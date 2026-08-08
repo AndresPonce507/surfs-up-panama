@@ -1,0 +1,17 @@
+# OS
+.DS_Store
+
+# tooling state, not project content
+.nwave/
+.claude/
+
+# secrets — nothing here should ever be committed
+.env
+.env.*
+*.pem
+*.key
+
+# deps and build output
+node_modules/
+dist/
+.astro/

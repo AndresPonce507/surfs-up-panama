@@ -1,0 +1,1192 @@
+<title>Surfs Up Panama</title>
+<style>
+  /* ============================================================
+     SURFS UP PANAMA — bathymetric chart identity
+     Light = chart paper. Dark = deep water.
+     Tokens defined on bare :root so the un-stamped (system) state
+     always resolves.
+     ============================================================ */
+
+  :root {
+    /* light: nautical chart paper */
+    --ground:      #E8E1D0;
+    --surface:     #F4EFE2;
+    --surface-2:   #DFD6C0;
+    --ink:         #0A1F27;
+    --ink-soft:    #4C666F;
+    --ink-faint:   #7C8F96;
+    --rule:        #C6BBA2;
+    --rule-soft:   #D6CDB8;
+    --accent:      #0B6E6E;
+    --accent-2:    #128C82;
+    --accent-wash: rgba(11,110,110,0.09);
+    --signal:      #C2411F;
+    --signal-wash: rgba(194,65,31,0.10);
+    --depth-1:     rgba(11,110,110,0.05);
+    --depth-2:     rgba(11,110,110,0.10);
+    --depth-3:     rgba(11,110,110,0.16);
+    --contour:     rgba(10,31,39,0.13);
+    --shadow:      0 1px 2px rgba(10,31,39,.06), 0 8px 24px rgba(10,31,39,.05);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #04141C;
+      --surface:     #08222E;
+      --surface-2:   #0D2E3C;
+      --ink:         #E9E1CD;
+      --ink-soft:    #90A9B2;
+      --ink-faint:   #5E7C87;
+      --rule:        #15384A;
+      --rule-soft:   #0F2C3A;
+      --accent:      #5AD6C2;
+      --accent-2:    #7FE3D2;
+      --accent-wash: rgba(90,214,194,0.10);
+      --signal:      #FF6E4B;
+      --signal-wash: rgba(255,110,75,0.12);
+      --depth-1:     rgba(90,214,194,0.04);
+      --depth-2:     rgba(90,214,194,0.08);
+      --depth-3:     rgba(90,214,194,0.14);
+      --contour:     rgba(144,169,178,0.16);
+      --shadow:      0 1px 2px rgba(0,0,0,.30), 0 12px 32px rgba(0,0,0,.28);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #04141C;
+    --surface:     #08222E;
+    --surface-2:   #0D2E3C;
+    --ink:         #E9E1CD;
+    --ink-soft:    #90A9B2;
+    --ink-faint:   #5E7C87;
+    --rule:        #15384A;
+    --rule-soft:   #0F2C3A;
+    --accent:      #5AD6C2;
+    --accent-2:    #7FE3D2;
+    --accent-wash: rgba(90,214,194,0.10);
+    --signal:      #FF6E4B;
+    --signal-wash: rgba(255,110,75,0.12);
+    --depth-1:     rgba(90,214,194,0.04);
+    --depth-2:     rgba(90,214,194,0.08);
+    --depth-3:     rgba(90,214,194,0.14);
+    --contour:     rgba(144,169,178,0.16);
+    --shadow:      0 1px 2px rgba(0,0,0,.30), 0 12px 32px rgba(0,0,0,.28);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", system-ui, sans-serif;
+    font-size: 17px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  /* ---------- instrument type: monospace carries the identity ---------- */
+  .mono, .eyebrow, .stat-v, .datum, code, th, .tag, .depth-mark, .cell-n {
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .eyebrow {
+    font-size: .70rem;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: .7rem;
+    margin: 0 0 1.1rem;
+    font-weight: 600;
+  }
+  .eyebrow::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+
+  /* ---------- layout ---------- */
+  .wrap { max-width: 1080px; margin: 0 auto; padding: 0 clamp(1.1rem, 4vw, 2.5rem); }
+
+  section { padding: clamp(3.5rem, 8vw, 6.5rem) 0; position: relative; }
+  section + section { border-top: 1px solid var(--rule-soft); }
+
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+
+  h2 {
+    font-size: clamp(1.75rem, 4.2vw, 2.7rem);
+    line-height: 1.08;
+    letter-spacing: -0.025em;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+  h3 {
+    font-size: clamp(1.05rem, 2vw, 1.25rem);
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+    font-weight: 650;
+    margin-bottom: .5rem;
+  }
+  p { margin: 0 0 1.05rem; max-width: 68ch; }
+  .lede { font-size: clamp(1.05rem, 2.1vw, 1.24rem); color: var(--ink-soft); line-height: 1.55; max-width: 62ch; }
+  .muted { color: var(--ink-soft); }
+  strong { font-weight: 650; color: var(--ink); }
+
+  /* ---------- hero ---------- */
+  .hero {
+    position: relative;
+    min-height: 88vh;
+    display: flex;
+    align-items: center;
+    padding: clamp(4rem, 10vw, 7rem) 0 clamp(3rem, 7vw, 5rem);
+    overflow: hidden;
+    border-top: none;
+  }
+  #seafloor {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    z-index: 0;
+  }
+  .hero .wrap { position: relative; z-index: 1; width: 100%; }
+
+  .hero-mark {
+    font-size: .70rem;
+    letter-spacing: .3em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 2.2rem;
+    display: flex;
+    gap: 1.2rem;
+    flex-wrap: wrap;
+  }
+
+  h1 {
+    font-size: clamp(2.6rem, 9vw, 6rem);
+    line-height: 0.92;
+    letter-spacing: -0.045em;
+    font-weight: 780;
+    margin-bottom: 1.6rem;
+  }
+  h1 .l2 { display: block; color: var(--accent); }
+
+  .hero-sub {
+    font-size: clamp(1.1rem, 2.4vw, 1.45rem);
+    line-height: 1.45;
+    max-width: 34ch;
+    color: var(--ink-soft);
+    margin-bottom: 2.6rem;
+  }
+  .hero-sub b { color: var(--ink); font-weight: 650; }
+
+  /* readout strip */
+  .readout {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    box-shadow: var(--shadow);
+    max-width: 760px;
+  }
+  .readout > div {
+    padding: .95rem 1.1rem;
+    border-right: 1px solid var(--rule-soft);
+  }
+  .readout > div:last-child { border-right: none; }
+  .datum-k {
+    font-size: .62rem; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--ink-faint); margin-bottom: .3rem;
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+  }
+  .datum { font-size: 1.3rem; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
+  .datum small { font-size: .72rem; color: var(--ink-faint); font-weight: 400; }
+  .datum.hot { color: var(--signal); }
+  .datum.good { color: var(--accent); }
+
+  /* ---------- grids & cards ---------- */
+  .grid { display: grid; gap: 1.15rem; }
+  .g2 { grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+  .g3 { grid-template-columns: repeat(auto-fit, minmax(232px, 1fr)); }
+  .g4 { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    padding: 1.4rem 1.45rem;
+    position: relative;
+  }
+  .card h3 { margin-bottom: .45rem; }
+  .card p { font-size: .93rem; margin-bottom: 0; color: var(--ink-soft); }
+  .card p + p { margin-top: .7rem; }
+
+  /* layer cards get a depth index */
+  .layer { padding-top: 1.9rem; }
+  .depth-mark {
+    position: absolute;
+    top: .85rem; left: 1.45rem;
+    font-size: .62rem; letter-spacing: .14em;
+    color: var(--accent);
+    text-transform: uppercase;
+  }
+  .layer.ai .depth-mark { color: var(--ink-faint); }
+
+  /* stat blocks */
+  .stat { border-left: 2px solid var(--accent); padding: .15rem 0 .15rem 1rem; }
+  .stat-v { font-size: clamp(1.5rem, 3.6vw, 2.1rem); font-weight: 650; letter-spacing: -0.03em; line-height: 1.05; display: block; }
+  .stat-k { font-size: .84rem; color: var(--ink-soft); line-height: 1.4; margin-top: .3rem; }
+  .stat.warn { border-left-color: var(--signal); }
+  .stat.warn .stat-v { color: var(--signal); }
+
+  /* ---------- tables ---------- */
+  .tscroll { overflow-x: auto; border: 1px solid var(--rule); background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 620px; font-size: .88rem; }
+  th {
+    text-align: left; padding: .7rem .9rem;
+    font-size: .64rem; letter-spacing: .13em; text-transform: uppercase;
+    color: var(--ink-faint); font-weight: 600;
+    border-bottom: 1px solid var(--rule); white-space: nowrap;
+    background: var(--surface-2);
+  }
+  td { padding: .72rem .9rem; border-bottom: 1px solid var(--rule-soft); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .cell-n { font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td b { font-weight: 650; }
+
+  .tag {
+    display: inline-block;
+    font-size: .62rem; letter-spacing: .1em; text-transform: uppercase;
+    padding: .18rem .5rem;
+    border: 1px solid currentColor;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .tag.no { color: var(--signal); }
+  .tag.mid { color: var(--ink-faint); }
+
+  /* ---------- callout ---------- */
+  .callout {
+    border: 1px solid var(--accent);
+    background: var(--accent-wash);
+    padding: 1.35rem 1.5rem;
+  }
+  .callout.warn { border-color: var(--signal); background: var(--signal-wash); }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout .eyebrow { color: inherit; }
+  .callout.warn .eyebrow { color: var(--signal); }
+
+  .pull {
+    font-size: clamp(1.15rem, 2.7vw, 1.55rem);
+    line-height: 1.35;
+    letter-spacing: -0.015em;
+    border-left: 2px solid var(--accent);
+    padding-left: 1.3rem;
+    margin: 2rem 0;
+    max-width: 46ch;
+    font-weight: 500;
+  }
+
+  /* ---------- lists ---------- */
+  ul.clean { list-style: none; padding: 0; margin: 0; }
+  ul.clean li {
+    padding: .55rem 0 .55rem 1.5rem;
+    position: relative;
+    border-bottom: 1px solid var(--rule-soft);
+    font-size: .93rem;
+    color: var(--ink-soft);
+  }
+  ul.clean li:last-child { border-bottom: none; }
+  ul.clean li::before {
+    content: "";
+    position: absolute; left: 0; top: 1.15rem;
+    width: 8px; height: 1px; background: var(--accent);
+  }
+  ul.clean li b { color: var(--ink); }
+  ul.clean.no li::before { background: var(--signal); }
+
+  /* ---------- diagrams ---------- */
+  .figure { margin: 1.6rem 0 0; }
+  .figure svg { display: block; width: 100%; height: auto; }
+  .fig-cap {
+    font-size: .75rem; color: var(--ink-faint); margin-top: .7rem;
+    font-family: ui-monospace, "SF Mono", SFMono-Regular, Menlo, monospace;
+    letter-spacing: .02em;
+  }
+  .svg-box { fill: var(--surface); stroke: var(--rule); }
+  .svg-box-a { fill: var(--accent-wash); stroke: var(--accent); }
+  .svg-t { fill: var(--ink); font-size: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .svg-t-s { fill: var(--ink-soft); font-size: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .svg-line { stroke: var(--ink-faint); fill: none; }
+  .svg-acc { stroke: var(--accent); fill: none; }
+
+  /* ---------- phase rail ---------- */
+  .phase {
+    display: grid;
+    grid-template-columns: 90px 1fr;
+    gap: 1.3rem;
+    padding: 1.2rem 0;
+    border-bottom: 1px solid var(--rule-soft);
+    align-items: start;
+  }
+  .phase:last-child { border-bottom: none; }
+  .phase-w {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--accent); padding-top: .25rem;
+  }
+  .phase-b h3 { margin-bottom: .3rem; }
+  .phase-b p { font-size: .92rem; color: var(--ink-soft); margin: 0; }
+
+  /* ---------- footer ---------- */
+  footer {
+    padding: 3rem 0 4rem;
+    border-top: 1px solid var(--rule);
+    color: var(--ink-faint);
+    font-size: .8rem;
+  }
+  footer .wrap { display: flex; justify-content: space-between; gap: 1.5rem; flex-wrap: wrap; }
+  footer .mono { letter-spacing: .1em; text-transform: uppercase; font-size: .66rem; }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, [tabindex]:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  .spacer-s { height: 1.6rem; }
+  .spacer-m { height: 2.4rem; }
+
+  @media (max-width: 620px) {
+    body { font-size: 16px; }
+    .phase { grid-template-columns: 1fr; gap: .4rem; }
+    .readout > div { border-right: none; border-bottom: 1px solid var(--rule-soft); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  }
+</style>
+
+<!-- ================= HERO ================= -->
+<section class="hero">
+  <canvas id="seafloor" aria-hidden="true"></canvas>
+  <div class="wrap">
+    <div class="hero-mark">
+      <span>7&deg;26&prime;N 80&deg;11&prime;W</span>
+      <span>PACIFIC + CARIBBEAN</span>
+      <span>OPEN SOURCE</span>
+    </div>
+
+    <h1>Surfs Up<span class="l2">Panama</span></h1>
+
+    <p class="hero-sub">
+      A free forecast that tells you where to surf today,
+      <b>and proves whether it was right.</b>
+    </p>
+
+    <div class="readout">
+      <div>
+        <div class="datum-k">Wave models</div>
+        <div class="datum good">4<small> independent</small></div>
+      </div>
+      <div>
+        <div class="datum-k">Breaks mapped</div>
+        <div class="datum">33<small> both coasts</small></div>
+      </div>
+      <div>
+        <div class="datum-k">Buoys nearby</div>
+        <div class="datum hot">0<small> within 680km</small></div>
+      </div>
+      <div>
+        <div class="datum-k">Running cost</div>
+        <div class="datum good">$0.15<small>/mo</small></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= WHY ================= -->
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Why we are doing this</p>
+    <h2>Five hundred people already do this by hand.</h2>
+    <p class="lede">
+      There is a WhatsApp group in Panama with around 500 surfers in it. All day they post photos
+      and clips of the waves at different beaches so everyone knows which spot is worth the drive.
+      That group is the best surf forecast in the country right now.
+    </p>
+
+    <div class="spacer-m"></div>
+
+    <div class="grid g2">
+      <div class="card">
+        <h3>It exists because forecasts lie</h3>
+        <p>
+          The tracker says clean, 1.5 metres, light offshore. You drive two hours. It is blown out
+          and unsurfable. Every surfer has this story. The models are not lying exactly, they just
+          cannot see what happens in the last few hundred metres before a wave breaks.
+        </p>
+      </div>
+      <div class="card">
+        <h3>But a chat group has no memory</h3>
+        <p>
+          Photos scroll past and vanish. Nothing accumulates. In a year that group will know exactly
+          as much as it knows today. Every good observation is spent once and then lost.
+        </p>
+      </div>
+    </div>
+
+    <div class="pull">
+      The group is a sensor network that nobody is recording. That is the entire opportunity.
+    </div>
+  </div>
+</section>
+
+<!-- ================= WHAT ================= -->
+<section>
+  <div class="wrap">
+    <p class="eyebrow">What we are building</p>
+    <h2>An instrument, not a beach postcard.</h2>
+    <p class="lede">
+      Four layers. Only one of them is AI, and it is not the one that makes the forecast accurate.
+      Getting that split right is the difference between a real product and a demo.
+    </p>
+
+    <div class="spacer-m"></div>
+
+    <div class="grid g4">
+      <div class="card layer">
+        <span class="depth-mark">Layer 01 / Data</span>
+        <h3>Read everything</h3>
+        <p>
+          Four independent global wave models, real tide gauges, real airport wind. Pulled every
+          hour. Written down permanently and never overwritten.
+        </p>
+      </div>
+      <div class="card layer">
+        <span class="depth-mark">Layer 02 / Physics</span>
+        <h3>Score the break</h3>
+        <p>
+          Plain arithmetic per spot. Does the swell fit this break, is the wind actually offshore
+          for this shore angle, is the tide in range. No AI, fully explainable.
+        </p>
+      </div>
+      <div class="card layer">
+        <span class="depth-mark">Layer 03 / Learning</span>
+        <h3>Learn the error</h3>
+        <p>
+          People report what it was really like. We join that back to what each model predicted
+          and learn how each one is wrong at each specific break.
+        </p>
+      </div>
+      <div class="card layer ai">
+        <span class="depth-mark">Layer 04 / Language</span>
+        <h3>Make the call</h3>
+        <p>
+          The AI writes the daily call, explains why, reads photos, and says plainly when it does
+          not know. It narrates. It does not compute the score.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= DATA ================= -->
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Layer 01 &mdash; The data</p>
+    <h2>Free, legally clean, and global from day one.</h2>
+    <p class="lede">
+      Every source below was checked against its actual terms, not assumed. Nothing here requires
+      scraping anyone, and nothing breaks if this grows past Panama.
+    </p>
+
+    <div class="spacer-m"></div>
+
+    <div class="tscroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Source</th>
+            <th>Gives us</th>
+            <th>Refresh</th>
+            <th>License</th>
+            <th>Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><b>NOAA GFS-Wave</b><br><span class="muted" style="font-size:.82rem">US government</span></td>
+            <td>Swell height, period, direction, partitioned swell trains</td>
+            <td class="cell-n">4&times;/day</td>
+            <td><span class="tag">Public domain</span></td>
+            <td class="cell-n">$0</td>
+          </tr>
+          <tr>
+            <td><b>ECMWF Open Data</b><br><span class="muted" style="font-size:.82rem">European centre</span></td>
+            <td>Independent wave and wind forecast, best global skill</td>
+            <td class="cell-n">2&times;/day</td>
+            <td><span class="tag">CC BY 4.0</span></td>
+            <td class="cell-n">$0</td>
+          </tr>
+          <tr>
+            <td><b>ECMWF AIFS</b><br><span class="muted" style="font-size:.82rem">AI weather model</span></td>
+            <td>A machine-learned wave forecast to disagree with the physics one</td>
+            <td class="cell-n">2&times;/day</td>
+            <td><span class="tag">CC BY 4.0</span></td>
+            <td class="cell-n">$0</td>
+          </tr>
+          <tr>
+            <td><b>DWD GWAM</b><br><span class="muted" style="font-size:.82rem">German service</span></td>
+            <td>Fourth independent wave estimate</td>
+            <td class="cell-n">2&times;/day</td>
+            <td><span class="tag">Open data</span></td>
+            <td class="cell-n">$0</td>
+          </tr>
+          <tr>
+            <td><b>NOAA CO-OPS</b><br><span class="muted" style="font-size:.82rem">Tide stations</span></td>
+            <td>Balboa and Crist&oacute;bal harmonic tide, verified live</td>
+            <td class="cell-n">Continuous</td>
+            <td><span class="tag">Public domain</span></td>
+            <td class="cell-n">$0</td>
+          </tr>
+          <tr>
+            <td><b>Aviation METAR</b><br><span class="muted" style="font-size:.82rem">Airport observations</span></td>
+            <td>Real measured wind at David, Bocas del Toro, R&iacute;o Hato</td>
+            <td class="cell-n">Hourly</td>
+            <td><span class="tag">Public domain</span></td>
+            <td class="cell-n">$0</td>
+          </tr>
+          <tr>
+            <td><b>Open-Meteo</b><br><span class="muted" style="font-size:.82rem">Convenience layer</span></td>
+            <td>All of the above as clean JSON, no GRIB decoding</td>
+            <td class="cell-n">Hourly</td>
+            <td><span class="tag mid">Non-commercial</span></td>
+            <td class="cell-n">$0</td>
+          </tr>
+          <tr>
+            <td><b>Surfline, Magicseaweed,<br>Windguru, Stormrider</b></td>
+            <td>Nothing. Their terms forbid automated access outright.</td>
+            <td class="cell-n">&mdash;</td>
+            <td><span class="tag no">Prohibited</span></td>
+            <td class="cell-n">&mdash;</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="spacer-m"></div>
+
+    <div class="grid g2">
+      <div class="callout warn">
+        <p class="eyebrow">The hard constraint</p>
+        <p style="margin-bottom:.7rem">
+          <b>There is no wave buoy anywhere near Panama's Pacific coast.</b> We checked the full
+          station registry directly rather than trusting search results. Every buoy between Ecuador
+          and Colombia is dead, was never instrumented for waves, or has literally been adrift
+          since June 2025. Nearest working one is 680km away on the wrong coast.
+        </p>
+        <p>
+          Webcams do not save us either. Two of sixteen named spots have any camera at all, one was
+          offline, and their terms forbid automated capture. Satellite cannot resolve a wave.
+        </p>
+      </div>
+      <div class="callout">
+        <p class="eyebrow">Which is why this works</p>
+        <p style="margin-bottom:.7rem">
+          If there were buoys everywhere, this would be a data plumbing exercise and Surfline would
+          already have done it. There are none. The only possible ground truth in Panama is people.
+        </p>
+        <p>
+          You have 500 of them, already posting daily, already organised. The hardest part of any
+          crowdsourced product is the cold start, and it is already solved.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= PHYSICS ================= -->
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Layer 02 &mdash; The physics</p>
+    <h2>Wind counts as much as size. That is the whole lesson.</h2>
+    <p class="lede">
+      When the tracker says perfect and the beach is garbage, the size was usually right. The wind
+      is what ruined it. Any scoring that treats wind as a minor modifier reproduces the exact
+      failure this thing exists to fix.
+    </p>
+
+    <div class="spacer-m"></div>
+
+    <div class="grid g2" style="align-items:start">
+      <div>
+        <h3>Four sub-scores, one number</h3>
+        <ul class="clean">
+          <li><b>Swell direction</b> is a gate, not a weight. If the swell cannot physically reach the break, nothing else matters and the score collapses.</li>
+          <li><b>Effective size</b> is period-weighted, never raw height. A wave carries energy proportional to height squared times period.</li>
+          <li><b>Wind</b> is measured along the shore normal. Onshore kills a spot roughly twice as fast as too-much-offshore does, so the penalty is deliberately asymmetric.</li>
+          <li><b>Tide</b> uses a narrow window for a shallow reef and a wide one for a beachbreak. One number per spot encodes "this only works on the push".</li>
+        </ul>
+        <div class="spacer-s"></div>
+        <p style="font-size:.9rem" class="muted">
+          Every sub-score is kept and shown. So the page can always answer why:
+          <b style="color:var(--signal)">Wind 0.18. That is what killed it.</b>
+        </p>
+      </div>
+
+      <div>
+        <div class="figure">
+          <svg viewBox="0 0 480 250" role="img" aria-label="Two waves of the same height but different periods, showing the longer period wave carries more energy">
+            <text x="0" y="14" class="svg-t-s">SAME HEIGHT. DIFFERENT WAVE.</text>
+
+            <line x1="0" y1="76" x2="480" y2="76" class="svg-line" stroke-dasharray="2 4" stroke-width="1"/>
+            <path d="M0,76 C30,36 60,36 90,76 C120,116 150,116 180,76 C210,36 240,36 270,76 C300,116 330,116 360,76 C390,36 420,36 450,76 L480,76"
+                  class="svg-line" stroke-width="1.5" opacity=".55"/>
+            <text x="0" y="106" class="svg-t">1.5 m @ 8 s</text>
+            <text x="130" y="106" class="svg-t-s">weak, gutless</text>
+            <text x="380" y="106" class="svg-t" style="fill:var(--ink-soft)">1.34 m</text>
+
+            <line x1="0" y1="176" x2="480" y2="176" class="svg-line" stroke-dasharray="2 4" stroke-width="1"/>
+            <path d="M0,176 C60,116 120,116 180,176 C240,236 300,236 360,176 C420,116 470,120 480,148"
+                  class="svg-acc" stroke-width="2.5"/>
+            <text x="0" y="212" class="svg-t">1.5 m @ 16 s</text>
+            <text x="130" y="212" class="svg-t-s">thick, powerful</text>
+            <text x="380" y="212" class="svg-t" style="fill:var(--accent)">1.90 m</text>
+
+            <text x="0" y="240" class="svg-t-s">EFFECTIVE HEIGHT = H &times; &radic;(T / 10)</text>
+          </svg>
+          <div class="fig-cap">
+            Both read "1.5 m" on any forecast app. The long-period one is a completely different
+            wave. Scoring raw height instead of energy is the single most common way a forecast
+            misleads you.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="spacer-m"></div>
+
+    <div class="grid g3">
+      <div class="stat">
+        <span class="stat-v">6.9 m</span>
+        <div class="stat-k">Spring tide range at Balboa on the Pacific side. A break completely transforms within hours and no global model captures what that does to a specific wave.</div>
+      </div>
+      <div class="stat">
+        <span class="stat-v">0.93 m</span>
+        <div class="stat-k">Spring range at Crist&oacute;bal on the Caribbean. The two coasts are effectively different products.</div>
+      </div>
+      <div class="stat">
+        <span class="stat-v">20&ndash;30 kt</span>
+        <div class="stat-k">The Chorro de Panam&aacute; gap wind, December to April. Confirmed against a 40 year Smithsonian record, not surf folklore. Global models smear it out.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= LEARNING ================= -->
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Layer 03 &mdash; The learning loop</p>
+    <h2>Ten to thirty reports. That is the whole ballgame.</h2>
+    <p class="lede">
+      This is the number everything else hangs on. It came out of the maths, not a guess, and it is
+      far smaller than it has any right to be.
+    </p>
+
+    <div class="spacer-m"></div>
+
+    <div class="grid g2" style="align-items:start">
+      <div>
+        <div class="figure">
+          <svg viewBox="0 0 420 300" role="img" aria-label="The learning loop: forecast, archive, reality, error, correction">
+            <!-- loop ring -->
+            <circle cx="210" cy="150" r="108" class="svg-acc" stroke-dasharray="3 6" stroke-width="1" opacity=".55"/>
+
+            <!-- top: forecast -->
+            <rect x="140" y="8" width="140" height="46" class="svg-box-a"/>
+            <text x="210" y="30" class="svg-t" text-anchor="middle">4 MODELS</text>
+            <text x="210" y="45" class="svg-t-s" text-anchor="middle">predict, hourly</text>
+
+            <!-- right: archive -->
+            <rect x="296" y="126" width="118" height="46" class="svg-box"/>
+            <text x="355" y="148" class="svg-t" text-anchor="middle">ARCHIVE</text>
+            <text x="355" y="163" class="svg-t-s" text-anchor="middle">never overwritten</text>
+
+            <!-- bottom: reality -->
+            <rect x="140" y="246" width="140" height="46" class="svg-box-a"/>
+            <text x="210" y="268" class="svg-t" text-anchor="middle">PEOPLE</text>
+            <text x="210" y="283" class="svg-t-s" text-anchor="middle">what it was really like</text>
+
+            <!-- left: correction -->
+            <rect x="6" y="126" width="118" height="46" class="svg-box"/>
+            <text x="65" y="148" class="svg-t" text-anchor="middle">CORRECTION</text>
+            <text x="65" y="163" class="svg-t-s" text-anchor="middle">per spot, per model</text>
+
+            <!-- arrows -->
+            <path d="M282,40 Q330,60 345,122" class="svg-acc" stroke-width="1.5" marker-end="url(#ah)"/>
+            <path d="M355,176 Q350,240 284,266" class="svg-acc" stroke-width="1.5" marker-end="url(#ah)"/>
+            <path d="M138,266 Q70,240 65,176" class="svg-acc" stroke-width="1.5" marker-end="url(#ah)"/>
+            <path d="M65,122 Q80,60 138,40" class="svg-acc" stroke-width="1.5" marker-end="url(#ah)"/>
+
+            <defs>
+              <marker id="ah" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+                <path d="M0,0 L6,3 L0,6 z" fill="var(--accent)"/>
+              </marker>
+            </defs>
+
+            <text x="210" y="146" class="svg-t" text-anchor="middle" style="fill:var(--accent)">GETS BETTER</text>
+            <text x="210" y="163" class="svg-t-s" text-anchor="middle">every single report</text>
+          </svg>
+          <div class="fig-cap">Each turn of this loop permanently improves the next forecast at that break.</div>
+        </div>
+      </div>
+
+      <div>
+        <h3>Why the number is so small</h3>
+        <p style="font-size:.95rem">
+          Most of a model's error at a given break is not random. It is a persistent offset caused
+          by something physical and unchanging: the reef refracts swell a certain way, an island
+          shadows it, the model grid cell sits in water too deep to see the bank. That offset
+          repeats every single time.
+        </p>
+        <p style="font-size:.95rem">
+          You do not need to learn chaos. You need to measure a constant. And measuring a constant
+          through noise takes far fewer samples than people expect.
+        </p>
+
+        <div class="spacer-s"></div>
+
+        <div class="tscroll">
+          <table style="min-width:0">
+            <thead>
+              <tr><th>Reports at a spot</th><th>What unlocks</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="cell-n"><b>10 to 30</b></td><td>Correction starts beating the raw model. First honest accuracy claim.</td></tr>
+              <tr><td class="cell-n"><b>~60</b></td><td>The offset is pinned to within 10 centimetres.</td></tr>
+              <tr><td class="cell-n"><b>100 to 200</b></td><td>It learns <i>when</i> a spot fails, not just that it does. Probably the best forecast available for that break, anywhere.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="spacer-s"></div>
+        <p style="font-size:.9rem" class="muted">
+          Ten to thirty reports is one season with a small local crew. Not a research programme.
+        </p>
+      </div>
+    </div>
+
+    <div class="spacer-m"></div>
+
+    <div class="callout warn">
+      <p class="eyebrow">The decision we cannot get wrong</p>
+      <p>
+        <b>Every prediction has to be written down at the moment it is made, from day one.</b>
+        Forecast archives are not retrievable after the fact. You cannot go back and ask what the
+        model said last Tuesday. If we overwrite yesterday's forecast with today's, there is
+        nothing to compare reality against and the entire learning loop is impossible, forever.
+        It costs almost nothing to do and it cannot be added later. This is the one thing that has
+        to be right in version one.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= GLOBAL ================= -->
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Why global makes it smarter</p>
+    <h2>A new break inherits what similar breaks already learned.</h2>
+    <p class="lede">
+      Panama is the beachhead, not the boundary. Nothing gets hardcoded to it. And going wide is
+      not just a bigger audience, it materially improves the forecast for every individual spot.
+    </p>
+
+    <div class="spacer-m"></div>
+
+    <div class="grid g3">
+      <div class="card">
+        <h3>Model error is regional</h3>
+        <p>
+          A global wave model does not fail randomly at one beach. It tends to fail the same way
+          along a whole stretch of coast, for shared physical reasons. So a correction learned at
+          one break genuinely transfers to its neighbours.
+        </p>
+      </div>
+      <div class="card">
+        <h3>Zero reports still gets a forecast</h3>
+        <p>
+          A brand new break with no data inherits a correction from structurally similar breaks:
+          same break type, same exposure, same shore orientation. It starts smarter than raw model
+          output on its first day.
+        </p>
+      </div>
+      <div class="card">
+        <h3>More spots, better priors</h3>
+        <p>
+          Every region added sharpens the shared baseline that new spots borrow from. Panama alone,
+          the flywheel is weak. Worldwide, it compounds. The dataset itself becomes worth
+          publishing openly.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= AI ROLE ================= -->
+<section>
+  <div class="wrap">
+    <p class="eyebrow">Layer 04 &mdash; Where the AI actually belongs</p>
+    <h2>It explains the forecast. It does not invent it.</h2>
+    <p class="lede">
+      Worth being blunt about this, because getting it backwards is how these projects die. If the
+      language model disappeared tomorrow, the app would be less pleasant to use and exactly as
+      accurate.
+    </p>
+
+    <div class="spacer-m"></div>
+
+    <div class="grid g2">
+      <div class="card">
+        <h3 style="color:var(--accent)">What it is genuinely best at</h3>
+        <ul class="clean">
+          <li><b>Adjudicating disagreement.</b> When four models say four different things, turning that into one plain sentence with a confidence level.</li>
+          <li><b>Reading photos.</b> Judging size against the surfer in frame, wind texture on the face, how crowded it is.</li>
+          <li><b>Encoding local knowledge.</b> "Venao goes to pieces when the wind swings southwest after 10am" is a rule a person knows and a model does not.</li>
+          <li><b>Explaining why.</b> Not just a score, but what drove it and what would have to change.</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 style="color:var(--signal)">What it must never be asked to do</h3>
+        <ul class="clean no">
+          <li><b>Compute the score.</b> Language models are bad at arithmetic and worse at pretending to be. The score is deterministic and auditable.</li>
+          <li><b>Predict wave height.</b> That is what the physics models are for. We correct them, we do not replace them.</li>
+          <li><b>Run on page load.</b> Generating per visitor turns a $0.21 monthly bill into $345. It runs once on a schedule, and the result is a static file.</li>
+          <li><b>Sound confident when it is not.</b> Uncertainty is reported beside the score, never quietly folded into it.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="pull">
+      We are not predicting waves. We are correcting a physical model's known local errors and
+      explaining its uncertainty. That is a truer story, and still an impressive one.
+    </div>
+  </div>
+</section>
+
+<!-- ================= HONESTY ================= -->
+<section>
+  <div class="wrap">
+    <p class="eyebrow">What we will and will not claim</p>
+    <h2>The accuracy scorecard is the actual product.</h2>
+    <p class="lede">
+      Not one competitor publishes how accurate their forecast turned out to be. Not Surfline, not
+      Windguru, none of them. It is the one genuinely unoccupied space in this market, and it is
+      the thing a group of 500 surfers will instantly respect.
+    </p>
+
+    <div class="spacer-m"></div>
+
+    <div class="grid g2">
+      <div class="callout">
+        <p class="eyebrow">Say this</p>
+        <p style="margin-bottom:.6rem"><b>"Learns your local break from the people who surf it."</b></p>
+        <p style="margin-bottom:.6rem"><b>"For Santa Catalina, GFS-Wave has run 25% too big for the last 30 days. We are discounting it."</b></p>
+        <p><b>"Models disagree by 40% today and nobody has reported since Tuesday. Low confidence."</b></p>
+      </div>
+      <div class="callout warn">
+        <p class="eyebrow">Never say this</p>
+        <p style="margin-bottom:.6rem"><b>"Perfect."</b> Not reachable, and the claim is self-harming. It sets up exactly the broken promise that made surfers distrust forecasts in the first place.</p>
+        <p style="margin-bottom:.6rem"><b>"AI predicts the waves."</b> It does not.</p>
+        <p><b>Any accuracy claim on day one.</b> There is no data yet. The claim becomes earnable at 10 to 30 reports per spot, and not before.</p>
+      </div>
+    </div>
+
+    <div class="spacer-m"></div>
+
+    <div class="callout">
+      <p class="eyebrow">The honest ceiling</p>
+      <p style="font-size:1.05rem;line-height:1.5">
+        Meaningfully better than any single forecast at the spots our community actually reports on.
+        And never better than the disagreement between two good surfers watching the same session.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= ARCHITECTURE ================= -->
+<section>
+  <div class="wrap">
+    <p class="eyebrow">How it gets built</p>
+    <h2>Precompute the whole world. Serve flat files.</h2>
+    <p class="lede">
+      One scheduled job per hour reads every source, scores every spot, and writes the entire site
+      out as static JSON. The CDN serves those files. No database on the read path. No compute per
+      visitor. It is the cheapest possible shape for something read constantly and written rarely.
+    </p>
+
+    <div class="spacer-m"></div>
+
+    <div class="figure">
+      <svg viewBox="0 0 900 300" role="img" aria-label="Architecture: sources feed an hourly job which writes static JSON to storage, served by CDN; community reports flow back into the archive">
+
+        <text x="0" y="12" class="svg-t-s">SOURCES</text>
+        <rect x="0" y="24" width="148" height="30" class="svg-box"/><text x="10" y="43" class="svg-t-s">NOAA GFS-Wave</text>
+        <rect x="0" y="60" width="148" height="30" class="svg-box"/><text x="10" y="79" class="svg-t-s">ECMWF + AIFS</text>
+        <rect x="0" y="96" width="148" height="30" class="svg-box"/><text x="10" y="115" class="svg-t-s">DWD GWAM</text>
+        <rect x="0" y="132" width="148" height="30" class="svg-box"/><text x="10" y="151" class="svg-t-s">Tide gauges</text>
+        <rect x="0" y="168" width="148" height="30" class="svg-box"/><text x="10" y="187" class="svg-t-s">Airport METAR</text>
+
+        <path d="M152,110 L212,110" class="svg-acc" stroke-width="1.5" marker-end="url(#a2)"/>
+
+        <text x="216" y="12" class="svg-t-s">HOURLY JOB</text>
+        <rect x="216" y="24" width="176" height="174" class="svg-box-a"/>
+        <text x="230" y="52" class="svg-t">1. Archive</text>
+        <text x="230" y="68" class="svg-t-s">every prediction, forever</text>
+        <text x="230" y="96" class="svg-t">2. Score</text>
+        <text x="230" y="112" class="svg-t-s">physics, per spot</text>
+        <text x="230" y="140" class="svg-t">3. Correct</text>
+        <text x="230" y="156" class="svg-t-s">learned per-spot bias</text>
+        <text x="230" y="184" class="svg-t">4. Narrate</text>
+
+        <path d="M396,110 L456,110" class="svg-acc" stroke-width="1.5" marker-end="url(#a2)"/>
+
+        <text x="460" y="12" class="svg-t-s">STORAGE</text>
+        <rect x="460" y="60" width="150" height="100" class="svg-box"/>
+        <text x="474" y="88" class="svg-t">STATIC JSON</text>
+        <text x="474" y="106" class="svg-t-s">one file per region</text>
+        <text x="474" y="122" class="svg-t-s">+ photo archive</text>
+        <text x="474" y="146" class="svg-t-s" style="fill:var(--accent)">no database</text>
+
+        <path d="M614,110 L674,110" class="svg-acc" stroke-width="1.5" marker-end="url(#a2)"/>
+
+        <text x="678" y="12" class="svg-t-s">EDGE</text>
+        <rect x="678" y="60" width="150" height="100" class="svg-box-a"/>
+        <text x="692" y="88" class="svg-t">CDN</text>
+        <text x="692" y="106" class="svg-t-s">POP inside Panama</text>
+        <text x="692" y="130" class="svg-t-s" style="fill:var(--accent)">$0 to 16,700 users</text>
+
+        <!-- feedback path -->
+        <text x="460" y="240" class="svg-t-s">COMMUNITY</text>
+        <rect x="460" y="252" width="368" height="36" class="svg-box"/>
+        <text x="474" y="275" class="svg-t">Photos and reports from surfers</text>
+
+        <path d="M460,270 L304,270 L304,206" class="svg-acc" stroke-width="1.5" stroke-dasharray="4 4" marker-end="url(#a2)"/>
+        <text x="316" y="240" class="svg-t-s" style="fill:var(--accent)">ground truth</text>
+
+        <defs>
+          <marker id="a2" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 z" fill="var(--accent)"/>
+          </marker>
+        </defs>
+      </svg>
+      <div class="fig-cap">
+        The dashed line is the part nobody else has. Everything above it is plumbing.
+      </div>
+    </div>
+
+    <div class="spacer-m"></div>
+
+    <div class="grid g4">
+      <div class="stat">
+        <span class="stat-v">$0.15</span>
+        <div class="stat-k">Per month, all in, up to roughly 16,700 users. Storage for photos is the only line that is not literally free.</div>
+      </div>
+      <div class="stat">
+        <span class="stat-v">$0.21</span>
+        <div class="stat-k">Monthly AI cost. One scheduled narration run, never per page view.</div>
+      </div>
+      <div class="stat">
+        <span class="stat-v">$4.50</span>
+        <div class="stat-k">Roughly what it costs to extend from Panama to every surf break on earth.</div>
+      </div>
+      <div class="stat warn">
+        <span class="stat-v">Feb 5</span>
+        <div class="stat-k">AWS now closes free-plan accounts after six months. Needs checking against the real account before anything else.</div>
+      </div>
+    </div>
+
+    <div class="spacer-s"></div>
+    <p class="muted" style="font-size:.9rem">
+      Two things the research was firm about. Do not use API Gateway or Amplify Hosting, they are
+      the services people reach for by reflex and the two with no permanent free tier. And set log
+      retention on day one, because it defaults to keeping everything forever.
+    </p>
+  </div>
+</section>
+
+<!-- ================= ROADMAP ================= -->
+<section>
+  <div class="wrap">
+    <p class="eyebrow">How we get there</p>
+    <h2>Useful at every stage, not just the last one.</h2>
+    <p class="lede">
+      Each phase ships something a surfer would actually open. Nothing here depends on the next
+      phase existing.
+    </p>
+
+    <div class="spacer-m"></div>
+
+    <div class="phase">
+      <div class="phase-w">Now</div>
+      <div class="phase-b">
+        <h3>Research complete</h3>
+        <p>Twelve parallel agents, 8,400 lines, every source checked against its real terms. Sitting in the repo with citations and access dates.</p>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-w">Next</div>
+      <div class="phase-b">
+        <h3>Discuss</h3>
+        <p>What a surfer is actually hiring this for, the journey from opening it to leaving the house, and the acceptance criteria that define done.</p>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-w">Phase 1</div>
+      <div class="phase-b">
+        <h3>The honest forecast</h3>
+        <p>Four models, real tide, real wind, physics scoring across Panama's spots. No accuracy claim yet, because there is no data yet. Still better organised and better explained than anything currently available for Panama. The archive starts filling from day one.</p>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-w">Phase 2</div>
+      <div class="phase-b">
+        <h3>The community becomes the sensor</h3>
+        <p>One tap to report what it was really like. Photo upload where the location comes from the image itself. A share card built for pasting straight into the WhatsApp group, because the official API cannot reach a group and a person can.</p>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-w">Phase 3</div>
+      <div class="phase-b">
+        <h3>The loop closes</h3>
+        <p>Per-spot corrections go live once a spot crosses its threshold. The public scorecard turns on. This is the moment the product becomes something no competitor has.</p>
+      </div>
+    </div>
+    <div class="phase">
+      <div class="phase-w">Phase 4</div>
+      <div class="phase-b">
+        <h3>Everywhere else</h3>
+        <p>Spots are data, not code, so a new country is a data import. Corrections learned in Panama transfer to structurally similar breaks worldwide.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CLOSE ================= -->
+<section>
+  <div class="wrap">
+    <p class="eyebrow">What this is for</p>
+    <h2>Free, open, and built to be argued with.</h2>
+
+    <div class="grid g2">
+      <div>
+        <p>
+          No ads, no subscription, no premium tier. The code is public and so is the accuracy
+          record. If the forecast is wrong, the site says so before anyone else has to point it
+          out.
+        </p>
+        <p>
+          That last part is the whole ethic. Every existing surf forecast asks you to trust it and
+          gives you no way to check. This one keeps the receipts and shows them, and gets better
+          specifically because the people using it push back.
+        </p>
+      </div>
+      <div>
+        <ul class="clean">
+          <li><b>For the group</b> that is already doing this by hand every single day.</li>
+          <li><b>For anyone</b> who has driven two hours to a beach that turned out to be garbage.</li>
+          <li><b>For the record</b>, because an open dataset of forecast versus reality has value well past surfing.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span class="mono">Surfs Up Panama &middot; vision draft</span>
+    <span class="mono">Research: 12 agents &middot; 8,423 lines &middot; 2026-08-08</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var c = document.getElementById('seafloor');
+  if (!c) return;
+  var ctx = c.getContext('2d');
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var t = 0, raf = null, w = 0, h = 0;
+
+  function contourColor() {
+    return getComputedStyle(document.documentElement)
+      .getPropertyValue('--contour').trim() || 'rgba(120,150,160,0.15)';
+  }
+
+  function size() {
+    var dpr = Math.min(window.devicePixelRatio || 1, 2);
+    var r = c.getBoundingClientRect();
+    w = r.width; h = r.height;
+    c.width = Math.max(1, Math.floor(w * dpr));
+    c.height = Math.max(1, Math.floor(h * dpr));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  // Depth contours: stacked sine ridges, like a bathymetric chart read sideways.
+  function draw() {
+    ctx.clearRect(0, 0, w, h);
+    var col = contourColor();
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 1;
+
+    var lines = 26;
+    for (var i = 0; i < lines; i++) {
+      var p = i / lines;
+      var baseY = h * 0.16 + p * h * 0.92;
+      // deeper lines drift slower and sit tighter, like real depth contours
+      var amp = 8 + p * 34;
+      var wl = 0.0042 + p * 0.0016;
+      var ph = t * (0.15 + p * 0.35) + i * 0.5;
+
+      ctx.globalAlpha = 0.30 + 0.55 * (1 - Math.abs(p - 0.45) * 1.6);
+      ctx.beginPath();
+      for (var x = -20; x <= w + 20; x += 7) {
+        var y = baseY
+          + Math.sin(x * wl + ph) * amp
+          + Math.sin(x * wl * 2.3 + ph * 1.7) * amp * 0.28;
+        if (x === -20) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function loop() {
+    t += 0.0055;
+    draw();
+    raf = requestAnimationFrame(loop);
+  }
+
+  function start() {
+    size();
+    if (reduce) { t = 1.2; draw(); return; }
+    if (raf) cancelAnimationFrame(raf);
+    loop();
+  }
+
+  window.addEventListener('resize', function () {
+    size();
+    if (reduce) draw();
+  }, { passive: true });
+
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if (mq.addEventListener) mq.addEventListener('change', function(){ if (reduce) draw(); });
+  }
+
+  start();
+})();
+</script>
