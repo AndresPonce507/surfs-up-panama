@@ -21,7 +21,7 @@
 | Per-key height bias `b`, per-spot score delta | Conditional bias (stage 2) | Needs ~100-200 obs/spot (09 §13.4); designed as a threshold |
 | Per-reporter offset `u_r` | Per-spot GBM (stage 4) | KILLED by research (09 §5.3, §13.4): thousands of ratings per spot will not happen |
 | Partial pooling hierarchy | Learned similarity clustering | 09 §17.3: hand-assigned groups first; learned clustering fits noise at this scale |
-| Selection/robustness weights | Wind numeric correction | Scorecard tracks the wind variable; no correction term until a residual model for categorical wind exists |
+| Selection/robustness weights | Wind numeric correction | Wind is out of the scorecard grain entirely (domain model §9, amended 2026-08-08 coherence round); no correction term until a residual model for categorical wind exists |
 | Evaluation + honesty enforcement (§10) | Any skill personalization | Decision 14: score the wave, not the surfer |
 | σ_human ceiling metric | LLM or vision anywhere in the fit | 09 §6.1, §9.3: wrong tool for numbers; vision annotates, never labels |
 
@@ -212,7 +212,7 @@ Config: `data/config/trust-gate.json` (git, owned by 07 §7.3; shipped `{min_cre
 
 **G3, the standard-error floor, precisely (adopted from 07 §1 row 8, 2026-08-08 coherence round).**
 
-`se_gate = max(se_sample, 0.5 * sigma_eff / sqrt(n))`, per key, per variable.
+`se_gate = max(se_sample, 0.5 * sigma_eff / sqrt(n))`, per key, per claim-bearing variable: height and score, exactly the two for which `sigma_eff` exists (§8). Wind is claim-exempt and the gate never evaluates for it (§8, amended 2026-08-08 coherence round).
 
 - `se_sample`: the weighted sample standard deviation of the key's residual samples divided by `sqrt(n)`, exactly the settled scorecard's `bias_se` (domain model §9).
 - `sigma_eff`: the single-sample noise floor for the variable; one constant, one home (§8). Height: 0.48 m, the §5.2 decomposition (band-interval ~0.13 + eyeball ~0.30 + day-to-day model error ~0.35, in quadrature), replaced by the measured estimate (sigma_human §10 + fitted dispersion) when it arrives. Score: 25 points, unfit prior, one `q_obs` anchor step (flagged §14).
@@ -257,6 +257,7 @@ Below the gates: `applied: false`, the payload carries the counter (`"7 / 30"`, 
 | tau_u (reporter shrinkage) | 4; re-estimate at >= 50 reporters with >= 5 reports | unfit prior, derived | 09 §13.2 (mechanism); arithmetic in §5.2 |
 | Reporter trust threshold | 8 reports across >= 2 spots (weight 0.67, se ~= 0.17 m) | derived | 09 §5.2 arithmetic per person |
 | sigma_eff (single-sample noise) | 0.48 m | unfit prior, decomposed | 09 §5.1 (sigma), §16.1 (label noise); components in §5.2 |
+| sigma_eff (wind) | undefined, deliberately | claim-exempt (2026-08-08 coherence round) | wind never renders as a number; statement below the table |
 | Band midpoints / variance | canonical table midpoints; width^2/12 | v1 convention | domain model §7.2 |
 | Top band value | 3.0 m, var 0.25 | unfit prior | flagged §14 |
 | q_obs anchors | 20 / 45 / 70 / 90 | unfit prior | flagged §14; 4-way label per 09 §13.2 |
@@ -272,6 +273,8 @@ Below the gates: `applied: false`, the payload carries the counter (`"7 / 30"`, 
 | Pairwise-metric target | ~400 same-day pairs for a 10-pt lift claim | fixed | 09 §10.2 |
 
 Every "unfit prior" row is a number that ships, works, and is replaced by an estimate when the stated data condition arrives. None of them can print a public number on their own; the gates stand in front of all of them.
+
+**Wind is claim-exempt, stated explicitly (added 2026-08-08 coherence round; the silence itself was the gap).** Round-1's scorecard grain included the wind variable, so an unstated `sigma_eff` left G3 formally applicable to wind with no floor: exactly the coordinated-lying vulnerability the floor exists to close. The domain lane has since dropped wind from the grain outright (domain model §9, same coherence round), so the exemption below now holds structurally as well as by rule, and is stated anyway because a future stage-2 wind model would otherwise walk straight back into the gap. The closure is an exemption, not a constant, because wind never produces a displayed numeric claim anywhere in this design: the observed carrier is a three-state categorical word (Clean / Bumpy / Blown out, research 09 §13.2 form row 3; report field `wind`, domain model §7), the product renders wind only as a word (`wind_state` in the published payload, domain model §13), and no residual model for categorical wind exists (§1 non-goal of this file; §5.1 forms `r_height` and `r_score` only, no `r_wind`). No residual means no `bias`, no `se_sample`, and nothing for G3 to gate; a single-sample noise floor in metres or knots would also be the wrong shape for a categorical label. Binding precondition, so this gap cannot re-open by silence: if a categorical-wind residual model ever ships (stage 2, §1), defining its own `sigma_eff` floor, in that residual's units, derived from the label's confusion structure rather than borrowed from height, is a precondition of its significance gate, not a follow-up.
 
 ### 9. Hazard table (09 §13.5, each an obligation)
 
