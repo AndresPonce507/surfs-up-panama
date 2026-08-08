@@ -2,7 +2,9 @@
 .DS_Store
 
 # tooling state, not project content
-.nwave/
+.nwave/*
+!.nwave/config.yaml
+!.nwave/des-config.json
 .claude/
 
 # secrets — nothing here should ever be committed

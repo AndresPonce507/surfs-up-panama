@@ -1,0 +1,29 @@
+{
+  "name": "surfs-up-panama",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Free community surf forecast that shows its own track record. Panama first, global by design.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "astro build",
+    "dev": "astro dev",
+    "preview": "astro preview",
+    "test": "vitest run",
+    "test:at": "cucumber-js",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "^13.2.1",
+    "@playwright/test": "^1.62.1",
+    "astro": "^7.2.0",
+    "aws-cdk-lib": "^2.263.0",
+    "fast-check": "^4.9.0",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}

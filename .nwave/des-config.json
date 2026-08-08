@@ -1,0 +1,10 @@
+{
+  "deliverable_type": "application",
+  "rigor": {
+    "profile": "thorough",
+    "agent_model": "inherit",
+    "reviewer_model": "haiku",
+    "review_enabled": true,
+    "mutation_enabled": false
+  }
+}

@@ -1,0 +1,17 @@
+# nWave workflow configuration — Surfs Up Panama
+#
+# Committed on purpose. This is project contract, not local tooling state:
+# it decides which DELIVER spine every session runs. Machine-generated state
+# under .nwave/ (telemetry, logs, des) stays gitignored.
+#
+# atdd_pure is also the framework default, so this file is a declaration
+# rather than an override. Declared anyway so the repo is self-describing
+# and a fresh clone cannot silently resolve a different spine.
+
+workflow:
+  mode: atdd_pure
+
+# atdd_pure.carpaccio_slice_max is deliberately NOT set. The framework
+# default (15 ATs per slice) applies and `des carpaccio-slice-gate` reports
+# its source as "framework-default". Pin a project value only once a real
+# Slice Plan shows what a right-sized slice costs here.
