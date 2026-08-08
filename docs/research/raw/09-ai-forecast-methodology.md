@@ -234,6 +234,13 @@ difference between a swell that lights the spot up and one that is blocked entir
 
 ## 8.4 So: is inter-model spread a valid confidence signal?
 
+> ⚠️ **SUPERSEDED IN PART — read §3.6 before building anything from this section.**
+> The later section titled "3.6 CORRECTION to sections 8.4 and 14.3 — spread is weaker than
+> I implied" cites four studies showing spread is a weak skill predictor, downgrades it to a
+> qualitative flag, and says to remove it entirely if it fails the §10.2 calibration check.
+> Pointer added 2026-08-08 after a reader hit this section and §14.3 without ever reaching the
+> correction, which sits near the end of the file. Where the two disagree, §3.6 wins.
+
 **[ESTABLISHED PRACTICE, with an important caveat]** Using the spread of an ensemble as a
 proxy for forecast uncertainty is standard operational meteorology, and comparing several
 agencies' deterministic runs is the long-standing "poor man's ensemble." The relationship
@@ -1082,6 +1089,12 @@ Five required elements: **the one spot**, **the time window in hours**, **the pl
 makes it feel like local knowledge rather than a lookup.
 
 ## 14.3 Confidence must be honest — the exact computation
+
+> ⚠️ **SUPERSEDED IN PART — read §3.6 before building anything from this section.**
+> The `C_spread` term below is the one the later section titled "3.6 CORRECTION to sections 8.4
+> and 14.3 — spread is weaker than I implied" walks back. Ship confidence as a qualitative flag,
+> not as this calibrated product, and drop the spread term entirely if it fails the §10.2
+> calibration check. Pointer added 2026-08-08. Where the two disagree, §3.6 wins.
 
 **[DERIVED]** Three independent inputs, multiplied because each is a necessary condition:
 
