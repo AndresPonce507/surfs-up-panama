@@ -16,6 +16,8 @@ seed + correction files (§11), the size-band table (§7.2), the bundle payload 
 | Member blend | Input-space arithmetic mean (circular for direction) over usable members, land-masked and null excluded. ADR: `adr-scoring-member-blend.md` |
 | Learned correction | Two hooks, both data-driven, both inert at launch: per-source H bias (pre-blend) and score delta (post-combine), research 09 §7.4 + §13.4 gates re-checked at read time. Absent file = identity function. Turning learning on changes data, not code shape |
 | Confidence | Computed beside the score, never multiplied into it (research 09 §7.5). Spread term is a qualitative flag per §3.6, percentile form wired as data for when spread history exists, removed if it fails the §10.2 calibration check |
+| Null observations | Ingest contract (04 §11): wind pair or `tide_m` can arrive null. A null factor is EXCLUDED (weight leaves the mean), confidence is capped, the payload names the gap; no fallback value is ever fabricated. Law L16. Added 2026-08-08 coherence round |
+| score_q mapping | `score_q = ScoreResult.score = Math.round(100 * q_final)`, identity, one rounding, here and nowhere else. §3. Stated 2026-08-08 coherence round |
 | Compute fit | 960 score evaluations per build (20 spots × 48 h), each O(1). Under 50 ms total against a 120 s build Lambda budget. Arithmetic in §8 |
 | Nothing Panama | All spot physics from the seed file; rotational-invariance law L12 makes any hemisphere or fixed-window assumption a failing property test |
 
@@ -43,8 +45,9 @@ report recency ───────┘
 Functional core, imperative shell: the shell (builder) fetches the S3 objects, selects the
 latest run per source with `run_ts ≤ build time` (settled, `domain-model.md` §6), derives the
 day's tide extremes from the logged hourly tide series, then calls the core once per
-(spot, valid hour). Nothing inside §3 touches S3, the clock, or the environment
-(`contract:declared-inputs-not-ambient-reads`).
+(spot, valid hour). When the wind fields or the tide series are null (04 §11), the shell
+passes `null` through, never a substitute value; §3.6 governs. Nothing inside §3 touches S3,
+the clock, or the environment (`contract:declared-inputs-not-ambient-reads`).
 
 ### 2. Inputs consumed (settled contracts, cited not redesigned)
 
@@ -66,8 +69,9 @@ throughout: `angdiff(a, b) = ((a - b + 540) mod 360) - 180`, range [-180, 180).
 ```ts
 // ---------- input types ----------
 type SwellTrain = { h_m: number; t_s: number; dir_deg: number };
-type WindObs    = { speed_kt: number; dir_deg: number };
+type WindObs    = { speed_kt: number; dir_deg: number };   // shell passes WindObs | null (04 §11: wind source down)
 type TideObs    = { height_m: number; day_low_m: number; day_high_m: number };
+                                                           // shell passes TideObs | null (04 §11: tide dark > 7 days)
 
 type MemberRow = {                       // one usable prediction-log row, post land-mask filter
   source: string; lead_h: number; swell: SwellTrain; swell2: SwellTrain | null;
@@ -84,16 +88,24 @@ type EffectiveSpotParams = {             // output of applyCorrection(seed, corr
 };
 
 // ---------- output types ----------
-type SubScores = { dir: number; size: number; wind: number; tide: number };  // each in [0, 1]
+type SubScores = { dir: number; size: number;
+                   wind: number | null; tide: number | null };  // present factors in [0, 1];
+                                                                // null = observation unavailable (§3.6),
+                                                                // never 0, never a fabricated 1
 type Factor = "dir" | "size" | "wind" | "tide";
 type ScoreResult = {
   q: number;                 // [0, 1], pre-correction (research 09 §7.3)
   q_final: number;           // [0, 1], post-correction (research 09 §7.4)
-  score: number;             // integer 0..100 = Math.round(100 * q_final)
+  score: number;             // integer 0..100 = Math.round(100 * q_final).
+                             // Published verbatim as the canonical `score_q` (PublishedCall,
+                             // domain-model §6; bundle §13; predicted{} §7.4): score_q = score,
+                             // identity, no second rounding anywhere. (2026-08-08 coherence round)
   h_eff_m: number;
   sub: SubScores;            // decision 17: every sub-score exposed
-  damages: { factor: Factor; damage: number }[];   // sorted descending, §4
-  weakest_link: Factor | null;                     // null iff all damages are 0
+  missing: ("wind" | "tide")[];                    // §3.6; consumer: reason copy + P1 factor rows,
+                                                   // keyed (spot_id, valid_ts)
+  damages: { factor: Factor; damage: number }[];   // sorted descending, §4; no entry for a null factor
+  weakest_link: Factor | null;                     // null iff all damages are 0; never a null factor
   correction: { delta_q: number; gate: CorrectionGate };  // §5
 };
 
@@ -111,21 +123,24 @@ function sSize(h_eff: number, p: EffectiveSpotParams): number;
 //  S_size = exp(-1/2 * (ln(h_eff / h_ref) / s_size)^2); defined 0 at h_eff = 0 (the limit)
 //                                                               [research 09 §7.2b]
 
-function sWind(w: WindObs, p: EffectiveSpotParams): number;
+function sWind(w: WindObs | null, p: EffectiveSpotParams): number | null;
+//  null in -> null out (§3.6, no fallback value)               [04 §11; 2026-08-08 coherence round]
 //  u_off   = -w.speed * cos(w.dir - shore_normal)   > 0 offshore
 //  u_cross =  w.speed * |sin(w.dir - shore_normal)|
 //  S_wind  = exp( -(max(0, -u_off) / k_on)^2
 //                 -(max(0, u_off - u_star) / k_off)^2
 //                 -(u_cross / k_cross)^2 )                      [research 09 §7.2c]
 
-function sTide(t: TideObs, p: EffectiveSpotParams): number;
-//  neutral -> 1.0 (microtidal spots, §3.5)
+function sTide(t: TideObs | null, p: EffectiveSpotParams): number | null;
+//  null in -> null out (§3.6, no fallback value); distinct from neutral, which is a REAL 1.0
+//  neutral -> 1.0 (microtidal spots, §3.5)                      [04 §11; 2026-08-08 coherence round]
 //  eta = clip((height - day_low) / (day_high - day_low), 0, 1); day_high == day_low -> eta = eta_opt
 //  S_tide = exp(-1/2 * ((eta - eta_opt) / sigma_eta)^2)         [research 09 §7.2d, stage form]
 
 function combine(sub: SubScores, p: EffectiveSpotParams, delta_q: number): ScoreResult;
-//  sumW = w_size + w_wind + w_tide
-//  G = (S_size^w_size * S_wind^w_wind * S_tide^w_tide)^(1 / sumW); any factor 0 -> G = 0
+//  P = the present (non-null) factors among {size, wind, tide}
+//  sumW = sum of w_i for i in P                                 (weight renormalization, §3.6)
+//  G = (prod over P of S_i^w_i)^(1 / sumW); any present factor 0 -> G = 0
 //  Q = S_dir * G                                                [research 09 §7.3]
 //  Q_final = clip(Q + delta_q, 0, 1)                            [research 09 §7.4]
 //  score = Math.round(100 * Q_final)
@@ -155,6 +170,7 @@ constants file (data, not code), alongside the per-spot values that come from th
 | `lambda` (freshness) | 36 h | unfit prior | research 09 §14.3 |
 | `eta_opt`, `sigma_eta` maps | §3.5 table | **v1 convention, NOT from research** | research 09 §7.2d names the shape only |
 | `conf_level` thresholds | §6.4 table | **v1 convention, mine to set** per `domain-model.md` §6 | validated by research 09 §10.2 calibration |
+| `cap_missing_wind`, `cap_missing_tide` | 0.4, 0.7 | **unfit priors, mine** (2026-08-08 coherence round, §3.6) | mechanism: research 09 §14.4 no-fabrication + 04 §11 null contract; values flagged §12 |
 
 #### 3.2 Which swell train is scored
 
@@ -185,7 +201,8 @@ function blend(members: MemberRow[]): BlendResult;
 - Rationale and rejected alternatives (score-space mean, best member, median):
   `adr-scoring-member-blend.md`. Research 09 §8.4: the mean is "a reasonable default, but a
   default, not a demonstrated improvement"; never presented as better than the best member.
-- Wind and tide are single-source scalars per hour (no ensemble); they pass through.
+- Wind and tide are single-source scalars per hour (no ensemble); they pass through,
+  possibly null (04 §11; §3.6 governs the null path). (2026-08-08 coherence round)
 
 #### 3.4 Baseline and our rank (B1 metric inputs)
 
@@ -223,7 +240,40 @@ Stage normalization inputs (`day_low_m`, `day_high_m`) are the min and max of th
 hourly `tide_m` series over the spot-local calendar day (spot `timezone` field), computed by
 the shell, passed in. No new data source.
 
-### 4. The weakest-link output contract (decision 17, first-class)
+#### 3.6 Null observations (2026-08-08 coherence round; ingest contract 04 §11)
+
+04 §11 states as fact, from a live-verified failure mode: wave rows carry `wind_speed_kt` and
+`wind_dir_deg` null when the wind source is down, and `tide_m` null when tide has been dark
+more than 7 days. The §9 row that previously read "tide_m present hourly" recorded a stale
+requirement and is corrected below; the ingest lane owns the ACL and is right.
+
+**Chosen behavior: a null factor is EXCLUDED, never estimated.**
+
+| Case | Behavior |
+|---|---|
+| `wind_speed_kt` or `wind_dir_deg` null (either one: a wind observation is the pair) | `sWind` returns null; wind leaves the geometric mean AND `w_wind` leaves `sumW`; no damage entry; `sub.wind = null`; `missing` contains `"wind"`; confidence capped at `cap_missing_wind = 0.4` |
+| `tide_m` series null (no day extremes derivable either) | `sTide` returns null; same treatment with `w_tide`; `missing` contains `"tide"`; confidence capped at `cap_missing_tide = 0.7` |
+| `range_class: micro` with tide data present | Unchanged: neutral is a REAL `S_tide = 1.0`, not a null. Neutrality and absence stay distinguishable in the output |
+| Both null | Both excluded; `q = S_dir * S_size^(w_size/w_size) = S_dir * S_size`; caps compose by min |
+| Confidence cap application | `c_total = min(c_spread * c_track * c_fresh, cap)` where `cap = min` over missing factors, `1` when none. Applied before the §6.4 level projection. Reason copy names the missing source with the plain fact ("no wind data today; score is swell and tide only"), research 09 §14.4 |
+
+Rejected alternatives, so nobody reopens them:
+
+- **`S = 1.0` with the weight kept**: with sub-scores below 1, keeping `w_wind` in `sumW`
+  while pinning `S_wind = 1` reads as "wind was observed perfect". That is a fabricated
+  optimal observation entering the maths, exactly what research 09 §14.4 ("never fabricate")
+  and this design's core promise forbid. Weight renormalization is the true neutral of a
+  weighted geometric mean: the score becomes the honest mean of the factors we know.
+- **Refuse to score the hour**: wind is a single source; one outage would blank all spots for
+  its whole duration. Research 09 §14.4 requires saying what we do not know, not going
+  silent. The published score plus `missing` plus the capped confidence IS the honest state.
+
+Cap values 0.4 / 0.4-vs-0.7 asymmetry: `cap_missing_wind = 0.4` reuses the f(M) thin-data cap
+value (research 09 §7.5) and matches wind's weight class (0.4); `cap_missing_tide = 0.7` is
+the medium/high boundary (§6.4) matching tide's smaller weight (0.2). Both are unfit priors,
+mine, data in the constants file, flagged in §12. Consumers of `missing`: bundle
+`confidence_reason` copy and P1 factor rows (`application-architecture.md` §7), keyed
+`(spot_id, valid_ts)`. Declared law: L16 (§10), so DISTILL writes the property tests.
 
 The spot page must name the single thing that killed the score, and the frontend is building
 against this output, not deriving it. Naive `min(sub-score)` is wrong under unequal weights:
@@ -265,8 +315,12 @@ function applyCorrection(seed: SpotSeed, correction: CorrectionRecord | null): C
 ```
 
 - **Gates re-checked at read time** (defense in depth; `domain-model.md` §11 places them at
-  the builder): apply only if `n >= 10 AND distinct_reporters >= 5` (research 09 §13.4 gate 1)
-  and `|b| > 2 * se` (gate 2). Shrinkage (gate 3) and blocked cross-validation (gate 4) are
+  the builder): apply only if `n >= 10 AND reporters >= 5` (research 09 §13.4 gate 1)
+  and `|b| > 2 * se` (gate 2). Field semantics per 06 §7 as amended 2026-08-08: the file's
+  `reporters` is the distinct TRUST-ELIGIBLE count (06 G2) and the file's `se` is the floored
+  `se_gate = max(se_sample, 0.5 * sigma_eff / sqrt(n))` (06 G3), so this re-check needs no new
+  inputs and inherits both anti-Sybil amendments for free. Shrinkage (gate 3) and blocked
+  cross-validation (gate 4) are
   fit-time properties owned by lane 06; this function trusts `b` is already shrunk and states
   that as a requirement owed (§9). Clamp (gate 5): `|H bias| <= clamp.max_abs_h_frac * H`
   applied per member at use.
@@ -299,15 +353,20 @@ type SpreadInput =
                                                            // historical spread (research 09 §3.6.2)
 type ConfidenceResult = {
   c_spread: number; c_track: number; c_fresh: number;
-  c_total: number;                                         // product, research 09 §14.3
+  c_total: number;                                         // product, research 09 §14.3, then the
+                                                           // §3.6 missing-factor cap (2026-08-08)
   level: "high" | "medium" | "low";
+  track_state: "unverified" | "measured";                  // §6.2; drives the no-track-record copy
+                                                           // (2026-08-08 coherence round)
   spread_terms: { height: number; period: number; direction: number };  // penalty decomposition
-  dominant: "spread_height" | "spread_period" | "spread_direction" | "track" | "freshness" | null;
+  dominant: "spread_height" | "spread_period" | "spread_direction" | "track" | "freshness"
+          | "missing_data" | null;                         // missing_data when the §3.6 cap binds
 };
 function confidence(
   members: MemberRow[], spread: SpreadInput,
   track: { mae: number; mae_ref: number } | null,          // null until scorecard passes honesty gates
   last_report_age_h: number | null,                        // null = no report ever
+  missing: ("wind" | "tide")[],                            // §3.6 (2026-08-08 coherence round)
 ): ConfidenceResult;
 ```
 
@@ -334,12 +393,28 @@ function confidence(
   disagreement", research 09 §7.5 worked example). Consumer: `confidence_reason` in the
   bundle (`domain-model.md` §13), keyed `(spot_id, valid_ts)`.
 
-#### 6.2 C_track (research 09 §14.3)
+#### 6.2 C_track (research 09 §14.3; neutrality-at-launch argued, 2026-08-08 coherence round)
 
 `C_track = clip(1 - mae / mae_ref, 0, 1)` when the scorecard row passes the honesty gates
-(`n >= 10 AND distinct_reporters >= 5`, `domain-model.md` §9); input `null` and factor 1.0
-(neutral) otherwise. Research 09 never defines `MAE_reference`; that gap is D5, not filled
-here with an invented denominator.
+(`n >= 10 AND distinct trust-eligible reporters >= 5`, `domain-model.md` §9 as amended by
+06 §7); input `null`, factor 1.0, and `track_state = "unverified"` otherwise. When the gates
+pass, `track_state = "measured"`. Research 09 never defines `MAE_reference`; that gap is D5,
+not filled here with an invented denominator.
+
+**Why 1.0 stays, against the coherence finding that it flatters unverified spots:**
+
+| Argument | Evidence |
+|---|---|
+| The worst case the finding fears, a never-verified spot reading "high", is structurally unreachable | A spot with no report ever has `c_fresh = fresh_floor = 0.3` (§6.3), so `c_total <= 0.3 <= 0.4` and the level is "low" for every spot until its first report. Verified against the §11 worked example (0.09, low) |
+| A penalizing track prior would double-count | Freshness already encodes "no human has confirmed anything here"; multiplying a second sub-1 factor for the same absence pins day-one confidence to a constant "low", which carries zero information, the failure mode the finding itself names |
+| Confidence is not an accuracy claim | Decision 19 / HANDOFF §6 item 12 govern CLAIMS; those live behind the two claim ladders (06 §10) and stay unearnable at launch. `conf_level` states how sure we are about today's call from model agreement plus ground-truth recency; it asserts nothing about past skill |
+| The residual exposure is named, not hidden | The real window is a spot WITH recent reports but a sub-gate scorecard (`c_fresh` near 1, models agreeing): it can read "high" with zero verified track record. That is defensible (fresh human confirmation exists) but must not be silent, hence the copy rule below |
+
+**Copy rule, binding on the reason string**: whenever `track_state = "unverified"`, the
+confidence reason names it with the counter, "sin historial verificado aqui todavia (n/30)" /
+"no verified track record here yet (n/30)", regardless of level. The user never sees a "high"
+that silently implies a track record. Consumer: `confidence_reason` in the bundle
+(`domain-model.md` §13), keyed `(spot_id, valid_ts)`; frontend renders, never derives.
 
 #### 6.3 C_fresh (research 09 §14.3)
 
@@ -352,7 +427,9 @@ is stale"). Deviation flagged as D4 for Andres because it modifies a research fo
 
 #### 6.4 Level projection
 
-`c_total = c_spread * c_track * c_fresh` (research 09 §14.3). Thresholds, mine to set per
+`c_total = min(c_spread * c_track * c_fresh, §3.6 missing-factor cap)` (research 09 §14.3;
+cap added 2026-08-08 coherence round, binds only when wind or tide input is null and sets
+`dominant = "missing_data"` when it does). Thresholds, mine to set per
 `domain-model.md` §6, v1 convention, data: **low `c_total <= 0.4`, medium `0.4 < c_total <=
 0.7`, high `> 0.7`**. Consequences: since `c_track <= 1` and `c_fresh <= 1`, the f(M) cap on
 `c_spread` bounds `c_total <= 0.4`, so a single-member day can never read above "low";
@@ -396,15 +473,16 @@ concurrency, or timeout pressure to any guardrail.
 
 | From | Requirement | Why it blocks |
 |---|---|---|
-| Lane 06 (learning) | Confirm correction-file semantics: `score_delta.b` in display points; bias sign convention `residual = predicted - observed`, `corrected = predicted - b`; `b` values already shrunk (research 09 §13.4 gate 3); blocked cross-validation at fit time (gate 4) | §5 unit/sign pinning; a mismatch is a silent 100x or sign inversion on every public score |
-| Lane 04 (ingest) | Land-mask translation done in C1 (`H==0 && T==0 && dir==0` never reaches the blend as data), per `domain-model.md` §17; `tide_m` present hourly; member rows carry `source` and `lead_h` | Blend correctness; research 09 §8.3 Finding 2 is the already-verified defect |
+| Lane 06 (learning) | Confirm correction-file semantics: `score_delta.b` in display points; bias sign convention `residual = predicted - observed`, `corrected = predicted - b`; `b` values already shrunk (research 09 §13.4 gate 3); blocked cross-validation at fit time (gate 4); file `se` = floored `se_gate`, file `reporters` = trust-eligible distinct count (2026-08-08 coherence round, §5) | §5 unit/sign pinning; a mismatch is a silent 100x or sign inversion on every public score |
+| Lane 04 (ingest) | Land-mask translation done in C1 (`H==0 && T==0 && dir==0` never reaches the blend as data), per `domain-model.md` §17; wind pair and `tide_m` MAY be null per 04 §11 and the shell passes null through to §3.6, never a substitute (corrected 2026-08-08 coherence round: this row previously demanded "tide_m present hourly", which contradicted the ingest ACL; 04 is right); member rows carry `source` and `lead_h` | Blend correctness; research 09 §8.3 Finding 2 is the already-verified defect |
 | Builder (07 / C4 shell) | Latest-run-per-source member selection (settled, `domain-model.md` §6); day tide extremes from the logged series per spot-local day; `last_report_age_h`; daylight bounds | Declared inputs, so the core stays pure |
 | Domain constants | One versioned constants file carrying: §3.1 coefficients, §3.5 tide map, band edges, wind-word and conf-level thresholds, factor enable flags | Everything tunable is data; DISTILL property tests pin the laws, not the numbers |
 
 ### 10. Laws (each one property-testable; DISTILL authors against this list)
 
 Generator domains: `h_m ∈ [0, 20]`, `t_s ∈ (0, 25]`, angles `∈ [0, 360)`, `speed_kt ∈ [0, 80]`,
-`eta ∈ [0, 1]`, weights `> 0`, `delta_q ∈ [-1, 1]`.
+`eta ∈ [0, 1]`, weights `> 0`, `delta_q ∈ [-1, 1]`; wind and tide inputs each generated null
+with positive probability (§3.6, 2026-08-08 coherence round).
 
 | # | Law | Statement |
 |---|---|---|
@@ -423,6 +501,7 @@ Generator domains: `h_m ∈ [0, 20]`, `t_s ∈ (0, 25]`, angles `∈ [0, 360)`, 
 | L13 | Period monotone below reference | At fixed `h_m` with `h_eff < h_ref`: longer `t_s` never lowers `q` (energy flux, research 09 §7.2b); `hEff(1.5, 16) = 1.90` and `hEff(1.5, 8) = 1.34` reproduce the §7.2b sanity check |
 | L14 | Tide neutrality | `range_class: micro` implies `q` is independent of every tide input |
 | L15 | Rank consistency | `rankSpots` is a permutation; descending; deterministic under ties; `our_rank` depends only on scores, `baseline_rank_raw` only on blended raw heights |
+| L16 | Null-factor honesty (2026-08-08 coherence round, §3.6) | For `x ∈ {wind, tide}`: null input implies `sub.x = null` (never a number), `x ∈ missing`, no damage entry for `x`, and `q` equals the weighted geometric mean over the present factors only (renormalized `sumW`), bit-identical to computing with `x` never defined; the §3.6 confidence cap binds (`c_total <= cap`); `weakest_link` never names a null factor; `missing = []` implies L1-L15 outputs unchanged from the pre-amendment formula; microtidal neutral (`S_tide = 1.0`) and tide-null are distinguishable in the output |
 
 Each law is one or more property tests; the constants are parameters of the generators, so
 refitting coefficients later (research 09 §7 header) breaks no test that should survive.
@@ -502,6 +581,10 @@ day, which is the point of using real inputs.
 6. **`sigma_dir` is global** (20°) while every other direction fact is per-spot. A headland
    spot that wraps swell may deserve a wider sigma; that is a seed-schema extension the
    learning loop can motivate later, not a v1 need.
+7. **Missing-factor confidence caps (0.4 wind, 0.7 tide, §3.6)** are invented numbers with a
+   weight-class rationale, not research. If a long wind outage happens, the call-log rows it
+   produces (score present, `missing: ["wind"]`) are exactly the data to calibrate them
+   against. (2026-08-08 coherence round)
 
 ### 13. Decisions needing Andres
 

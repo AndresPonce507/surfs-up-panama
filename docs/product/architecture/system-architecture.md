@@ -6,16 +6,20 @@ Fact rule: every AWS price/quota cites `docs/research/raw/08-aws-architecture-an
 GitHub Actions reliability facts cite `docs/research/raw/13-github-actions-cron-reliability.md`.
 Durable contested decisions live in ADRs in this directory; this document references them by
 name and does not restate their rationale.
+Amended 2026-08-08 (coherence round): guardrails 2/4/6/7/8 and §3, §5, §6, §8, §12–§15 aligned
+to the shipped round-2 write path (`07-write-path.md` + its ADRs) and
+`adr-publish-time-html-rendering.md`; S3-at-scale cost corrected against domain-model §5.3;
+DynamoDB always-free status verified live. Each amendment is marked in place.
 
 ### Verdict block
 
 | Question | Verdict |
 |---|---|
 | Ingest runner | **EventBridge Scheduler + Lambda (zip, JSON sources), hourly.** GitHub Actions `schedule` REJECTED as primary: 1–4 h drift, drops growing >30%, 60-day auto-disable with the keepalive workaround TOS-blocked (research 13). Fallback lanes named in ADR-ingest-runner. |
-| Monthly cost, launch (20 spots, 500 MAU) | **≈ $0.19/mo** (no LLM narration) / **≈ $0.61/mo** (with ES+EN Haiku narration). Cost table in §12. |
-| Monthly cost, global (5,000 spots, 20,000 MAU) | **≈ $0.88–1.30/mo.** Audience, not spots, is the axis that eventually costs money. |
+| Monthly cost, launch (20 spots, 500 MAU) | **≈ $0.23/mo** (no LLM narration) / **≈ $0.65/mo** (with ES+EN Haiku narration). Cost table in §12. (Re-derived 2026-08-08 coherence round: adds publish-time HTML render PUTs, drops the on-demand DynamoDB line.) |
+| Monthly cost, global (5,000 spots, 20,000 MAU) | **≈ $2.65–4.80/mo, dominated by prediction-log S3 storage** (89.5 GB by end of year 1, measured, domain-model §5.3). Low end assumes the domain lane's Parquet + Glacier IR levers past 500 spots. (Corrected 2026-08-08 coherence round: the prior ≈$0.88–1.30 was ~7× low on S3.) Audience still owns the CloudFront meter; spots now carry a real storage cost. Table in §12. |
 | Unavoidable floor | S3 (~$0.15–0.30/mo with photos, 90-day retention) + domain registration (~$12/yr, not an AWS bill). Everything else sits inside perpetual always-free allowances. |
-| Binding constraint | CloudFront **requests** (10M/mo always-free). Enforced answer: ≤10 requests/session via one bundled region JSON — a requirement owed by the domain and frontend lanes (§14, §15). |
+| Binding constraint | CloudFront **requests** (10M/mo always-free). Enforced answer: ≤10 requests/session at P50 via per-route publish-time HTML (adr-publish-time-html-rendering.md); budget re-derived in §15. (Amended 2026-08-08 coherence round: the bundled-JSON fetch model no longer describes the client.) |
 | Region | us-east-1 (NOAA open-data buckets are there; same-region S3→Lambda transfer $0.00 — research 08 §5.1, §7.3). |
 | DNS | External registrar DNS, no Route 53 hosted zone ($0.50/mo avoided) — ADR-dns-external. |
 | IaC | AWS CDK (TypeScript), guardrails as compile-time-asserted code — ADR-iac-cdk. Skeleton in §11. |
@@ -63,7 +67,7 @@ C4Context
     System_Ext(github, "GitHub (public repo)", "Source of truth, CI synth/assert; phase-2 GRIB2 runner via workflow_dispatch")
 
     Rel(surfer, sup, "Reads ranked list + spot detail", "HTTPS via CloudFront POP in Panama")
-    Rel(reporter, sup, "POSTs report + photo", "HTTPS /api/*")
+    Rel(reporter, sup, "POSTs report + photo", "HTTPS, bare Function URLs off CloudFront")
     Rel(sup, openmeteo, "Hourly fetch, ~960 calls/day at 20 spots", "HTTPS")
     Rel(sup, noaa, "Phase 2: 4x/day GRIB2 subset reads", "S3 same-region / grib_filter")
     Rel(sup, tides, "Hourly tide fetch", "HTTPS")
@@ -81,8 +85,8 @@ flowchart TB
     end
     U["Surfers (dawn burst)"] -->|HTTPS| CF
     CF -->|"/* (OAC)"| S3[("S3 bucket — PRIVATE<br/>static site + precomputed JSON<br/>+ photos + raw archive + prediction log")]
-    CF -->|"/api/* (OAC + AWS_IAM)"| FURL["Lambda Function URLs<br/>report · upload-url · (auth later)<br/>reserved concurrency 2 each"]
-    FURL --> DDB[("DynamoDB on-demand<br/>reports · quotas · sessions<br/>25 GB always-free")]
+    RP["Reporters"] -->|"HTTPS direct, off CloudFront<br/>(adr-write-path-off-cloudfront)"| FURL["Bare Lambda Function URLs, auth NONE<br/>report RC 2 · mint RC 1 · push RC 1 · presign RC 1"]
+    FURL --> DDB[("DynamoDB PROVISIONED 25 WCU / 25 RCU<br/>reports · quotas · credentials · push subs<br/>25 GB always-free")]
     FURL -->|"presigned PUT (5 MB cap)"| S3
     S3 -.->|ObjectCreated| RS["Lambda resize (arm64)<br/>3 WebP variants, delete original"]
     RS --> S3
@@ -110,6 +114,8 @@ flowchart TB
 
 Every read is a static file from a CloudFront POP inside Panama; nothing computes on the read
 path; ingestion and AI bills are flat with respect to user count (research 08 §12.1).
+(Diagram amended 2026-08-08 coherence round: write path moved off CloudFront and DynamoDB to
+provisioned 25/25, per adr-write-path-off-cloudfront.md and adr-write-store-provisioned-capacity.md.)
 
 ### 4. Region and DNS
 
@@ -135,12 +141,17 @@ I own the *bucket level*; the domain lane owns key layout and payload contents (
 | `site/` + `assets/` | Astro build output, content-hashed assets | none (tiny, redeployed) |
 | `v1/` (published JSON + photos) | region bundles, manifest, reports, photo variants | photos: **expire 90 days after creation** (decision 3, §18) |
 | `raw/` | archived provider payloads for replayability | **expire 30 days** |
-| `predictions/` | **the immutable prediction log** (HANDOFF §3) | **NO expiry — deliberately excluded from every expiration rule.** Optional: transition to Glacier Instant Retrieval at 180 days (rate UNVERIFIED, research 08 §9.3) |
+| **prediction log** = `PREDICTION_LOG_PREFIX` = **`predictions/`**, top-level, NOT under `log/` (domain-model §5.2 and `adr-prediction-log-prefix-isolation.md`, settled in the 2026-08-08 coherence round; `log/` now holds only the derived `calls/` and `observations/`, so no `log/*` rule can reach the prediction log, and the ingest IAM grant on `predictions/*` matches the real write path) | **the immutable prediction log** (HANDOFF §3) | **NO expiry, ever.** Guardrail 4 forbids any expiration or transition rule whose prefix OVERLAPS this prefix; single allowlisted exception: an exact-prefix transition to Glacier IR at ≥90 d (the domain lane's own cost lever, domain-model §5.3, past 500 spots) |
+| `log/calls/` + `log/observations/` | published-call log + observation exports (scorecard rebuild inputs, domain-model §6/§9) | no expiry; per-prefix Glacier IR transition at 90 d past 500 spots (domain-model §17, implemented as exact per-family prefixes, never one `log/*` parent rule; guardrail 4) |
 | (bucket-wide) | — | **abort incomplete multipart uploads at 7 days** |
 
-The prediction log gets its own top-level prefix precisely so no lifecycle rule can ever touch
-it by accident. A guardrail assertion test (§11) fails the build if any expiration rule's
-prefix overlaps `predictions/`.
+(Amended 2026-08-08 coherence round.) Round 1 claimed the log had "its own top-level prefix" and
+asserted against the literal string `predictions/`. Both were wrong against the shipped layout:
+the log lives at `predictions/v1/...`, nested beside two other log families, and domain-model
+§17 recommends a `log/*` lifecycle whose prefix is a PARENT of the log path. String equality
+would have passed while a parent rule reached the one artifact HANDOFF §3 calls irreplaceable.
+Guardrail 4 (§9) now asserts prefix OVERLAP against one named constant, not string equality
+against a literal.
 
 **CloudFront behaviors and TTLs:**
 
@@ -150,8 +161,13 @@ prefix overlaps `predictions/`.
 | `v1/photos/*` (content-addressed) | S3 (OAC) | CachingOptimized | `public, max-age=31536000, immutable` |
 | `v1/*.json` (region bundles, reports) | S3 (OAC) | custom, compress | `public, max-age=300, stale-while-revalidate=3600, stale-if-error=86400` |
 | `manifest.json` | S3 (OAC) | custom | `public, max-age=60, stale-if-error=86400` |
-| `/api/*` | Lambda Function URL (OAC, `AWS_IAM`) | CachingDisabled, AllViewerExceptHostHeader | — |
+| `/api/*` | **row removed (2026-08-08 coherence round): no `/api/*` behavior exists.** The four write endpoints are bare Function URLs, auth `NONE`, off CloudFront entirely (adr-write-path-off-cloudfront.md) | — | — |
 | default `/*` (HTML) | S3 (OAC) | custom, compress | `public, max-age=300, stale-while-revalidate=3600` |
+
+Browser traffic is HTML routes, hashed assets and photo thumbs only
+(adr-publish-time-html-rendering.md). `manifest.json` and the `v1/*.json` bundles stay published
+as build commit marker, publish-probe target (§10) and debug surface, ~720 origin GETs/mo, no
+longer per-session fetches. (Amended 2026-08-08 coherence round.)
 
 Security headers via a CloudFront **managed Response Headers Policy** (free), NOT CloudFront
 Functions — keeps CF Functions usage at zero rather than spending the 2M free tier on every
@@ -169,31 +185,74 @@ allowance is UNVERIFIED (research 08 §5.3) — this design makes it irrelevant.
 20,000 phones at 5:40 am and a single-writer S3 bucket; it converts the dawn burst from a
 concurrency problem into ~45 origin fetches/hour regardless of audience.
 
-### 6. Write path — Lambda Function URLs, abuse protection without WAF
+### 6. Write path — bare Function URLs, abuse protection without WAF
 
-API Gateway is rejected: no perpetual free tier (research 08 §3.2). Function URLs cost nothing
-beyond Lambda's perpetual 1M requests + 400k GB-s (research 08 §3.1). All `/api/*` routes go
-through CloudFront to the Function URLs with **OAC + `AWS_IAM` auth type**, so the raw
-`*.lambda-url.on.aws` endpoint cannot be hit directly (research 08 §3.4).
+(Amended 2026-08-08 coherence round. Round 1 routed `/api/*` through CloudFront with OAC +
+`AWS_IAM` and leaned on per-IP quotas; the round-2 write-path lane superseded both, declaring
+each change. This section now matches the shipped design: `07-write-path.md`,
+`adr-write-path-off-cloudfront.md`, `adr-write-store-provisioned-capacity.md`.)
 
-**DISCUSS #11 changes the abuse model research 08 assumed.** Research 08 §8 leaned on
-"the write path is auth-gated"; the product decision is **anonymous reporting**. Corrected
-control stack, all free:
+API Gateway stays rejected: no perpetual free tier (research 08 §3.2). The four write endpoints
+(`/api/report`, `/api/mint`, `/api/push`, `/api/photo-url`) are **bare Lambda Function URLs,
+auth type `NONE`, CORS locked to the exact site origin, NOT behind CloudFront.** Quantified
+reason: a rejected request behind CloudFront bills $1.00–$2.20/M and burns the read path's 10M
+free requests, while a throttled Function URL 429 bills $0.00 (research 15 §5.1). A write flood
+and the read path must never share a meter. OAC "hiding" protected nothing: the URL ships in a
+public repo's client bundle.
+
+Control stack for anonymous writes (DISCUSS #11), all free:
 
 | Layer | Control | Concrete value |
 |---|---|---|
-| 1 | Lambda reserved concurrency | **2 per function** — the hard spend/blast-radius cap; an attack gets throttled, not billed |
-| 2 | Per-device daily quota (DynamoDB TTL counter) | **20 reports/day, 10 photo presigns/day** (device id is client-supplied → spoofable, hence layer 3) |
-| 3 | Per-IP daily quota (DynamoDB TTL counter, `CloudFront-Viewer-Address`) | **60 reports/day, 30 presigns/day** per IP |
-| 4 | Presigned PUT constraints | `content-length-range` ≤ **5 MB**, 5-min expiry, key minted server-side |
-| 5 | Body validation in-handler | ≤ 2 KB report payload, schema-checked; 429 with `Retry-After` on quota hit |
-| 6 | Statistical outlier down-weighting | domain lane (DISCUSS #24) — data quality, not infrastructure |
+| 1 | **Lambda reserved concurrency — the real cost cap** | report **2**; mint, push, photo-presign **1** each. Max 10 RPS per unit of concurrency; everything above is a free front-door 429 (research 15 §4, §5.1) |
+| 2 | Circuit breakers | 4 CloudWatch alarms → one SNS topic → breaker fn → `PutFunctionConcurrency(0)`; EventBridge one-shot restores after 6 h (07-write-path §7.2). The shared topic is a correlated failure mode: §6.1 |
+| 3 | DynamoDB provisioned 25/25 | fails closed: past the free capacity the table throttles for free instead of billing (adr-write-store-provisioned-capacity.md) |
+| 4 | Per-device daily quota (DynamoDB TTL counter) | **20 reports / 10 presigns / 20 push subs per day.** Honest label: hygiene against runaway clients, not a security or cost control — device ids are client-minted and free to spoof |
+| 5 | Presigned PUT constraints | `content-length-range` ≤ **5 MB**, 5-min expiry, key minted server-side |
+| 6 | Body validation in-handler | ≤ 2 KB report payload, schema-checked; 429 with `Retry-After` on quota hit |
+| 7 | Statistical outlier down-weighting | domain lane (DISCUSS #24) — data quality, not infrastructure |
+
+Per-IP quotas are **gone on purpose** (round 1's layer 3, 60/30 per day via
+`CloudFront-Viewer-Address`). Two independent kills: off CloudFront that header does not exist,
+and Panama carrier-grade NAT makes IP quotas leaky against an attacker rotating cloud IPs while
+throttling a whole town sharing one mobile IP (research 15 §11). Nothing identity-shaped
+replaces them: the cost cap is layers 1–3, the spend backstop is guardrail 8, and the one
+identity-shaped control left (layer 4) is spoofable. Stated plainly rather than pretended
+otherwise.
+
+#### 6.1 Worst case under attack — corrected arithmetic (2026-08-08 coherence round)
+
+A reviewer falsified research 15 §14.3's "about $29" row (200 ms handler) on physics: reserved
+concurrency RC caps concurrent execution, so execution-seconds/month ≤ RC × 2,592,000. That row
+multiplied the 20 RPS invocation ceiling (51.84M/mo, itself sustainable only at ≤ 100 ms) by
+200 ms = 10.37M exec-s against a physical cap of 5.18M at RC 2. Impossible. The true
+per-function supremum lands at exactly **100 ms billed**, where the request meter and the
+duration meter peak simultaneously:
+
+| Function | RC | Max billed inv/mo (10 RPS × RC) | Exec-s cap (GB-s at 128 MB) | Requests after 1M free | Duration after 400k GB-s free | Supremum (compute) |
+|---|---|---|---|---|---|---|
+| report | 2 | 51.84M | 5.184M s (648k GB-s) | $10.17 | $4.13 | **$14.30/mo** |
+| mint / push / photo-presign | 1 each | 25.92M | 2.592M s (324k GB-s) | $4.98 | $0.00 standalone | **$4.98/mo each** |
+
+Prices per research 15 §5.2 (accessed 2026-08-08). CloudWatch Logs ingestion adds ~$4/mo for
+the report flood alone (research 15 §9b, 07-write-path §12).
+
+**Correlated failure, stated plainly: all four breakers hang off ONE SNS topic** (07-write-path
+§11 item 6). One topic or breaker-fn defect disables all four breakers together, so the four
+floods can run concurrently. Sum of per-function suprema ≈ **$29/mo**. Strict account-level
+bound (the 1M-request and 400k GB-s free pools deduct once, not four times; all four held at
+100 ms): (129.6M − 1M) × $0.20/M + (1.62M − 0.4M GB-s) × $0.0000166667 ≈ $25.72 + $20.33 ≈
+**$46/mo compute**, plus logs. **Every correlated variant exceeds the $20 billing alarm
+(guardrail 9).** The enforcement that must actually work is guardrail 8's $18 budget action,
+which now denies exactly the four write Function URLs. The shared-topic SPOF is accepted at
+this scale and named here so nobody reads "breakers" as redundancy.
 
 Not bought: WAF ($7/mo minimum config = 35% of the alarm budget at zero traffic, research 08
-§10.4). The read path cannot be overwhelmed (cached), and layers 1–5 bound the write path's
-cost at approximately zero. If genuinely attacked, the documented escape hatch is the
-CloudFront flat Pro plan ($15/mo, bundles WAF/DDoS/bot management — research 08 §2.4,
-ADR-cdn-billing-model). Optional stronger anti-bot (Cloudflare Turnstile) is decision 5, §18.
+§10.4). The read path cannot be overwhelmed (cached); the write path's worst case is bounded by
+§6.1 (<$1/mo with breakers working). If genuinely attacked, the documented escape hatch is
+flipping the write path behind CloudFront plus the flat Pro plan ($15/mo, bundles WAF/DDoS/bot
+management — research 08 §2.4, ADR-cdn-billing-model, 07-write-path §7.2 tier 5). Optional
+stronger anti-bot (Cloudflare Turnstile) is decision 5, §18.
 
 ### 7. Ingest runner — the decision, with evidence
 
@@ -272,12 +331,12 @@ Perpetual = always-free on the Paid Plan, forever. All allowances from research 
 | CloudFront Functions | 2,000,000/mo | **perpetual** | 0 (headers policy instead) | 0% | 0 | 0% |
 | EventBridge Scheduler | 14,000,000/mo | **perpetual** | 840 | 0.006% | 840 | 0.006% |
 | DynamoDB storage | 25 GB | **perpetual** | <0.1 GB | 0.4% | <1 GB | 4% |
-| DynamoDB on-demand requests | free-tier coverage UNVERIFIED (research 08 §4.4) | — | ~24k WRU ≈ $0.01 full price | — | ~$0.02 | — |
+| DynamoDB provisioned capacity | 25 WCU + 25 RCU | **perpetual — VERIFIED [live 2026-08-08]**: the AWS Free Tier product directory (aws.amazon.com/api/dirs, `free-tier-products`) tags DynamoDB **`always-free`** ("25 GB of Storage, 25 provisioned WCU, 25 provisioned RCU"); the pricing page (aws.amazon.com/dynamodb/pricing/provisioned/) lists the same "each month on a per Region, per-payer account basis" with no expiry qualifier, while the one 12-month item in that same list (data transfer out) carries its qualifier inline. If this were 12-month it would cost $14.24/mo from month 13 (25×730×$0.00065 + 25×730×$0.00013); it is not. Per-payer account = one 25/25 pool for the whole account; no other project on this account uses DynamoDB today (amended 2026-08-08 coherence round) | 25/25 provisioned (adr-write-store-provisioned-capacity) | 100% by design, fails closed | same | 100% |
 | S3 storage | **no verifiable perpetual free tier** (research 08 §12.3) | assume paid day one | ~2.5 GB | — | ~12 GB | — |
 | S3 PUT | none verified | assume paid | ~20,000/mo | — | ~100,000/mo | — |
 | CloudWatch logs | 5 GB/mo | **perpetual** | ~0.05 GB | 1% | ~0.2 GB | 4% |
-| CloudWatch custom metrics | 10 | **perpetual** | 5 | 50% | 5 | 50% |
-| CloudWatch alarms | 10 | **perpetual** | 4 | 40% | 4 | 40% |
+| CloudWatch custom metrics | 10 | **perpetual** | 6 (+1 `PushSendFailures`, 07-write-path §11; amended 2026-08-08) | 60% | 6 | 60% |
+| CloudWatch alarms | 10 | **perpetual** | 8 (4 infra + 4 write-path breakers, 07-write-path §7.2; amended 2026-08-08) | 80% | 8 | 80% |
 | CloudWatch dashboards | 3 | **perpetual** | 1 | 33% | 1 | 33% |
 | SSM Parameter Store (Standard) | free (storage + standard API) | **perpetual** | 4 params | — | 5 | — |
 | SNS email | 1,000/mo (research 08 §1.3 — flagged ⚠️ there) | perpetual (⚠️ partially verified) | ~10 alarm mails | 1% | ~10 | 1% |
@@ -300,30 +359,70 @@ point. "CDK + assert" means the value is set in the CDK stack AND checked by
 
 1. **Lambda reserved concurrency = 2** on every function (`reservedConcurrentExecutions: 2`).
    Enforced: CDK + assert (test iterates ALL `AWS::Lambda::Function` resources).
-2. **Lambda timeouts:** fetch **60 s**, build **120 s**, report API **10 s**, presign **5 s**,
-   resize **60 s**, dispatcher **10 s**. Never the 900 s default. Enforced: CDK + assert
+2. **Lambda timeouts:** fetch **60 s**, build **120 s**, **all four write functions (report,
+   mint, push, photo-presign) 5 s** (07-write-path §2; amended 2026-08-08 coherence round,
+   tightened from round 1's stale "report API 10 s"), resize **60 s**, dispatcher **10 s**,
+   notify/export **120 s**, breaker **10 s**. Never the 900 s default. Enforced: CDK + assert
    (`timeout ≤ 120s` for all; the worst-case bill is timeout × concurrency × memory).
 3. **CloudWatch log retention = 14 days on EVERY log group** (`logRetention:
    RetentionDays.TWO_WEEKS`). The default is Never Expire and this is the #1 way "free"
    serverless starts billing (research 08 §10.2 #3). Enforced: CDK + assert (test fails on any
    `AWS::Logs::LogGroup` without `RetentionInDays: 14`, and on any Lambda lacking an explicit
    log group).
-4. **S3 lifecycle:** `raw/` expires **30 days**; photos expire **90 days**; abort incomplete
-   multipart uploads **7 days**; `predictions/` excluded from ALL expiration rules. Enforced:
-   CDK + assert (including the predictions-overlap check).
+4. **S3 lifecycle + the prediction-log no-touch contract.** (Amended 2026-08-08 coherence
+   round: round 1 asserted against the literal string `predictions/`, which never matched the
+   shipped path `predictions/v1/...` (domain-model §5.2, 04-ingest §3), and domain-model
+   §17 recommends a `log/*` transition whose prefix is a PARENT of the log. String equality is
+   what let that through; the assert now tests prefix overlap against one named constant.)
+   `raw/` expires **30 days**; photos expire **90 days**; abort incomplete multipart uploads
+   **7 days**. Prediction-log contract, CDK + assert:
+   - **`PREDICTION_LOG_PREFIX` is defined ONCE in the stack. Today it is `predictions/`.**
+     If the domain lane relocates the log to a top-level `predictions/` this round, the constant
+     changes in that one place and every assert follows; no other text keys on the literal.
+   - **No expiration rule may have a prefix that overlaps `PREDICTION_LOG_PREFIX`.** Overlap:
+     either string is a prefix of the other. That catches the parent (`log/`), any child
+     (`predictions/v1/dt=...`), exact equality, and the empty prefix (a bucket-wide rule).
+   - **No transition rule may overlap it either**, with exactly ONE allowlisted exception: a
+     rule whose filter prefix is byte-identical to `PREDICTION_LOG_PREFIX`, transitioning to
+     Glacier Instant Retrieval at ≥90 days (the domain lane's own cost lever, domain-model
+     §5.3, past 500 spots). Domain-model §17's `log/* → Glacier IR at 90 d` recommendation is
+     implemented as exact per-log-family prefixes, never one parent rule: the prediction log
+     may change storage class only by a deliberate, named act, never as a side effect of a
+     broader prefix.
+   - Bucket-wide rules (no filter) may carry only the multipart-abort action.
 5. **ECR lifecycle policy** (phase-2 fallback lane only): expire untagged **immediately**,
    keep last **2** tagged images. Enforced: CDK + assert, in the same commit that ever adds an
    ECR repo.
-6. **S3 bucket private + CloudFront OAC; Function URLs `AWS_IAM` + OAC signing.** No public
-   bucket policy, no direct Function URL access. Enforced: CDK + assert
-   (`BlockPublicAccess.BLOCK_ALL` on every bucket; `AuthType: AWS_IAM` on every Function URL).
-7. **Per-device and per-IP daily write quotas in DynamoDB:** device **20 reports / 10
-   presigns**, IP **60 / 30**, counter items with **TTL = 2 days**. Enforced: shared
-   quota middleware in the write Lambdas + an acceptance test that submits request 21 and
-   asserts 429 (wired in DISTILL).
+6. **S3 buckets private + CloudFront OAC on read surfaces; Function URL auth ENUMERATED, never
+   blanket.** (Amended 2026-08-08 coherence round: round 1 asserted `AWS_IAM` on every Function
+   URL; the shipped write path (adr-write-path-off-cloudfront.md) puts four URLs at `NONE`, so
+   the blanket assert would deterministically fail CI on day one, and a guardrail that fails
+   against our own design gets deleted under pressure.) `BlockPublicAccess.BLOCK_ALL` on every
+   bucket, unchanged. The Function URL assert carries an explicit list,
+   `WRITE_URL_FNS = {report, mint, push, photo-presign}`:
+   - every Function URL in the list asserts `AuthType: NONE`, `AllowOrigins` equal to the exact
+     site origin (never `*`), and that NO CloudFront behavior routes to it;
+   - every Function URL NOT in the list asserts `AuthType: AWS_IAM` (today that set is empty);
+   - a Function URL in neither classification fails the build. No default branch exists.
+7. **Per-device daily write quotas in DynamoDB; per-IP quotas REMOVED.** (Amended 2026-08-08
+   coherence round: round 1's per-IP rows (60/30 via `CloudFront-Viewer-Address`) died twice
+   over — off CloudFront the header does not exist, so the guardrail was unimplementable as
+   written, and Panama CGNAT makes IP quotas leaky for attackers rotating cloud IPs while
+   unfair to a whole town behind one carrier IP; research 15 §11, 07-write-path §1 row 3.)
+   Device quotas: **20 reports / 10 presigns / 20 push subscriptions** per day, counter items
+   with **TTL = 2 days**. Honest accounting: device ids are client-minted and spoofable, so
+   this row is data hygiene against runaway clients, and it is the ONLY identity-shaped control
+   on the write path. The real cost cap is guardrail 1's reserved concurrency plus the
+   write-path breakers (07-write-path §7.2); the spend backstop is guardrail 8. Enforced:
+   shared quota middleware in the write Lambdas + an acceptance test that submits request 21
+   and asserts 429 (wired in DISTILL).
 8. **AWS Budgets:** alert budgets at **$1, $5, $15**; ONE action-enabled budget at **$18**
-   attaching an IAM deny policy to the ingest and write roles (first two action-enabled
-   budgets are free; Budgets alerts, it does not stop — research 08 §10.1). Enforced: CDK.
+   denying **`lambda:InvokeFunctionUrl` on the four write functions only** (first two
+   action-enabled budgets are free; Budgets alerts, it does not stop — research 08 §10.1).
+   (Amended 2026-08-08 coherence round, adopting 07-write-path §11 item 7: round 1 denied the
+   ingest role too, which would let a billing flood stop the prediction log — destroying the
+   irreplaceable artifact (HANDOFF §3) to save dollars. The narrowed deny means no flood can
+   ever take down ingest. A real improvement over my round-1 design.) Enforced: CDK.
 9. **CloudWatch billing alarm at $20** — already exists on the account; imported/asserted in
    CDK so a rebuild cannot silently drop it. Enforced: CDK.
 10. **Anthropic Console spend limit = $5/month hard limit.** Direct-API spend is invisible to
@@ -339,14 +438,16 @@ point. "CDK + assert" means the value is set in the CDK stack AND checked by
 
 ### 10. Zero-budget observability + dead-man's switch + substrate probes
 
-Everything below fits the perpetual free tier: 5 custom metrics of 10, 4 alarms of 10,
-1 dashboard of 3, ~0.05 GB of 5 GB logs (research 08 §10.3).
+Everything below fits the perpetual free tier: 6 custom metrics of 10, 8 alarms of 10,
+1 dashboard of 3, ~0.05 GB of 5 GB logs (research 08 §10.3). (Counts amended 2026-08-08
+coherence round: +4 write-path breaker alarms and +1 `PushSendFailures` metric per 07-write-path
+§11. Tight but inside; the next alarm added must retire one or start billing.)
 
 **Metrics (via metric filters on structured JSON logs — never a per-spot metric, which would
 cost $0.30 each × 40+ instantly):** `IngestSuccess`, `IngestDurationMs`, `BuildSuccess`,
 `ProviderErrors`, `ReportsWritten`.
 
-**Alarms (4):**
+**Alarms (4 infra below; the 4 write-path breaker alarms live in 07-write-path §7.2):**
 
 | # | Alarm | Config | Meaning |
 |---|---|---|---|
@@ -389,7 +490,7 @@ infra/
   bin/app.ts                 # env = { account, region: "us-east-1" }
   lib/site-stack.ts          # S3 (private, lifecycle rules) + CloudFront (OAC, behaviors §5) + ACM
   lib/ingest-stack.ts        # EventBridge Scheduler (hourly :17 + 4x/day) + fetch/build Lambdas
-  lib/write-stack.ts         # Function URLs (AWS_IAM) + DynamoDB single table + resize pipeline
+  lib/write-stack.ts         # bare Function URLs (NONE + exact-origin CORS) + DynamoDB PROVISIONED 25/25 + resize + breakers
   lib/observability-stack.ts # metric filters, 4 alarms, SNS topic, budgets
   test/guardrails.test.ts    # THE guardrail gate — see below
   cdk.json
@@ -424,8 +525,12 @@ const logGroups = template.findResources("AWS::Logs::LogGroup");
 for (const [id, lg] of Object.entries(logGroups)) {
   expect(lg.Properties.RetentionInDays).toBe(14);
 }
-// buckets: BlockPublicAccess ALL; lifecycle rules present; no rule prefix overlaps "predictions/"
-// function URLs: AuthType === "AWS_IAM"
+// buckets: BlockPublicAccess ALL; lifecycle: no expiration/transition rule prefix OVERLAPS
+//   PREDICTION_LOG_PREFIX (parent, child, equal, or bucket-wide) except the one exact-prefix
+//   Glacier IR transition — guardrail 4 (amended 2026-08-08: overlap, not string equality)
+// function URLs: WRITE_URL_FNS assert NONE + exact-origin CORS + no CloudFront behavior;
+//   every other URL asserts AWS_IAM; an unclassified URL fails the build — guardrail 6
+// table: BillingMode PROVISIONED, 25 WCU / 25 RCU — adr-write-store-provisioned-capacity
 ```
 
 This suite must be demonstrated failing once (temporarily set a retention to undefined, watch
@@ -462,20 +567,33 @@ first infrastructure slice to build, wired into CI and proven red-then-green bef
   `repo:AndresPonce507/surfs-up-panama:ref:refs/heads/<default-branch>`, workflow permissions
   `id-token: write` — and the research-13 §7 trap is design-relevant: declaring an
   `environment:` on the job SWAPS the `sub` claim to the environment form (it does not add
-  it). The role allows `s3:PutObject` on `raw/*` and `predictions/*` prefixes only — a
-  data-plane role that cannot touch infrastructure, consistent with agents-read-only-on-prod.
+  it). The role allows `s3:PutObject` on `raw/*` and the prediction-log prefix (guardrail 4's
+  `PREDICTION_LOG_PREFIX`, today `predictions/*`; amended 2026-08-08 coherence round)
+  only — a data-plane role that cannot touch infrastructure, consistent with
+  agents-read-only-on-prod.
 - Provider/API keys: **SSM Parameter Store Standard SecureString** (free; Secrets Manager is
   $0.40/secret/mo with no free tier — research 08 §14.2), read at Lambda cold start, cached in
   module scope.
 - Repo hygiene: GitHub secret scanning + push protection on; gitleaks in the local CI gate;
   `.env.example` documents parameter names so contributors bring their own keys.
 
+**Launch blockers — recorded 2026-08-08 coherence round.** Both need AWS access; the owner has
+asked not to touch AWS right now, so they are recorded with their dollar exposure and gate the
+zero-to-deployed step 1, not this design round:
+
+| # | Blocker | Exposure if bad | Check |
+|---|---|---|---|
+| 1 | Lambda `Concurrent executions` applied quota on this 3-day-old account. New accounts can carry reduced quotas; if the applied quota is ≤ 102, `PutFunctionConcurrency` is rejected and the rate limiter, the breakers and the mint cap **do not exist** (research 15 §5.0) | research 15's worked case at quota 50: **~$130/mo** attack ceiling instead of §6.1's figures | Service Quotas console, BEFORE any deploy; if reduced, recheck as usage grows and set reserved concurrency the moment the quota passes 102 |
+| 2 | Whether AWS meters data-transfer-out for a 429 emitted before the function runs (research 15 §15.3; carried by adr-write-path-off-cloudfront, never laundered into certainty) | pessimistic bound ~$27 per BILLION rejected requests after the free 100 GB/mo | one-afternoon load test before launch; until then the working control is tier 4, deleting the Function URL config, which stops response bytes entirely |
+
 ### 12. Cost — the dollar figure and how it is produced
 
 Assumptions: us-east-1, external DNS, no container Lambda in phase 1, deterministic scoring,
-photos 200/day with 90-day retention, prices per research 08 (accessed 2026-08-08): S3
-$0.023/GB-mo, PUT $0.005/1k, GET $0.0004/1k; DynamoDB $0.625/M WRU; Haiku 4.5 $1/$5 per M
-tokens.
+photos 200/day with 90-day retention, DynamoDB provisioned 25/25 inside the verified always-free
+allowance (§8), publish-time HTML render PUTs per adr-publish-time-html-rendering.md (lane 03
+owns exact counts). Prices per research 08 (accessed 2026-08-08): S3 $0.023/GB-mo, PUT
+$0.005/1k, GET $0.0004/1k; Haiku 4.5 $1/$5 per M tokens. Prediction-log volumes: domain-model
+§5.3/§6, measured. (Tables re-derived 2026-08-08 coherence round.)
 
 **Launch — 20 spots, 500 MAU:**
 
@@ -484,27 +602,35 @@ tokens.
 | CloudFront (requests + egress) | 100k req, 5 GB — inside free tier | $0.00 |
 | Lambda (all functions) | ~19k inv, ~52k GB-s — inside free tier | $0.00 |
 | EventBridge Scheduler | 840 of 14M | $0.00 |
-| DynamoDB on-demand | ~24k request units (assumed NOT free-tier covered, §8) | $0.01 |
-| S3 storage | ~2.5 GB (site + raw 30d + photos 90d + prediction log) | $0.06 |
-| S3 PUT | ~20,000 | $0.10 |
+| DynamoDB provisioned 25 WCU / 25 RCU | inside the always-free allowance, VERIFIED [live 2026-08-08] (§8) | $0.00 |
+| S3 storage | ~2.5 GB (site + raw 30d + photos 90d + prediction log 0.36 GB/yr, domain-model §5.3) | $0.06 |
+| S3 PUT | ~30,000 (data artifacts ~8k, 04-ingest §9 measured, + per-route HTML/OG renders ~22k, adr-publish-time-html-rendering) | $0.15 |
 | S3 GET (origin fetches) | ~50,000 | $0.02 |
 | CloudWatch, SSM, ACM, SNS, DNS | inside free tiers / external | $0.00 |
-| **Subtotal without LLM** | | **≈ $0.19/month** |
+| **Subtotal without LLM** | (was $0.19; re-derived 2026-08-08 coherence round) | **≈ $0.23/month** |
 | LLM narration (optional): Haiku 4.5, 1 national narration/day × ES+EN (DISCUSS #8 doubles it) | ~0.24M in / 0.036M out tokens | $0.42 |
-| **Total with narration** | | **≈ $0.61/month** |
+| **Total with narration** | | **≈ $0.65/month** |
 
 **Global — 5,000 spots, 20,000 MAU:**
 
 | Line item | Usage | Cost/mo |
 |---|---|---|
 | CloudFront | 4M req (40% of free), 200 GB (20%) | $0.00 |
-| Lambda | ~90k inv, ~130k GB-s (33%) | $0.00 |
-| DynamoDB | ~$0.02 | $0.02 |
-| S3 storage | ~12 GB (tiles + photos + growing prediction log) | $0.28 |
-| S3 PUT (tile-sharded, staleness-gated — §13) | ~100,000 | $0.50 |
-| S3 GET | ~200,000 | $0.08 |
+| Lambda | ~90k inv, ~130k GB-s (33%, now including the HTML render step — §13) | $0.00 |
+| DynamoDB provisioned 25/25 | always-free, verified (§8) | $0.00 |
+| S3 storage, end of year 1, **uncompacted JSONL** | **~110 GB**: prediction log **89.5 GB** ($2.06, domain-model §5.3 measured) + calls log 15.8 GB ($0.36, domain-model §6) + observations, site, tiles, photos ~4 GB ($0.09) | **$2.51** |
+| same, with the domain lane's levers past 500 spots (**Parquet ÷3 + Glacier IR** $0.004/GB past 90 d, domain-model §5.3) | log ~$0.55 + calls ~$0.10 + rest ~$0.13 | **($0.78)** |
+| S3 PUT (staleness-gated data tiles + ~5,000 per-spot HTML routes + OG images per model cycle — adr-publish-time-html-rendering) | ~350,000 | $1.75 |
+| S3 GET | ~300,000 | $0.12 |
 | LLM (flat with audience) | unchanged | $0.42 |
-| **Total** | | **≈ $1.30/month** (≈ $0.88 without narration) |
+| **Total, uncompacted** | | **≈ $4.80/month** (≈ $4.38 without narration) |
+| **Total with Parquet + Glacier IR** | | **≈ $3.07/month** (≈ $2.65 without narration) |
+
+Correction note (2026-08-08 coherence round): round 1's S3 line here read "~12 GB, $0.28/mo",
+about 7× low, because it ignored domain-model §5.3's measured log volume. And the log never
+expires, so growth is linear: uncompacted adds roughly **+$2.4/mo with each further year**;
+the Parquet + Glacier levers cut that accrual to roughly **+$0.15/mo per year**. Adopt the
+levers at the 500-spot trigger (adr-prediction-log-format.md), not later.
 
 **Where $0 actually breaks (thresholds, from research 08 §12.4 recomputed at the enforced
 ≤10 req/session):**
@@ -515,6 +641,7 @@ tokens.
 | CloudFront egress | ~100,000 MAU at 500 KB/session | $0.085–0.110/GB |
 | Lambda compute | ~3× global-scale build load, or GRIB2 run hourly instead of 4×/day | overage $0.0000166667/GB-s |
 | The $20 alarm | ~50–60k MAU on the request line alone | guardrails 8/11 fire first |
+| Write-path attack with breakers broken | ≈ $14.30/mo (report alone) to ≈ $29–46/mo correlated (§6.1; added 2026-08-08 coherence round) | exceeds the $20 alarm; guardrail 8's $18 budget action is the enforcement that must work |
 
 ### 13. Global scaling curve — 500 and 5,000 spots are design inputs, not futures
 
@@ -526,6 +653,12 @@ From research 08 §15.3 (spot axis, 4×/day model refresh, hourly light rebuild,
 | Build Lambda GB-s/mo (sharded) | ~52k | ~61k | ~130k | ~355k (89% of free) ⚠️ |
 | S3 PUTs/mo | ~5k | ~20k | ~100k | ~900k |
 | Spot-axis cost/mo | ~$0.03 | **~$0.10** | **~$0.50** | ~$4.51 |
+
+(Note added 2026-08-08 coherence round: this table counts data tiles only, per research 08
+§15.3. Publish-time HTML adds per-spot route renders on top (~350k total PUTs/mo at 5,000
+spots, ≈$1.75/mo), and the never-expiring log dominates spot-axis cost at scale. §12's global
+table is the corrected whole-system figure; this table remains valid for the tile-data axis it
+was derived on.)
 
 Design consequences baked in NOW (each is cheap at 20 spots and a rewrite at 5,000):
 
@@ -551,25 +684,35 @@ exceeds them, my §8/§12 numbers are void and we re-negotiate:
 
 | # | Requirement | Value I need | Which budget it protects |
 |---|---|---|---|
-| 1 | Published forecast payload = **ONE bundled file per region/tile**, never per-spot files | ≤ **100 KB gzipped** per bundle; ~20 spots/bundle | CloudFront requests (the binding constraint) + S3 PUTs (research 08 §4.4) |
-| 2 | Objects written per hourly rebuild (launch) | ≤ **10** (region bundle + manifest + reports bundle) | S3 PUT ≈ $0.10/mo |
-| 3 | Objects written per model cycle (5,000 spots) | ≤ **300** tiles/cycle, staleness-gated (§13.2) | S3 PUT ≤ $0.50/mo |
-| 4 | Manifest | ≤ **2 KB**, rewritten hourly, single key | request budget (1 fetch/session) |
+| 1 | Published forecast payload = **ONE bundled data file per region/tile**, never per-spot data files. (Amended 2026-08-08 coherence round: this file is the BUILDER's input and the probe artifact; the browser fetches per-route HTML, not this file — adr-publish-time-html-rendering) | ≤ **100 KB gzipped** per bundle; ~20 spots/bundle | S3 PUTs + build determinism; the browser request budget now lives in §15 |
+| 2 | Objects written per hourly rebuild (launch) | ≤ **10 data artifacts** (bundle + manifest + reports) **+ ~25 HTML routes**, plus ~25 OG images per model cycle (adr-publish-time-html-rendering; lane 03 owns exact counts; amended 2026-08-08) | S3 PUT ≈ $0.15/mo |
+| 3 | Objects written per model cycle (5,000 spots) | ≤ **300** data tiles **+ staleness-gated per-spot HTML routes and OG images, ~2,500/cycle at ~25% stale** (amended 2026-08-08) | S3 PUT ≤ ~$1.75/mo (§12) |
+| 4 | Manifest | ≤ **2 KB**, rewritten hourly, single key, written LAST as the build commit marker (04-ingest §3) | publish probe + commit semantics; no longer a per-session browser fetch (amended 2026-08-08) |
 | 5 | Raw archive under one `raw/` prefix, no other data mixed in | ≤ **5 MB/hour** at launch | 30-day lifecycle can expire it safely; storage ≤ $0.10/mo |
-| 6 | **Prediction log under its own dedicated prefix** (`predictions/`), append-only, write-once keys, never overwritten, lead time as a dimension | ≤ **1 KB/spot/cycle** compressed (≈ 0.7 GB/mo at 5,000 spots) | it is exempt from ALL expiry (HANDOFF §3); growth must stay ≤ ~$0.02/mo/month accrual |
+| 6 | **Prediction log under its own dedicated prefix** (guardrail 4's `PREDICTION_LOG_PREFIX`, today `predictions/`; amended 2026-08-08 coherence round), append-only, write-once keys, never overwritten, lead time as a dimension | domain-model §5.3 measured: 0.36 GB/yr at 20 spots, 89.5 GB/yr at 5,000 | exempt from ALL expiry (HANDOFF §3); the §12 global table now carries its real cost; Parquet + Glacier IR at the 500-spot trigger keeps accrual ≈ +$0.15/mo/yr |
 | 7 | Photos: exactly **3 variants ≤ 300 KB total** per photo; original deleted after resize | per research 08 §9.1 | storage floor $0.12/mo steady-state at 90-day retention; egress/session cap |
-| 8 | Reports bundle per region, rebuilt on write | ≤ **50 KB** | request budget (bundled with, or beside, req. 1) |
+| 8 | Reports bundle per region, rebuilt on write | ≤ **50 KB** | build input; reports render into routes at publish time, and any client fetch of this file is the frontend lane's call inside §15's budget (amended 2026-08-08) |
 | 9 | No per-user or per-request variance in any published S3 payload | absolute | CDN cacheability — one URL, one cached object, for everyone |
 | 10 | Idempotency: re-running an hour's build writes byte-identical keys or same-key overwrites | absolute | duplicate EventBridge delivery must be a no-op (research 08 §10.5) |
 
 ### 15. Request-budget requirement — owed by the frontend lane
 
-≤ **10 CloudFront requests per session** (1 HTML + 1–2 hashed assets after first visit ≈ 0 +
-1 manifest + 1 region bundle + ~5 lazy photo thumbs). Service worker caching (DISCUSS #26)
-pushes repeat-visit requests toward 3–5. This single discipline moves the free-tier break
-point from ~16,700 MAU to ~50,000 MAU (research 08 §12.4) and is a CI-enforceable budget the
-frontend lane already owns via its 100 KB constraint — count requests in the same CI check
-that counts bytes.
+(Re-derived 2026-08-08 coherence round against adr-publish-time-html-rendering.md: the browser
+fetches HTML documents per route, never forecast JSON. Round 1's budget counted a manifest and
+a region-bundle fetch that no longer happen client-side.)
+
+≤ **10 CloudFront requests per session at P50.** Composition under the per-route HTML model:
+2–3 HTML documents (home + 1–2 spot/tomorrow routes) + 0–2 hashed assets (immutable, ≈0 after
+first visit) + ~5 lazy photo thumbs ≈ 8–10 first visit, 3–7 repeat with the service worker
+(DISCUSS #26). Manifest and region bundle count zero: they are builder and probe artifacts
+(§5), not client fetches.
+
+Per-route CI budget the frontend lane owns: **1 document (≤14 KB first flight, per the ADR) +
+≤5 lazy thumbs + only content-hashed immutable assets** — count requests in the same CI check
+that counts bytes. Tail honesty: a session browsing N spot pages costs ~N extra documents plus
+their thumbs; the ~50,000-MAU free-tier break point (§12) holds at the P50 budget and degrades
+linearly with route depth, not catastrophically, because every route is CDN-cached and
+byte-capped.
 
 ### 16. Open-Meteo redistribution — the legal risk to this whole architecture, stated plainly
 
@@ -620,8 +763,10 @@ Precomputing provider data into public static JSON on a CDN **is redistribution*
    so it cannot matter.
 8. **Glacier Instant Retrieval rates** for the optional prediction-log transition —
    UNVERIFIED (research 08 §9.3).
-9. **DynamoDB on-demand free-tier coverage** — UNVERIFIED (research 08 §4.4); costed at full
-   price ($0.01–0.02/mo) so the answer cannot hurt.
+9. ~~DynamoDB on-demand free-tier coverage~~ — **RESOLVED [live 2026-08-08], coherence round.**
+   Doubly moot: the table is provisioned 25/25 (adr-write-store-provisioned-capacity), and that
+   allowance is verified **Always Free** (citation in §8), so the feared $14.24/mo from month 13
+   does not exist.
 10. **Cloudflare/Vercel comparison (research 08 §17):** partially closed today. Verified live
     [2026-08-08, developers.cloudflare.com/r2/pricing/]: R2 free tier = 10 GB-month storage,
     1M Class A + 10M Class B ops/mo, **egress to internet free** — §17's core structural claim
@@ -637,7 +782,7 @@ Precomputing provider data into public static JSON on a CDN **is redistribution*
 | 2 | DNS | (a) External registrar free DNS, $0.00/mo; (b) Route 53 zone, $0.50/mo ($6/yr) for one-console + free health checks | **(a)** — ADR-dns-external. (b) is defensible convenience; it is also the only avoidable AWS floor cost. |
 | 3 | Photo retention | (a) Delete at 90 days, ~$0.12/mo steady; (b) keep forever, ~$0.80/mo by month 12 and growing ~$0.04/mo/mo | **(a).** A surf photo's value dies with the swell. The report *data* (the label) is kept forever regardless — only pixels expire. |
 | 4 | LLM narration at launch | (a) Ship deterministic scoring only, $0.00; (b) + Haiku ES+EN daily narration, $0.42/mo | **(a)**, add (b) once scoring is trusted (research 08 §12.6 build order). The Spanish-first decision doubles narration cost — still trivial. |
-| 5 | Anonymous write-path abuse posture | (a) Quota stack only (§6), $0; (b) + Cloudflare Turnstile (free, but 3rd party + JS weight against the 100 KB budget) | **(a)** at launch; reserved concurrency caps the worst case at ~$0 regardless. Revisit on first real abuse, with data. |
+| 5 | Anonymous write-path abuse posture | (a) Control stack only (§6), $0; (b) + Cloudflare Turnstile (free, but 3rd party + JS weight against the 100 KB budget) | **(a)** at launch. Worst case: <$1/mo with breakers working, ≈$14–46/mo with breakers broken (§6.1 — corrected 2026-08-08 coherence round; round 1's "~$0 regardless" was wrong). Revisit on first real abuse, with data. |
 | 6 | CloudFront spend posture | (a) Pay-as-you-go + alarm + documented Pro-plan escape hatch; (b) flat Pro $15/mo pre-emptively for a hard cap | **(a)** — ADR-cdn-billing-model. (b) spends 75% of the alarm budget on a risk the request alarm already catches in time. |
 | 7 | Open-Meteo confirmation email | (a) Send before launch; (b) rely on the CC-BY-4.0 reading | **(a).** One email closes the largest legal open item on the primary data source (§16). Fallback chain is designed either way. |
 
@@ -658,7 +803,8 @@ Precomputing provider data into public static JSON on a CDN **is redistribution*
 4. **Web push (DISCUSS #12) is unmodeled cost surface**: per-spot subscriptions + a send
    fan-out (Web Push is direct HTTP with VAPID keys, not SNS). Round-2 write-path lane owes
    the volume math; at plausible scale it fits Lambda's free tier but nobody has done the
-   arithmetic.
+   arithmetic. *(Closed in round 2: 07-write-path §8.5 did the arithmetic; worst-case push
+   abuse $0.00. Noted 2026-08-08 coherence round.)*
 5. **The old `docs/design/03-infrastructure.md` skeleton** from the killed round is now
    orphaned by this document's location; coordinator should delete or repoint it before the
    coherence review counts files.

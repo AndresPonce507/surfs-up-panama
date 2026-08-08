@@ -9,7 +9,7 @@
 3. Exactly-once: the updater advances a `JobCursor` over report SKs with a conditional update; `ADD` is never applied twice to the same report.
 4. Raw `device_ids` are stored in daily rows; `distinct_reporters` is resolved through C5 at read time (merge-safe — see `adr-identity-claim-merge.md`).
 5. Honesty gates are part of the read contract: a claim publishes only when `n ≥ 10 AND distinct_reporters ≥ 5 AND |bias| > 2·bias_se`; otherwise the payload carries the `"n / 30"` counter and `claim_ok: false` (research 09 §13.3–13.4, decision 19).
-6. Recovery: the scorecard is a projection of `log/predictions/` + `log/observations/` and is rebuildable from them — a defective updater loses no data.
+6. Recovery: the scorecard is a projection of `predictions/` + `log/observations/` and is rebuildable from them — a defective updater loses no data.
 
 ## Alternatives considered
 

@@ -4,11 +4,11 @@
 
 ## Decision
 
-1. The immutable prediction log is written as **gzipped JSONL**, one file per `(run_date, source, cycle, partition)`, under `log/predictions/v1/dt=<run_date>/src=<source>/cyc=<HH>Z/<partition>.jsonl.gz`.
+1. The immutable prediction log is written as **gzipped JSONL**, one file per `(run_date, source, cycle, partition)`, under `predictions/v1/dt=<run_date>/src=<source>/cyc=<HH>Z/<partition>.jsonl.gz`.
 2. **Partition by run date first** — retention, backfill, and learning-job scans are all date-scoped.
 3. **Compaction to Parquet is triggered when a region exceeds ~500 spots** (or when the learning job's scan time over 90 days exceeds ~60 s, whichever comes first). Until then, no columnar dependency exists anywhere in the ingest path.
 4. Record natural key: `(spot_id, source, run_ts, valid_ts)`. File-level idempotency: re-running a cycle rewrites the same key from the same upstream data.
-5. Insert-only. No UPDATE, no DELETE, no lifecycle deletion of `log/predictions/` — only storage-class transition (Glacier Instant Retrieval past 90 days, and only once volume warrants it, ≥500 spots).
+5. Insert-only. No UPDATE, no DELETE, no lifecycle deletion of `predictions/` — only storage-class transition (Glacier Instant Retrieval past 90 days, and only once volume warrants it, ≥500 spots).
 
 ## Alternatives considered
 

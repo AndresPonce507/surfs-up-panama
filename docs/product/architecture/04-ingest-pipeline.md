@@ -28,7 +28,7 @@ Hourly, EventBridge Scheduler fires a zip-packaged fetch Lambda (512 MB, 60 s, r
 concurrency 2, all fixed by the infra lane). It fetches 4 wave members + wind + tide for
 every spot in the spot list (data, not code), archives the verbatim payloads, normalizes
 them through a per-source anti-corruption layer, attributes each series to a model cycle,
-and appends immutable snapshot files to `log/predictions/v1/`. A separate build Lambda
+and appends immutable snapshot files to `predictions/v1/`. A separate build Lambda
 (hourly, offset 5 minutes) reads the log plus seeds, corrections and reports, and publishes
 the region bundle. The fetch never scores; the build never fetches. The log is the only
 contract between them.
@@ -93,7 +93,7 @@ only ever read it. Ordering per source, inside one fetch run (hourly at :17):
 6. Cycle attribution per source: assign `run_ts` (section 5). If the attributed cycle's
    file already exists in the log, this fetch confirms it and writes nothing.
 7. **Durable side effect #2: gzip JSONL file per `(run_date, source, cycle, partition)`
-   PUT to `log/predictions/v1/...` with `If-None-Match: *`.** 168 lead hours per spot per
+   PUT to `predictions/v1/...` with `If-None-Match: *`.** 168 lead hours per spot per
    source per cycle (Domain Model §5.3 fidelity, D1). This is the prediction log write.
    It happens here, in the fetch Lambda, before any scoring exists, so that no downstream
    failure, build bug, or publish refusal can ever cost a snapshot. Mandate check,
@@ -134,7 +134,7 @@ sequenceDiagram
     participant EB as EventBridge (hourly :17)
     participant F as Fetch Lambda
     participant P as Provider (per source)
-    participant S3 as S3 (raw/ + log/predictions/)
+    participant S3 as S3 (raw/ + predictions/)
     participant B as Build Lambda (:22)
     participant CF as CloudFront
 
@@ -236,7 +236,7 @@ EventBridge Scheduler is at-least-once and the async invoke config is retry 0 + 
 |---|---|---|
 | Provider calls | Repeated (~42 calls) | 2x one hour's calls is 0.4% of the daily cap |
 | `raw/` | Keyed `(provider, dt, HH)`: second write overwrites with an equivalent payload | raw/ is forensic, not the record of truth |
-| `log/predictions/` | Conditional PUT returns **412**; treated as duplicate ack; the log is untouched | First write wins = insert-only enforced by the substrate, not by convention |
+| `predictions/` | Conditional PUT returns **412**; treated as duplicate ack; the log is untouched | First write wins = insert-only enforced by the substrate, not by convention |
 | `log/calls/` + bundle | Same `build_id` key (`b_<date>T<HH>Z`) overwritten with content derived from the same log state | Deterministic scoring (no LLM at launch, System Architecture §18 decision 4); a report arriving between the two runs changes reports.json only, both states valid |
 | DynamoDB | Untouched: ingest writes no DynamoDB | The write path is a different lane (07) |
 

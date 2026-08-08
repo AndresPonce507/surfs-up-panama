@@ -15,9 +15,15 @@ coast and string comes from config and content files keyed by `region_id`.
 
 ### 1. Rendering model (the one structural call)
 
-**Forecast content is rendered into static HTML at publish time, once per publish cycle. The browser
+**Forecast content is rendered into static HTML at publish time, once per publish build. The browser
 fetches pages, not forecast JSON.** Full reasoning and the two rejected alternatives in
 `adr-publish-time-html-rendering.md`.
+
+(Terminology amended, 2026-08-08 coherence round: the hourly publish stamp is **`build_id`**
+(shape `b_<YYYY-MM-DDTHH>Z`, domain model §6), and this document now says "build" for it
+everywhere. "Cycle" is reserved for the model-run concept, 00/06/12/18Z, which is a different
+thing; this document previously used `cycle_id` for the publish stamp and was the only one of
+the seven docs doing so.)
 
 Why it is the call: decision 21 (Astro, near-zero JS) plus decision 27 (100 KB, 3G under 2 s) plus
 the CloudFront request guardrail (research 08 §12.4: requests per session, not bytes, are the
@@ -40,7 +46,7 @@ C4Container
   Person(surfer, "Surfer", "Phone, outdoors, one hand, bright sun, bad signal")
   Person(member, "WhatsApp group member", "Pastes the daily call into the group by hand")
   System_Boundary(app, "Surfs Up (frontend slice)") {
-    Container(site, "Published static site", "Astro build output on S3 + CloudFront", "Prerendered HTML per route per language, hashed CSS/JS, per-cycle OG images")
+    Container(site, "Published static site", "Astro build output on S3 + CloudFront", "Prerendered HTML per route per language, hashed CSS/JS, per-build OG images")
     Container(sw, "Service worker + PWA shell", "Vanilla JS in the browser", "Caches per-route, serves offline fallback, keeps requests/session near 10")
     Container(queue, "Offline report queue", "IndexedDB in the browser", "Holds committed labels until signal returns")
     Container(builder, "Site builder", "Publish step of the hourly job (owned by lane 03)", "Renders HTML + OG images from the region data file")
@@ -106,6 +112,14 @@ budget and the refusal to go further than tomorrow is visible in the information
 itself: there is no third route to navigate to, and the home footer says so in words (copy in §10).
 
 ### 5. The byte budget, with the arithmetic
+
+**Read this before any arithmetic below. The browser downloads pages, never forecast data.**
+Every reading route is finished HTML the moment it leaves the builder. The ~100 KB gz region
+bundle (research 08 §4.4) is the **builder's input, consumed server-side at publish time**; no
+request for it, or for any forecast JSON, exists anywhere in the client. If a page-weight
+number includes the bundle, the number is wrong: the bundle never crosses the wire to a
+browser. (Restated unmissably, 2026-08-08 coherence round: two sibling documents carried
+arithmetic assuming the browser downloads the bundle; both are being corrected to match this.)
 
 **The enforced envelope.** "3G" is pinned to a CI-emulated profile of 400 kbps down / 400 ms RTT
 (slow-3G class). The arithmetic that follows is what makes 2 s reachable at all:
@@ -178,25 +192,76 @@ caps; the crafter chooses inside them.
 
 ### 7. Payload requirements — owed by the domain lane
 
-The domain lane (01) owns every schema, field name and byte size. These are the frontend's
-requirements against that contract. All field names below in backticks are **placeholders**, not
-proposals. Per clause `data:consumer-known-before-produced`, each row names its consumer and join
+The domain lane (01) owns the bundle schema (P1, P5, P7); the write-path lane
+(`07-write-path.md`) owns the wire contracts (P2, P3, P4, P6). These are the frontend's
+requirements against those contracts. (Amended, 2026-08-08 coherence round: field names are **no longer
+placeholders — they are the canonical names** settled in `domain-model.md` and the write-path
+request schema, `07-write-path.md` §4.1. The receiving contract wins because it is what the
+server parses. Renames applied throughout this document: `report_uuid`→**`report_id`** (a
+client-minted **ULID**, `^[0-9A-HJKMNP-TV-Z]{26}$` — the server rejects a v4 UUID by shape),
+`captured_at`→**`observed_at`**, `size_category`→**`size_band`**, `wind_category`→**`wind`**,
+`cycle_id`→**`build_id`**. `queued_offline` and `lang` are dropped from P2 — see the P2 note
+below.) Per clause `data:consumer-known-before-produced`, each row names its consumer and join
 key. Every contract row declares its failure behaviour; a contract that only describes success
 leaves the failure branch to be invented silently downstream.
 
-| # | Payload | Producer → Consumer | Semantic fields required (placeholder names) | Byte budget (gz) | Join key | Failure behaviour |
+**The published score on the wire is `score_q`, an integer 0 to 100 — never a 0-to-1 float.**
+Every `{score}` placeholder in §10 copy and §14 wireframes renders that integer as-is;
+`delta.score_points` (P3) is a signed integer difference of two `score_q` values; no frontend
+code multiplies, divides or rounds a score. (Confirmed explicitly, 2026-08-08 coherence round.)
+
+| # | Payload | Producer → Consumer | Semantic fields required (canonical names) | Byte budget (gz) | Join key | Failure behaviour |
 |---|---|---|---|---:|---|---|
-| P1 | Publish-cycle render input | domain data file → site builder | Per spot, per day (today/tomorrow): identity + slug + names es/en, `region_id`, `coast`, rank, score 0-100, four sub-scores + weakest-link label (decision 17), size **category + metre range, never a point** (decision 18), confidence level (3) + reason text es/en (decision 7), best window, narration es/en, `published_at`, `cycle_id`, scorecard block (see P5), last-human-report age + count | build-side, no wire cap (the ~100 KB region file of research 08 §4.4 is fine here) | `spot_id` + `cycle_id` | Missing spot → builder fails the publish LOUD, names the spot; never publishes a page with invented data. Missing narration in one language → publish proceeds, page falls back to structured fields, defect logged |
-| P2 | Report submission request | report island → write path | `report_uuid` (client-minted v4, idempotency key), `spot_id`, `captured_at` (device clock at commit), `queued_offline` flag, answers: `size_category`, `wind_category`, `quality`, `lang` | ≤ 1 KB | `report_uuid` | 4xx: island shows the reason, keeps the label locally, never silently drops. 5xx/timeout: label goes to queue, retry on `online`/next open |
-| P3 | Reveal response | write path → report screen 2 | `outcome` enum: `compared` \| `no_snapshot` \| `queued_duplicate`; when `compared`: predicted score, predicted size category + range, predicted wind word, signed delta, and the spot's report counter `n_reports`/`threshold` (decision 19) | ≤ 2 KB | `report_uuid` | `no_snapshot` (no prediction was logged for that spot+hour): screen 2 thanks the reporter and says plainly there is nothing to compare, per research 09 §14.4 never fabricate. Duplicate `report_uuid` on re-sync: server returns the original reveal, screen renders it identically (idempotent) |
-| P4 | Server-side dedup on re-sync | queue flush → write path | Dedup key is `report_uuid` **alone**; `captured_at` is preserved as the observation time and is the value joined against the prediction log, never the sync time | n/a | `report_uuid`; reveal joins prediction log on `spot_id` + `captured_at` | Replay of an acked id: acknowledged, not double-counted, original reveal returned |
+| P1 | Publish-build render input | domain bundle → site builder | Per spot, per day (today/tomorrow): the field-by-field table below — identity (`spot_id`, `slug`, name), `region_id`, `coast`, `rank`, **`score_q`** (int 0-100), `sub` four sub-scores + `weakest_link`/`damages` (decision 17), `size_band` + `size_range_m` **band + metre range, never a point** (decision 18), `conf_level` + reason es/en (decision 7), best window, narration es/en, `published_at`, `build_id`, scorecard block (see P5), last-report line | build-side, no wire cap (the ~100 KB gz region bundle of research 08 §4.4 is builder input, never a client payload — §5) | `spot_id` + `build_id` | Per field, declared in the P1 table below. Load-bearing fields missing → builder fails the publish LOUD, names the spot and field; never publishes a page with invented data. Display enrichments missing → page degrades per the table, defect logged |
+| P2 | Report submission request | report island → write path (POST `/api/report`; wire SSOT `07-write-path.md` §4.1) | Body: `report_id` (ULID, minted at commit, idempotency key), `spot_id` (string, spot seed id), `observed_at` (ISO8601 UTC, device clock at commit, back-datable ≤ 12 h), `submitted_at` (ISO8601 UTC, device clock at send), `size_band` (v1 7-band enum, domain model §7.2), `size_band_schema` (int, currently `1`), `wind` (3-value enum ← Q2), `quality` (4-value enum ← Q3), `trigger` (`organic` default; `push_solicited` when opened from the `?t=ps` deep link). Header: `X-Surf-Credential` | ≤ 1 KB (island discipline; server hard cap 4 KB) | `report_id` | 4xx other than 401/429: island shows the reason, keeps the label locally, never silently drops, no mechanical retry. 401 `credential_missing`/`credential_invalid`: island mints via `/api/mint` in the background and retries — no user-visible step. 429/5xx/timeout: label stays queued, backoff with jitter; **429 is never an error state in the UI** — same pending state as no signal (research 15 §5.5) |
+| P3 | Reveal response | write path → report screen 2 | `outcome` enum: `compared` \| `no_snapshot` \| `queued_duplicate`; `report_id`; when `compared`: `predicted{score_q, size_band, size_range_m, wind_state, conf_level}`, `delta{score_points, size_bands}` (both signed ints, positive = we ran big), `counter{n_reports, threshold}` (decision 19) | ≤ 2 KB | `report_id` | `no_snapshot` (no prediction was logged for that spot+hour): `predicted: null`, no `delta`, counter present; screen 2 thanks the reporter and says plainly there is nothing to compare, per research 09 §14.4 never fabricate. Duplicate `report_id` on re-sync: server returns the original reveal, screen renders it identically (idempotent) |
+| P4 | Server-side dedup on re-sync | queue flush → write path | Dedup key is `report_id` **alone**; `observed_at` is preserved as the observation time and is the value joined against the prediction log, never the sync time | n/a | `report_id`; reveal joins prediction log on `(spot_id, floor_utc_hour(observed_at))` | Replay of an acked id: acknowledged, not double-counted, original reveal returned |
 | P5 | Scorecard display block | domain scorecard → builder → spot page | Either a display-ready claim (`bias` direction + magnitude, `n_reports`, `n_distinct_reporters`, window) **or** an explicit `insufficient` state with `n`/`threshold`. Frontend renders, never computes statistics. The `bias > 2 × bias_se` display guard of research 09 §13.3 is the domain lane's to enforce **before** the datum reaches the builder | inside P1 | `spot_id` | Absent block → page renders the day-one empty state (§10), never a blank or a stale claim |
-| P6 | Push subscription | push island → write path | `spot_id`, subscription endpoint + keys, `lang` | ≤ 1 KB | subscription endpoint | 5xx: UI stays "not subscribed", offers retry; UI says "listo" only after server ack (no false green) |
-| P7 | Share/OG inputs | domain lane → builder | Per spot per cycle: OG title + description strings es/en, and the structured fields for the OG image (score, size words, wind word, confidence) | build-side | `spot_id` + `cycle_id` | Missing → builder emits the static generic OG card, logs the gap |
+| P6 | Push subscription | push island → write path (POST `/api/push`; wire SSOT `07-write-path.md` §8.1) | `action` (`subscribe` \| `unsubscribe`), `spot_id`, `subscription{endpoint, keys{p256dh, auth}}`, `lang` (kept HERE: the notify job composes push copy from it — a named server-side consumer, unlike report `lang`), `threshold_score` (optional int 0-100, default 70). Header: `X-Surf-Credential` | ≤ 2 KB (server cap) | `(spot_id, endpoint_hash)` | 400 `endpoint_not_allowed`: UI says the browser is unsupported, names no jargon. 401: background mint + retry as P2. 429/5xx: UI stays "not subscribed", offers retry — subscribe is interactive, never queued; UI says "listo" only after server ack (no false green) |
+| P7 | Share/OG inputs | domain lane → builder | Per spot per build: OG title + description strings es/en, and the structured fields for the OG image: `score_q`, `size_band` + `size_range_m`, `wind_state`, `conf_level` | build-side | `spot_id` + `build_id` | Missing → builder emits the static generic OG card, logs the gap |
+
+**P1 field table** (added 2026-08-08 coherence round — Fix: a requirement stated as a concept
+instead of a field is how the earlier name mismatches happened). Names marked ✔ are settled in
+`domain-model.md` / `05-scoring-engine.md`; names marked (p) are this lane's proposal for fields
+the domain lane is adding, to be confirmed in its bundle schema. "FAIL" = builder refuses the
+publish LOUD, naming spot + field; "degrade" = page renders without that element, defect logged.
+
+| Field | Type / unit | Settled | Page behaviour when absent |
+|---|---|---|---|
+| `spot_id` | string, spot seed id | ✔ | FAIL |
+| `slug` | string, language-neutral URL segment | (p) | FAIL (routes cannot be built) |
+| `name` | string, display name (proper noun, language-neutral) | (p) | FAIL |
+| `region_id` | string, e.g. `pa-pacific` | ✔ | FAIL |
+| `coast` | enum `pacific` \| `caribbean` | ✔ | degrade: coast badge omitted |
+| `rank` | int ≥ 1, position in that day's ranked list | (p) | FAIL (the ranked list is the product) |
+| `score_q` | **int 0-100** | ✔ | FAIL |
+| `sub` | object `{dir, size, wind, tide}`, each float 0-1 | ✔ | degrade: breakdown bars omitted |
+| `damages` | array `{factor, damage}` sorted desc (scoring §4) | ✔ | degrade: weakest-link callout omitted |
+| `weakest_link` | enum `dir` \| `size` \| `wind` \| `tide` \| `null` (null = perfect day, no callout rendered — scoring ADR) | ✔ | degrade: callout omitted |
+| `size_band` | v1 7-band enum (domain §7.2) | ✔ | FAIL |
+| `size_range_m` | `[lo, hi]` metres, always rendered with "≈", never a point | ✔ | FAIL (decision 18) |
+| `conf_level` | enum `low` \| `medium` \| `high` | ✔ | FAIL (decision 7) |
+| `conf_reason_es`, `conf_reason_en` | string ≤ 160 chars each | (p) | degrade: `<details>` reason omitted |
+| best window | `{start, end}` spot-local `HH:MM` strings (client renders, never computes — domain §14) | (p) | degrade: window line omitted |
+| `narration_es`, `narration_en` | string ≤ 280 chars each | (p) | degrade: structured fields only (declared in P1 row) |
+| `published_at` | ISO8601 UTC | ✔ | FAIL (the staleness stamp is an honesty element) |
+| `build_id` | string `b_<YYYY-MM-DDTHH>Z` | ✔ | FAIL (join key + share cache-buster) |
+| scorecard block | P5 shape | ✔ | degrade: day-one empty state (§10) |
+| last-report line | `last_report_at` ISO8601 UTC + `last_report_n` int distinct reporters | (p) | degrade: line omitted (normal on day one) |
+
+**P2 fields dropped, decided (2026-08-08 coherence round, answering `07-write-path.md` §1 row
+6):** `queued_offline` and `lang` are **removed** from P2, not defended. `queued_offline` had no
+consumer: offline-ness is derivable server-side from `received_at − submitted_at` (domain model
+§7.3 says so explicitly — "gap derivable, no separate offline flag needed"), and P2 now carries
+`submitted_at`. Report-side `lang` had no consumer either: the reveal is rendered client-side
+from P3's structured fields, so the server never composes report copy. `lang` **stays on P6**,
+where it has a named consumer (the notify job composes push copy from it, join
+`endpoint_hash`). A field in a published contract that nothing reads teaches the next person to
+assume it matters; both are gone.
 
 **Anti-leak payload contract (correctness requirement, not preference):** no payload delivered to
 the `/…/reportar` route family may contain any forecast field for any spot. The reveal exists only
-as a POST response (P3); there is no GET-able reveal URL keyed by spot or cycle. The report island
+as a POST response (P3); there is no GET-able reveal URL keyed by spot or build. The report island
 never holds prediction data, so an offline client *cannot* compute a reveal locally, by
 construction. Enforcement in §9.
 
@@ -209,25 +274,28 @@ acked by the write path or durably written to the IndexedDB queue, whichever hap
 Note for the domain lane, flagged: research 09 §13.2 field 1 ("Compared to the forecast?") predates
 the anchoring resolution and cannot be asked cold. Screen 1 asks absolute size, wind, quality; the
 residual §13.2 wanted is computed server-side by joining the cold label to the prediction log on
-`spot_id` + `captured_at`.
+`(spot_id, floor_utc_hour(observed_at))`. (Field names aligned to the wire contract, 2026-08-08
+coherence round.)
 
 **The four leak paths, and how each is closed** (mechanism detail in `adr-report-flow-leak-isolation.md`):
 
 | # | Leak path | Closure |
 |---|---|---|
-| L1 | The page the flow opened from (spot page DOM contains the forecast) | Screen 1 is its own route, a static document whose template is built with **no access to forecast data** (it imports spot identity only, and does not change per cycle). The report button is a plain link. Nothing of the spot page's DOM survives the navigation |
+| L1 | The page the flow opened from (spot page DOM contains the forecast) | Screen 1 is its own route, a static document whose template is built with **no access to forecast data** (it imports spot identity only, and does not change per build). The report button is a plain link. Nothing of the spot page's DOM survives the navigation |
 | L2 | A prefetched payload | Nothing on screen 1 prefetches: no `rel=prefetch/preload` toward the write path, no speculation rules, and the reveal has no URL to prefetch — it exists only as the POST response to the submission itself |
-| L3 | The back stack | Strict ordering: (1) the label commits (queue write or server ack), (2) `history.replaceState` swaps screen 1's history entry for the `/reportado` URL, (3) screen 2 renders. Because the swap precedes the render, there is no mid-render window where Back returns to an editable form; Back from the reveal, at any moment, lands on the spot page. Screen 2 has no edit affordance (the resolution's "never let the reveal round-trip back"). Re-opening screen 1 later starts a blank report with a fresh `report_uuid` |
+| L3 | The back stack | Strict ordering: (1) the label commits (queue write or server ack), (2) `history.replaceState` swaps screen 1's history entry for the `/reportado` URL, (3) screen 2 renders. Because the swap precedes the render, there is no mid-render window where Back returns to an editable form; Back from the reveal, at any moment, lands on the spot page. Screen 2 has no edit affordance (the resolution's "never let the reveal round-trip back"). Re-opening screen 1 later starts a blank report with a fresh `report_id` |
 | L4 | A service-worker cached response | The cached copy of screen 1 is the same forecast-free static document, so serving it stale leaks nothing. The write path is a network-only SW route: POST responses are never `cache.put`, and the write path sends `Cache-Control: no-store`. The spot page's cached copy is never rendered inside the flow |
 
 Offline: the label commits to the queue, screen 2 renders its **queued variant with no reveal**
 (copy in §10). The reveal happens only when the server has the report. The island holds no
-prediction data, so there is nothing on the device to leak (P7 contract, §7).
+prediction data, so there is nothing on the device to leak (anti-leak payload contract, §7).
 
-`captured_at` comes from the device clock, which lies. The write path records its own
-`received_at`; the domain lane owns the plausibility guard between the two. Frontend requirement
-only: send both the commit-time timestamp and the queued flag, never overwrite `captured_at` at
-sync time.
+`observed_at` comes from the device clock, which lies. The write path records its own
+`received_at`; the write path owns the plausibility guard between the two (`07-write-path.md`
+§4.2 step 5). Frontend requirement only: send `observed_at` (device clock at commit) and
+`submitted_at` (device clock at send), and never overwrite either at sync time — the queued
+flag is gone, offline-ness is derived server-side from the `received_at − submitted_at` gap.
+(Amended 2026-08-08 coherence round.)
 
 ### 9. Enforcement (rules without tooling erode)
 
@@ -243,7 +311,11 @@ sync time.
 
 Plain surfer voice. No em dashes anywhere in UI strings. Body-height words first, metre **ranges**
 second, always with "≈" so the copy never claims more precision than the range carries
-(decision 18; ranges themselves are the domain lane's, shown here as placeholders).
+(decision 18; ranges themselves are the domain lane's, shown here as placeholders). Size words on
+every surface are the **canonical es/en strings of the v1 band table, domain model §7.2** — one
+constants file, consumed by the capture form, display, and residual math alike; this document
+mints no size vocabulary of its own. (Aligned 2026-08-08 coherence round; the illustrative
+wireframe strings in §14 predate the band table and render the same fields.)
 
 **Home.**
 - Header: es "¿Dónde se surfea hoy?" / en "Where's it working today?"
@@ -255,14 +327,14 @@ second, always with "≈" so the copy never claims more precision than the range
 
 **Report screen 1 (cold: no score, no prediction, no hint anywhere on this document).**
 - Title: es "¿Cómo estuvo {spot}?" / en "How was {spot}?"
-- Q1: es "¿Qué tan grande?" opciones: "A la rodilla · A la cintura · Al pecho · A la cabeza · Pasada de cabeza · Doble para arriba" / en "How big?" "Knee high · Waist high · Chest high · Head high · Overhead · Double or more"
+- Q1: es "¿Qué tan grande?" opciones: "Plano · Tobillo a rodilla · Rodilla a cintura · Cintura a pecho · Pecho a cabeza · Cabeza a un metro más · Doble o más" / en "How big?" "Flat · Ankle to knee · Knee to waist · Waist to chest · Chest to head · Head to overhead · Double overhead +" — the seven options ARE the v1 `size_band` enum values, es/en strings verbatim from domain model §7.2. (Amended 2026-08-08 coherence round: the previous six anchor-style options could not map 1:1 onto the settled 7-band enum, so the form could not have produced valid `size_band` values. Register check with the cousin's group, Decisions needing Andres #6, now covers these strings)
 - Q2: es "¿El viento?" "Limpio · Picado · Destrozado" / en "Wind?" "Clean · Choppy · Blown out"
 - Q3: es "¿Cómo estuvo?" "Malo · Normal · Bueno · Épico" / en "How was it?" "Bad · OK · Good · Epic"
 - Submit: es "Mandar" / en "Send". After submit, photo prompt (decision 9): es "¿Foto? Si tienes una, súbela. Si no, ya está." / en "Got a photo? Add it if you want. If not, you're done."
 - `<noscript>`: es "Para mandar reportes hace falta JavaScript. Para leer el pronóstico no." / en "Sending a report needs JavaScript. Reading the forecast doesn't."
 
 **Report screen 2 (the reveal).**
-- Compared: es "Dijimos: al pecho (≈{rango} m), limpio. {score}. Tú viste: a la cintura, picado. Nos pasamos {delta} puntos." / en "We said chest high (≈{range} m), clean. {score}. You saw waist high, choppy. We were {delta} too high."
+- Compared: es "Dijimos: {banda} (≈{rango} m), {viento}. {score}. Tú viste: {banda_obs}, {viento_obs}. Nos pasamos {delta} puntos." / en "We said {band} (≈{range} m), {wind}. {score}. You saw {band_obs}, {wind_obs}. We were {delta} too high." — fills from P3: `{banda}`/`{rango}` ← `predicted.size_band`/`size_range_m`, `{viento}` ← `predicted.wind_state`, `{score}` ← `predicted.score_q` (the integer, as-is), `{delta}` ← `delta.score_points` (sign flips the verb: too high/too low). (Template parameterized 2026-08-08 coherence round; the old literal words were example fills)
 - Counter (decision 19): es "Reporte {n} de {threshold} en este spot. Gracias." / en "Report {n} of {threshold} at this spot. Thanks."
 - Queued (offline): es "Guardado. Cuando vuelva la señal lo mandamos y te decimos cómo nos fue." / en "Saved. When the signal comes back we'll send it and tell you how we did."
 - No snapshot: es "Gracias. Esa hora no la teníamos pronosticada, así que no hay comparación." / en "Thanks. We had no forecast logged for that hour, so there's nothing to compare."
@@ -282,7 +354,7 @@ SURF {fecha}                         SURF {date}
 Mejor: {spot}, {score}               Best: {spot}, {score}
 {tamaño} y {viento}. {ventana}.      {size} and {wind}. {window}.
 Confianza {nivel}.                   {level} confidence.
-{url}?c={cycle}                      {url}?c={cycle}
+{url}?b={build_id}                   {url}?b={build_id}
 ```
 
 Copy risk flagged: "picado" and "destrozado" need a sanity read from the cousin's group before
@@ -336,7 +408,7 @@ CloudFront requests, inside research 08 §12.4's target):
 document it describes). The 0.3 KB inline script upgrades it to a relative age and flips the amber
 "Viejo" chip past 3 h. The SW adds no header tricks: truth lives in the document.
 
-**Offline report queue.** IndexedDB, records keyed by `report_uuid`, append at commit, delete on
+**Offline report queue.** IndexedDB, records keyed by `report_id`, append at commit, delete on
 server ack. Flush triggers: `online` event, page open, SW activation. **Background Sync is
 progressive enhancement only**: its availability on iOS is UNVERIFIED in the research corpus, so
 the design must not depend on it; the flush triggers above work everywhere. Probe at island start
@@ -368,11 +440,12 @@ carries the same text with JS off. Anyone can send it from any spot page or the 
 
 **OG strategy for the link preview.** Every spot page and the home page carry `og:title`,
 `og:description`, `og:image`, `og:locale` (es_PA + en alternate). The OG image is pre-rendered
-per spot per publish cycle by the builder (P7): 1200×630 **JPEG** ≤ 60 KB showing spot name, score,
+per spot per publish build by the builder (P7): 1200×630 **JPEG** ≤ 60 KB showing spot name, score,
 size words and confidence. JPEG, not WebP, because WhatsApp's preview handling of WebP is not
 covered by the research corpus and a broken preview is worse than 15 extra KB on the sharer's
-side (never in the page budget). Share URLs append `?c={cycle_id}` so each day's paste is a fresh
-URL to the preview crawler; the page canonical tag strips the parameter. This makes WhatsApp's
+side (never in the page budget). Share URLs append `?b={build_id}` so each paste is a fresh
+URL to the preview crawler; the page canonical tag strips the parameter. (Cache-buster renamed
+from `?c={cycle_id}`, 2026-08-08 coherence round — `b` for build, matching the field.) This makes WhatsApp's
 preview-caching behaviour (also not in the corpus) irrelevant instead of assumed. Both unknowns
 are named in §15 with their fallbacks; neither blocks launch.
 
@@ -447,9 +520,13 @@ both signals, `<details>` for the reason, no third line ever.
 │ ← ¿Cómo estuvo Santa Catalina?               │
 │                                              │
 │ ¿Qué tan grande?                             │
-│ ( ) A la rodilla      ( ) A la cintura       │
-│ (•) Al pecho          ( ) A la cabeza        │
-│ ( ) Pasada de cabeza  ( ) Doble para arriba  │
+│ ( ) Plano                                    │
+│ ( ) Tobillo a rodilla                        │
+│ ( ) Rodilla a cintura                        │
+│ (•) Cintura a pecho                          │
+│ ( ) Pecho a cabeza                           │
+│ ( ) Cabeza a un metro más                    │
+│ ( ) Doble o más                              │
 │                                              │
 │ ¿El viento?                                  │
 │ (•) Limpio   ( ) Picado   ( ) Destrozado     │
@@ -466,7 +543,7 @@ both signals, `<details>` for the reason, no third line ever.
 ```
 This document carries ZERO forecast data: no score, no sub-scores, no size words for today, no
 weakest link. Its template is built without access to forecast data (§8 L1), so the property holds
-per publish cycle without anyone remembering to hold it.
+per publish build without anyone remembering to hold it.
 
 **Report screen 2 (the reveal, rendered from the POST response):**
 ```
@@ -551,14 +628,14 @@ dependency-cruiser rule covers that half.
   `wa.me` deep-link pattern with a number; the number-less share variant needs one live check.
   Fallback if it fails: share island only, clipboard copy (already designed).
 - **WhatsApp preview behaviour**: WebP acceptance and preview caching are not in the research
-  corpus. Design already assumes the worst (JPEG, per-cycle cache-busting param), so both unknowns
+  corpus. Design already assumes the worst (JPEG, per-build cache-busting param), so both unknowns
   are moot rather than risky.
 - **iOS Background Sync and SW/storage eviction windows**: UNVERIFIED in the corpus; the design
   does not depend on either (flush triggers and network-first + in-document stamp). Verifying them
   later can only upgrade behaviour, never break it.
 - **Surfer Spanish**: "picado" / "destrozado" / "pasada de cabeza" need the cousin's read. Wrong
   register here costs trust with exactly the 500 people who matter.
-- **Hourly HTML republish volume**: ~45-90 small PUTs per cycle against lane 03's S3/CloudFront
+- **Hourly HTML republish volume**: ~45-90 small PUTs per build against lane 03's S3/CloudFront
   guardrails. Research 08 §4.4 prices the same order of regeneration at ~$0.15/month, so I expect
   a non-issue, but lane 03 owns the number.
 - **Astro islands versus hand-rolled vanilla islands** for the three islands: both fit the KB caps;
@@ -571,6 +648,6 @@ dependency-cruiser rule covers that half.
 | 1 | Rendering model | A: publish-time HTML (hourly republish of routes). B: static shell + client fetch of region JSON. C: hybrid (HTML home, JSON detail) | **A.** B ships ~100 KB JSON + JS before first paint and breaks decision 27; C pays both complexity bills. Full trade-offs in `adr-publish-time-html-rendering.md` |
 | 2 | Report flow without JS | A: island-only, honest `<noscript>` message. B: progressive enhancement, plain form POST fallback with server-rendered reveal | **A for v1.** B doubles the write-path surface (HTML + JSON responses) for a user who cannot queue offline anyway. B stays open as v1.1 if field data shows JS-off traffic |
 | 3 | PWA display mode | A: `standalone`. B: `minimal-ui` | **A.** iOS push requires the installed context anyway (research 12 §4); standalone is that context |
-| 4 | OG image freshness | A: per-spot per-cycle OG image + `?c=` cache-buster. B: one static generic card | **A.** The preview IS the product's pitch inside the group; a stale preview of a surf call is a small lie. B is the automatic fallback when P7 data is missing |
+| 4 | OG image freshness | A: per-spot per-build OG image + `?b=` cache-buster. B: one static generic card | **A.** The preview IS the product's pitch inside the group; a stale preview of a surf call is a small lie. B is the automatic fallback when P7 data is missing |
 | 5 | Dark theme control | A: `prefers-color-scheme` only. B: manual toggle (adds JS + storage) | **A at launch.** The dawn use case is exactly when phones are already in dark mode; a toggle adds JS and state for a preference the OS already expresses |
 | 6 | Copy sign-off | Send §10 Spanish strings to the cousin's group for a register check before DISTILL freezes them | Do it; it is one WhatsApp message, and it is the cheapest trust insurance in this document |

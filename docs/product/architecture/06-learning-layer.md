@@ -5,7 +5,7 @@
 **Verdict up front:**
 
 - Stage 1 only at launch: one shrunken scalar height bias per (spot, source, lead_bucket) plus one shrunken score delta per spot, exactly research 09 §13.4 stage 1 and §7.4. Stages 2+ are designed as data thresholds, not built.
-- A correction goes live per key only when `n >= 10 AND distinct_reporters >= 5 AND |b| > 2*se`, shrinkage always on, clamped at 40% of forecast height (score: 12 points). Below the gate the product shows the counter, never a number (decision 19).
+- A correction goes live per key only when `n >= 10 AND distinct trust-eligible reporters >= 5 AND |b_shrunk| > 2*se_gate` with `se_gate = max(se_sample, 0.5*sigma_eff/sqrt(n))`, shrinkage always on, clamped at 40% of forecast height (score: 12 points). Below the gate the product shows the counter, never a number (decision 19). Trust eligibility ships at zero (a proven no-op at launch, §7 G2) and the se floor removes the consistency discount coordinated liars would otherwise enjoy (§7 G3). Both adopted from 07 §1 rows 7-8, 2026-08-08 coherence round.
 - The cost priced in DISCUSS ("Known cost", 2026-08-08) is paid here with an explicit per-reporter offset estimator: a two-way additive model (spot bias + reporter offset) fitted by backfitting with shrinkage toward zero. A reporter's offset reaches half weight at 4 reports and is worth real trust at about 8 reports spanning 2+ spots. Before that it is mostly zero and the k-distinct-reporters averaging carries the load.
 - Cold start is the `n=0` limit of partial pooling (research 09 §5.4), run over a recursive hierarchy (global -> basin -> region -> similarity group -> spot) with hard basin partitions. At launch, with one region, upper levels collapse; activation is data-driven, no code change.
 - All three §13.5 hazards get concrete mechanisms (solicited-report flag + inverse-propensity weights; staleness-driven solicitation + full-list display; robust medians + concordance + clamp). The Sybil case is honestly unsolved statistically: the clamp bounds the damage, the immutable logs make it reversible, and prevention is the write-path lane's half (doc 07, research 15).
@@ -28,12 +28,30 @@
 ### 2. Data flow (all inputs settled round 1)
 
 ```
-log/predictions/v1/   (C1, immutable)  ─┐
-log/observations/v1/  (C2 export)      ─┼─> nightly learning job ─> learned/corrections/v1/current/<spot_id>.json
-C5 reporter resolution (OHS)           ─┘         │                 learned/corrections/v1/history/dt=<date>/
-log/calls/v1/         (C4, immutable)  ───────────┼─> monthly evaluation ─> learned/metrics/v1/dt=<month>/
-learned/overrides/v1/reporter-weights.json (git) ─┘
+predictions/v1/       (C1, immutable)             ─┐
+log/observations/v1/  (C2 export)                 ─┼─> nightly learning job ─> learned/corrections/v1/current/<spot_id>.json
+C5 reporter resolution (OHS)                      ─┤                           learned/corrections/v1/history/dt=<date>/
+log/calls/v1/         (C4, immutable)             ─┤  (§6.3 propensity deciles)
+data/config/trust-gate.json (git, 07 §7.3)        ─┤  (G2 eligibility; added 2026-08-08 coherence round)
+learned/overrides/v1/reporter-weights.json (git)  ─┘  (§6.4 override weights)
+
+predictions/ + log/observations/ + log/calls/     ───> monthly evaluation ─> learned/metrics/v1/dt=<month>/
 ```
+
+(Diagram rewired 2026-08-08 coherence round: `log/calls/` and `reporter-weights.json` feed the NIGHTLY job (§6.3, §6.4); the earlier wiring showed them reaching only the monthly evaluation, which contradicted §6.)
+
+**Exact input universe (stated 2026-08-08 coherence round).** Domain model §17 states this lane's inputs as "exactly `predictions/`, `log/observations/`, and the C5 resolution -- nothing else". That sentence holds for residual FORMATION; round 2 added three read-only weighting/config surfaces it does not name. The closed set:
+
+| Input | Role | Residuals formed from it? |
+|---|---|---|
+| `predictions/v1/` | forecast side of every verified pair | yes |
+| `log/observations/v1/` | label side of every verified pair | yes |
+| C5 reporter resolution | `device_id -> reporter_key`, current mapping at aggregation time | keying only |
+| `log/calls/v1/` | which score decile was live each morning: §6.3 propensity denominators; §10 monthly metrics | no, never |
+| `data/config/trust-gate.json` | G2 eligibility thresholds (07 §7.3) | no (config) |
+| `learned/overrides/v1/reporter-weights.json` | §6.4 incident overrides, human PR | no (config) |
+
+Nothing else is read; the job never reads DynamoDB (the nightly export is the boundary). Flagged to round 3, domain lane: §17's "nothing else" wording needs this widening -- exceeded here loudly, not silently.
 
 Consumers and join keys for everything this lane produces (clause `data:consumer-known-before-produced`):
 
@@ -47,7 +65,7 @@ Consumers and join keys for everything this lane produces (clause `data:consumer
 
 ### 3. Interfaces with the sibling lanes
 
-**Required FROM 05-scoring-engine** (absent at write time; binding requests):
+**Required FROM 05-scoring-engine** (absent at write time; binding requests. 05 landed later the same round: its §5 consumes this file's §7 field semantics as amended, and its §3 pins the `score_q` mapping cited in §5.1 below; full S1-S4 reconciliation stays the round-3 gate. Noted 2026-08-08 coherence round):
 
 | # | Requirement | Why |
 |---|---|---|
@@ -66,6 +84,7 @@ Consumers and join keys for everything this lane produces (clause `data:consumer
 - **Apply rule, uniform: `corrected = raw - b`.** Height per (source, lead) pre-blend; score per spot post-score. The §7.4 `Q_final = clip(Q + delta_s)` term is `delta_s = -b_score` under this convention.
 - **Observed height carrier: the size band is an interval, never a point** (domain model §7.2). Treatment in §5.1.
 - **Reporter identity carrier: `reporter_key` via C5 resolution at aggregation time** (adr-identity-claim-merge). Never raw device counts.
+- **Identifier carriers, settled, not re-opened:** `report_id` is a client-minted ULID (domain model §7.3; 07 §1 row 5) and the observation timestamp is `observed_at` (UTC). Every join in this file uses these two names. (Confirmed 2026-08-08 coherence round.)
 
 ### 5. The correction model, precisely
 
@@ -82,6 +101,7 @@ r_score[i]      = score_q_shown[i] - q_obs(quality_i)        (from predicted{} c
 - Top band `double_overhead_plus` is open-ended: nominal value 3.0 m, variance (0.5 m)^2. It stays IN the fit; excluding "way bigger than forecast" days would censor the dependent variable and bias `b` downward. Flagged §14.
 - `u_hat[r(i)]`: the reporter's shrunken personal offset (§5.2), subtracted before the residual is formed. At `n_r = 0` it is exactly 0.
 - `q_obs` anchors: Bad 20, OK 45, Good 70, Epic 90 (0-100 scale, unfit priors, flagged §14). Score residuals are fitted on height-corrected builds only, sequentially after the height fit, so the score delta captures what the height correction missed, not the same error twice.
+- `score_q` carrier, stated where consumed: `score_q` is the published 0-100 integer, `score_q = Math.round(100 * q_final)`, identity, one rounding, pinned in 05 §3 ("here and nowhere else"). `r_score`, the score delta `b_score`, and G6's clamp are all in display points on that scale (`units: "display_points"`, spot-correction/1, domain model §11); 05 §5 converts at apply time (`delta_q = b / 100`). Sign confirmed for 05 §5's owed interface: `residual = predicted - observed`, `corrected = predicted - b`, exactly §4's convention. (Stated 2026-08-08 coherence round.)
 
 #### 5.2 The per-reporter offset estimator (the priced cost of decision 28)
 
@@ -169,16 +189,54 @@ A height correction at key `(spot, source, lead_bucket)` and the per-spot score 
 | # | Gate | Value | Defense of the number |
 |---|---|---|---|
 | G1 | Minimum pairs | `n >= 10` | 09 §13.4 gate 1 gives the 10-30 range; §5.2's table puts the break-even for a chunky bias (b >= 0.15 m, sigma ~= 0.5) at n > 11 and for b >= 0.2 at n > 4. 10 is the floor where a real bias is establishable; G3 makes the exact floor non-load-bearing, because at n = 10 only |b| > 0.63 sigma can pass |
-| G2 | Distinct reporters | `distinct(reporter_key) >= 5` | 09 §13.4 gate 1 + §13.2: k ~= 4-9 distinct people halves observer bias; 5 is the bottom of that band. Prefer 8 reports from 8 people over 20 from 2 (09 §13.2, verbatim design rule) |
-| G3 | Significance | `|b_shrunk| > 2 * se` | 09 §13.3: a claim smaller than twice its standard error is indistinguishable from noise. Same rule the frontend's `claim_ok` enforces (settled, domain model §9); one rule, two enforcement points |
+| G2 | Distinct reporters | `distinct trust-eligible reporter_key >= 5` (eligibility defined below) | 09 §13.4 gate 1 + §13.2: k ~= 4-9 distinct people halves observer bias; 5 is the bottom of that band. Prefer 8 reports from 8 people over 20 from 2 (09 §13.2, verbatim design rule). Distinctness over freely mintable ids is not an anti-gaming control (research 15 §11.2); eligibility is the repair, and it ships at zero, so launch behavior is identical. Adopted from 07 §1 row 7, 2026-08-08 coherence round |
+| G3 | Significance | `|b_shrunk| > 2 * se_gate`, `se_gate = max(se_sample, 0.5 * sigma_eff / sqrt(n))` (floor defined below) | 09 §13.3: a claim smaller than twice its standard error is indistinguishable from noise. The unfloored form REWARDS coordinated lying (research 15 §15.1); the floor removes that. Adopted from 07 §1 row 8, 2026-08-08 coherence round. One rule, two enforcement points with the scorecard's `claim_ok`, which must adopt the same upgrades (routed below) |
 | G4 | Shrinkage | always on, never raw `b_raw` | 09 §13.4 gate 3; prevents most small-sample blowups on its own |
 | G5 | Clamp, height | `|b| <= 0.40 * forecast_H`, enforced at APPLY time by the builder (settled, domain model §11) | 09 §13.4 gate 5 ("e.g. +/- 40%"). Applied at read so a corrupt correction file can never print an absurd number and deleting the file reverts to seed |
 | G6 | Clamp, score | `|b_score| <= 12` points (adds `clamp.max_abs_score` to the correction file, additive to schema spot-correction/1) | Unfit prior, mine: bounded by "a correction should never move a spot across two confidence-band-sized chunks of the 0-100 scale on human say-so alone". Flagged §14 |
 | G7 | System-level blocked CV | monthly: rolling-origin held-out time blocks (train weeks 1-8, test 9-10); if corrected MAE loses to raw at the majority of gated keys, `applied: false` EVERYWHERE until a human looks | 09 §13.4 gate 4. Deliberately system-level, not per-spot: per-spot CV at n ~= 10 is noise and would flap. Random k-fold banned (swell-event leakage, 09 §13.4). Recorded in `adr-correction-gates-and-clamps.md` |
 
+**G2, trust eligibility, precisely (adopted from 07 §1 row 7, 2026-08-08 coherence round).**
+
+Config: `data/config/trust-gate.json` (git, owned by 07 §7.3; shipped `{min_credential_age_days: 0, min_prior_reports: 0, min_prior_spots: 2}`). A sample's reporter is **trust-eligible** iff both clauses hold, evaluated per report from fields every record carries from day one (07 §6: `credential_issued_at`, `received_at`; they exist precisely so this gate can be flipped on retroactively):
+
+| Clause | Predicate | Carrier |
+|---|---|---|
+| Age | `received_at - credential_issued_at >= min_credential_age_days` | both server-set on the record; age frozen at receipt (07 §6: "credential age at receipt") |
+| History | at `received_at`, >= `min_prior_reports` earlier stored reports by the same `reporter_key` (current C5 mapping), spanning >= `min_prior_spots` distinct spots | the immutable observation log itself. The spots clause qualifies the history clause: at `min_prior_reports = 0` it is vacuous, which is why the shipped `min_prior_spots: 2` is inactive at launch (07 §7.3, "all zero/inactive") |
+
+- Age-at-receipt, side taken: research 15 §16.3 sketches age-at-aggregation ("counted once the credential ages"); 07 §6 pins age at receipt. This file takes 07's: frozen per record, so eligibility is a pure function of log + config (recompute-deterministic, no wall clock), and strictly stronger, because a forged batch already stored cannot ripen into eligibility by waiting. Retroactivity still holds where it matters: on a future flip, every stored report whose credential was already old enough at receipt counts immediately. Honest cost: a reporter's own first-`A`-days reports never qualify; at `A = 0` that cost is zero, and any future flip prices it then.
+- Ineligible samples are excluded from the correction fit and from every gated count: G1's `n`, G2's distinctness, and the scorecard's gated aggregates (routing below). They still appear in every display-instantly surface (recent reports, the counter): 07 §7.3's separation, decisions 4/11 intact.
+- **No-op at launch, confirmed in writing:** at the shipped config the predicate reduces to `age >= 0 AND priors >= 0`. Age >= 0 holds by construction (a report requires an already-minted credential and both timestamps are the server's); priors >= 0 trivially. The eligible set equals the full set; every count and every fitted value is bit-identical to the ungated computation. The gate cannot delay anything at launch. DISTILL obligation (clause `check:unfired-is-not-evidence`): one AT runs the fit with a nonzero fixture config and watches a young credential's samples drop out; a gate never seen firing proves nothing.
+- Correction-file field semantics, pinned: the file's `reporters` field carries the distinct trust-eligible count. 05 §5's read-time re-check consumes it as such (stated there, same round), so the builder inherits eligibility with no new inputs.
+
+**G3, the standard-error floor, precisely (adopted from 07 §1 row 8, 2026-08-08 coherence round).**
+
+`se_gate = max(se_sample, 0.5 * sigma_eff / sqrt(n))`, per key, per variable.
+
+- `se_sample`: the weighted sample standard deviation of the key's residual samples divided by `sqrt(n)`, exactly the settled scorecard's `bias_se` (domain model §9).
+- `sigma_eff`: the single-sample noise floor for the variable; one constant, one home (§8). Height: 0.48 m, the §5.2 decomposition (band-interval ~0.13 + eyeball ~0.30 + day-to-day model error ~0.35, in quadrature), replaced by the measured estimate (sigma_human §10 + fitted dispersion) when it arrives. Score: 25 points, unfit prior, one `q_obs` anchor step (flagged §14).
+- **Why the floor, plainly:** fabricated reports agree with each other; agreement shrinks `se_sample`; so the unfloored `|b| > 2 * se` gets EASIER to pass the more coordinated the lie. The gate rewards exactly the behavior it exists to stop, and a gate that is easier to pass by lying is worse than no gate (research 15 §15.1; 07 §7.3's design rule: no gate gets easier to pass as input variance drops; 07 §7.4's `band_dispersion` detector treats the same low variance as suspicion, the correct inversion). The floor removes the consistency discount: `2 * se_gate` never drops below `sigma_eff / sqrt(n)`, so at n = 10 nothing under `|b| = 0.15 m` passes, however consistent the samples.
+- **Why 0.5:** honest samples have expected sd ~ `sigma_eff`, so a floor at `1.0 * sigma_eff / sqrt(n)` would bind on roughly half of honest keys and erase real precision differences. At 0.5 the floor binds only when the sample sd is under half the physical noise: probability under ~1.5% for honest data at n = 10 (chi-square left tail), vanishing as n grows, and routine for coordinated fabrication. Honest keys pass untouched; zero-variance coordination is refused categorically.
+- Correction-file field semantics, pinned: the file's `se` field carries `se_gate`, never raw `se_sample`, so neither the builder re-check (05 §5) nor the scorecard headline ("+/-0.09") can ever print a precision the physical noise floor says is impossible.
+
+**The displayed scorecard: what `claim_ok` covers, what remains (research 15 §15.1a; stated 2026-08-08 coherence round).**
+
+`claim_ok` (settled, domain model §9): the scorecard renders a bias headline only when `n >= 10 AND distinct_reporters >= 5 AND |bias| > 2 * bias_se`; below that, the payload carries the counter and `claim_ok: false`. Round 1 shipping it half-closed research 15 §15.1a's finding that the displayed number, the decision-13 differentiator, had no gate at all.
+
+| Attack on the displayed number | Settled `claim_ok` stops it? | Disposition |
+|---|---|---|
+| A handful of forged reports on a cold spot moves the headline | yes: sub-gate spots show only the counter, never a number | closed round 1 |
+| 10 reports from 5 freshly minted device ids | no: distinctness counts freely mintable keys (research 15 §11.2) | close by adopting G2: `distinct_reporters` counted over trust-eligible keys. Launch-identical (config zero) |
+| Coordinated consistency shrinks `bias_se`, the 2-se test passes early | no: the settled formula rewards agreement (research 15 §15.1) | close by adopting G3: `bias_se := se_gate`. NOT a launch no-op: binds whenever sample sd < `0.5 * sigma_eff`, ~1% of honest keys and every zero-variance fabrication |
+| Patient attacker: aged credentials, plausible variance, weeks of seasoning | no, and not closable statistically | residual, stated: the bar is weeks, not impossible (research 15 §15.5). Bounded by §9 hazard (c): winsorization, concordance decay, override recovery. The headline prints only gated, shrunken, winsorized values, so magnitude is damped, not clamped; no display clamp exists, because clamping a measured claim would be dishonest in the other direction |
+| The counter ("7 / 30") and the recent-reports feed | not gated, by design | a count is not a claim; decisions 4/11/19: display-instantly is the product |
+
+Ownership routing (this file edits no settled doc): the two "close by adopting" rows are one formula amendment to domain model §9's `claim_ok`: `distinct_reporters` = distinct trust-eligible `reporter_key` (G2 above) and `bias_se` floored to `se_gate` (G3 above). Owner: domain lane, round 3; 07 §1 row 7 already routes the eligibility half, the se-floor half is routed here. Implementation lands in the C3 scorecard updater/builder (adr-scorecard-incremental): the age clause needs only the record's own two fields; the history clause needs the reporter's prior-report count (GSI1 query, cheap); a nonzero-config FLIP is applied by full recompute from the immutable logs (the settled recovery path), never by mutating stored aggregates. Frontend change: none, it renders `claim_ok` as delivered.
+
 Below the gates: `applied: false`, the payload carries the counter (`"7 / 30"`, decision 19, denominator 30 = top of the 10-30 range) and `claim_ok: false`. The product never shows a sub-gate number. No accuracy claim of any kind is earnable at launch (decision 19, HANDOFF §6 item 12, 09 §10.4): see §10 for the two separate claim ladders.
 
-**Aggregate/bounded-change contract for the nightly write** (mandate 8; the SpotDefinition aggregate itself is settled, domain model §10): universe = `learned/corrections/v1/`. Declared delta per run = replace `current/<spot_id>.json` for spots recomputed + append one `history/dt=` copy each. Complement that must NOT change: seed files (git), both logs, scorecard items, any other spot's current file. The job holds no write credential for any other prefix; the complement is enforced by IAM, not by discipline (infra lane's guardrail 6).
+**Aggregate/bounded-change contract for the nightly write** (mandate 8; the SpotDefinition aggregate itself is settled, domain model §10): universe = `learned/corrections/v1/`. Declared delta per run = replace `current/<spot_id>.json` for spots recomputed + append one `history/dt=` copy each. Complement that must NOT change: seed files (git), the prediction log (`predictions/`, top-level), both derived logs (`log/calls/`, `log/observations/`; `log/` holds exactly these two, adr-prediction-log-prefix-isolation), the trust-gate config, scorecard items, any other spot's current file. (Prefix list restated 2026-08-08 coherence round.) The job holds no write credential for any other prefix; the complement is enforced by IAM, not by discipline (infra lane's guardrail 6).
 
 ### 8. Parameter table (every number, its status, its citation)
 
@@ -188,7 +246,10 @@ Below the gates: `applied: false`, the payload carries the counter (`"7 / 30"`, 
 | Residual sign | forecast - observed | settled | domain model §9, 09 §13.3 (overrides §5.1's flip, §4 above) |
 | n_min (G1) | 10 | fixed | 09 §13.4, §5.2 |
 | k_min distinct reporters (G2) | 5 | fixed | 09 §13.4, §13.2 |
-| Significance (G3) | 2 * se | fixed | 09 §13.3 |
+| Significance (G3) | 2 * se_gate | fixed | 09 §13.3; floor per 07 §1 row 8 |
+| se floor (G3) | `se_gate = max(se_sample, 0.5 * sigma_eff / sqrt(n))` | fixed (2026-08-08 coherence round) | research 15 §15.1; 07 §1 row 8 |
+| sigma_eff_score (G3 floor, score scale) | 25 pts | unfit prior | mine, one q_obs anchor step; flagged §14 |
+| Trust-gate config (G2) | `{age 0 d, priors 0, spots 2}` at launch | settled, flippable by PR + recompute (2026-08-08 coherence round) | 07 §7.2 item 0.11, §7.3 |
 | Height clamp (G5) | 0.40 * forecast H | fixed | 09 §13.4 gate 5 |
 | Score clamp (G6) | 12 pts | unfit prior | mine, flagged §14 |
 | tau (spot level) | estimated; prior 6, floor 2; switchover at >= 8 gated spots | hand-set until estimable | 09 §5.4 (formula), §17.4 (estimate-from-data rule), adr-pooling-hierarchy-activation |
@@ -253,7 +314,7 @@ Numbers are internally consistent; sigma values are the §8 priors.
 | Day 0 | No correction file. `apply(seed, absent) = seed`. `bias_gate: "no_correction"` in PublishedCall | Score from seed physics; scorecard shows `0 / 30` |
 | n=3, 2 reporters | Internal shrunk estimate exists (mostly the regional prior); G1, G2 fail | `3 / 30`, no claim, no correction |
 | n=12, 4 reporters | G1 passes, G2 fails (4 < 5) | `12 / 30`, `applied: false` |
-| n=22, 7 reporters | Key (ncep_gfswave016, lead 24-48): raw `b_raw = -0.22 m` (forecast ran small), sigma_hat = 0.42, `se = 0.42/sqrt(22) = 0.090`. G3: 0.22 > 0.179 PASS. Shrink: tau = 0.42^2/0.17^2 = 6.1, weight 22/28.1 = 0.783, parent (region) b = -0.05: `b_shrunk = 0.783*(-0.22) + 0.217*(-0.05) = -0.183`. G5 at forecast H 0.8: 0.183 <= 0.32 PASS. File written: `{"b": -0.183, "se": 0.090, "n": 22, "reporters": 7, "applied": true, "shrunk_from_global": 0.217}` | Next hourly build: member h 0.8 corrects to `0.8 - (-0.183) = 0.983`; `H_eff = 0.983 * sqrt(15.5/10) = 1.22 m` -> band chest_head, where raw H_eff 0.996 said waist_chest. The scorecard headline goes live: "corre chico aqui: 0.18 m de menos (n=22, 7 personas, +/-0.09)". `bias_applied: -0.183` logged in PublishedCall |
+| n=22, 7 reporters | Key (ncep_gfswave016, lead 24-48): raw `b_raw = -0.22 m` (forecast ran small), sigma_hat = 0.42, `se_sample = 0.42/sqrt(22) = 0.090`; floor `0.5*0.48/sqrt(22) = 0.051` does not bind, `se_gate = 0.090` (the stored `se`). All 7 reporters trust-eligible at the zero config. G3: 0.22 > 0.179 PASS. Shrink: tau = 0.42^2/0.17^2 = 6.1, weight 22/28.1 = 0.783, parent (region) b = -0.05: `b_shrunk = 0.783*(-0.22) + 0.217*(-0.05) = -0.183`. G5 at forecast H 0.8: 0.183 <= 0.32 PASS. File written: `{"b": -0.183, "se": 0.090, "n": 22, "reporters": 7, "applied": true, "shrunk_from_global": 0.217}` | Next hourly build: member h 0.8 corrects to `0.8 - (-0.183) = 0.983`; `H_eff = 0.983 * sqrt(15.5/10) = 1.22 m` -> band chest_head, where raw H_eff 0.996 said waist_chest. The scorecard headline goes live: "corre chico aqui: 0.18 m de menos (n=22, 7 personas, +/-0.09)". `bias_applied: -0.183` logged in PublishedCall |
 | One reporter inside that n | d_9f8 has 9 reports across 2 spots, `u_raw = +0.21` (calls it big). Weight 9/13 = 0.69, `u_hat = +0.145`. Her chest_head report (mid 1.35) entered the fit as `1.35 - 0.145 = 1.205` | Nothing; u_r is never published, never shown, never keyed to a visible identity |
 | A troll arrives | 5 reports "flat" from one new device on a firing day with 4 other reporters: spot-day median ignores it (1 of 5+ samples after per-device collapse); its concordance D_r starts growing; G2 unaffected (1 key) | Nothing moves. The correction shifts by under 1/(1+tau) of one winsorized sample |
 | The monthly check | Rolling-origin CV: corrected MAE beats raw at 6 of 8 gated keys; system stays on. Calibration: high-conf bin 71% hit vs low-conf 52%: confidence survives this month | Metrics file for Andres; nothing user-facing changes |
@@ -264,8 +325,8 @@ Numbers are internally consistent; sigma values are the §8 priors.
 |---|---|---|---|
 | Pairs in 90-d window | ~2k-40k (obs x ~20 keys each) | ~400k | ~4M |
 | Backfitting 3 passes | milliseconds | seconds | ~1 min, plain Python dicts |
-| Dominant cost: pair re-derivation scan of `log/predictions/` (90 d) | 1,440 gz files, 90 MB total, streamed: ~1 min | 2.2 GB: minutes, still inside one 15-min Lambda | 22 GB: DOES NOT FIT nightly Lambda |
-| Verdict | 1024 MB Lambda, seconds-to-minutes, concurrency 1 within the reserved-2 budget. **No decision to surface** | same | Trigger: when the nightly scan passes ~5 min, emit verified pairs to a `log/pairs/` cache at scorecard-update time (the updater already computes them; adr-scorecard rejected materializing pairs for the SCORECARD's needs, and that rejection is not disturbed; this would be a new consumer with its own justification). Deferred, flagged §15 D4 |
+| Dominant cost: pair re-derivation scan of `predictions/` (90 d) | 1,440 gz files, 90 MB total, streamed: ~1 min | 2.2 GB: minutes, still inside one 15-min Lambda | 22 GB: DOES NOT FIT nightly Lambda |
+| Verdict | 1024 MB Lambda, seconds-to-minutes, concurrency 1 within the reserved-2 budget. **No decision to surface** | same | Trigger: when the nightly scan passes ~5 min, emit verified pairs to a derived pairs cache at scorecard-update time (prefix settled at trigger time, NOT under `log/`: that prefix holds exactly `calls/` and `observations/`, adr-prediction-log-prefix-isolation; noted 2026-08-08 coherence round) (the updater already computes them; adr-scorecard rejected materializing pairs for the SCORECARD's needs, and that rejection is not disturbed; this would be a new consumer with its own justification). Deferred, flagged §15 D4 |
 
 Monthly evaluation reads the same window plus `log/calls/`: same envelope. Nothing here needs more than the platform the infra lane already budgeted; the one future exception is named above with its tripwire.
 
@@ -281,7 +342,7 @@ Monthly evaluation reads the same window plus `log/calls/`: same envelope. Nothi
 ### 14. What I am unsure about
 
 1. **sigma_eff = 0.48 m and sigma_u = 0.25 m are decomposed priors, not measurements.** Both are replaced by estimates (sigma_human from §10's repeat measurements; sigma_u from the reporter panel) within the first season. If sigma_u is much smaller than assumed, tau_u = 4 over-shrinks and reporter calibration arrives slower than the §5.2 table promises.
-2. **q_obs anchors (20/45/70/90)** are invented. The score delta inherits their arbitrariness; the G3 significance gate keeps an arbitrary anchor from printing a confident number, but the delta's magnitude is only as meaningful as the anchors. An ordinal-logistic treatment (09 §5.3 row 3) is the eventual fix, at ~30-50 obs spanning both classes.
+2. **q_obs anchors (20/45/70/90)** are invented. The score delta inherits their arbitrariness; the G3 significance gate keeps an arbitrary anchor from printing a confident number, but the delta's magnitude is only as meaningful as the anchors. An ordinal-logistic treatment (09 §5.3 row 3) is the eventual fix, at ~30-50 obs spanning both classes. The G3 score-scale floor inherits the same arbitrariness: `sigma_eff_score = 25 pts` is one anchor step, mine, replaced together with the anchors (added 2026-08-08 coherence round).
 3. **Top band at 3.0 m** is a guess for an open interval. Panama Pacific rarely exceeds it; a region where it is common (global later) needs proper censored-interval treatment before this convention distorts fits there.
 4. **Propensity pooled across spots** assumes reporting behavior is a community property, not a spot property. Plausible at 20 spots and one community; wrong once regions differ culturally. Per-spot propensity needs data no spot will have for a while.
 5. **Score-delta double-count risk:** fitting the score residual after height correction (sequential) prevents the obvious double-count, but wind-driven quality errors land in the score delta with no wind correction to claim them; if a wind term ever ships (stage 2), the score delta must be refitted from scratch, not adjusted.
@@ -294,7 +355,7 @@ Monthly evaluation reads the same window plus `log/calls/`: same envelope. Nothi
 | D1 | `trigger` field on report submissions (solicited vs organic) | (a) add now, doc 07 carries it; (b) infer later from push-delivery logs | **(a)**: one enum field at write time vs a fragile retro-join on push logs that do not currently record delivery per device+spot+day |
 | D2 | Off-day solicitation (an opt-in "help calibrate on quiet days" ask, max 1/week) to cover predicted-bad deciles | (a) ship at launch; (b) hold until the coverage histogram proves the gap; (c) never (decisions 12/23 lean against nagging) | **(b)**: the histogram is free and the ask has real product cost; build the tripwire, not the feature |
 | D3 | Reporter-weight overrides file (§6.4) | (a) as designed (git, PR, incident-only); (b) reject as too close to moderation (decision 24) | **(a)**: research 15 §3's recovery story requires SOME down-weight mechanism; git+PR is auditable and touches reporters, not reports |
-| D4 | Pairs cache `log/pairs/` | (a) defer until the nightly scan passes 5 min (§12); (b) build day one | **(a)**: parsimony; the trigger is measurable and the recovery path (recompute from logs) never depends on the cache |
+| D4 | Deferred pairs cache (§12; prefix settled at trigger time, never under `log/`) | (a) defer until the nightly scan passes 5 min (§12); (b) build day one | **(a)**: parsimony; the trigger is measurable and the recovery path (recompute from logs) never depends on the cache |
 | D5 | Score clamp 12 pts (G6) | accept / change | Accept as a v1 prior; it only ever binds when G1-G4 have already passed, so it is a seatbelt, not a driver |
 
 ### 16. ADR index (this lane)

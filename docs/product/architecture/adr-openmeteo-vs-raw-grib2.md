@@ -12,7 +12,7 @@
    `fetch(spots, cycle_hint) -> normalized snapshot rows` + `probe() -> health`, with
    sources declared in a data registry (id, adapter type, endpoint template, cycle
    schedule, latency estimate, freshness threshold). Downstream consumers read only
-   `log/predictions/v1/` rows, which carry a `source` id and nothing provider-shaped.
+   `predictions/v1/` rows, which carry a `source` id and nothing provider-shaped.
    **Swapping Open-Meteo out is a registry edit plus one adapter; the pipeline, log
    schema, build, scoring and learning layers do not change.**
 3. **Raw NOAA `gfswave` GRIB2 is the named fallback and the phase-2 enrichment**, already
