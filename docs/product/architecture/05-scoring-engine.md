@@ -15,7 +15,7 @@ seed + correction files (§11), the size-band table (§7.2), the bundle payload 
 | Weakest link | First-class output: per-factor log-damage, ranked. The label the UI shows is `argmax(damage)`, not `min(sub-score)`. ADR: `adr-scoring-weakest-link-damage.md` |
 | Member blend | Input-space arithmetic mean (circular for direction) over usable members, land-masked and null excluded. ADR: `adr-scoring-member-blend.md` |
 | Learned correction | Two hooks, both data-driven, both inert at launch: per-source H bias (pre-blend) and score delta (post-combine), research 09 §7.4 + §13.4 gates re-checked at read time. Absent file = identity function. Turning learning on changes data, not code shape |
-| Confidence | Computed beside the score, never multiplied into it (research 09 §7.5). Spread term is a qualitative flag per §3.6, percentile form wired as data for when spread history exists, removed if it fails the §10.2 calibration check |
+| Confidence | Computed beside the score, never multiplied into it (research 09 §7.5). Spread term is a qualitative flag per §3.6, percentile form wired as data for when spread history exists, removed if it fails the §10.2 calibration check. Day-one levels render from model agreement alone: freshness participates only once a spot has a report (§6.3, D4 ANSWERED 2026-08-08) |
 | Null observations | Ingest contract (04 §11): wind pair or `tide_m` can arrive null. A null factor is EXCLUDED (weight leaves the mean), confidence is capped, the payload names the gap; no fallback value is ever fabricated. Law L16. Added 2026-08-08 coherence round |
 | score_q mapping | `score_q = ScoreResult.score = Math.round(100 * q_final)`, identity, one rounding, here and nowhere else. §3. Stated 2026-08-08 coherence round |
 | Compute fit | 960 score evaluations per build (20 spots × 48 h), each O(1). Under 50 ms total against a 120 s build Lambda budget. Arithmetic in §8 |
@@ -255,7 +255,7 @@ requirement and is corrected below; the ingest lane owns the ACL and is right.
 | `tide_m` series null (no day extremes derivable either) | `sTide` returns null; same treatment with `w_tide`; `missing` contains `"tide"`; confidence capped at `cap_missing_tide = 0.7` |
 | `range_class: micro` with tide data present | Unchanged: neutral is a REAL `S_tide = 1.0`, not a null. Neutrality and absence stay distinguishable in the output |
 | Both null | Both excluded; `q = S_dir * S_size^(w_size/w_size) = S_dir * S_size`; caps compose by min |
-| Confidence cap application | `c_total = min(c_spread * c_track * c_fresh, cap)` where `cap = min` over missing factors, `1` when none. Applied before the §6.4 level projection. Reason copy names the missing source with the plain fact ("no wind data today; score is swell and tide only"), research 09 §14.4 |
+| Confidence cap application | `c_total = min(product of participating confidence factors (§6.4), cap)` where `cap = min` over missing factors, `1` when none. Applied before the §6.4 level projection. Reason copy names the missing source with the plain fact ("no wind data today; score is swell and tide only"), research 09 §14.4 |
 
 Rejected alternatives, so nobody reopens them:
 
@@ -352,8 +352,12 @@ type SpreadInput =
   | { kind: "climatology"; pct: number };                  // percentile of THIS spot's own
                                                            // historical spread (research 09 §3.6.2)
 type ConfidenceResult = {
-  c_spread: number; c_track: number; c_fresh: number;
-  c_total: number;                                         // product, research 09 §14.3, then the
+  c_spread: number; c_track: number;
+  c_fresh: number | null;                                  // null = no report ever: excluded from
+                                                           // the product, not floored (§6.3, D4
+                                                           // ANSWERED 2026-08-08)
+  c_total: number;                                         // product of participating factors,
+                                                           // research 09 §14.3 + §6.3, then the
                                                            // §3.6 missing-factor cap (2026-08-08)
   level: "high" | "medium" | "low";
   track_state: "unverified" | "measured";                  // §6.2; drives the no-track-record copy
@@ -365,7 +369,7 @@ type ConfidenceResult = {
 function confidence(
   members: MemberRow[], spread: SpreadInput,
   track: { mae: number; mae_ref: number } | null,          // null until scorecard passes honesty gates
-  last_report_age_h: number | null,                        // null = no report ever
+  last_report_age_h: number | null,                        // null = no report ever (§6.3: excluded)
   missing: ("wind" | "tide")[],                            // §3.6 (2026-08-08 coherence round)
 ): ConfidenceResult;
 ```
@@ -405,8 +409,8 @@ not filled here with an invented denominator.
 
 | Argument | Evidence |
 |---|---|
-| The worst case the finding fears, a never-verified spot reading "high", is structurally unreachable | A spot with no report ever has `c_fresh = fresh_floor = 0.3` (§6.3), so `c_total <= 0.3 <= 0.4` and the level is "low" for every spot until its first report. Verified against the §11 worked example (0.09, low) |
-| A penalizing track prior would double-count | Freshness already encodes "no human has confirmed anything here"; multiplying a second sub-1 factor for the same absence pins day-one confidence to a constant "low", which carries zero information, the failure mode the finding itself names |
+| A never-verified spot reading "high" was structurally unreachable pre-amendment; it is reachable now, and deliberately (2026-08-08, D4) | With freshness excluded for unreported spots (§6.3) and tight model agreement, `c_total = c_spread` can exceed 0.7. Accepted: the level is an agreement claim, never an accuracy claim; the copy rule below plus the §6.3 copy rule name both absences on every such row, and the §10.2 calibration check with the §6.1 removal clause bounds the exposure once data exists |
+| A penalizing track prior would still be wrong | Absence of verification is carried by copy, not by penalty factors (§6.3, 2026-08-08): a penalizing prior would reintroduce the constant day-one "low" that D4 removed, which carries zero information, the failure mode the finding itself names |
 | Confidence is not an accuracy claim | Decision 19 / HANDOFF §6 item 12 govern CLAIMS; those live behind the two claim ladders (06 §10) and stay unearnable at launch. `conf_level` states how sure we are about today's call from model agreement plus ground-truth recency; it asserts nothing about past skill |
 | The residual exposure is named, not hidden | The real window is a spot WITH recent reports but a sub-gate scorecard (`c_fresh` near 1, models agreeing): it can read "high" with zero verified track record. That is defensible (fresh human confirmation exists) but must not be silent, hence the copy rule below |
 
@@ -416,26 +420,71 @@ confidence reason names it with the counter, "sin historial verificado aqui toda
 that silently implies a track record. Consumer: `confidence_reason` in the bundle
 (`domain-model.md` §13), keyed `(spot_id, valid_ts)`; frontend renders, never derives.
 
-#### 6.3 C_fresh (research 09 §14.3)
+#### 6.3 C_fresh (research 09 §14.3; participation amended 2026-08-08, D4 ANSWERED)
 
-`C_fresh = exp(-Δt_h / 36)`, floored at `fresh_floor = 0.3` (data). The floor is a deliberate
-deviation, argued: with no floor, a spot with no report ever has `C_fresh = 0`, every spot
-reads "low" for the entire pre-community period, and a constant output carries zero
-information. The floor keeps freshness modulating without zeroing the display; the reason
-string still names staleness plainly with the actual date (research 09 §14.4 "say when data
-is stale"). Deviation flagged as D4 for Andres because it modifies a research formula.
+Absence and staleness are different states (Andres, 2026-08-08): a spot with zero reports is
+not stale, it is unreported. The factor treats them differently:
+
+| State | Input | Factor |
+|---|---|---|
+| Unreported (no report ever) | `last_report_age_h = null` | `c_fresh = null`; freshness leaves the `c_total` product entirely. Absence is not an observation; flooring it fabricated a staleness reading for a spot never observed, the same move §3.6 and research 09 §14.4 forbid for wind and tide (L16). Exclusion is this design's own null-observation rule applied to its third input |
+| Reported (a report exists) | `last_report_age_h = Δt` | `C_fresh = max(exp(-Δt / 36), fresh_floor = 0.3)`, bit-identical to the pre-amendment formula. `lambda = 36 h` unchanged (research 09 §14.3, unfit prior) |
+
+Day-one consequence: with no reports anywhere and track neutral (§6.2), `c_total = c_spread`,
+so the level renders from model agreement alone and all three levels are reachable from the
+first build (arithmetic in §11). Four models in tight agreement and four models split between
+0.8 m and 2 m are different days, and the level now says so. Track record is not made
+redundant: it joins as an independent multiplicand once the scorecard passes the gates
+(§6.2), dragging the level where the spot has measurably been hard to call and upgrading the
+copy from unverified to measured where it has not.
+
+`fresh_floor = 0.3` survives, scoped to the reported regime only: a long-silent spot decays
+to the floor and reads baja at any agreement (0.96 × 0.3 = 0.29, §11), never a pinned zero,
+and the reason string names the stale date (research 09 §14.4 "say when data is stale"). The
+floor stays an unfit prior, mine, data, flagged in §12; its original day-one job is now done
+by exclusion instead.
+
+Binding copy rule (extends the §6.2 rule): whenever `c_fresh = null`, the reason string names
+both the level's basis and the absence: "el nivel refleja cuanto coinciden los modelos; nadie
+ha reportado desde este spot todavia". An agreement claim, never an accuracy or error-bar
+claim (research 09 §3.6 qualitative-flag consequence; §10.4 honesty rule). Consumer:
+`confidence_reason` in the bundle (`domain-model.md` §13), keyed `(spot_id, valid_ts)`.
+
+Rejected alternatives, so nobody reopens them:
+
+- **Raise the floor until "alta" is reachable** (needs `fresh_floor > 0.7`): guts staleness,
+  a genuinely old report could never drag the level below media, and unreported stays
+  conflated with stale.
+- **Freshness as a separate displayed signal, out of the product**: a stale spot with tight
+  agreement would read alta; staleness must bind the level itself, which was the point of the
+  term and stays.
+- **Expire old reports back to `null` past a horizon**: the level would rise as the last
+  report ages past the horizon, non-monotone in report age, and the horizon would be one more
+  uncited coefficient.
+
+Known one-way ratchet, stated: once a spot's first report ever ages past ~43 h (where
+`exp(-Δt/36)` reaches the floor), its ceiling is `c_spread × 0.3`, baja, below a
+never-reported neighbour at the same agreement. Conservative by construction, both states
+named in copy; §12 carries it.
 
 #### 6.4 Level projection
 
-`c_total = min(c_spread * c_track * c_fresh, §3.6 missing-factor cap)` (research 09 §14.3;
-cap added 2026-08-08 coherence round, binds only when wind or tide input is null and sets
-`dominant = "missing_data"` when it does). Thresholds, mine to set per
+`c_total = min(product of participating factors, §3.6 missing-factor cap)` (research 09
+§14.3 as amended by §6.3; cap added 2026-08-08 coherence round, binds only when wind or tide
+input is null and sets `dominant = "missing_data"` when it does). Participating factors:
+`c_spread` unless removed per §6.1, `c_track` always (neutral 1.0 until measured, §6.2),
+`c_fresh` only when a report exists (§6.3, amended 2026-08-08). Thresholds, mine to set per
 `domain-model.md` §6, v1 convention, data: **low `c_total <= 0.4`, medium `0.4 < c_total <=
-0.7`, high `> 0.7`**. Consequences: since `c_track <= 1` and `c_fresh <= 1`, the f(M) cap on
-`c_spread` bounds `c_total <= 0.4`, so a single-member day can never read above "low";
-the §7.5 worked Venao value 0.31 reads "low", matching the research text. Both continuous
-value and level are logged in every PublishedCall row (settled, `domain-model.md` §6) so
-thresholds can move without losing history.
+0.7`, high `> 0.7`**. Consequences: since every other participating factor is `<= 1`, the
+f(M) cap on `c_spread` bounds `c_total <= 0.4`, so a single-member day can never read above
+"low"; the §7.5 worked Venao value 0.31 reads "low", matching the research text.
+Zero-informative-factor guard (2026-08-08): if the spread factor is disabled by the §6.1
+removal clause AND `track_state = "unverified"` AND `c_fresh = null`, no informative factor
+survives and an empty product would read 1.0, alta, a fabricated certainty; the level is
+forced "low" with `dominant = null` and the reason names that no usable confidence signal
+exists yet (research 09 §14.4). Both continuous value and level are logged in every
+PublishedCall row (settled, `domain-model.md` §6) so thresholds can move without losing
+history.
 
 Structural separation law (L9): `score()` does not accept ensemble-spread, track-record, or
 freshness inputs; `confidence()` does not return anything `combine()` reads. The type
@@ -482,7 +531,8 @@ concurrency, or timeout pressure to any guardrail.
 
 Generator domains: `h_m ∈ [0, 20]`, `t_s ∈ (0, 25]`, angles `∈ [0, 360)`, `speed_kt ∈ [0, 80]`,
 `eta ∈ [0, 1]`, weights `> 0`, `delta_q ∈ [-1, 1]`; wind and tide inputs each generated null
-with positive probability (§3.6, 2026-08-08 coherence round).
+with positive probability (§3.6, 2026-08-08 coherence round); `last_report_age_h` generated
+null with positive probability (§6.3, 2026-08-08).
 
 | # | Law | Statement |
 |---|---|---|
@@ -502,6 +552,7 @@ with positive probability (§3.6, 2026-08-08 coherence round).
 | L14 | Tide neutrality | `range_class: micro` implies `q` is independent of every tide input |
 | L15 | Rank consistency | `rankSpots` is a permutation; descending; deterministic under ties; `our_rank` depends only on scores, `baseline_rank_raw` only on blended raw heights |
 | L16 | Null-factor honesty (2026-08-08 coherence round, §3.6) | For `x ∈ {wind, tide}`: null input implies `sub.x = null` (never a number), `x ∈ missing`, no damage entry for `x`, and `q` equals the weighted geometric mean over the present factors only (renormalized `sumW`), bit-identical to computing with `x` never defined; the §3.6 confidence cap binds (`c_total <= cap`); `weakest_link` never names a null factor; `missing = []` implies L1-L15 outputs unchanged from the pre-amendment formula; microtidal neutral (`S_tide = 1.0`) and tide-null are distinguishable in the output |
+| L17 | Freshness participation (2026-08-08, §6.3, D4) | `last_report_age_h = null` implies `c_fresh = null` and freshness absent from the `c_total` product (never a floored number); `last_report_age_h = h` implies `c_fresh = max(exp(-h/36), 0.3)`, non-increasing in `h`, and `c_total` bit-identical to the pre-amendment formula; `c_fresh = null` and `c_fresh = 1.0` are distinguishable in the output; spread disabled AND `track_state = "unverified"` AND `c_fresh = null` forces `level = "low"` with `dominant = null` (§6.4 guard) |
 
 Each law is one or more property tests; the constants are parameters of the generators, so
 refitting coefficients later (research 09 §7 header) breaks no test that should survive.
@@ -548,10 +599,32 @@ from the `domain-model.md` §11 example. Correction file absent (launch).
 
 **Confidence** (same members; research 09 §7.5 worked the identical numbers): CV_H = 0.122,
 CV_T = 0.182, Δdir = 9°; penalties 0.239 + 0.832 + 0.090; `c_spread = exp(-1.161) = 0.31`,
-M = 4 so no cap. Track neutral (no scorecard yet) = 1.0; freshness with no report ever =
-floor 0.30. `c_total = 0.31 × 1.0 × 0.30 = 0.09` and the level is **low**; dominant =
-`spread_period` (72% of the spread penalty). The reason copy writes itself and is true:
-"models split 10 s vs 15.5 s on period, and nobody has reported from this spot yet."
+M = 4 so no cap. Track neutral (no scorecard yet) = 1.0; no report ever, so `c_fresh = null`
+and freshness does not participate (§6.3, amended 2026-08-08). `c_total = 0.31 × 1.0 = 0.31`
+and the level is **low**; dominant = `spread_period` (72% of the spread penalty). The reason
+copy writes itself and is true: "models split 10 s vs 15.5 s on period, and nobody has
+reported from this spot yet."
+
+**Day-one level reachability (D4, 2026-08-08).** Same Venao seed and valid hour; the member
+variants below differ only in how much the models agree. Launch state throughout: no report
+ever (`c_fresh = null`), track neutral, so `c_total = c_spread`:
+
+| Case | Members H m / T s / dir | CV_H / CV_T / Δdir | Penalty sum | c_total | Level |
+|---|---|---|---|---|---|
+| Four members, tight | 0.71-0.76 / 12.8-13.5 / 4° range | 0.025 / 0.019 / 4° | 0.010 + 0.009 + 0.018 = 0.036 | 0.96 | **alta** |
+| Four members, moderate period split | 0.71-0.76 / 10.5-15.0 / 9° range | 0.025 / 0.132 / 9° | 0.010 + 0.432 + 0.090 = 0.532 | 0.59 | **media** |
+| Four members, the real pull above | 0.64-0.86 / 10.05-15.5 / 9° range | 0.122 / 0.182 / 9° | 0.239 + 0.832 + 0.090 = 1.161 | 0.31 | **baja** |
+| One usable member | any single row | spread terms 0; f(M) caps `c_spread` at 0.4 | n/a | 0.40 | **baja** |
+
+What each level takes on day one: alta needs the penalty sum under 0.357 = -ln(0.7) (with
+height and direction aligned, period scatter up to ~1.5 s std at a 13 s mean; spread across
+all three terms, roughly heights within ±6 cm, periods within ±1 s, directions within ±10°);
+media needs under 0.916 = -ln(0.4); anything worse, or a single member, reads baja.
+
+Once a report exists, freshness rejoins (§6.3) and staleness binds at any agreement. On the
+tight-agreement day (`c_spread = 0.96`): report 3 h old, `c_fresh = 0.92`, `c_total = 0.89`,
+alta; 24 h old, `c_fresh = 0.51`, `c_total = 0.50`, media; 96 h old, `c_fresh = floor 0.30`,
+`c_total = 0.29`, baja. A genuinely stale spot cannot read confident.
 
 The day reads: right direction, clean-enough light wind, tide fine, score capped by size.
 Weakest link "size at 0.69" with confidence low. That matches the §8.2 discussion of the same
@@ -573,9 +646,15 @@ day, which is the point of using real inputs.
    hard (`Δdir` term) and the members are displayed raw, but the blended score that hour is
    physically dubious. Score-per-member with a min or max was rejected in the blend ADR;
    revisit only with evidence from the call log.
-4. **`fresh_floor` and the §6.3 deviation** make day-one confidence read mostly "low" via
-   spread and freshness anyway (0.09 in the worked example). If Andres wants day-one levels
-   driven by model agreement alone, the freshness factor's enable flag is the lever; D4.
+4. **Day-one "alta" is an agreement claim riding a weak predictor** (D4 ANSWERED 2026-08-08,
+   §6.3). Spread-skill correlation can be near zero (research 09 §3.6; Rupp 2026: "robustly
+   close to zero" in eastern Canada even at 100 members). Between launch and the first §10.2
+   calibration pass, the three levels rest on a signal that may prove uninformative at these
+   spots; the §6.3 copy rule keeps the claim honest and the §6.1 removal clause takes the
+   factor out if the data says so. Second exposure, the one-way ratchet (§6.3): a spot's
+   first report ever, aged past ~43 h, pins its ceiling at baja (`c_spread × 0.3`), below a
+   never-reported neighbour at the same agreement. Conservative direction; revisit only with
+   call-log evidence.
 5. **Best-window semantics** (§7) are my convention; research 09 never defines the term. The
    wind-word thresholds likewise. Both are data.
 6. **`sigma_dir` is global** (20°) while every other direction fact is per-spot. A headland
@@ -593,7 +672,7 @@ day, which is the point of using real inputs.
 | D1 | Blend rule | (a) input-space mean over usable members (ADR); (b) score each member, publish the mean of scores; (c) best member only | **(a)**, per research 09 §8.4 mean-as-default; (b) is defensible and revisitable once the call log can compare them offline, zero user risk |
 | D2 | Secondary swell train | (a) score primary train only (literal research 09 §7); (b) score each train, take the max-scoring train | **(a) for launch.** (b) is the likely end state (a spot lit by its secondary swell scores 0 on (a)), but research 09 gives no combination rule, so shipping (b) means shipping uncited physics. Log both trains from day one either way, so flipping later is retroactively evaluable |
 | D3 | Tide word-to-number map (§3.5 values) | ship v1 values / have the cousin's crew sanity-check optimum and sigma per spot alongside the D7 band check (`domain-model.md` §16) | **Sanity-check with locals in the same WhatsApp message as the band edges.** One message covers both open data tables |
-| D4 | Freshness floor 0.3 (§6.3 deviation from research 09 §14.3) | (a) floor at 0.3; (b) no floor, day-one confidence pinned low until reports flow; (c) disable the freshness factor until the first report exists | **(a)** with the stale-date always in the reason string; (b) makes the confidence row a constant, which is zero signal; (c) hides real staleness |
+| D4 | Freshness floor 0.3 (§6.3 deviation from research 09 §14.3) | (a) floor at 0.3; (b) no floor, day-one confidence pinned low until reports flow; (c) disable the freshness factor until the first report exists | **ANSWERED 2026-08-08 (Andres): (c), as amended in §6.3.** Freshness participates only once a spot has a report: the null case is excluded, not floored, and the floor survives inside the reported regime. That closes my original objection to (c), "hides real staleness": a spot with an old report still decays to the floor and reads baja at any agreement. Day-one levels render from model agreement alone; arithmetic and reachability table in §11 |
 | D5 | `MAE_reference` for C_track | research 09 §14.3 leaves it undefined; candidates: B1 raw-model MAE at the same spot and lead (skill-score framing, research 09 §10.1) vs a fixed band-width constant | **B1 raw-model MAE** once the scorecard has it; factor stays neutral until then. Needs lane 06 to expose raw-model MAE per (spot, lead) in the scorecard, one more variable in an existing structure |
 | D6 | Best window definition | (a) contiguous daylight run at q >= 0.8 × day max; (b) fixed top-N hours; (c) drop the field at launch | **(a)**, ratio as data; it degrades honestly (null when flat) and the payload field is already in the settled bundle shape |
 
@@ -614,3 +693,15 @@ day, which is the point of using real inputs.
 4. **Research 09 §7.5's own worked example** rounds its penalty sum (0.239 + 0.832 + 0.090 =
    1.161); the CV_T penalty from the stated CV (0.182/0.20)^2 is 0.828. Cosmetic, no
    consequence; noted so nobody chases a phantom discrepancy in DISTILL.
+5. **`docs/feature/daily-call-with-permanent-receipts/feature-delta.md` slice-07 is worded
+   for the pre-D4 behaviour** (found 2026-08-08, D4 amendment round). Its plan-notes bullet 3
+   states the freshness floor holds `c_total <= 0.3` so "the displayed level stays 'baja'
+   until reports exist in a later feature". False under §6.3 as amended: with no report ever,
+   freshness is excluded, `c_total = c_spread`, and all three levels are reachable on day one
+   (single-member days still cap at baja via f(M), §6.1). Needed rewording of that bullet:
+   with four members the `members_used < 2` cap does not bind; with zero reports the
+   freshness factor does not participate (05 §6.3, D4 ANSWERED 2026-08-08), so the day-one
+   level renders from model agreement alone, and the reason string names that nobody has
+   reported yet. The slice-07 row's own value statement already matches the new behaviour and
+   needs no change; Pre-requisites row 4 can strike scoring D4 from its open list. Feature
+   lane owns the edit.

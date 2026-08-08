@@ -1,0 +1,144 @@
+/* NOT IMPORTED — zero wire bytes. Recipes for components whose markup has
+   not landed yet. Each block moves into components.css in the same commit
+   as its markup (rule: shipped CSS must have a shipped consumer —
+   clause data:consumer-known-before-produced). Exact hexes, ratios and the
+   glyph SVGs are specified in docs/product/architecture/09-design-system.md;
+   this file is the paste-ready CSS the DELIVER crafter consumes. */
+
+/* ---- confidence indicator (decision 7). Dots + word, one <details> for
+   the reason. Shape + word always travel together; colour never appears:
+   confidence is a certainty signal, not a quality verdict. */
+.conf {
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  letter-spacing: var(--track-meta);
+}
+
+.conf .dots {
+  letter-spacing: 0.12em;
+  font-size: 0.625rem;
+  vertical-align: 0.08em;
+}
+
+details.conf > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  cursor: pointer;
+  list-style: none;
+}
+
+details.conf > summary::after {
+  content: '▸';
+  margin-left: var(--sp-1);
+  transition: transform var(--dur-2) var(--ease);
+}
+
+details.conf[open] > summary::after {
+  transform: rotate(90deg);
+}
+
+/* ---- staleness chip (>3h, flipped by the 0.3KB stamp island) */
+.chip-stale {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--sp-2);
+  border: 1px solid var(--warn);
+  border-radius: var(--r-full);
+  background: var(--warn-bg);
+  color: var(--warn); /* 5.99:1 day / 7.28:1 dark — AA, ≥14px 600 */
+  font-size: var(--text-meta);
+  font-weight: 600;
+  opacity: 0;
+}
+
+.chip-stale.on {
+  opacity: 1;
+  transition: opacity var(--dur-2) var(--ease);
+}
+
+/* ---- accuracy scorecard block (decisions 13, 19). A quiet card: the
+   product's honesty lives here, so it reads as body text, not as ornament */
+.scorecard {
+  margin-bottom: var(--sp-3);
+  padding: var(--sp-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-m);
+  background: var(--surface);
+}
+
+.scorecard .counter {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* ---- breakdown bars (decision 17). Track/fill are non-text UI:
+   fill 7.91:1 day, 8.14:1 dark on --sunken; the weakest-link fill uses
+   --danger (6.75:1 day, 6.02:1 dark on --sunken) AND the arrow + words
+   name it, so colour never carries the callout alone. */
+.bars {
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.bar {
+  display: grid;
+  grid-template-columns: 6rem 1fr auto;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--text-meta);
+}
+
+.bar .track {
+  height: 8px;
+  border-radius: var(--r-full);
+  background: var(--sunken);
+}
+
+.bar .fill {
+  height: 100%;
+  border-radius: var(--r-full);
+  background: var(--ink-2);
+}
+
+.bar.weakest .fill {
+  background: var(--danger);
+}
+
+/* ---- day-one empty state (decision 19): same card voice as .scorecard,
+   counter big and tabular. Never a blank. */
+.state-empty {
+  padding: var(--sp-4);
+  border: 1px dashed var(--ctrl);
+  border-radius: var(--r-m);
+  color: var(--ink);
+}
+
+/* ---- image frames (map, report photos): space reserved via aspect-ratio,
+   zero CLS; the alt text renders readable on --sunken while loading/offline */
+.img-frame {
+  overflow: hidden;
+  border-radius: var(--r-m);
+  background: var(--sunken);
+  color: var(--ink-2);
+}
+
+.img-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* ---- reveal card (report screen 2, island-rendered from P3) */
+.reveal {
+  padding: var(--sp-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-l);
+  background: var(--surface);
+}
+
+.reveal .delta {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}

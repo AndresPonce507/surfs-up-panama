@@ -110,6 +110,14 @@ const JOBS = [
       ['cucumber acceptance', 'npx', ['cucumber-js']],
     ],
   },
+  {
+    name: 'ui',
+    default: true,
+    steps: [
+      ['build', 'npm', ['run', 'build']],
+      ['ui quality mandates', 'node', ['scripts/check-ui-quality.mjs']],
+    ],
+  },
 ];
 // ── END ADAPT ───────────────────────────────────────────────────────
 
