@@ -9,16 +9,24 @@ name and does not restate their rationale.
 Amended 2026-08-08 (coherence round): guardrails 2/4/6/7/8 and §3, §5, §6, §8, §12–§15 aligned
 to the shipped round-2 write path (`07-write-path.md` + its ADRs) and
 `adr-publish-time-html-rendering.md`; S3-at-scale cost corrected against domain-model §5.3;
-DynamoDB always-free status verified live. Each amendment is marked in place.
+DynamoDB always-free status verified live (re-opened in the second pass, next note). Each
+amendment is marked in place.
+Amended 2026-08-08 (coherence round, second pass, cost review): DynamoDB 25/25 perpetuity
+pulled back to **UNVERIFIED** (research 08 disputes the live read; both branches priced in §8
+and §17 item 9; settled by the §11 step 1 human billing-console check). §12 launch and global
+storage re-priced with photos (5.4 GB, flat with audience): launch ≈$0.32/mo, global
+≈$2.67–4.85/mo. Prediction-log Glacier IR transition pinned at exactly 90 d (domain-model
+§5.3's 180 d cites §8 here, which never said 180; routed for correction). §6.1 correlated
+attack now prices its logs (≈$10/mo, ≈$56/mo all-in). Each amendment marked in place.
 
 ### Verdict block
 
 | Question | Verdict |
 |---|---|
 | Ingest runner | **EventBridge Scheduler + Lambda (zip, JSON sources), hourly.** GitHub Actions `schedule` REJECTED as primary: 1–4 h drift, drops growing >30%, 60-day auto-disable with the keepalive workaround TOS-blocked (research 13). Fallback lanes named in ADR-ingest-runner. |
-| Monthly cost, launch (20 spots, 500 MAU) | **≈ $0.23/mo** (no LLM narration) / **≈ $0.65/mo** (with ES+EN Haiku narration). Cost table in §12. (Re-derived 2026-08-08 coherence round: adds publish-time HTML render PUTs, drops the on-demand DynamoDB line.) |
-| Monthly cost, global (5,000 spots, 20,000 MAU) | **≈ $2.65–4.80/mo, dominated by prediction-log S3 storage** (89.5 GB by end of year 1, measured, domain-model §5.3). Low end assumes the domain lane's Parquet + Glacier IR levers past 500 spots. (Corrected 2026-08-08 coherence round: the prior ≈$0.88–1.30 was ~7× low on S3.) Audience still owns the CloudFront meter; spots now carry a real storage cost. Table in §12. |
-| Unavoidable floor | S3 (~$0.15–0.30/mo with photos, 90-day retention) + domain registration (~$12/yr, not an AWS bill). Everything else sits inside perpetual always-free allowances. |
+| Monthly cost, launch (20 spots, 500 MAU) | **≈ $0.32/mo** (no LLM narration) / **≈ $0.74/mo** (with ES+EN Haiku narration). Cost table in §12. (Re-derived 2026-08-08 coherence round: adds publish-time HTML render PUTs, drops the on-demand DynamoDB line. Corrected in the second pass: the storage line undercounted photos, which are 5.4 GB alone.) |
+| Monthly cost, global (5,000 spots, 20,000 MAU) | **≈ $2.67–4.85/mo, dominated by prediction-log S3 storage** (89.5 GB by end of year 1, measured, domain-model §5.3). Low end assumes the domain lane's Parquet + Glacier IR levers past 500 spots. (Corrected 2026-08-08 coherence round: the prior ≈$0.88–1.30 was ~7× low on S3. Second pass re-priced photos at 5.4 GB, flat with audience.) Audience still owns the CloudFront meter; spots now carry a real storage cost. Table in §12. |
+| Unavoidable floor | S3 (**~$0.32/mo** at launch with photos, 90-day retention: ~$0.145 storage + ~$0.17 requests, §12; corrected second pass) + domain registration (~$12/yr, not an AWS bill). Everything else sits inside always-free allowances, with ONE contested line: DynamoDB 25/25 perpetuity is **UNVERIFIED** (§8): $0.00 if perpetual, ~$14.24/mo from month 13 if 12-month. Human check, §11 step 1. |
 | Binding constraint | CloudFront **requests** (10M/mo always-free). Enforced answer: ≤10 requests/session at P50 via per-route publish-time HTML (adr-publish-time-html-rendering.md); budget re-derived in §15. (Amended 2026-08-08 coherence round: the bundled-JSON fetch model no longer describes the client.) |
 | Region | us-east-1 (NOAA open-data buckets are there; same-region S3→Lambda transfer $0.00 — research 08 §5.1, §7.3). |
 | DNS | External registrar DNS, no Route 53 hosted zone ($0.50/mo avoided) — ADR-dns-external. |
@@ -141,7 +149,7 @@ I own the *bucket level*; the domain lane owns key layout and payload contents (
 | `site/` + `assets/` | Astro build output, content-hashed assets | none (tiny, redeployed) |
 | `v1/` (published JSON + photos) | region bundles, manifest, reports, photo variants | photos: **expire 90 days after creation** (decision 3, §18) |
 | `raw/` | archived provider payloads for replayability | **expire 30 days** |
-| **prediction log** = `PREDICTION_LOG_PREFIX` = **`predictions/`**, top-level, NOT under `log/` (domain-model §5.2 and `adr-prediction-log-prefix-isolation.md`, settled in the 2026-08-08 coherence round; `log/` now holds only the derived `calls/` and `observations/`, so no `log/*` rule can reach the prediction log, and the ingest IAM grant on `predictions/*` matches the real write path) | **the immutable prediction log** (HANDOFF §3) | **NO expiry, ever.** Guardrail 4 forbids any expiration or transition rule whose prefix OVERLAPS this prefix; single allowlisted exception: an exact-prefix transition to Glacier IR at ≥90 d (the domain lane's own cost lever, domain-model §5.3, past 500 spots) |
+| **prediction log** = `PREDICTION_LOG_PREFIX` = **`predictions/`**, top-level, NOT under `log/` (domain-model §5.2 and `adr-prediction-log-prefix-isolation.md`, settled in the 2026-08-08 coherence round; `log/` now holds only the derived `calls/` and `observations/`, so no `log/*` rule can reach the prediction log, and the ingest IAM grant on `predictions/*` matches the real write path) | **the immutable prediction log** (HANDOFF §3) | **NO expiry, ever.** Guardrail 4 forbids any expiration or transition rule whose prefix OVERLAPS this prefix; single allowlisted exception: an exact-prefix transition to Glacier IR at **exactly 90 d** (the domain lane's own cost lever, domain-model §5.3, past 500 spots; pinned 2026-08-08 coherence round, second pass: domain-model §5.3 says 180 d and cites §8 here, which never stated 180. 90 d is the value all §12 cost math uses; the domain-model half is routed for the matching fix) |
 | `log/calls/` + `log/observations/` | published-call log + observation exports (scorecard rebuild inputs, domain-model §6/§9) | no expiry; per-prefix Glacier IR transition at 90 d past 500 spots (domain-model §17, implemented as exact per-family prefixes, never one `log/*` parent rule; guardrail 4) |
 | (bucket-wide) | — | **abort incomplete multipart uploads at 7 days** |
 
@@ -235,15 +243,18 @@ duration meter peak simultaneously:
 | mint / push / photo-presign | 1 each | 25.92M | 2.592M s (324k GB-s) | $4.98 | $0.00 standalone | **$4.98/mo each** |
 
 Prices per research 15 §5.2 (accessed 2026-08-08). CloudWatch Logs ingestion adds ~$4/mo for
-the report flood alone (research 15 §9b, 07-write-path §12).
+the report flood alone (research 15 §9b, 07-write-path §12). Correlated, the report flood is
+only 40% of invocations (51.84M of 129.6M), so at the same log bytes per invocation the four
+floods together ingest ≈2.5× that: **≈$10/mo logs** (derived from the research 15 §9b rate,
+accessed 2026-08-08; added 2026-08-08 coherence round, second pass).
 
 **Correlated failure, stated plainly: all four breakers hang off ONE SNS topic** (07-write-path
 §11 item 6). One topic or breaker-fn defect disables all four breakers together, so the four
 floods can run concurrently. Sum of per-function suprema ≈ **$29/mo**. Strict account-level
 bound (the 1M-request and 400k GB-s free pools deduct once, not four times; all four held at
 100 ms): (129.6M − 1M) × $0.20/M + (1.62M − 0.4M GB-s) × $0.0000166667 ≈ $25.72 + $20.33 ≈
-**$46/mo compute**, plus logs. **Every correlated variant exceeds the $20 billing alarm
-(guardrail 9).** The enforcement that must actually work is guardrail 8's $18 budget action,
+**$46/mo compute**, + ≈$10/mo correlated logs (above) ≈ **$56/mo all-in**. **Every correlated
+variant exceeds the $20 billing alarm (guardrail 9).** The enforcement that must actually work is guardrail 8's $18 budget action,
 which now denies exactly the four write Function URLs. The shared-topic SPOF is accepted at
 this scale and named here so nobody reads "breakers" as redundancy.
 
@@ -331,8 +342,8 @@ Perpetual = always-free on the Paid Plan, forever. All allowances from research 
 | CloudFront Functions | 2,000,000/mo | **perpetual** | 0 (headers policy instead) | 0% | 0 | 0% |
 | EventBridge Scheduler | 14,000,000/mo | **perpetual** | 840 | 0.006% | 840 | 0.006% |
 | DynamoDB storage | 25 GB | **perpetual** | <0.1 GB | 0.4% | <1 GB | 4% |
-| DynamoDB provisioned capacity | 25 WCU + 25 RCU | **perpetual — VERIFIED [live 2026-08-08]**: the AWS Free Tier product directory (aws.amazon.com/api/dirs, `free-tier-products`) tags DynamoDB **`always-free`** ("25 GB of Storage, 25 provisioned WCU, 25 provisioned RCU"); the pricing page (aws.amazon.com/dynamodb/pricing/provisioned/) lists the same "each month on a per Region, per-payer account basis" with no expiry qualifier, while the one 12-month item in that same list (data transfer out) carries its qualifier inline. If this were 12-month it would cost $14.24/mo from month 13 (25×730×$0.00065 + 25×730×$0.00013); it is not. Per-payer account = one 25/25 pool for the whole account; no other project on this account uses DynamoDB today (amended 2026-08-08 coherence round) | 25/25 provisioned (adr-write-store-provisioned-capacity) | 100% by design, fails closed | same | 100% |
-| S3 storage | **no verifiable perpetual free tier** (research 08 §12.3) | assume paid day one | ~2.5 GB | — | ~12 GB | — |
+| DynamoDB provisioned capacity | 25 WCU + 25 RCU | **UNVERIFIED, contested (re-opened 2026-08-08 coherence round, second pass).** My live read said perpetual: the AWS Free Tier product directory (aws.amazon.com/api/dirs, `free-tier-products`, accessed 2026-08-08) tags DynamoDB `always-free` ("25 GB of Storage, 25 provisioned WCU, 25 provisioned RCU"), and the pricing page (aws.amazon.com/dynamodb/pricing/provisioned/, accessed 2026-08-08) lists the same "each month on a per Region, per-payer account basis" with no expiry qualifier. **Research 08, accessed the same day, disagrees**: its §1.3 attaches its checkmark only to the 25 GB storage and streams lines and flags the WCU/RCU allowance with its own UNVERIFIED marker (§4.4). Two same-day reads conflict; neither is treated as settled. Branches: perpetual = **$0.00 forever**; 12-month = **~$14.24/mo from month 13** (25×730×$0.00065 + 25×730×$0.00013, rates per aws.amazon.com/dynamodb/pricing/provisioned/, accessed 2026-08-08). Human settles it on the Free Tier billing page, folded into §11 step 1. Closed regardless of the branch: switching from on-demand to provisioned resolved the mode-coverage risk (research 08 §4.4's actual worry), months 1–12 are $0.00 either way, and the table fails closed. Per-payer account = one 25/25 pool for the whole account; no other project on this account uses DynamoDB today | 25/25 provisioned (adr-write-store-provisioned-capacity) | 100% by design, fails closed | same | 100% |
+| S3 storage | **no verifiable perpetual free tier** (research 08 §12.3) | assume paid day one | ~6.3 GB (corrected second pass: photos are 5.4 GB) | — | ~111 GB end of yr 1, uncompacted (§12; corrected second pass) | — |
 | S3 PUT | none verified | assume paid | ~20,000/mo | — | ~100,000/mo | — |
 | CloudWatch logs | 5 GB/mo | **perpetual** | ~0.05 GB | 1% | ~0.2 GB | 4% |
 | CloudWatch custom metrics | 10 | **perpetual** | 6 (+1 `PushSendFailures`, 07-write-path §11; amended 2026-08-08) | 60% | 6 | 60% |
@@ -384,8 +395,12 @@ point. "CDK + assert" means the value is set in the CDK stack AND checked by
      (`predictions/v1/dt=...`), exact equality, and the empty prefix (a bucket-wide rule).
    - **No transition rule may overlap it either**, with exactly ONE allowlisted exception: a
      rule whose filter prefix is byte-identical to `PREDICTION_LOG_PREFIX`, transitioning to
-     Glacier Instant Retrieval at ≥90 days (the domain lane's own cost lever, domain-model
-     §5.3, past 500 spots). Domain-model §17's `log/* → Glacier IR at 90 d` recommendation is
+     Glacier Instant Retrieval at **exactly 90 days** (the domain lane's own cost lever,
+     domain-model §5.3, past 500 spots). (Pinned at 90, not "≥90", 2026-08-08 coherence round,
+     second pass: "90 or more" let two documents diverge while both passed CI. Domain-model
+     §5.3's 180 d cites §8 here for a number §8 never contained; §12's cost math computes
+     against 90 d, so 90 d is the chosen value and the domain-model half is routed for
+     correction.) Domain-model §17's `log/* → Glacier IR at 90 d` recommendation is
      implemented as exact per-log-family prefixes, never one parent rule: the prediction log
      may change storage class only by a deliberate, named act, never as a side effect of a
      broader prefix.
@@ -543,7 +558,9 @@ first infrastructure slice to build, wired into CI and proven red-then-green bef
 
 1. 👤 Billing console: verify account plan + creation date; **upgrade to Paid Plan**
    (research 08 §1.2 — the account-closure clock). While there, read the Free Tier usage page
-   and settle whether S3 shows an always-free line (§16, unsure item 1).
+   and settle TWO contested allowances (amended 2026-08-08 coherence round, second pass):
+   whether S3 shows an always-free line (§17 item 1), and whether the DynamoDB 25 WCU / 25 RCU
+   line is tagged always-free or 12-month (§17 item 9: $0.00 vs ~$14.24/mo from month 13).
 2. 👤 `npx cdk bootstrap aws://<acct>/us-east-1` (one-time, local credentials).
 3. CI (no credentials): `npm test` (guardrail gate) + `npx cdk synth`.
 4. 👤 `npx cdk deploy --all` locally. Agents may run `synth`/`diff` only; the repo's CI has no
@@ -589,8 +606,9 @@ zero-to-deployed step 1, not this design round:
 ### 12. Cost — the dollar figure and how it is produced
 
 Assumptions: us-east-1, external DNS, no container Lambda in phase 1, deterministic scoring,
-photos 200/day with 90-day retention, DynamoDB provisioned 25/25 inside the verified always-free
-allowance (§8), publish-time HTML render PUTs per adr-publish-time-html-rendering.md (lane 03
+photos 200/day with 90-day retention, DynamoDB provisioned 25/25 (perpetuity UNVERIFIED,
+contested, §8; $0.00 either way through month 12), publish-time HTML render PUTs per
+adr-publish-time-html-rendering.md (lane 03
 owns exact counts). Prices per research 08 (accessed 2026-08-08): S3 $0.023/GB-mo, PUT
 $0.005/1k, GET $0.0004/1k; Haiku 4.5 $1/$5 per M tokens. Prediction-log volumes: domain-model
 §5.3/§6, measured. (Tables re-derived 2026-08-08 coherence round.)
@@ -602,14 +620,14 @@ $0.005/1k, GET $0.0004/1k; Haiku 4.5 $1/$5 per M tokens. Prediction-log volumes:
 | CloudFront (requests + egress) | 100k req, 5 GB — inside free tier | $0.00 |
 | Lambda (all functions) | ~19k inv, ~52k GB-s — inside free tier | $0.00 |
 | EventBridge Scheduler | 840 of 14M | $0.00 |
-| DynamoDB provisioned 25 WCU / 25 RCU | inside the always-free allowance, VERIFIED [live 2026-08-08] (§8) | $0.00 |
-| S3 storage | ~2.5 GB (site + raw 30d + photos 90d + prediction log 0.36 GB/yr, domain-model §5.3) | $0.06 |
+| DynamoDB provisioned 25 WCU / 25 RCU | inside the 25/25 allowance; perpetuity UNVERIFIED, contested (§8; ~$14.24/mo from month 13 if 12-month; human check §11 step 1) | $0.00 (months 1–12, either branch) |
+| S3 storage | ~6.3 GB: photos 90d **5.4 GB** (200/day × 300 KB × 90 d; §14 req 7, §18 dec 3) + raw 30d ~0.5 GB + prediction log 0.36 GB yr 1 (domain-model §5.3) + site ~0.05 GB. (Corrected 2026-08-08 coherence round, second pass: the prior "~2.5 GB" all-in sat below photos alone.) | $0.145 |
 | S3 PUT | ~30,000 (data artifacts ~8k, 04-ingest §9 measured, + per-route HTML/OG renders ~22k, adr-publish-time-html-rendering) | $0.15 |
 | S3 GET (origin fetches) | ~50,000 | $0.02 |
 | CloudWatch, SSM, ACM, SNS, DNS | inside free tiers / external | $0.00 |
-| **Subtotal without LLM** | (was $0.19; re-derived 2026-08-08 coherence round) | **≈ $0.23/month** |
+| **Subtotal without LLM** | (was $0.19 round 1, $0.23 first pass; corrected 2026-08-08 coherence round, second pass: photos priced) | **≈ $0.32/month** |
 | LLM narration (optional): Haiku 4.5, 1 national narration/day × ES+EN (DISCUSS #8 doubles it) | ~0.24M in / 0.036M out tokens | $0.42 |
-| **Total with narration** | | **≈ $0.65/month** |
+| **Total with narration** | | **≈ $0.74/month** |
 
 **Global — 5,000 spots, 20,000 MAU:**
 
@@ -617,14 +635,14 @@ $0.005/1k, GET $0.0004/1k; Haiku 4.5 $1/$5 per M tokens. Prediction-log volumes:
 |---|---|---|
 | CloudFront | 4M req (40% of free), 200 GB (20%) | $0.00 |
 | Lambda | ~90k inv, ~130k GB-s (33%, now including the HTML render step — §13) | $0.00 |
-| DynamoDB provisioned 25/25 | always-free, verified (§8) | $0.00 |
-| S3 storage, end of year 1, **uncompacted JSONL** | **~110 GB**: prediction log **89.5 GB** ($2.06, domain-model §5.3 measured) + calls log 15.8 GB ($0.36, domain-model §6) + observations, site, tiles, photos ~4 GB ($0.09) | **$2.51** |
-| same, with the domain lane's levers past 500 spots (**Parquet ÷3 + Glacier IR** $0.004/GB past 90 d, domain-model §5.3) | log ~$0.55 + calls ~$0.10 + rest ~$0.13 | **($0.78)** |
+| DynamoDB provisioned 25/25 | perpetuity UNVERIFIED, contested (§8; ~$14.24/mo from month 13 if 12-month; human check §11 step 1) | $0.00 (months 1–12, either branch) |
+| S3 storage, end of year 1, **uncompacted JSONL** | **~111 GB**: prediction log **89.5 GB** ($2.06, domain-model §5.3 measured) + calls log 15.8 GB ($0.36, domain-model §6) + photos **5.4 GB** ($0.124; flat with audience per §1, 200/day × 300 KB × 90 d) + observations, site, tiles ~0.5 GB **floor, not a measurement** ($0.01; tiles bound at 250 × ≤100 KB ≈ 0.03 GB, site small, observations volume unmeasured anywhere). (Corrected 2026-08-08 coherence round, second pass: the prior "~4 GB incl. photos" bucket sat below photos alone.) | **$2.55** |
+| same, with the domain lane's levers past 500 spots (**Parquet ÷3 + Glacier IR** $0.004/GB past 90 d, domain-model §5.3) | log ~$0.55 + calls ~$0.10 + photos ~$0.12 (no transition: 90-d expiry) + rest ~$0.03 | **($0.80)** |
 | S3 PUT (staleness-gated data tiles + ~5,000 per-spot HTML routes + OG images per model cycle — adr-publish-time-html-rendering) | ~350,000 | $1.75 |
 | S3 GET | ~300,000 | $0.12 |
 | LLM (flat with audience) | unchanged | $0.42 |
-| **Total, uncompacted** | | **≈ $4.80/month** (≈ $4.38 without narration) |
-| **Total with Parquet + Glacier IR** | | **≈ $3.07/month** (≈ $2.65 without narration) |
+| **Total, uncompacted** | | **≈ $4.85/month** (≈ $4.42 without narration) |
+| **Total with Parquet + Glacier IR** | | **≈ $3.09/month** (≈ $2.67 without narration) |
 
 Correction note (2026-08-08 coherence round): round 1's S3 line here read "~12 GB, $0.28/mo",
 about 7× low, because it ignored domain-model §5.3's measured log volume. And the log never
@@ -641,7 +659,7 @@ levers at the 500-spot trigger (adr-prediction-log-format.md), not later.
 | CloudFront egress | ~100,000 MAU at 500 KB/session | $0.085–0.110/GB |
 | Lambda compute | ~3× global-scale build load, or GRIB2 run hourly instead of 4×/day | overage $0.0000166667/GB-s |
 | The $20 alarm | ~50–60k MAU on the request line alone | guardrails 8/11 fire first |
-| Write-path attack with breakers broken | ≈ $14.30/mo (report alone) to ≈ $29–46/mo correlated (§6.1; added 2026-08-08 coherence round) | exceeds the $20 alarm; guardrail 8's $18 budget action is the enforcement that must work |
+| Write-path attack with breakers broken | ≈ $14.30/mo (report alone) to ≈ $29–46/mo compute + ~$10/mo logs ≈ $56/mo correlated (§6.1; added 2026-08-08 coherence round, logs priced in the second pass) | exceeds the $20 alarm; guardrail 8's $18 budget action is the enforcement that must work |
 
 ### 13. Global scaling curve — 500 and 5,000 spots are design inputs, not futures
 
@@ -763,10 +781,18 @@ Precomputing provider data into public static JSON on a CDN **is redistribution*
    so it cannot matter.
 8. **Glacier Instant Retrieval rates** for the optional prediction-log transition —
    UNVERIFIED (research 08 §9.3).
-9. ~~DynamoDB on-demand free-tier coverage~~ — **RESOLVED [live 2026-08-08], coherence round.**
-   Doubly moot: the table is provisioned 25/25 (adr-write-store-provisioned-capacity), and that
-   allowance is verified **Always Free** (citation in §8), so the feared $14.24/mo from month 13
-   does not exist.
+9. **DynamoDB 25 WCU / 25 RCU perpetuity — UNVERIFIED, re-opened (2026-08-08 coherence round,
+   second pass).** The first pass marked this RESOLVED on a live read of the Free Tier product
+   directory and the provisioned pricing page (both accessed 2026-08-08; citations kept in §8).
+   Research 08, accessed the same day, disagrees: it confirms only the 25 GB storage and streams
+   lines and flags the WCU/RCU allowance with its own UNVERIFIED marker (§1.3, §4.4). The repo
+   disputes its own live read, so the claim stays open rather than inheriting one side. Branches:
+   perpetual = $0.00; 12-month = ~$14.24/mo from month 13 (arithmetic in §8). Settled by the
+   §11 step 1 human billing-console check, same visit as the S3 question (item 1 above).
+   Closed regardless of the branch: switching from on-demand to provisioned 25/25
+   (adr-write-store-provisioned-capacity) resolved the mode-coverage risk research 08 §4.4
+   actually raised; months 1–12 are $0.00 either way and the table fails closed. The remaining
+   exposure is smaller than round 1 feared, but not zero.
 10. **Cloudflare/Vercel comparison (research 08 §17):** partially closed today. Verified live
     [2026-08-08, developers.cloudflare.com/r2/pricing/]: R2 free tier = 10 GB-month storage,
     1M Class A + 10M Class B ops/mo, **egress to internet free** — §17's core structural claim
@@ -782,7 +808,7 @@ Precomputing provider data into public static JSON on a CDN **is redistribution*
 | 2 | DNS | (a) External registrar free DNS, $0.00/mo; (b) Route 53 zone, $0.50/mo ($6/yr) for one-console + free health checks | **(a)** — ADR-dns-external. (b) is defensible convenience; it is also the only avoidable AWS floor cost. |
 | 3 | Photo retention | (a) Delete at 90 days, ~$0.12/mo steady; (b) keep forever, ~$0.80/mo by month 12 and growing ~$0.04/mo/mo | **(a).** A surf photo's value dies with the swell. The report *data* (the label) is kept forever regardless — only pixels expire. |
 | 4 | LLM narration at launch | (a) Ship deterministic scoring only, $0.00; (b) + Haiku ES+EN daily narration, $0.42/mo | **(a)**, add (b) once scoring is trusted (research 08 §12.6 build order). The Spanish-first decision doubles narration cost — still trivial. |
-| 5 | Anonymous write-path abuse posture | (a) Control stack only (§6), $0; (b) + Cloudflare Turnstile (free, but 3rd party + JS weight against the 100 KB budget) | **(a)** at launch. Worst case: <$1/mo with breakers working, ≈$14–46/mo with breakers broken (§6.1 — corrected 2026-08-08 coherence round; round 1's "~$0 regardless" was wrong). Revisit on first real abuse, with data. |
+| 5 | Anonymous write-path abuse posture | (a) Control stack only (§6), $0; (b) + Cloudflare Turnstile (free, but 3rd party + JS weight against the 100 KB budget) | **(a)** at launch. Worst case: <$1/mo with breakers working, ≈$14–56/mo with breakers broken, logs included (§6.1 — corrected 2026-08-08 coherence round; round 1's "~$0 regardless" was wrong; logs priced in the second pass). Revisit on first real abuse, with data. |
 | 6 | CloudFront spend posture | (a) Pay-as-you-go + alarm + documented Pro-plan escape hatch; (b) flat Pro $15/mo pre-emptively for a hard cap | **(a)** — ADR-cdn-billing-model. (b) spends 75% of the alarm budget on a risk the request alarm already catches in time. |
 | 7 | Open-Meteo confirmation email | (a) Send before launch; (b) rely on the CC-BY-4.0 reading | **(a).** One email closes the largest legal open item on the primary data source (§16). Fallback chain is designed either way. |
 

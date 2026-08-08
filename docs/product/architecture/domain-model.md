@@ -1,6 +1,6 @@
 ## Domain Model
 
-**Lane:** domain/data (DESIGN round 1). **Status:** PROPOSED, 2026-08-08; **amended 2026-08-08 coherence round** (prediction-log prefix isolation, missing consumer fields, round-2 supersessions; each amendment carries an inline note). **Owner file** — application and system architecture live in their own sections; this section owns every data contract: prediction log, observation record, identity, scorecard, spot files, DynamoDB keys, published payloads.
+**Lane:** domain/data (DESIGN round 1). **Status:** PROPOSED, 2026-08-08; **amended 2026-08-08 coherence round** (prediction-log prefix isolation, missing consumer fields, round-2 supersessions; second pass same day: two-day ranking representation `adr-two-day-ranking.md`, `conf_value`/`conf_level` split, §7.3 wind-consumer staleness; each amendment carries an inline note). **Owner file** — application and system architecture live in their own sections; this section owns every data contract: prediction log, observation record, identity, scorecard, spot files, DynamoDB keys, published payloads.
 
 **Verdict up front:**
 
@@ -134,7 +134,7 @@ flowchart TB
 | **bias / bias_se** | C3 | Mean signed residual and its standard error; displayed only under §9's claim gate, `|bias| > 2·se_gate` with `se_gate = max(bias_se, 0.5·σ_eff/√n)` (research 09 §13.3; 06-learning-layer §7 G3, amended 2026-08-08 coherence round) |
 | **correction** | C3 | Learned per-spot adjustment file; never touches the seed |
 | **PublishedCall** | C4 | What we actually showed: score, confidence, sub-scores, corrections applied — snapshotted per build |
-| **confidence level** | C4 | high/medium/low projection of continuous `C_total = C_spread × C_track × C_fresh` (research 09 §14.3) |
+| **confidence level** | C4 | high/medium/low projection of continuous `C_total = C_spread × C_track × C_fresh` (research 09 §14.3). Field names pinned 2026-08-08 coherence round second pass: the level is **`conf_level`** everywhere it is published or logged (§6, §7.3 `predicted{}`, §13); the continuous value is **`conf_value`**, PublishedCall log only (§6). Bare `confidence` is retired as a C4 field name — round 1 used it for both types (§13 canonical-names table) |
 | **region / tile** | C4 | `region_id` = publication unit (launch: `pa-pacific`); `geohash4` tile = scaling unit past ~40 spots per region |
 
 Spanish is the product language; these are code/schema names. UI copy maps 1:1 (e.g. size bands §7.2 carry `es`/`en` display strings in one canonical constants file).
@@ -186,7 +186,7 @@ s3://<data-bucket>/raw/<provider>/dt=YYYY-MM-DD/<HH>/...        # verbatim paylo
 |---|---|---|---|---|---|---|
 | **20** | 53,760 | 62 KB | 1.0 MB | **0.36 GB** | **$0.008/mo** | 0.04% |
 | **500** | 1.34 M | 1.5 MB | 24.5 MB | **8.95 GB** | $0.21/mo | 1.0% |
-| **5,000** | 13.4 M | 15.3 MB | 245 MB | **89.5 GB** | $2.06/mo (→ ~$0.6/mo with Parquet ÷3 + optional Glacier IR **transition** at 180 d per system-architecture §8 — a storage-class transition only, never expiry; amended 2026-08-08, was "90 d") | 10% → ~3% |
+| **5,000** | 13.4 M | 15.3 MB | 245 MB | **89.5 GB** | $2.06/mo (→ ~$0.6/mo with Parquet ÷3 + optional Glacier IR **transition** at 90 d per system-architecture §5 topology + guardrail 4 (§9) allowlist; §12's cost math computes against 90 d — a storage-class transition only, never expiry; re-amended 2026-08-08 coherence round second pass: an earlier same-day amendment set 180 d citing system-architecture §8, which never carried that number) | 10% → ~3% |
 
 S3 has **no verified perpetual free allowance** (research 08 §12.3) — figures are dollars, not free-tier percentages. Conclusion unchanged from research 09: do not compromise fidelity to save storage.
 
@@ -197,14 +197,14 @@ S3 has **no verified perpetual free allowance** (research 08 §12.3) — figures
 What we showed, per build, per spot, per valid hour — required by every evaluation metric (research 09 §10.3: "log … for every spot, every day, whether or not anyone looked"). Snapshotted because recomputing history with a later formula is a lie (research 09 §13.1).
 
 ```json
-{"spot_id":"playa-venao","build_id":"b_2026-08-08T11Z","built_at":"2026-08-08T11:00:00Z","valid_ts":"2026-08-09T12:00Z","lead_h":25,"score_q":74,"confidence":0.31,"conf_level":"low","sub":{"dir":1.0,"size":0.81,"wind":0.66,"tide":0.92},"h_eff_m":1.1,"size_band":"waist_chest","bias_applied":0.0,"bias_gate":"n_lt_10","baseline_rank_raw":3,"our_rank":1,"members_used":4,"members_null":3}
+{"spot_id":"playa-venao","build_id":"b_2026-08-08T11Z","built_at":"2026-08-08T11:00:00Z","valid_ts":"2026-08-09T12:00Z","lead_h":25,"score_q":74,"conf_value":0.31,"conf_level":"low","sub":{"dir":1.0,"size":0.81,"wind":0.66,"tide":0.92},"h_eff_m":1.1,"size_band":"waist_chest","bias_applied":0.0,"bias_gate":"n_lt_10","baseline_rank_raw":3,"our_rank":1,"members_used":4,"members_null":3}
 ```
 
 | Field | Consumer |
 |---|---|
 | `score_q, conf_level, sub, size_band` | reveal screen (server-side authoritative capture, §7.4); Brier + calibration check (research 09 §10.2) |
 | `baseline_rank_raw, our_rank` | B1 skill metric — pairwise ranking vs raw model, THE metric. Baseline = rank spots by raw significant wave height, formula per research 09 §10.1–10.2; the scoring lane implements it | 
-| `conf_level` | display projection of continuous `confidence`; **thresholds are the round-2 scoring lane's to set** — both values are logged so thresholds can change without losing history |
+| `conf_level` | display projection of continuous `conf_value` (renamed from `confidence` 2026-08-08 coherence round second pass — the bare name also held §13's string level, one name naming two types; split per §13's canonical-names table); **thresholds are the round-2 scoring lane's to set** — both values are logged so thresholds can change without losing history |
 | `bias_applied, bias_gate` | C3 audit: which correction was live when; scorecard honesty guard |
 | `members_used, members_null` | per-source availability tracking; confidence `f(M)` audit |
 
@@ -250,7 +250,8 @@ Range edges are **v1 convention (unfit priors)** — they live in ONE canonical 
 
 | Field | Consumer | Notes |
 |---|---|---|
-| `size_band, wind, quality` | C3 residuals + Brier label; C4 recent-reports feed | The label. Immutable |
+| `size_band, quality` | C3 residuals (`size_band` → height residual, `quality` → score residual, 06 §5.1) + Brier event (`quality ∈ {good, epic}`, 06 §10); C4 recent-reports feed | The label. Immutable |
+| `wind` | C4 recent-reports feed only — **no C3 residual reader** (amended 2026-08-08 coherence round second pass: wind is out of the residual formation and scorecard grain, §9 / 06 §8; a stage-2 categorical wind model — research 09 §13.4, not built — would define its own consumer and aggregate shape) | The label. Immutable |
 | `observed_at` (UTC) | verification join `floor_utc_hour(observed_at) = valid_ts`; SK ordering | Client sets it (defaults to now, adjustable back ≤12 h for "this morning" reports) |
 | `submitted_at − observed_at` | C3 staleness/trust weighting; offline-sync latency metric | Gap derivable — no separate offline flag needed |
 | `report_id` (client-minted ULID) | dedup (§7.4); photo attach ref | Minted ONCE at commit, before any network attempt |
@@ -415,36 +416,66 @@ Contract: **this section is the schema authority; frontend states requirements, 
 
 Size framing (amended 2026-08-08 coherence round — the round-1 "28.4 KB of the 100 KB page budget" arithmetic implied a browser download and is void): bundle 27.5 KB + reports 0.7 KB + manifest 0.15 KB ≈ **28.4 KB gz of builder input per region per cycle** — trivial for the publish job to fetch, and the measurement still governs S3 storage/PUT sizing. Page weight is owned by application-architecture's per-route figures (14 KB documents under the 100 KB cap). Decompressed bundle is 218 KB of JSON in builder memory — trivial. Today+tomorrow only (decision 10) keeps it small; a 7-day bundle would be ~3.5×.
 
-Bundle shape (amended 2026-08-08 coherence round: top-level header + P1 fields added — round-1 showed only a per-spot object, and a builder could not satisfy application-architecture P1 as written):
+Bundle shape (amended 2026-08-08 coherence round: top-level header + P1 fields added — round-1 showed only a per-spot object, and a builder could not satisfy application-architecture P1 as written. **Re-amended same day, second pass — `adr-two-day-ranking.md`: round-1's single flat `spots` array had exactly one order, which encoded exactly one ranking (today's), while the route table renders `/manana` / `/en/tomorrow` and P1 asks for its render fields per spot per day. Day-scoped fields now split from spot-scoped fields; "order is rank" survives, per day**):
 
 ```json
 {"schema":"region-bundle/1","region_id":"pa-pacific","build_id":"b_2026-08-08T11Z",
- "published_at":"2026-08-08T11:00:00Z","spots":[ ...one object per spot, see below... ]}
+ "published_at":"2026-08-08T11:00:00Z",
+ "days":[
+   {"date":"2026-08-08","spots":[
+     {"spot_id":"playa-venao","score_q":74,"conf_level":"low",
+      "confidence_reason":{"es":"Los modelos difieren 40% en el período y el último reporte fue el martes.","en":"..."},
+      "call":{"es":"Pecho a cabeza y limpio temprano. Terral hasta las 10, después se arruina.","en":"..."},
+      "size_band":"waist_chest","size_range_m":[0.8,1.4],
+      "weakest_link":"wind",
+      "damages":[{"factor":"wind","damage":0.190},{"factor":"size","damage":0.095},{"factor":"tide","damage":0.016},{"factor":"dir","damage":0.0}],
+      "best_window":{"start":"06:00","end":"09:30"},"wind_state":"clean"},
+     ...19 more day-summary objects, array order = today's rank... ]},
+   {"date":"2026-08-09","spots":[ ...same 20 spot_ids, tomorrow's values, array order = tomorrow's rank... ]}],
+ "spot_detail":{
+   "playa-venao":{"name":"Playa Venao","coast":"pacific",
+     "tide":{"next_high":"11:04","next_high_m":4.3,"next_low":"17:21","next_low_m":0.9},
+     "scorecard":{"n_obs":22,"n_reporters":7,"threshold":30,"counter":"22 / 30","claim_ok":false,"headline":null},
+     "reports":{"last_ts":"2026-08-07T16:12:00-05:00","count_24h":3,"distinct_24h":3},
+     "members":[{"source":"ncep_gfswave016","h":0.64,"t":15.5,"dir":206},{"source":"dwd_gwam","h":0.86,"t":10.05,"dir":203}],
+     "hourly":[{"t":"2026-08-08T05:00-05:00","score_q":74,"h_eff_m":1.1,"swell_h_m":0.8,"swell_t_s":15.5,"swell_dir_deg":206,"wind_kt":6,"wind_dir_deg":30,"tide_m":2.3,"sub":{"dir":1.0,"size":0.81,"wind":0.66,"tide":0.92}}]},
+   ...one entry per spot_id... }}
 ```
 
 - **`region_id`, `build_id`, `published_at` live once in the header** — P1's per-spot asks, satisfied at bundle grain since every spot in the file shares them. Join key for P1: `spot_id` + `build_id`.
 - **`spot_id` IS the slug** (URL-safe lowercase kebab, enforced at seed PR review). No separate `slug` field: one value, one home, nothing to diverge.
-- **Array order IS rank**: `spots[0]` is rank 1 (today's top call). No separate `rank` field, so order and rank cannot contradict each other.
-- **P1's `cycle_id` names this `build_id`** — `build_id` is the canonical per-publish stamp (six of seven docs); the frontend doc's rename is being fixed in its own lane.
+- **Order is rank, per day**: `days[d].spots` is that day's ranked list — `days[d].spots[0]` is rank 1 for that day. Still no `rank` field anywhere: one order per day, each order in its own array, so order and rank cannot contradict each other and today's ranking cannot be conflated with tomorrow's. Exactly two days (decision 10): `days[0]` = the civil date containing `published_at` in the region's timezone, `days[1]` = the next civil date. `spot_detail` is a JSON **object** keyed by `spot_id` — an object has no order, so no second ranking exists that could disagree with the day arrays.
+- **Validity invariants — builder fails the publish LOUD on violation (P1's failure contract):** every `days[*].spots[*].spot_id` appears exactly once as a `spot_detail` key; both day arrays contain the same spot set (each is a permutation of it — every spot carries 48 h of hourly data, so both days are always rankable); `days[1].date` = `days[0].date` + 1 day.
+- **`build_id` is the canonical per-publish stamp.** The frontend doc briefly called it `cycle_id`, which collided with this document's own "cycle" term for the model run (00/06/12/18Z). Renamed there in the 2026-08-08 coherence round; `cycle_id` no longer exists anywhere as a live field name.
 
-Per spot (concrete, abridged — full sample in the measurement script):
+**Day-summary object — complete field list (exhaustive, nothing abridged):** `spot_id` · `score_q` (int 0–100) · `conf_level` (`low|medium|high`) · `confidence_reason{es,en}` · `call{es,en}` · `size_band` · `size_range_m` (`[lo,hi]` metres) · `weakest_link` (nullable) · `damages[]` (sorted descending) · `best_window{start,end}` (local-time strings) · `wind_state`. Every value is for that object's day; each may legitimately differ between `days[0]` and `days[1]` (confidence genuinely drops with lead — `C_spread`/`C_track` are lead-dependent).
 
-```json
-{"spot_id":"playa-venao","name":"Playa Venao","coast":"pacific","score_q":74,"confidence":"low",
- "confidence_reason":{"es":"Los modelos difieren 40% en el período y el último reporte fue el martes.","en":"..."},
- "call":{"es":"Pecho a cabeza y limpio temprano. Terral hasta las 10, después se arruina.","en":"..."},
- "size_band":"waist_chest","size_range_m":[0.8,1.4],
- "weakest_link":"wind",
- "damages":[{"factor":"wind","damage":0.190},{"factor":"size","damage":0.095},{"factor":"tide","damage":0.016},{"factor":"dir","damage":0.0}],
- "best_window":{"start":"06:00","end":"09:30"},"wind_state":"clean",
- "tide":{"next_high":"11:04","next_high_m":4.3,"next_low":"17:21","next_low_m":0.9},
- "scorecard":{"n_obs":22,"n_reporters":7,"counter":"22 / 30","claim_ok":false,"headline":null},
- "reports":{"last_ts":"2026-08-07T16:12:00-05:00","count_24h":3,"distinct_24h":3},
- "members":[{"source":"ncep_gfswave016","h":0.64,"t":15.5,"dir":206},{"source":"dwd_gwam","h":0.86,"t":10.05,"dir":203}],
- "hourly":[{"t":"2026-08-08T05:00-05:00","score_q":74,"h_eff_m":1.1,"swell_h_m":0.8,"swell_t_s":15.5,"swell_dir_deg":206,"wind_kt":6,"wind_dir_deg":30,"tide_m":2.3,"sub":{"dir":1.0,"size":0.81,"wind":0.66,"tide":0.92}}]}
-```
+**`spot_detail` value — complete field list (exhaustive):** `name` · `coast` · `tide{next_high, next_high_m, next_low, next_low_m}` (publish-relative "next", rendered on a page built at publish time) · `scorecard{n_obs, n_reporters, threshold, counter, claim_ok, headline}` (§9's gate; `headline` null whenever `claim_ok` is false). **`threshold` is an integer and `counter` is its display string** (added 2026-08-08 coherence round second pass, flagged by the frontend lane): the day-one empty state needs the threshold as a number, and parsing it back out of `"22 / 30"` would make a display string load-bearing. Both ship; `counter` stays because the rendered form is what decision 19 promises and one place should own its formatting · `reports{last_ts, count_24h, distinct_24h}` · `members[]` · `hourly[]` (48 points spanning both days — one series, shared by both days, never split per day).
 
-Every element traces to a binding decision: `score_q`+`call` (decisions 2–3; `score_q` is the canonical name of the published 0-100 integer, renamed from round-1 `score`/hourly `q` in the 2026-08-08 coherence round), three-level `confidence` with reason (7), `scorecard` inline with counter and `claim_ok` honesty gate (13, 19, research 09 §13.3), `size_band` primary + metres secondary (18), sub-scores exposed for the breakdown page (17), `weakest_link` + `damages` (added 2026-08-08 coherence round: first-class scoring-engine output per 05 §4 / law L10 — `weakest_link = argmax(damage)`, null iff all damages are 0, `damages` sorted descending — consumed by decision 17's "what killed it" callout, which round 1 left with no field to render from), `coast` (P1, copied from the seed), `members` for "models split on period" transparency (research 09 §8.4), local-time strings precomputed from the spot's timezone (mobile clients render, never compute). Field additions postdate the byte measurements above; they add under 2 KB raw / well under 1 KB gz at 20 spots, noise against the figures, which remain valid as builder-input sizing.
+Route → render input (the builder's whole read contract per route):
+
+| Route | Reads |
+|---|---|
+| `/` , `/en/` | `days[0].spots` in array order; `name` and `reports` joined from `spot_detail` on `spot_id` (the home top card renders a last-report freshness line, so the join is wider than `name` alone — widened 2026-08-08 coherence round second pass, flagged by the frontend lane) |
+| `/manana` , `/en/tomorrow` | `days[1].spots`, same join |
+| `/spots/{slug}` | `spot_detail[slug]` + that `spot_id`'s summary object from each of the two day arrays |
+
+**Canonical field names (this section is the schema authority; the frontend payload table adopts these — its guessed names below are renamed, not negotiated):**
+
+| Canonical | Supersedes (guessed / round-1) | Shape |
+|---|---|---|
+| `spot_id` | `slug` | string; IS the URL slug |
+| array position in `days[d].spots` | `rank` | no rank field exists; position 0 = rank 1, per day |
+| `conf_level` | round-1 bundle `confidence` (string) | enum `low\|medium\|high`; same name as the §6 log and §7.3 `predicted{}` |
+| `conf_value` | round-1 §6 `confidence` (float) | float 0–1, continuous `C_total`; **PublishedCall log only, never in the bundle** — pages show a level, threshold tuning reads the log |
+| `confidence_reason` | `conf_reason_es` / `conf_reason_en` | one `{es,en}` object, not two fields |
+| `call` | `narration_es` / `narration_en` | one `{es,en}` object, not two fields |
+| `scorecard.n_obs` `.n_reporters` `.counter` `.claim_ok` `.headline` | `n_reports`, `n_distinct_reporters`, window | `counter` is decision-19's `"22 / 30"` string; the 30-day window is fixed by §9, never a payload field |
+| `build_id` | `cycle_id` | header, once (settled earlier in the 2026-08-08 round) |
+
+Bare `confidence` is retired as a field name in every C4 artifact (bundle and PublishedCall log): round 1 used it for a float in §6 and a string in §13 — one name, two types in the same document. The `conf_value`/`conf_level` split closes that. The seed's `"confidence":"2+sources"` (§11, `spot-seed/1`) is a different concept (per-spot research evidence grade) in a different schema namespace and keeps its name — flagged, not renamed.
+
+Every element traces to a binding decision: `score_q`+`call` (decisions 2–3; `score_q` is the canonical name of the published 0-100 integer, renamed from round-1 `score`/hourly `q` in the 2026-08-08 coherence round), three-level `conf_level` with `confidence_reason` (7), `scorecard` inline with counter and `claim_ok` honesty gate (13, 19, research 09 §13.3), `size_band` primary + metres secondary (18), sub-scores exposed for the breakdown page (17), `weakest_link` + `damages` (added 2026-08-08 coherence round: first-class scoring-engine output per 05 §4 / law L10 — `weakest_link = argmax(damage)`, null iff all damages are 0, `damages` sorted descending — consumed by decision 17's "what killed it" callout, which round 1 left with no field to render from), `coast` (P1, copied from the seed), `members` for "models split on period" transparency (research 09 §8.4), local-time strings precomputed from the spot's timezone (mobile clients render, never compute). Field additions postdate the byte measurements above; they add under 2 KB raw / well under 1 KB gz at 20 spots, noise against the figures, which remain valid as builder-input sizing. The two-day restructure adds one more day-summary set (~0.7 KB raw per spot, text-dominated): estimated **+3–4 KB gz at 20 spots** on top of the 27.5 KB round-1 measured baseline — every sizing conclusion (S3, PUTs, builder memory) unchanged at any plausible value; re-run the measurement script against the two-day sample before quoting a new figure downstream.
 
 Regeneration: hourly build rewrites 4 objects per region (bundle, index, reports, manifest) = ~2,900 S3 PUTs/mo at one region; scales O(tiles) with per-tile model-cycle stamps past 40 spots/region (research 08 §15.5).
 
@@ -470,7 +501,8 @@ Net: the system is "two immutable logs + one small CRUD table + derived projecti
 4. **`predicted{}` capture for offline reports** (§7.4): server resolves the call live at `observed_at` from `log/calls/`. If the builder was down that hour, there is no call to attach — record ships with `predicted: null` and C3 skips the Brier pairing (verification against the prediction log still works). Rare, but the null path must be in the ATs.
 5. **Geohash4 tile size** (~20 km): Panama's Pacific spots cluster acceptably, but Santa Catalina's 4 breaks land in one tile while Azuero spots spread across several. Tiling only matters past ~40 spots/region; if real-world regions produce degenerate tiles (1 spot each), precision 3 is the documented fallback (research 08 §15.5).
 6. **No unlink/unmerge in v1 identity** (§8): a wrong merge is repairable only by manual mapping edit. Acceptable for launch volume; needs a real command before any public "claim" UI ships at scale.
-7. **Bundle size at 40+ spots per region**: 27.5 KB measured at 20 spots scales ~linearly (≈55 KB at 40). Still inside budget, but the tile split should trigger on measured bundle size, not spot count alone.
+7. **Bundle size at 40+ spots per region**: 27.5 KB measured at 20 spots scales ~linearly (≈55 KB at 40; ~+3–4 KB gz per 20 spots more after the two-day restructure — same conclusion). Still inside budget, but the tile split should trigger on measured bundle size, not spot count alone.
+8. **Region civil-day boundary (§13)**: `days[].date` assumes every spot in a region shares one timezone — true for `pa-pacific`, and implicit rather than enforced. A region spanning timezones would make "today" ambiguous at the boundary hours; the constraint "a region does not span timezones" should become an explicit seed-PR check at the first region where it could bind.
 
 ### 16. Decisions needing Andres
 
@@ -486,8 +518,8 @@ Net: the system is "two immutable logs + one small CRUD table + derived projecti
 
 ### 17. Contract notes for the other lanes
 
-- **Frontend**: §13 is the schema your builder renders from at publish time — the bundle never ships to a client (`adr-publish-time-html-rendering.md`; this bullet amended 2026-08-08, round-1 "single data fetch" framing superseded). Screen-1 leak-proofing (no forecast in the DOM, back stack, or cached route of the report flow) is yours; the domain guarantees no API supports label edit after commit. The 3-hourly variant is a reference measurement only; its wire-cost rationale is void.
-- **Infrastructure**: S3 prefixes in §5–§6, PUT counts in §5.3/§13; the DynamoDB table in §12 is the only stateful store (provisioned 25/25, `adr-write-store-provisioned-capacity.md`); research 08 §4.4's DynamoDB sketch (rating/height_ft fields, SESSION#) is **superseded** by §12 — do not copy it. Lifecycle rules (amended 2026-08-08 coherence round): `raw/` expire 30 d; `log/*` (= `calls/` + `observations/` only) → Glacier IR at 90 d (only matters ≥500 spots); **`predictions/` is top-level, outside `log/`, and excluded from every expiration rule** — the guardrail asserts the literal prefix; the only lifecycle action ever permitted on it is the optional Glacier IR **transition** at 180 d (system-architecture §8). Round-1's `log/*` wording would have swept the prediction log; that is the defect `adr-prediction-log-prefix-isolation.md` closes.
+- **Frontend**: §13 is the schema your builder renders from at publish time — the bundle never ships to a client (`adr-publish-time-html-rendering.md`; this bullet amended 2026-08-08, round-1 "single data fetch" framing superseded). Second pass, same day: the bundle is **two-day shaped** (`days[0]`/`days[1]` ranked day-summary arrays + unordered `spot_detail` map, `adr-two-day-ranking.md`) — `/manana` / `/en/tomorrow` renders `days[1].spots`; adopt §13's canonical-names table verbatim (your payload table's `slug` / `rank` / `conf_reason_*` / `narration_*` / `n_reports` rows rename to it). Screen-1 leak-proofing (no forecast in the DOM, back stack, or cached route of the report flow) is yours; the domain guarantees no API supports label edit after commit. The 3-hourly variant is a reference measurement only; its wire-cost rationale is void.
+- **Infrastructure**: S3 prefixes in §5–§6, PUT counts in §5.3/§13; the DynamoDB table in §12 is the only stateful store (provisioned 25/25, `adr-write-store-provisioned-capacity.md`); research 08 §4.4's DynamoDB sketch (rating/height_ft fields, SESSION#) is **superseded** by §12 — do not copy it. Lifecycle rules (amended 2026-08-08 coherence round): `raw/` expire 30 d; `log/*` (= `calls/` + `observations/` only) → Glacier IR at 90 d (only matters ≥500 spots); **`predictions/` is top-level, outside `log/`, and excluded from every expiration rule** — the guardrail asserts the literal prefix; the only lifecycle action ever permitted on it is the optional Glacier IR **transition** at exactly 90 d, guardrail 4's single allowlisted exception (system-architecture §5 / §9; 180 d corrected to 90 d 2026-08-08 coherence round second pass — the cited §8 never carried 180). Round-1's `log/*` wording would have swept the prediction log; that is the defect `adr-prediction-log-prefix-isolation.md` closes.
 - **Round-2 ingest (04)**: the `land_masked` translation (`H==0 && T==0 && dir==0` → flag, exclude from blends) is a C1 ACL obligation with a unit test — the already-verified defect of research 09 §8.3.
 - **Round-2 scoring (05)**: consumes `effective = apply(seed, correction)`; every constant name in §11's seed maps 1:1 to research 09 §7 symbols.
 - **Round-2 learning (06)**: owns residual-on-interval math (§7.2), pooling, per-user offsets. Input universe widened 2026-08-08 coherence round (round-1's "exactly three, nothing else" was false; 06 §2 carries the exact input-universe table, matched here, not reinvented): residuals form ONLY from `predictions/v1/` + `log/observations/v1/`, keyed by the C5 resolution (`device_id -> reporter_key` at aggregation time); three read-only surfaces are additionally read and never form residuals: `log/calls/v1/` (which score decile was live each morning: 06 §6.3 propensity denominators, §10 monthly metrics), `data/config/trust-gate.json` (G2 eligibility, owned by 07 §7.3), `learned/overrides/v1/reporter-weights.json` (06 §6.4 incident overrides, human PR). Nothing else is read; the job never reads DynamoDB (the nightly export is the boundary).
@@ -504,3 +536,4 @@ Net: the system is "two immutable logs + one small CRUD table + derived projecti
 | `adr-write-store-single-table.md` | Single-table DynamoDB, keys derived from §12.1 access patterns |
 | `adr-scorecard-incremental.md` | Daily/monthly aggregate items + cursor exactly-once; rejected EWMA and full recompute |
 | `adr-published-payload-region-bundle.md` | One region bundle vs per-spot files; measured-bytes governance |
+| `adr-two-day-ranking.md` | Two-day bundle shape: per-day ranked summary arrays + unordered `spot_detail` map; order-is-rank preserved per day (2026-08-08 coherence round, second pass) |

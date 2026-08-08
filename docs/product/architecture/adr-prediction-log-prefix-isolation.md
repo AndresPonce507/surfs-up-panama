@@ -25,7 +25,7 @@ Lifecycle law restated with the move:
 |---|---|---|
 | `raw/` | 30 d | none |
 | `log/*` (calls, observations) | none at launch; rules permitted | Glacier IR at 90 d permitted |
-| `predictions/` | **never; excluded from every expiration rule (guardrail 4 asserts the literal prefix)** | optional Glacier IR at 180 d only (system-architecture §8) |
+| `predictions/` | **never; excluded from every expiration rule (guardrail 4 asserts the literal prefix)** | optional Glacier IR at 90 d only (system-architecture §5 topology + guardrail 4; corrected from 180 d, 2026-08-08 coherence round: 180 was cited to a section that never contained it) |
 
 ## Why (a) over (b) (keep `log/predictions/` plus a carve-out)
 
@@ -37,5 +37,5 @@ Lifecycle law restated with the move:
 
 - Any `log/*` lifecycle rule is now safe by construction with respect to the prediction log; it can only reach `calls/` and `observations/`, both of which are derived or re-exportable (observations re-export nightly from DynamoDB; calls are valuable but not the irreplaceable asset).
 - The ingest job writes `predictions/...` and needs exactly the IAM grant already specified.
-- domain-model §17's lifecycle note now names `predictions/` as excluded from all expiration rules, transition-only at 180 d.
+- domain-model §17's lifecycle note now names `predictions/` as excluded from all expiration rules, transition-only at 90 d (corrected from 180 d, 2026-08-08 coherence round).
 - The guardrail assert must be observed failing once (add a violating rule in a test synth, watch CI go red, revert) before it counts as protection; system-architecture already carries this proof obligation for its guardrail suite.

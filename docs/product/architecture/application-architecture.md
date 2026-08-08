@@ -2,6 +2,8 @@
 
 Lane: application/frontend. Author: solution-architect (Morgan), DESIGN round 1, 2026-08-08.
 Binding inputs: `HANDOFF.md` §3-§7, `BRIEF.md`, `docs/DISCUSS-decisions.md` (cited by number),
+`domain-model.md` §13 + `adr-two-day-ranking.md` (schema authority for P1/P5, adopted 2026-08-08
+coherence round, second pass),
 `docs/research/raw/09-ai-forecast-methodology.md` (§7, §13.2, §13.3, §14), `docs/research/raw/12-community-whatsapp-ugc.md` (§1, §4),
 `docs/research/raw/08-aws-architecture-and-cost.md` (§4.4, §12.4 request guardrail).
 ADRs: `adr-publish-time-html-rendering.md`, `adr-report-flow-leak-isolation.md`, `adr-performance-budget-cuts.md`.
@@ -28,15 +30,19 @@ the seven docs doing so.)
 Why it is the call: decision 21 (Astro, near-zero JS) plus decision 27 (100 KB, 3G under 2 s) plus
 the CloudFront request guardrail (research 08 §12.4: requests per session, not bytes, are the
 binding cost constraint) all point the same way. Client-side rendering would require shipping JS
-plus the region data file (~100 KB gz for all spots, research 08 §4.4) before first paint, which
-blows the budget on its own.
+plus the region bundle before first paint. (Bundle figure amended 2026-08-08 coherence round: the
+domain lane measured 27.5 KB gz at 20 spots, ~31 KB after the two-day restructure — domain model
+§13; research 08 §4.4's ~100 KB was an estimate. Smaller than round 1 assumed, but it grows
+linearly with spot count, lands on top of a framework runtime plus hydration, and adds exactly
+the requests the guardrail counts, so the call stands unchanged.)
 
 Consequence owed to the infrastructure lane (03): the hourly publish job regenerates the HTML
 routes, not only JSON. Cache headers per research 08 §4.4 (`max-age=300, stale-while-revalidate=3600`
 on HTML, immutable on hashed assets) avoid paid invalidations. Consequence owed to the domain lane
 (01): the region data file becomes the **builder's input**, not a browser payload. Research 08 §4.4's
 sentence "one fetch returns everything the client needs" assumed a JS client; under this design the
-client never fetches it. Flagged for the round-3 coherence review.
+client never fetches it. (Resolved 2026-08-08 coherence round: domain model §13 now states this
+consumption model explicitly — every published artifact is builder input, none ships to a browser.)
 
 ### 2. C4 Container
 
@@ -93,7 +99,8 @@ C4Component
 ### 4. Route map and language routing
 
 Spanish is the default at the root, English is a mirrored tree under `/en/` (decision 8). Slugs are
-language-neutral so a shared spot URL works in both trees. The toggle is a plain link to the twin
+language-neutral so a shared spot URL works in both trees; the slug IS `spot_id` — one value, one
+home, no separate `slug` field anywhere (domain model §13, amended 2026-08-08 coherence round). The toggle is a plain link to the twin
 URL (top of page, 44 px target), `hreflang` alternates on every page, `lang` attribute set per page.
 No JS locale sniffing and no redirects: both break caching and surprise people on bad signal.
 
@@ -111,12 +118,33 @@ Today and tomorrow are separate prerendered routes, not a JS tab, so each stays 
 budget and the refusal to go further than tomorrow is visible in the information architecture
 itself: there is no third route to navigate to, and the home footer says so in words (copy in §10).
 
+**Render source per route** (amended 2026-08-08 coherence round, second pass: the bundle is
+two-day shaped — `days[0]`/`days[1]` ranked day-summary arrays plus an unordered `spot_detail`
+map, `adr-two-day-ranking.md`. Round 1's `/manana` had **no bundle source for any value it
+renders**: every day-scoped field existed exactly once, implicitly today. Closed — each route now
+names its source):
+
+| Route | Reads from the bundle |
+|---|---|
+| `/` , `/en/` | `days[0].spots` in array order (position = rank; no `rank` field); `name` and the last-report line joined from `spot_detail[spot_id]` |
+| `/manana` , `/en/tomorrow` | `days[1].spots`, same joins. Tomorrow's `score_q`, `call`, `size_band`, `size_range_m`, `wind_state`, `conf_level`, `confidence_reason`, `best_window`, `weakest_link`, `damages` are that array's own values — genuinely different from today's (confidence drops with lead) |
+| `/spots/{slug}` | `spot_detail[spot_id]` (slug = spot_id) + that spot's summary object from each of the two day arrays; breakdown bars derived per the §7 sub-scores decision |
+
+Flagged for the domain lane, not silently diverged: domain §13's route-read table lists only
+`name` as the home routes' `spot_detail` join, but the home top card also renders the last-report
+freshness line, so the home read widens to `spot_detail[spot_id].reports` — a read-contract
+widening over data already in the bundle, not a schema ask.
+
 ### 5. The byte budget, with the arithmetic
 
 **Read this before any arithmetic below. The browser downloads pages, never forecast data.**
-Every reading route is finished HTML the moment it leaves the builder. The ~100 KB gz region
-bundle (research 08 §4.4) is the **builder's input, consumed server-side at publish time**; no
-request for it, or for any forecast JSON, exists anywhere in the client. If a page-weight
+Every reading route is finished HTML the moment it leaves the builder. The region bundle
+(27.5 KB gz measured at 20 spots, +3–4 KB after the two-day restructure — domain model §13,
+`adr-two-day-ranking.md`; research 08 §4.4's ~100 KB was an estimate) is the **builder's input,
+consumed server-side at publish time**; no request for it, or for any forecast JSON, exists
+anywhere in the client. Stated explicitly so no reader has to assume it (amended 2026-08-08
+coherence round, second pass): the two-day restructure moves **zero bytes** in this section —
+its +3–4 KB lands on builder input, and every wire ceiling and line item below is unchanged. If a page-weight
 number includes the bundle, the number is wrong: the bundle never crosses the wire to a
 browser. (Restated unmissably, 2026-08-08 coherence round: two sibling documents carried
 arithmetic assuming the browser downloads the bundle; both are being corrected to match this.)
@@ -141,7 +169,7 @@ Everything else arrives after first render on the warm connection. On the fast-3
 
 | # | Line item | Budget | What it buys |
 |---|---|---:|---|
-| 1 | HTML document: 20 ranked rows, top-card call + narration, critical CSS, inline SVG glyphs, staleness + SW-registration inline JS | 14.0 KB | First render under 2 s on slow 3G, readable with JS off |
+| 1 | HTML document: 20 ranked rows, top-card `call` text, critical CSS, inline SVG glyphs, staleness + SW-registration inline JS | 14.0 KB | First render under 2 s on slow 3G, readable with JS off |
 | 2 | Full stylesheet (async, content-hashed, cached forever) | 6.0 KB | Both themes, non-critical styles |
 | 3 | Share island JS (deferred) | 1.0 KB | Copy-the-call button (decision 5) |
 | 4 | Service worker script (registered after load) | 3.0 KB | Offline + request-count discipline |
@@ -162,7 +190,7 @@ first visit, everything on the wire.
 | Map tiles / any JS map library | A tile library is 40-150 KB before the first tile. Decision 20 needs one small static image per spot, pre-rendered at build |
 | Analytics / tag scripts | 0 KB. Nothing to sell (BRIEF constraint 3) |
 | Client-side framework runtime on reading routes | Astro static output ships none |
-| Forecast JSON to the browser | Rendering is publish-time; the ~100 KB region file never reaches the client |
+| Forecast JSON to the browser | Rendering is publish-time; the region bundle never reaches the client (its ~31 KB gz two-day measured size is an S3/builder figure, never a page figure) |
 | Hero/lifestyle photography | This is an instrument, not a beach postcard (vision deck) |
 
 **CI enforcement (decision 27).** A build step walks the emitted `dist/`, computes gz bytes per
@@ -171,7 +199,7 @@ The failure message names the route, the measured bytes, the ceiling, and the la
 contributors (gate states WHAT/WHY/HOW; clause `gate:self-explaining-what-why-how`). Budgets in
 this table are ceilings the gate enforces, not measurements; the first real build produces the
 measured column beside them. DELIVER gate criterion, explicit: the first build must come in under
-every ceiling, and if the home document does not fit 14 KB, the cut is narration length on rows
+every ceiling, and if the home document does not fit 14 KB, the cut is `call` text length on rows
 2-20, never the honesty elements (stamp, confidence, the today-and-tomorrow-only footer).
 
 ### 6. Island inventory (hard push to zero JS)
@@ -201,8 +229,14 @@ server parses. Renames applied throughout this document: `report_uuid`→**`repo
 client-minted **ULID**, `^[0-9A-HJKMNP-TV-Z]{26}$` — the server rejects a v4 UUID by shape),
 `captured_at`→**`observed_at`**, `size_category`→**`size_band`**, `wind_category`→**`wind`**,
 `cycle_id`→**`build_id`**. `queued_offline` and `lang` are dropped from P2 — see the P2 note
-below.) Per clause `data:consumer-known-before-produced`, each row names its consumer and join
-key. Every contract row declares its failure behaviour; a contract that only describes success
+below.) (Second pass, same day — `adr-two-day-ranking.md` + domain model §13 settle the bundle
+names this lane had proposed: `slug` and `rank` cease to exist as fields (`spot_id` IS the slug;
+array position IS the rank, per day), `conf_reason_es`/`conf_reason_en`→
+**`confidence_reason{es,en}`**, `narration_es`/`narration_en`→**`call{es,en}`**, the P5 scorecard
+block adopts **`scorecard{n_obs, n_reporters, counter, claim_ok, headline}`**,
+`best_window{start,end}` is settled, and this document never used bare `confidence` as a field
+name — checked, nothing to retire.) Per clause `data:consumer-known-before-produced`, each row
+names its consumer and join key. Every contract row declares its failure behaviour; a contract that only describes success
 leaves the failure branch to be invented silently downstream.
 
 **The published score on the wire is `score_q`, an integer 0 to 100 — never a 0-to-1 float.**
@@ -212,42 +246,73 @@ code multiplies, divides or rounds a score. (Confirmed explicitly, 2026-08-08 co
 
 | # | Payload | Producer → Consumer | Semantic fields required (canonical names) | Byte budget (gz) | Join key | Failure behaviour |
 |---|---|---|---|---:|---|---|
-| P1 | Publish-build render input | domain bundle → site builder | Per spot, per day (today/tomorrow): the field-by-field table below — identity (`spot_id`, `slug`, name), `region_id`, `coast`, `rank`, **`score_q`** (int 0-100), `sub` four sub-scores + `weakest_link`/`damages` (decision 17), `size_band` + `size_range_m` **band + metre range, never a point** (decision 18), `conf_level` + reason es/en (decision 7), best window, narration es/en, `published_at`, `build_id`, scorecard block (see P5), last-report line | build-side, no wire cap (the ~100 KB gz region bundle of research 08 §4.4 is builder input, never a client payload — §5) | `spot_id` + `build_id` | Per field, declared in the P1 table below. Load-bearing fields missing → builder fails the publish LOUD, names the spot and field; never publishes a page with invented data. Display enrichments missing → page degrades per the table, defect logged |
+| P1 | Publish-build render input | domain bundle (`region-bundle/1`, two-day shape — `adr-two-day-ranking.md`) → site builder | Header once per bundle: `region_id`, `build_id`, `published_at`. Per day: `days[d].spots[]` day-summary objects, **array order = that day's rank**. Per spot: `spot_detail[spot_id]`, day-independent. Field-by-field table below (restructured 2026-08-08 coherence round, second pass) | build-side, no wire cap (the region bundle — 27.5 KB gz measured, +3–4 KB two-day — is builder input, never a client payload — §5) | `spot_id` + `build_id`; day arrays ↔ `spot_detail` joined on `spot_id` | Per field, declared in the P1 table below, plus the domain lane's three LOUD bundle invariants (day/detail referential integrity, same spot set both days, consecutive dates — domain §13). Load-bearing fields missing → builder fails the publish LOUD, names the spot and field; never publishes a page with invented data. Display enrichments missing → page degrades per the table, defect logged |
 | P2 | Report submission request | report island → write path (POST `/api/report`; wire SSOT `07-write-path.md` §4.1) | Body: `report_id` (ULID, minted at commit, idempotency key), `spot_id` (string, spot seed id), `observed_at` (ISO8601 UTC, device clock at commit, back-datable ≤ 12 h), `submitted_at` (ISO8601 UTC, device clock at send), `size_band` (v1 7-band enum, domain model §7.2), `size_band_schema` (int, currently `1`), `wind` (3-value enum ← Q2), `quality` (4-value enum ← Q3), `trigger` (`organic` default; `push_solicited` when opened from the `?t=ps` deep link). Header: `X-Surf-Credential` | ≤ 1 KB (island discipline; server hard cap 4 KB) | `report_id` | 4xx other than 401/429: island shows the reason, keeps the label locally, never silently drops, no mechanical retry. 401 `credential_missing`/`credential_invalid`: island mints via `/api/mint` in the background and retries — no user-visible step. 429/5xx/timeout: label stays queued, backoff with jitter; **429 is never an error state in the UI** — same pending state as no signal (research 15 §5.5) |
 | P3 | Reveal response | write path → report screen 2 | `outcome` enum: `compared` \| `no_snapshot` \| `queued_duplicate`; `report_id`; when `compared`: `predicted{score_q, size_band, size_range_m, wind_state, conf_level}`, `delta{score_points, size_bands}` (both signed ints, positive = we ran big), `counter{n_reports, threshold}` (decision 19) | ≤ 2 KB | `report_id` | `no_snapshot` (no prediction was logged for that spot+hour): `predicted: null`, no `delta`, counter present; screen 2 thanks the reporter and says plainly there is nothing to compare, per research 09 §14.4 never fabricate. Duplicate `report_id` on re-sync: server returns the original reveal, screen renders it identically (idempotent) |
 | P4 | Server-side dedup on re-sync | queue flush → write path | Dedup key is `report_id` **alone**; `observed_at` is preserved as the observation time and is the value joined against the prediction log, never the sync time | n/a | `report_id`; reveal joins prediction log on `(spot_id, floor_utc_hour(observed_at))` | Replay of an acked id: acknowledged, not double-counted, original reveal returned |
-| P5 | Scorecard display block | domain scorecard → builder → spot page | Either a display-ready claim (`bias` direction + magnitude, `n_reports`, `n_distinct_reporters`, window) **or** an explicit `insufficient` state with `n`/`threshold`. Frontend renders, never computes statistics. The `bias > 2 × bias_se` display guard of research 09 §13.3 is the domain lane's to enforce **before** the datum reaches the builder | inside P1 | `spot_id` | Absent block → page renders the day-one empty state (§10), never a blank or a stale claim |
+| P5 | Scorecard display block | domain scorecard → builder → spot page | Canonical shape **`scorecard{n_obs, n_reporters, counter, claim_ok, headline}`** in `spot_detail` (domain §13; renamed 2026-08-08 coherence round second pass from this row's `n_reports`/`n_distinct_reporters`/window — the 30-day window is fixed by domain §9, never a payload field). `claim_ok: true` → render `headline`, the display-ready claim. `claim_ok: false` → `headline` is null; render the empty/insufficient state from `counter` (decision 19's `"7 / 30"` string — its `"N / M"` shape is contractual, and the two integers in §10's empty-state sentence are its two numbers; a shape change fails the build LOUD, never a page silently). Frontend renders, never computes statistics; the claim gate (`n ≥ 10 AND distinct_reporters ≥ 5 AND |bias| > 2·se_gate`, domain §9) is the domain lane's to enforce **before** the datum reaches the builder | inside P1 | `spot_id` | `claim_ok: false` or block absent → page renders the day-one empty state (§10), never a blank or a stale claim |
 | P6 | Push subscription | push island → write path (POST `/api/push`; wire SSOT `07-write-path.md` §8.1) | `action` (`subscribe` \| `unsubscribe`), `spot_id`, `subscription{endpoint, keys{p256dh, auth}}`, `lang` (kept HERE: the notify job composes push copy from it — a named server-side consumer, unlike report `lang`), `threshold_score` (optional int 0-100, default 70). Header: `X-Surf-Credential` | ≤ 2 KB (server cap) | `(spot_id, endpoint_hash)` | 400 `endpoint_not_allowed`: UI says the browser is unsupported, names no jargon. 401: background mint + retry as P2. 429/5xx: UI stays "not subscribed", offers retry — subscribe is interactive, never queued; UI says "listo" only after server ack (no false green) |
-| P7 | Share/OG inputs | domain lane → builder | Per spot per build: OG title + description strings es/en, and the structured fields for the OG image: `score_q`, `size_band` + `size_range_m`, `wind_state`, `conf_level` | build-side | `spot_id` + `build_id` | Missing → builder emits the static generic OG card, logs the gap |
+| P7 | Share/OG inputs | domain lane → builder | Per spot per build: OG title + description strings es/en, and the structured fields for the OG image: `score_q`, `size_band` + `size_range_m`, `wind_state`, `conf_level` — all from that spot's `days[0]` summary; the share card pitches today (source named 2026-08-08 coherence round, second pass) | build-side | `spot_id` + `build_id` | Missing → builder emits the static generic OG card, logs the gap |
 
 **P1 field table** (added 2026-08-08 coherence round — Fix: a requirement stated as a concept
-instead of a field is how the earlier name mismatches happened). Names marked ✔ are settled in
-`domain-model.md` / `05-scoring-engine.md`; names marked (p) are this lane's proposal for fields
-the domain lane is adding, to be confirmed in its bundle schema. "FAIL" = builder refuses the
-publish LOUD, naming spot + field; "degrade" = page renders without that element, defect logged.
+instead of a field is how the earlier name mismatches happened. **Restructured same day, second
+pass: every name below is settled in domain model §13 — the (p) proposals are resolved, adopted
+or superseded; this table adopts, it does not propose.**) "FAIL" = builder refuses the publish
+LOUD, naming spot + field; "degrade" = page renders without that element, defect logged.
 
-| Field | Type / unit | Settled | Page behaviour when absent |
-|---|---|---|---|
-| `spot_id` | string, spot seed id | ✔ | FAIL |
-| `slug` | string, language-neutral URL segment | (p) | FAIL (routes cannot be built) |
-| `name` | string, display name (proper noun, language-neutral) | (p) | FAIL |
-| `region_id` | string, e.g. `pa-pacific` | ✔ | FAIL |
-| `coast` | enum `pacific` \| `caribbean` | ✔ | degrade: coast badge omitted |
-| `rank` | int ≥ 1, position in that day's ranked list | (p) | FAIL (the ranked list is the product) |
-| `score_q` | **int 0-100** | ✔ | FAIL |
-| `sub` | object `{dir, size, wind, tide}`, each float 0-1 | ✔ | degrade: breakdown bars omitted |
-| `damages` | array `{factor, damage}` sorted desc (scoring §4) | ✔ | degrade: weakest-link callout omitted |
-| `weakest_link` | enum `dir` \| `size` \| `wind` \| `tide` \| `null` (null = perfect day, no callout rendered — scoring ADR) | ✔ | degrade: callout omitted |
-| `size_band` | v1 7-band enum (domain §7.2) | ✔ | FAIL |
-| `size_range_m` | `[lo, hi]` metres, always rendered with "≈", never a point | ✔ | FAIL (decision 18) |
-| `conf_level` | enum `low` \| `medium` \| `high` | ✔ | FAIL (decision 7) |
-| `conf_reason_es`, `conf_reason_en` | string ≤ 160 chars each | (p) | degrade: `<details>` reason omitted |
-| best window | `{start, end}` spot-local `HH:MM` strings (client renders, never computes — domain §14) | (p) | degrade: window line omitted |
-| `narration_es`, `narration_en` | string ≤ 280 chars each | (p) | degrade: structured fields only (declared in P1 row) |
-| `published_at` | ISO8601 UTC | ✔ | FAIL (the staleness stamp is an honesty element) |
-| `build_id` | string `b_<YYYY-MM-DDTHH>Z` | ✔ | FAIL (join key + share cache-buster) |
-| scorecard block | P5 shape | ✔ | degrade: day-one empty state (§10) |
-| last-report line | `last_report_at` ISO8601 UTC + `last_report_n` int distinct reporters | (p) | degrade: line omitted (normal on day one) |
+Header, once per bundle (P1's per-spot asks for these are satisfied at bundle grain — every spot
+in the file shares them):
+
+| Field | Type / unit | Page behaviour when absent |
+|---|---|---|
+| `region_id` | string, e.g. `pa-pacific` | FAIL |
+| `build_id` | string `b_<YYYY-MM-DDTHH>Z` | FAIL (join key + share cache-buster) |
+| `published_at` | ISO8601 UTC | FAIL (the staleness stamp is an honesty element) |
+
+Day summary, one object per spot per day in `days[d].spots[]` (`d`=0 today, `d`=1 tomorrow;
+**array position IS that day's rank — no `rank` field exists**; a missing or empty day array is
+FAIL, the ranked list is the product):
+
+| Field | Type / unit | Page behaviour when absent |
+|---|---|---|
+| `spot_id` | string; IS the URL slug (language-neutral kebab, enforced at seed PR review) — no separate `slug` field | FAIL |
+| `score_q` | **int 0-100** | FAIL |
+| `conf_level` | enum `low` \| `medium` \| `high` | FAIL (decision 7) |
+| `confidence_reason` | one `{es,en}` object, ≤ 160 chars each | degrade: `<details>` reason omitted |
+| `call` | one `{es,en}` object, ≤ 280 chars each | degrade: structured fields only (declared in P1 row) |
+| `size_band` | v1 7-band enum (domain §7.2) | FAIL |
+| `size_range_m` | `[lo, hi]` metres, always rendered with "≈", never a point | FAIL (decision 18) |
+| `wind_state` | 3-value wind enum | degrade: wind word + glyph omitted |
+| `weakest_link` | enum `dir` \| `size` \| `wind` \| `tide` \| `null` (null = perfect day, no callout rendered — scoring ADR) | degrade: callout omitted |
+| `damages` | array `{factor, damage}` sorted desc (scoring §4) | degrade: weakest-link callout omitted |
+| `best_window` | `{start, end}` spot-local `HH:MM` strings (client renders, never computes — domain §14) | degrade: window line omitted; breakdown bars for that day also omitted (they derive at this hour — see below) |
+
+Spot detail, one entry per spot in the unordered `spot_detail` map (day-independent; joined to
+both day arrays on `spot_id`):
+
+| Field | Type / unit | Page behaviour when absent |
+|---|---|---|
+| `name` | string, display name (proper noun, language-neutral) | FAIL |
+| `coast` | enum `pacific` \| `caribbean` | degrade: coast badge omitted |
+| `scorecard` | `{n_obs, n_reporters, counter, claim_ok, headline}` — the P5 shape | degrade: day-one empty state (§10) |
+| `reports` | `{last_ts, count_24h, distinct_24h}` (supersedes the round-1 `last_report_at`/`last_report_n` proposal) | degrade: last-report line omitted (normal on day one) |
+| `hourly[]` | 48 points spanning both days; frontend reads only `t` + `sub` per point, solely for the derived bars below | degrade: breakdown bars omitted |
+
+(`spot_detail` also carries `tide{…}` and `members[]`; no frontend surface renders either at
+launch, so they are not P1 requirements — named here so their absence from this table reads as
+deliberate, not missed.)
+
+**Day-level sub-scores — the one open reconciliation, closed (2026-08-08 coherence round, second
+pass).** Round-1 P1 asked for `sub`, the four sub-scores, per spot per day; the bundle carries
+`sub` hourly only (`spot_detail[].hourly[].sub`), and the settled day summary does not add it.
+Decided: **derive, don't ask.** The breakdown bars for day `d` render the `sub{dir, size, wind,
+tide}` of the single hourly point whose spot-local timestamp falls in the hour containing
+`days[d].spots[i].best_window.start` — the hour that day's call is about. The builder computes
+exactly that: one array lookup, no averaging, no invention. `best_window` absent → bars omitted
+(the degrade declared in the day-summary table). The "what killed it" callout (decision 17)
+renders from the day summary's `weakest_link` + `damages` only — authoritative, never re-derived
+from the bars — and the callout arrow anchors on the `weakest_link` factor, never on the visually
+lowest bar, so the two surfaces cannot disagree about which factor killed the day.
 
 **P2 fields dropped, decided (2026-08-08 coherence round, answering `07-write-path.md` §1 row
 6):** `queued_offline` and `lang` are **removed** from P2, not defended. `queued_offline` had no
@@ -622,7 +687,7 @@ dependency-cruiser rule covers that half.
 
 - **The gz estimates.** The §5 table is ceilings from comparable page structures, not measurements
   of a build that does not exist yet. The CI gate makes them binding; the first build produces the
-  measured column. If 20 rows plus narration will not fit 14 KB, the cut is narration length on
+  measured column. If 20 rows plus call text will not fit 14 KB, the cut is `call` length on
   rows 2-20, never the honesty elements.
 - **`wa.me/?text=` with no phone number** as a zero-JS share anchor. Research 12 §1 verifies the
   `wa.me` deep-link pattern with a number; the number-less share variant needs one live check.
@@ -645,7 +710,7 @@ dependency-cruiser rule covers that half.
 
 | # | Decision | Options | My recommendation |
 |---|---|---|---|
-| 1 | Rendering model | A: publish-time HTML (hourly republish of routes). B: static shell + client fetch of region JSON. C: hybrid (HTML home, JSON detail) | **A.** B ships ~100 KB JSON + JS before first paint and breaks decision 27; C pays both complexity bills. Full trade-offs in `adr-publish-time-html-rendering.md` |
+| 1 | Rendering model | A: publish-time HTML (hourly republish of routes). B: static shell + client fetch of region JSON. C: hybrid (HTML home, JSON detail) | **A.** B ships the region bundle (~31 KB gz two-day measured at 20 spots, growing linearly with spot count) + framework JS before first paint and breaks decision 27; C pays both complexity bills. Full trade-offs in `adr-publish-time-html-rendering.md` |
 | 2 | Report flow without JS | A: island-only, honest `<noscript>` message. B: progressive enhancement, plain form POST fallback with server-rendered reveal | **A for v1.** B doubles the write-path surface (HTML + JSON responses) for a user who cannot queue offline anyway. B stays open as v1.1 if field data shows JS-off traffic |
 | 3 | PWA display mode | A: `standalone`. B: `minimal-ui` | **A.** iOS push requires the installed context anyway (research 12 §4); standalone is that context |
 | 4 | OG image freshness | A: per-spot per-build OG image + `?b=` cache-buster. B: one static generic card | **A.** The preview IS the product's pitch inside the group; a stale preview of a surf call is a small lie. B is the automatic fallback when P7 data is missing |

@@ -259,7 +259,8 @@ Settled shape = domain model §7.3, verbatim. This lane adds **three fields** (b
 | **`received_at`** | **server clock, authoritative** | trust gate (credential age at receipt); clock-plausibility audit vs `observed_at`/`submitted_at`; coordination detector cadence (§7.4) | `report_id` |
 | **`credential_issued_at`** | **server, from the verified credential** | trust gate: `age = received_at − credential_issued_at`; cohort analysis in the detector | `device_id` |
 | **`trigger`** (`organic` \| `push_solicited`) | client (from the `?t=ps` deep link) | learning §6.3 propensity weights; monthly imbalance metric | `report_id` |
-| `size_band`, `size_band_schema`, `wind`, `quality` | client | C3 residuals + Brier label; C4 recent-reports feed | `(spot_id, hour)` |
+| `size_band`, `size_band_schema`, `quality` | client | C3 residuals (`r_height` from band + schema, `r_score` from quality) and Brier label (`quality ∈ {Good, Epic}`, 06 §10); C4 recent-reports feed | `(spot_id, hour)` |
+| `wind` | client | C4 recent-reports feed only, displayed as the word it is. No residual, no scorecard: wind is out of residual formation and the scorecard grain (06 §5.1/§8; domain model §9). A stage-2 categorical wind model (not built) would backfill by recompute from the immutable logs. Amended 2026-08-08 coherence round: this cell previously named C3 residuals + Brier label, stale, no `r_wind` exists | `(spot_id, hour)` |
 | `build_id` + `predicted{}` | server, authoritative at accept (§4.5) | reveal (this doc §4.3); Brier pairing; drift audit | `report_id` |
 | `photo_ids[]` | resize pipeline, append-only (§9) | photo display; C3 dispute checks | `report_id` |
 | GSI1/GSI2 keys | server (tile from spot index, never from country) | AP3/AP4/AP13 | per §12 |
