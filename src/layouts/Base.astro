@@ -1,0 +1,88 @@
+---
+// Base document shell. Constraints it carries (application-architecture.md):
+// system font stack only, no webfonts; critical CSS inlined, zero
+// render-blocking subresources; lang set per page; hreflang alternates on
+// every page; the language toggle is a plain link to the twin URL, 44 px
+// target. hreflang hrefs are relative until the production domain is settled;
+// they must become absolute then.
+import { otherLocale, type Locale } from '../i18n/strings';
+
+interface Props {
+  locale: Locale;
+  title: string;
+  currentPath: string;
+  /** Twin URL of this page in the other language. */
+  altPath: string;
+}
+
+const { locale, title, currentPath, altPath } = Astro.props;
+const altLang = otherLocale(locale);
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate" hreflang={locale} href={currentPath} />
+    <link rel="alternate" hreflang={altLang} href={altPath} />
+    <style is:inline>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        margin: 0 auto;
+        max-width: 40rem;
+        padding: 1rem;
+        font-family: system-ui, sans-serif;
+        line-height: 1.45;
+      }
+      .lang-toggle {
+        display: inline-flex;
+        min-width: 44px;
+        min-height: 44px;
+        align-items: center;
+        justify-content: center;
+        float: right;
+      }
+      nav a {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        margin-right: 1rem;
+      }
+      ol.ranked {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      ol.ranked li {
+        padding: 0.75rem 0;
+        border-top: 1px solid currentColor;
+      }
+      fieldset {
+        border: 0;
+        padding: 0;
+        margin: 1rem 0;
+      }
+      fieldset label {
+        display: block;
+        padding: 0.4rem 0;
+      }
+      .cta {
+        display: inline-flex;
+        min-height: 44px;
+        align-items: center;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <a class="lang-toggle" href={altPath} lang={altLang}>
+      {altLang.toUpperCase()}
+    </a>
+    <slot />
+  </body>
+</html>

@@ -1,0 +1,19 @@
+---
+// Report screen 2 shell. The reveal renders from the POST response only; see
+// the constraint block in ReportShell.astro.
+import type { GetStaticPaths } from 'astro';
+import ReportShell from '../../../../components/ReportShell.astro';
+import { region } from '../../../../data/region';
+
+export const getStaticPaths = (() =>
+  region.spots.map((spot) => ({
+    params: { slug: spot.spot_id },
+  }))) satisfies GetStaticPaths;
+
+const { slug } = Astro.params;
+if (slug === undefined) {
+  throw new Error('en/spots/[slug]/reported: slug param missing');
+}
+---
+
+<ReportShell locale="en" spotId={slug} />

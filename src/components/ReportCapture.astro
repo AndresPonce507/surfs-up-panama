@@ -1,0 +1,86 @@
+---
+// Report screen 1: the cold capture form.
+//
+// ANTI-ANCHORING CONSTRAINT, DO NOT WEAKEN (application-architecture.md
+// sections 7 to 9, adr-report-flow-leak-isolation.md): this route must NEVER
+// receive forecast data. No score, no size words for today, no wind state, no
+// hint anywhere on this document. The surfer's label must commit before they
+// see our numbers, or every report is anchored and the accuracy ledger is
+// worthless. That is a correctness constraint on the product's core promise,
+// not a style preference.
+//
+// Concretely: this template imports spot IDENTITY only (src/data/region) and
+// must not import src/data/forecast or any module that touches forecast data,
+// directly or transitively. It does not change per publish build. A
+// dependency-cruiser rule and a dist/ grep gate enforce this in CI (section
+// 9); keep this import list clean anyway.
+import Base from '../layouts/Base.astro';
+import { spotById } from '../data/region';
+import { sizeBands } from '../data/size-bands';
+import { strings, type Locale } from '../i18n/strings';
+import { paths } from '../i18n/routes';
+
+interface Props {
+  locale: Locale;
+  spotId: string;
+}
+
+const { locale, spotId } = Astro.props;
+const t = strings[locale];
+const spot = spotById(spotId);
+if (spot === undefined) {
+  throw new Error(`ReportCapture: no spot identity for spot_id "${spotId}"`);
+}
+
+// Submission is owned by the report island (commit to queue, POST, render the
+// reveal). The island is not scaffolded yet, so the control is disabled: with
+// no JS, reporting is unavailable by design and the noscript copy says so.
+---
+
+<Base
+  locale={locale}
+  title={t.report.title(spot.name)}
+  currentPath={paths.report(locale, spotId)}
+  altPath={paths.report(locale === 'es' ? 'en' : 'es', spotId)}
+>
+  <h1>{t.report.title(spot.name)}</h1>
+  <form>
+    <fieldset>
+      <legend>{t.report.sizeQuestion}</legend>
+      {
+        sizeBands.map((band) => (
+          <label>
+            <input type="radio" name="size_band" value={band.value} />
+            {band.label[locale]}
+          </label>
+        ))
+      }
+    </fieldset>
+    <fieldset>
+      <legend>{t.report.windQuestion}</legend>
+      {
+        t.report.windOptions.map((option) => (
+          <label>
+            <input type="radio" name="wind" value={option.value} />
+            {option.label}
+          </label>
+        ))
+      }
+    </fieldset>
+    <fieldset>
+      <legend>{t.report.qualityQuestion}</legend>
+      {
+        t.report.qualityOptions.map((option) => (
+          <label>
+            <input type="radio" name="quality" value={option.value} />
+            {option.label}
+          </label>
+        ))
+      }
+    </fieldset>
+    <button type="submit" disabled>{t.report.submit}</button>
+  </form>
+  <noscript>
+    <p>{t.report.noscript}</p>
+  </noscript>
+</Base>

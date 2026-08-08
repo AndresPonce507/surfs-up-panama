@@ -1,0 +1,19 @@
+---
+// Report screen 1. Forecast-free by construction; see the constraint block in
+// ReportCapture.astro before adding ANY import here.
+import type { GetStaticPaths } from 'astro';
+import ReportCapture from '../../../../components/ReportCapture.astro';
+import { region } from '../../../../data/region';
+
+export const getStaticPaths = (() =>
+  region.spots.map((spot) => ({
+    params: { slug: spot.spot_id },
+  }))) satisfies GetStaticPaths;
+
+const { slug } = Astro.params;
+if (slug === undefined) {
+  throw new Error('en/spots/[slug]/report: slug param missing');
+}
+---
+
+<ReportCapture locale="en" spotId={slug} />

@@ -1,0 +1,72 @@
+---
+// Home and tomorrow are the same ranked-list screen over a different day
+// array. They are separate prerendered routes, not a JS tab, so each stays
+// inside its own byte budget and the refusal to forecast past tomorrow is
+// visible in the information architecture itself (application-architecture.md
+// section 4). Array position IS the rank; no rank field exists.
+import Base from '../layouts/Base.astro';
+import { forecast } from '../data/forecast';
+import { spotById } from '../data/region';
+import { strings, type Locale } from '../i18n/strings';
+import { paths } from '../i18n/routes';
+
+interface Props {
+  locale: Locale;
+  day: 0 | 1;
+}
+
+const { locale, day } = Astro.props;
+const t = strings[locale];
+const daySpots = forecast.days[day];
+const currentPath = day === 0 ? paths.home(locale) : paths.tomorrow(locale);
+const altLocale: Locale = locale === 'es' ? 'en' : 'es';
+const altPath = day === 0 ? paths.home(altLocale) : paths.tomorrow(altLocale);
+
+function nameOf(spotId: string): string {
+  const spot = spotById(spotId);
+  if (spot === undefined) {
+    // A day array entry with no identity is a broken build input. Fail the
+    // build LOUD; never render a page with invented data (P1 contract).
+    throw new Error(`RankedList: no spot identity for spot_id "${spotId}"`);
+  }
+  return spot.name;
+}
+---
+
+<Base
+  locale={locale}
+  title={t.home.header}
+  currentPath={currentPath}
+  altPath={altPath}
+>
+  <h1>{t.home.header}</h1>
+  <p>{t.home.updatedPrefix} {forecast.published_at}</p>
+  <nav>
+    <a href={paths.home(locale)} aria-current={day === 0 ? 'page' : undefined}>
+      {t.home.tabToday}
+    </a>
+    <a
+      href={paths.tomorrow(locale)}
+      aria-current={day === 1 ? 'page' : undefined}
+    >
+      {t.home.tabTomorrow}
+    </a>
+  </nav>
+  <ol class="ranked">
+    {
+      daySpots.map((summary, index) => (
+        <li>
+          <span>{index + 1}</span>
+          <a href={paths.spot(locale, summary.spot_id)}>
+            {nameOf(summary.spot_id)}
+          </a>
+          <strong>{summary.score_q}</strong>
+          <p>{summary.call[locale]}</p>
+        </li>
+      ))
+    }
+  </ol>
+  <footer>
+    <p>{t.home.honestyFooter}</p>
+  </footer>
+</Base>

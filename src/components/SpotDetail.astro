@@ -1,0 +1,64 @@
+---
+// Spot detail skeleton: identity, both day summaries, and the report CTA in
+// the bottom thumb zone (decisions 13, 23). Breakdown bars, scorecard, static
+// map and report photos arrive with their data contracts; not scaffolded
+// because each would mean inventing content the bundle owns.
+import Base from '../layouts/Base.astro';
+import { forecast, type DaySummary } from '../data/forecast';
+import { spotById } from '../data/region';
+import { strings, type Locale } from '../i18n/strings';
+import { paths } from '../i18n/routes';
+
+interface Props {
+  locale: Locale;
+  spotId: string;
+}
+
+const { locale, spotId } = Astro.props;
+const t = strings[locale];
+const spot = spotById(spotId);
+if (spot === undefined) {
+  // Only known slugs are generated; an unknown one is a broken build input.
+  throw new Error(`SpotDetail: no spot identity for spot_id "${spotId}"`);
+}
+
+function summaryFor(day: 0 | 1): DaySummary | undefined {
+  return forecast.days[day].find((entry) => entry.spot_id === spotId);
+}
+
+const today = summaryFor(0);
+const tomorrow = summaryFor(1);
+---
+
+<Base
+  locale={locale}
+  title={spot.name}
+  currentPath={paths.spot(locale, spotId)}
+  altPath={paths.spot(locale === 'es' ? 'en' : 'es', spotId)}
+>
+  <h1>{spot.name}</h1>
+  <p>{t.home.updatedPrefix} {forecast.published_at}</p>
+  <section>
+    <h2>{t.home.tabToday}</h2>
+    {
+      today && (
+        <p>
+          <strong>{today.score_q}</strong> {today.call[locale]}
+        </p>
+      )
+    }
+  </section>
+  <section>
+    <h2>{t.home.tabTomorrow}</h2>
+    {
+      tomorrow && (
+        <p>
+          <strong>{tomorrow.score_q}</strong> {tomorrow.call[locale]}
+        </p>
+      )
+    }
+  </section>
+  <p>
+    <a class="cta" href={paths.report(locale, spotId)}>{t.spot.reportCta}</a>
+  </p>
+</Base>
