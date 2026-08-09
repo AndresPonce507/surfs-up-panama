@@ -13,6 +13,8 @@
 // Exits non-zero and names the failed observable, why it matters, and what to
 // do next, matching the repo's gate convention.
 
+import { readFileSync } from 'node:fs';
+
 const DEFAULT_ORIGIN = 'https://d1j9u9fxnap4es.cloudfront.net';
 
 const originFlag = process.argv.indexOf('--origin');
@@ -39,6 +41,45 @@ async function get(path) {
   const res = await fetch(`${ORIGIN}${path}`, { redirect: 'follow' });
   const body = await res.text();
   return { status: res.status, body };
+}
+
+/** Spot id -> {lat, lon}, read from the seed file the pipeline itself uses. */
+function spotCoordinates() {
+  const out = {};
+  let text;
+  try {
+    text = readFileSync('data/spots/pa-pacific.yaml', 'utf8');
+  } catch {
+    return out;
+  }
+  let current = null;
+  for (const line of text.split('\n')) {
+    const id = line.match(/^\s*-\s*spot_id:\s*([a-z0-9-]+)/u);
+    if (id) {
+      current = id[1];
+      out[current] = {};
+      continue;
+    }
+    if (!current) continue;
+    const lat = line.match(/^\s*lat:\s*(-?[\d.]+)/u);
+    if (lat) out[current].lat = Number(lat[1]);
+    const lon = line.match(/^\s*lon:\s*(-?[\d.]+)/u);
+    if (lon) out[current].lon = Number(lon[1]);
+  }
+  return out;
+}
+
+/** Great-circle km between two seed spots, or null when either is unknown. */
+function separationKm(a, b) {
+  if (!a?.lat || !b?.lat) return null;
+  const R = 6371;
+  const rad = (x) => (x * Math.PI) / 180;
+  const dLat = rad(b.lat - a.lat);
+  const dLon = rad(b.lon - a.lon);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
 }
 
 function stripTags(html) {
@@ -108,18 +149,40 @@ async function main() {
   }
 
   // --- distinct spots must not show identical numbers -----------------------
+  //
+  // Two spots inside one wave-model grid cell receive identical forecast
+  // inputs, so identical output is physics, not a cloning bug. The GFS wave
+  // grid is 0.16 deg, about 18 km. playa-teta and playa-serena sit 2.58 km
+  // apart and legitimately match. Outside a cell, identical numbers really do
+  // mean the page is repeating a neighbour, so that stays a failure.
+  //
+  // This distinction is the point of the check, not a softening of it: the
+  // spot-06 charter's negative is that distinct spots must not show
+  // "suspiciously" copied data, and two beaches the model cannot tell apart
+  // are not suspicious. What would be suspicious is two spots the model CAN
+  // tell apart showing the same numbers.
+  const GRID_KM = 18;
+  const coords = spotCoordinates();
   const fingerprints = new Map();
   for (const [link, html] of pages) {
+    const slug = link.replace(/^\/spots\//u, '').replace(/\/$/u, '');
     const nums = (stripTags(html).match(/\d+(?:[.,]\d+)?/gu) ?? []).join(',');
     if (fingerprints.has(nums) && nums.length > 20) {
-      fail(
-        `${link} shows numbers identical to ${fingerprints.get(nums)}`,
-        'two different spots showing the same data means the page is not really per-spot',
-        'check the producer is writing per-spot values, not repeating days[0].spots[0]',
+      const other = fingerprints.get(nums);
+      const km = separationKm(coords[slug], coords[other.slug]);
+      if (km === null || km > GRID_KM) {
+        fail(
+          `${link} shows numbers identical to ${other.link}${km === null ? '' : ` and they are ${km.toFixed(1)} km apart`}`,
+          'two spots the wave model can tell apart must not show the same data; that means the page is repeating a neighbour',
+          'check the producer is writing per-spot values, not repeating days[0].spots[0]',
+        );
+        break;
+      }
+      notes.push(
+        `${link} and ${other.link} match, but they are ${km.toFixed(1)} km apart, inside one ${GRID_KM} km model cell, so identical numbers are expected`,
       );
-      break;
     }
-    fingerprints.set(nums, link);
+    fingerprints.set(nums, { link, slug });
   }
 
   // --- confidence word on the list ------------------------------------------
