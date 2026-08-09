@@ -11,6 +11,8 @@
   "scripts": {
     "build": "npm run publish:surface -- --verify && astro build",
     "publish:surface": "tsx src/publish/publish-static-surface.ts",
+    "pipeline:capture": "tsx src/pipeline/capture-cli.ts",
+    "pipeline:build": "tsx src/pipeline/run-build-cli.ts",
     "dev": "astro dev",
     "preview": "astro preview",
     "test": "vitest run",
