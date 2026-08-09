@@ -73,7 +73,6 @@ ol.ranked {
 }
 
 ol.ranked li {
-  position: relative; /* anchors the confidence reason dropdown (below) */
   display: grid;
   grid-template-columns: 1.75rem 1fr auto;
   column-gap: var(--sp-2);
@@ -109,11 +108,10 @@ ol.ranked li > strong {
 }
 
 ol.ranked li > p {
-  /* Columns 1-2, not 2-4: column 3 on this row now belongs to the
-     confidence badge (below), sharing the row's second line rather than
-     adding a third. Reclaiming column 1 (empty here; the rank number only
-     occupies row 1) keeps the reclaimed width roughly net-neutral. */
-  grid-column: 1 / 3;
+  /* Columns 2-3, its original span: confidence now has its own third line
+     (below) rather than sharing this one, so the call keeps its full
+     width regardless of how long the published text runs. */
+  grid-column: 2 / 4;
   margin: var(--sp-1) 0 0;
   color: var(--ink-2);
   font-size: var(--text-meta);
@@ -157,9 +155,8 @@ ol.ranked li:first-child > strong {
 }
 
 ol.ranked li:first-child > p {
-  /* Column 1 only: column 2 on this row now belongs to the confidence
-     badge (below), right under the score above it. */
-  grid-column: 1 / 2;
+  /* Original full span: confidence now has its own third line (below). */
+  grid-column: 1 / 3;
   margin-top: var(--sp-2);
   display: block;
   color: var(--ink);
@@ -168,24 +165,21 @@ ol.ranked li:first-child > p {
   line-height: var(--leading-body);
 }
 
-/* ---- confidence: the level word always visible, sharing the row's
-   existing second line (same grid row as the call/reason paragraph) rather
-   than adding a third. The honest reason one tap away via native
-   <details>/<summary> (zero JS, adr-publish-time-html-rendering.md); its
-   content is a positioned dropdown so an opened reason gets the row's full
-   width to read, instead of being squeezed into the narrow badge column.
-   No transition or animation anywhere in this block: the disclosure is
-   instant, so prefers-reduced-motion has nothing to opt out of, and the
-   hero row (U4) stays exempt from motion by construction. */
+/* ---- confidence: the level word always visible on its own third line
+   (product decision, Andres, superseding the earlier second-line-sharing
+   cut -- see Confidence.astro's header comment: "Confianza {word}" reads
+   clearer than a bare word next to a wave score, and that phrase does not
+   fit the row's original two lines without clipping real call text). The
+   honest reason one tap away via native <details>/<summary> (zero JS,
+   adr-publish-time-html-rendering.md), in normal document flow -- opening
+   one grows its own row and pushes the rows below it down; nothing needs
+   positioning tricks now that confidence is not fighting the call for
+   space. No transition or animation anywhere in this block: the
+   disclosure is instant, so prefers-reduced-motion has nothing to opt out
+   of, and the hero row (U4) stays exempt from motion by construction. */
 ol.ranked li > details.confidence {
-  grid-row: 2;
-  grid-column: 3;
-  justify-self: end;
-  align-self: start;
-}
-
-ol.ranked li:first-child > details.confidence {
-  grid-column: 2;
+  grid-column: 1 / -1;
+  margin-top: var(--sp-1);
 }
 
 ol.ranked li > details.confidence > summary {
@@ -200,8 +194,6 @@ ol.ranked li > details.confidence > summary {
   font-size: var(--text-caption);
   font-weight: 600;
   letter-spacing: var(--track-meta);
-  text-transform: capitalize; /* "baja" -> "Baja": a floating label reads
-    as a label, not a stray lowercase word, with zero extra layout width. */
   list-style: none;
   cursor: pointer;
 }
@@ -219,26 +211,19 @@ ol.ranked li > details.confidence[open] > summary::after {
 }
 
 ol.ranked li > details.confidence > div {
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 100%;
-  z-index: 1;
-  margin-top: var(--sp-1);
-  padding: var(--sp-2);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-s);
-  background: var(--bg);
+  padding: 0 var(--sp-2) var(--sp-2);
   color: var(--ink-2);
   font-size: var(--text-caption);
   line-height: var(--leading-snug);
 }
 
-/* hero card: the CLOSED summary sits on --hero-grad (same darker ink as its
-   own reason paragraph, already proven readable against the worst stop,
-   09-design-system.md). The OPENED div is a solid --bg dropdown regardless
-   of row, so it keeps the default --ink-2, already proven on --bg. */
-ol.ranked li:first-child > details.confidence > summary {
+/* hero card: both the closed summary and the opened reason sit directly on
+   --hero-grad (normal document flow now, no separate solid backdrop), so
+   both need the darker ink already proven readable against the worst
+   gradient stop (09-design-system.md) -- the same token the hero's own
+   call paragraph already uses. */
+ol.ranked li:first-child > details.confidence > summary,
+ol.ranked li:first-child > details.confidence > div {
   color: var(--ink);
 }
 

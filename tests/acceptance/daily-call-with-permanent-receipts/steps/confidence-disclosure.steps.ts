@@ -246,16 +246,13 @@ function assertBehavior(findings: readonly string[], how: string): void {
   );
 }
 
-// The visible trigger text is the bare level word ("baja"), not "Confianza
-// baja": at real published call lengths (up to 65 chars) the "Confianza "
-// prefix cost more width than the row's second line could spare without
-// clipping the call -- see Confidence.astro's header comment for the
-// measured numbers. The charter's hard rule is the level word itself
-// ("sin la palabra, es FALLA"), not "confianza" as a visible prefix, so
-// full "Confianza {word}" context lives in aria-label instead, checked
-// separately below.
-const LEVEL_WORD_PATTERN = /\b(alta|media|baja)\b/iu;
-const ACCESSIBLE_LEVEL_LABEL_PATTERN = /confianza\s+(alta|media|baja)/iu;
+// Product decision (Andres): the visible trigger text is the full
+// "Confianza alta/media/baja", not a bare level word -- a bare word next
+// to a wave score reads as small waves, not low confidence, and clarity
+// wins over the width budget. Confidence now owns its own third line
+// (Confidence.astro's header comment has the full history), so the call
+// text never has to share width with it.
+const LEVEL_WORD_PATTERN = /confianza\s+(alta|media|baja)/iu;
 
 /** The exact regression the honesty negative test guards against: a reason
  * that claims or implies anyone checked the actual waves. Zero beach
@@ -335,17 +332,17 @@ Then(
       const summary = rows.nth(index).locator('details.confidence summary');
       const summaryExists = (await summary.count()) > 0;
       const summaryText = summaryExists ? ((await summary.textContent()) ?? '').trim() : '';
-      const ariaLabel = summaryExists ? ((await summary.getAttribute('aria-label')) ?? '') : '';
+      const ariaLabel = summaryExists ? await summary.getAttribute('aria-label') : null;
       if (!LEVEL_WORD_PATTERN.test(summaryText)) {
-        findings.push(`la fila ${index + 1} no muestra "alta/media/baja" en su texto visible (encontrado: "${summaryText}")`);
+        findings.push(`la fila ${index + 1} no muestra "Confianza alta/media/baja" en su texto visible (encontrado: "${summaryText}")`);
       }
-      if (!ACCESSIBLE_LEVEL_LABEL_PATTERN.test(ariaLabel)) {
-        findings.push(`la fila ${index + 1} no da contexto de accesibilidad "Confianza alta/media/baja" (aria-label encontrado: "${ariaLabel}")`);
+      if (ariaLabel !== null) {
+        findings.push(`la fila ${index + 1} tiene un aria-label ("${ariaLabel}") ademas del texto visible, lo que anuncia la confianza dos veces a un lector de pantalla`);
       }
     }
     assertBehavior(
       findings,
-      'renderizar <Confidence level={summary.conf_level} /> en cada fila, con la palabra dentro del texto de <summary> y el contexto completo en aria-label, nunca solo un color o un atributo data-level.',
+      'renderizar <Confidence level={summary.conf_level} /> en cada fila, con "Confianza alta/media/baja" dentro del texto de <summary> y sin aria-label redundante, nunca solo un color o un atributo data-level.',
     );
   },
 );
@@ -484,7 +481,7 @@ Then('el toque de confianza mide al menos 44 por 44 px y no tiene movimiento', a
 });
 
 Then(
-  'la confianza comparte la segunda línea de la fila en vez de agregar una tercera',
+  'la confianza ocupa su propia tercera línea, después de la razón, por decisión de producto',
   async function (this: PipelineWorld) {
     const world = slice07World(this);
     const page = requiredPage(world);
@@ -496,25 +493,31 @@ Then(
         const reason = row.querySelector('p');
         const summary = row.querySelector('details.confidence summary');
         if (reason === null || summary === null) return null;
+        const reasonRect = reason.getBoundingClientRect();
+        const summaryRect = summary.getBoundingClientRect();
         return {
-          reasonBottom: reason.getBoundingClientRect().bottom,
-          summaryTop: summary.getBoundingClientRect().top,
+          reasonBottom: reasonRect.bottom,
+          reasonWidth: reasonRect.width,
+          summaryTop: summaryRect.top,
         };
       });
       if (geometry === null) {
         findings.push(`la fila ${index + 1} no tiene razón o confianza para comparar`);
         continue;
       }
-      // The confidence badge's top must land above the reason paragraph's
-      // bottom edge: they occupy the SAME visual band (the row's existing
-      // second line), never a badge stacked below it as a new line.
-      if (geometry.summaryTop >= geometry.reasonBottom) {
-        findings.push(`la fila ${index + 1} agrega una tercera línea: la confianza empieza en ${geometry.summaryTop}, el llamado termina en ${geometry.reasonBottom}`);
+      // Product decision, superseding the earlier "shares the line" cut:
+      // confidence's own top must land AT OR BELOW the reason paragraph's
+      // bottom edge -- its own line, after the call, never overlapping or
+      // squeezed beside it. reasonWidth is asserted elsewhere (the
+      // overflow/clipping Then step); here only the vertical relationship
+      // matters.
+      if (geometry.summaryTop < geometry.reasonBottom - 1) {
+        findings.push(`la fila ${index + 1} no deja que la confianza empiece después de la razón: confianza en ${geometry.summaryTop}, razón termina en ${geometry.reasonBottom}`);
       }
     }
     assertBehavior(
       findings,
-      'colocar <details class="confidence"> en la misma grid-row que <p> (columna 3 en filas normales, columna 2 en el héroe), nunca en una fila propia de ancho completo.',
+      'colocar <details class="confidence"> con grid-column: 1 / -1 y sin grid-row explícita, para que caiga en su propia fila después de <p> por auto-flow.',
     );
   },
 );
