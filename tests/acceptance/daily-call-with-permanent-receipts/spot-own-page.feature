@@ -48,7 +48,14 @@ Feature: Cada spot tiene su propia página, con lo suyo y no lo de otro
     Given una superficie publicada real, sin modificar
     When el surfista abre la página del spot más flojo de la lista a 390 px
     Then la página nombra ese spot y trae sus números reales de hoy y de mañana
-    And donde falta tamaño o ventana la página lo dice en palabras, sin error crudo ni texto en blanco
+    And el tamaño y la ventana de hoy y de mañana están completos o dicen en palabras que faltan, nunca en blanco ni con error crudo
+
+  @slice-06 @driving_port @real-io @adapter-integration @negative @error @covers-R33
+  Scenario: Un campo que de verdad falta se dice en palabras, sin importar que otros spots ya tengan datos completos
+    Given una superficie publicada donde un spot pierde su tamaño y su ventana de hoy
+    When el surfista toca "sin-datos" desde la lista de hoy y abre su página a 390 px
+    Then donde falta tamaño o ventana la página lo dice en palabras, sin error crudo ni texto en blanco
+    And la ventana de mañana para ese mismo spot aparece con formato normal, no degradada
 
   @slice-06 @driving_port @real-io @adapter-integration @ui-u2 @ui-u3
   Scenario: La página del spot se lee en el teléfono y vuelve a la lista sin perderse

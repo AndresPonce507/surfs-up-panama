@@ -37,10 +37,20 @@
         "expected_size": "Doble o más ≈2.4 m o más",
         "expected_window": "Ventana 5:30–8:00"
       }
+    },
+    "sin-datos": {
+      "spot_id": "playa-teta",
+      "today": {
+        "degraded": true
+      },
+      "tomorrow": {
+        "size_band": "ankle_knee",
+        "size_range_m": [0.1, 0.4],
+        "wind_state": "clean",
+        "best_window": { "start": "05:45", "end": "07:15" },
+        "expected_size": "Tobillo a rodilla ≈0.1–0.4 m",
+        "expected_window": "Ventana 5:45–7:15"
+      }
     }
-  },
-  "realWeakestSpot": {
-    "spot_id": "punta-chame",
-    "name": "Punta Chame"
   }
 }

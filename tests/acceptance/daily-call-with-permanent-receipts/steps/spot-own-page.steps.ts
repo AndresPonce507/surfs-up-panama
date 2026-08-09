@@ -47,10 +47,33 @@ type StructuredDay = {
   readonly expected_window: string;
 };
 
+/**
+ * A day that deliberately carries no structured size or window, regardless
+ * of what the real installed data happens to have. Real data completeness is
+ * not permanent -- upstream fields (e.g. tide) can still leave a day's size
+ * or window null -- so the honest-fallback path is exercised by a fixture
+ * that always strips these fields, never by an incidental gap in production
+ * data that could close.
+ */
+type DegradedDay = {
+  readonly degraded: true;
+};
+
+type ProfileDay = StructuredDay | DegradedDay;
+
+function isDegradedDay(day: ProfileDay): day is DegradedDay {
+  return 'degraded' in day;
+}
+
+function requiredStructuredDay(day: ProfileDay, context: string): StructuredDay {
+  assert.ok(!isDegradedDay(day), `test fixture error: ${context} is deliberately degraded and has no expected_size/expected_window`);
+  return day;
+}
+
 type Profile = {
   readonly spot_id: string;
-  readonly today: StructuredDay;
-  readonly tomorrow: StructuredDay;
+  readonly today: ProfileDay;
+  readonly tomorrow: ProfileDay;
 };
 
 type Slice06Fixture = {
@@ -159,9 +182,16 @@ function requiredProfile(name: string): Profile {
   return profile;
 }
 
-function applyDay(rows: readonly SurfaceCall[], spotId: string, day: StructuredDay): void {
+function applyDay(rows: readonly SurfaceCall[], spotId: string, day: ProfileDay): void {
   const row = rows.find((call) => call.spot_id === spotId);
   assert.ok(row, `test fixture error: ${spotId} is not in the installed ranking`);
+  if (isDegradedDay(day)) {
+    delete row.size_band;
+    delete row.size_range_m;
+    delete row.wind_state;
+    delete row.best_window;
+    return;
+  }
   Object.assign(row, {
     size_band: day.size_band,
     size_range_m: day.size_range_m,
@@ -436,6 +466,12 @@ Given('una superficie publicada real, sin modificar', function (this: PipelineWo
   world06(this).slice06Root = copyProjectForSurface();
 });
 
+Given('una superficie publicada donde un spot pierde su tamaño y su ventana de hoy', function (this: PipelineWorld) {
+  const world = world06(this);
+  world.slice06Root = copyProjectForSurface();
+  applyProfiles(world.slice06Root, ['sin-datos']);
+});
+
 Given('una superficie publicada con perfiles de tamaño y ventana distintos para dos spots', function (this: PipelineWorld) {
   const world = world06(this);
   world.slice06Root = copyProjectForSurface();
@@ -589,10 +625,12 @@ Then(
     const world = world06(this);
     const current = requiredCurrent(world);
     const profile = requiredProfile(current);
+    const today = requiredStructuredDay(profile.today, `${current}.today`);
+    const tomorrow = requiredStructuredDay(profile.tomorrow, `${current}.tomorrow`);
     const page = capturedPage(world, current);
     const findings: string[] = [];
-    if (page.sizeToday !== profile.today.expected_size) findings.push(`hoy: se esperaba "${profile.today.expected_size}", se vio "${page.sizeToday}"`);
-    if (page.sizeTomorrow !== profile.tomorrow.expected_size) findings.push(`mañana: se esperaba "${profile.tomorrow.expected_size}", se vio "${page.sizeTomorrow}"`);
+    if (page.sizeToday !== today.expected_size) findings.push(`hoy: se esperaba "${today.expected_size}", se vio "${page.sizeToday}"`);
+    if (page.sizeTomorrow !== tomorrow.expected_size) findings.push(`mañana: se esperaba "${tomorrow.expected_size}", se vio "${page.sizeTomorrow}"`);
     assertBehavior(findings, 'renderizar formatSizeEs(size_band, size_range_m) del día correspondiente, nunca formatear el tamaño a mano.');
   },
 );
@@ -603,10 +641,12 @@ Then(
     const world = world06(this);
     const current = requiredCurrent(world);
     const profile = requiredProfile(current);
+    const today = requiredStructuredDay(profile.today, `${current}.today`);
+    const tomorrow = requiredStructuredDay(profile.tomorrow, `${current}.tomorrow`);
     const page = capturedPage(world, current);
     const findings: string[] = [];
-    if (page.windowToday !== profile.today.expected_window) findings.push(`hoy: se esperaba "${profile.today.expected_window}", se vio "${page.windowToday}"`);
-    if (page.windowTomorrow !== profile.tomorrow.expected_window) findings.push(`mañana: se esperaba "${profile.tomorrow.expected_window}", se vio "${page.windowTomorrow}"`);
+    if (page.windowToday !== today.expected_window) findings.push(`hoy: se esperaba "${today.expected_window}", se vio "${page.windowToday}"`);
+    if (page.windowTomorrow !== tomorrow.expected_window) findings.push(`mañana: se esperaba "${tomorrow.expected_window}", se vio "${page.windowTomorrow}"`);
     assertBehavior(findings, 'renderizar formatBestWindowEs(best_window) del día correspondiente, nunca formatear la ventana a mano.');
   },
 );
@@ -652,18 +692,68 @@ Then('la página nombra ese spot y trae sus números reales de hoy y de mañana'
 });
 
 Then(
+  'el tamaño y la ventana de hoy y de mañana están completos o dicen en palabras que faltan, nunca en blanco ni con error crudo',
+  function (this: PipelineWorld) {
+    // Deliberately data-state-agnostic: the real weakest spot may have full
+    // structured data today and a genuine gap tomorrow (a coordinator-verified
+    // fact -- completeness is not permanent, e.g. the tide gap). This proves
+    // the page is always in ONE of the two honest states, whichever the real
+    // data currently is, rather than assuming either state permanently.
+    const page = requiredWeakest(world06(this));
+    const findings: string[] = [];
+    if (hasTechnicalLeak(page.bodyText)) findings.push('la página expone un error crudo o un valor técnico');
+    for (const [label, text] of [
+      ['tamaño de hoy', page.sizeToday],
+      ['tamaño de mañana', page.sizeTomorrow],
+      ['ventana de hoy', page.windowToday],
+      ['ventana de mañana', page.windowTomorrow],
+    ] as const) {
+      if (text.trim().length === 0) {
+        findings.push(`${label} quedó vacío`);
+        continue;
+      }
+      const isHonestFallback = /^Sin (?:datos de tamaño|ventana)/i.test(text);
+      const isFormatted = text.includes('≈') || /^Ventana\s/.test(text);
+      if (!isHonestFallback && !isFormatted) {
+        findings.push(`${label} no es ni un valor formateado ni el mensaje honesto de "sin datos": "${text}"`);
+      }
+    }
+    assertBehavior(findings, 'mostrar siempre el tamaño y la ventana formateados con formatSizeEs/formatBestWindowEs, o el mensaje honesto en palabras cuando falten -- nunca vacío ni un valor crudo, sin importar si los datos de hoy están completos.');
+  },
+);
+
+Then(
   'donde falta tamaño o ventana la página lo dice en palabras, sin error crudo ni texto en blanco',
   function (this: PipelineWorld) {
-    const page = requiredWeakest(world06(this));
+    // Bound to a DELIBERATELY degraded fixture profile (never to whatever the
+    // real installed data happens to have): a scenario that only "passes"
+    // because production data is currently incomplete is not proof the
+    // fallback works, it is a coincidence. See "sin-datos" in the fixture.
+    const world = world06(this);
+    const page = capturedPage(world, requiredCurrent(world));
     const findings: string[] = [];
     if (hasTechnicalLeak(page.bodyText)) findings.push('la página expone un error crudo o un valor técnico');
     if (page.sizeToday.trim().length === 0) findings.push('el campo de tamaño de hoy quedó vacío en vez de decir algo');
     if (page.windowToday.trim().length === 0) findings.push('el campo de ventana de hoy quedó vacío en vez de decir algo');
-    if (!/sin datos de tamaño/i.test(page.bodyText)) findings.push('falta el tamaño y la página no lo dice en palabras');
-    if (!/sin ventana/i.test(page.bodyText)) findings.push('falta la ventana y la página no lo dice en palabras');
+    if (!/sin datos de tamaño/i.test(page.sizeToday)) findings.push('falta el tamaño y la página no lo dice en palabras');
+    if (!/sin ventana/i.test(page.windowToday)) findings.push('falta la ventana y la página no lo dice en palabras');
     assertBehavior(findings, 'mostrar un mensaje explícito en español cuando el tamaño o la ventana todavía no están publicados para ese spot.');
   },
 );
+
+Then('la ventana de mañana para ese mismo spot aparece con formato normal, no degradada', function (this: PipelineWorld) {
+  // Proves the degradation is scoped to today only: tomorrow's structured
+  // fields are untouched by the fixture and must render formatted, not fall
+  // back, on the very same page as today's deliberately missing fields.
+  const world = world06(this);
+  const current = requiredCurrent(world);
+  const tomorrow = requiredStructuredDay(requiredProfile(current).tomorrow, `${current}.tomorrow`);
+  const page = capturedPage(world, current);
+  assertBehavior(
+    page.windowTomorrow === tomorrow.expected_window ? [] : [`se esperaba "${tomorrow.expected_window}", se vio "${page.windowTomorrow}"`],
+    'degradar solo el día cuyo dato falta; el otro día del mismo spot sigue leyendo formatBestWindowEs normalmente.',
+  );
+});
 
 Then('nada se corta ni se encima en 390 px', function (this: PipelineWorld) {
   const world = world06(this);
