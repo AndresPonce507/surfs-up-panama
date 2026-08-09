@@ -555,10 +555,10 @@ commit messages. Read those messages before building on them.
 
 | Branch | Head | State |
 |---|---|---|
-| `build/f2-integration` | `82be859` | the contract base |
+| `build/f2-integration` | `5ed5c02` | the contract base plus this handoff |
 | `build/f2-paste` | `84dd4fb` | DISTILL slice-01 DONE and verified; DELIVER roadmap UNFINISHED |
 | `build/f2-report` | `6060587` | DISTILL slice-01 authored, RED run NOT verified |
-| `build/f2-infra` | `0e9885d` | four stacks authored; deploy blocked at IAM; budget guard live |
+| `build/f2-infra` | `0a22527` | **F-BILL slice-05 SHIPPED, gate green.** Four stacks authored and synth green. Slice-04 and all deploys blocked at IAM |
 | `build/f2-bugfix` | `7a3ca6b` | bug 1 DONE; bugs 2 and 3 are WIP with no tests, do not ship |
 | `build/f2-signal` | `674c3ce` | DISCUSS done, 5 slices |
 | `build/f2-deltas` | `6037fc1` | DISCUSS done, F-SEE-WHAT-KILLED-IT |
@@ -706,9 +706,14 @@ was ignored. Run three or four lanes, not eleven.
 
 ### Exact next actions for the session that picks this up
 
-1. Clear the AWS blocker with the two commands above, then let the infra lane finish: `cdk synth`
-   green for all four stacks, deploy read side first, `write-stack` last, and treat a
-   `PutFunctionConcurrency` rejection at deploy time as the answer to the Lambda quota question.
+1. Clear the AWS blocker with the two commands above. The infra lane is otherwise DONE: all four
+   stacks (`SurfsUpPanamaSite`, `SurfsUpPanamaIngest`, `SurfsUpPanamaObservability`,
+   `SurfsUpPanamaWrite`) synth green credential-free, and F-BILL slice-05 shipped with
+   `ci:local` real exit 0, 10 passed / 0 failed / 0 skipped. What remains after the grant is the
+   deploy itself: read side first, `write-stack` last, and treat a `PutFunctionConcurrency`
+   rejection at deploy time as the answer to the Lambda quota question. Note the corrected
+   precondition: the sum of reservations is 13, so the real requirement is quota >= 113, not the
+   117 first estimated. F-BILL slice-04 unblocks with the same grant.
 2. Finish `build/f2-paste`: re-validate the roadmap with
    `des-verify-integrity docs/feature/f-paste-the-call-into-the-group/deliver/ --roadmap-only`, then
    dispatch `@nw-functional-software-crafter` per DELIVER phase 2 with the full DES template from
