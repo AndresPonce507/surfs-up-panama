@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build": "npm run publish:surface -- --verify && astro build",
+    "budget": "node scripts/check-page-weight.mjs",
     "publish:surface": "tsx src/publish/publish-static-surface.ts",
     "dev": "astro dev",
     "preview": "astro preview",

@@ -52,6 +52,19 @@ const JOBS = [
     steps: [['ui quality mandates', 'npm', ['run', 'test:ui']]],
   },
   {
+    // Two concurrent `astro build` runs collide on the shared
+    // .astro/.prerender/.vite scratch directory, whatever --outDir each was
+    // given. This job builds, so it runs in its own wave, alone, after every
+    // other job. The page-weight gate runs inside `astro build`, so this job is
+    // the whole promise: build the real site, measure every route, refuse over
+    // a ceiling.
+    name: 'budget',
+    default: true,
+    serial: true,
+    needs: ['npm'],
+    steps: [['build + page weight', 'npm', ['run', 'build', '--', '--outDir', '.ci-local-logs/budget-dist']]],
+  },
+  {
     name: 'e2e',
     default: true,
     heavy: true,
@@ -313,9 +326,12 @@ export async function runLocalCi({
   const cores = coreCount();
   const concurrency = Number(argv.find((argument) => argument.startsWith('--jobs='))?.split('=')[1])
     || Math.max(2, Math.min(4, Math.floor(cores / 3)));
+  // Waves run one after another. A job marked `serial` gets the last wave to
+  // itself: it needs exclusive use of a resource the other jobs also touch.
   const waves = [
-    selected.filter((job) => !job.heavy),
-    selected.filter((job) => job.heavy),
+    selected.filter((job) => !job.heavy && !job.serial),
+    selected.filter((job) => job.heavy && !job.serial),
+    ...selected.filter((job) => job.serial).map((job) => [job]),
   ].filter((wave) => wave.length);
   const results = [];
   const startedAt = Date.now();
