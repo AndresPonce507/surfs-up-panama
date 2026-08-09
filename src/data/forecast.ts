@@ -13,6 +13,7 @@
 import surface from '../../data/published-surface.json';
 
 import type { Locale } from '../i18n/strings';
+import { assertStrictTwoDayUpdate } from '../publish/static-surface';
 
 export interface DaySummary {
   /** Joins to spot_detail and to SpotIdentity on spot_id. */
@@ -49,7 +50,10 @@ type PublishedCall = {
   readonly best_window?: { readonly start: string; readonly end: string };
 };
 
-const today: readonly DaySummary[] = (surface.current.calls as readonly PublishedCall[]).map((call) => ({
+const current = assertStrictTwoDayUpdate(surface.current);
+
+function summaries(calls: readonly PublishedCall[]): readonly DaySummary[] {
+  return calls.map((call) => ({
   spot_id: call.spot_id,
   score_q: call.score_q,
   call: { es: call.call_es },
@@ -57,9 +61,12 @@ const today: readonly DaySummary[] = (surface.current.calls as readonly Publishe
   ...(call.size_range_m === undefined ? {} : { size_range_m: call.size_range_m }),
   ...(call.wind_state === undefined ? {} : { wind_state: call.wind_state }),
   ...(call.best_window === undefined ? {} : { best_window: call.best_window }),
-}));
+  }));
+}
 
 export const forecast: ForecastPlaceholder = {
-  published_at: surface.current.published_at,
-  days: [today, today],
+  published_at: current.published_at,
+  // Today's legacy alias remains only for yesterday-receipt compatibility.
+  // Tomorrow always comes from its separately ranked day array.
+  days: [summaries(current.calls), summaries(current.days[1].spots)],
 };
