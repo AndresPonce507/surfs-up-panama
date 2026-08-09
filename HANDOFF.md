@@ -307,3 +307,222 @@ for genuinely disjoint work, not for work that merely lives in different files.
 - The repo is public. Never commit credentials. `.nwave/config.yaml` and `des-config.json` are
   tracked on purpose; the rest of `.nwave/` is not
 - Git identity here is `andresponce0001@gmail.com`, which attributes correctly on `AndresPonce507`
+
+---
+
+## 9. Slice-04 pause point, 2026-08-09
+
+**Status: Slice-04 shipped.** The verified implementation commit is
+`fee3aadf91b2c8f48922a9cd999a498907be4bba`; the tracker update is
+`26df2b6`. The permanent source-blind Terra examiner recorded PASS against the HTTPS preview,
+with title `¿Dónde se surfea hoy?`, reason `Pecho a cabeza, viento limpio, mejor de 06:00 a
+09:30.`, and screenshot `/private/tmp/terra-vera-cloudfront-spanish-final.png`. DES recorded the
+examiner verdict and verified the slice commit. The local built page was opened at
+`http://127.0.0.1:58532/` in Chrome for Andres's smoke test.
+
+### What Slice-04 changes
+
+- The home page has an oversized winning call with literal Spanish `VE A Playa Venao`.
+- Its visible reason is Spanish plain language: `Pecho a cabeza, viento limpio, mejor de 06:00 a
+  09:30.`
+- The pipeline publishes the structured size, wind, and time fields that make this repeatable.
+- Slice-04 ATs include a disguised technical model token regression case. The E2E identity check
+  understands the added `VE A` presentation prefix.
+
+### Verified evidence
+
+- `npm run ci:local` passed on 2026-08-09 after the last AT change: 9 passed, 0 failed, 0 skipped.
+  This includes typecheck, unit, UI, infra, AT, E2E, security, secrets, and dependency gates.
+- Focused Slice-04 ATs passed: 9 scenarios, 61 steps.
+- `git diff --check` passed before the pause.
+- A fresh `npm run build` completed immediately before the pause. A local static server is still
+  running from `dist/` at `http://127.0.0.1:58532/` (parent agent session id 68427). Its direct
+  HTTP output includes `VE A Playa Venao` and `Pecho a cabeza, viento limpio, mejor de 06:00 a
+  09:30.`. Confirm it is still live with:
+
+  ```sh
+  curl -fsS http://127.0.0.1:58532/ | rg -o 'VE A[^<]*|Pecho a cabeza[^<]*'
+  ```
+
+### Vera blocker and correct next action
+
+The built public page and a direct 390x844 Playwright screenshot were Spanish. Three earlier
+examiner runs nevertheless claimed an English page. The final Terra run cited
+`/tmp/panama-surf-slice04-vera-58532-390x844.png` but again claimed English although the fresh
+server's direct HTML was Spanish. Treat those FAILs as conflicting examiner evidence, **not** as a
+product defect. Do not record them as a charter failure and do not commit on a guessed PASS.
+
+The permanent Codex-compatible replacement is installed globally as
+`nw-codex-user-examiner`, model `gpt-5.6-terra`; Codex config sets high reasoning. It requires a
+fresh public artifact and returns INDETERMINATE for conflicts. It will be visible only after a new
+Codex session starts. In that new session, run this examiner source-blind against port 58532 or a
+freshly built equivalent, requiring the final URL, exact title, exact reason, and a screenshot path.
+If its screenshot conflicts with the direct server output, inspect the screenshot and return
+INDETERMINATE rather than guessing.
+
+**Latest examiner evidence, 2026-08-09:** the permanent Terra examiner reached
+`http://127.0.0.1:58532/` but Chrome showed title `127.0.0.1`, reason
+`127.0.0.1 didn’t send any data.`, and `ERR_EMPTY_RESPONSE`; its screenshot is
+`/private/tmp/terra-vera-127-0-0-1-58532.png`. The verdict is **INDETERMINATE**.
+Do not reinterpret this as a product PASS or FAIL. Restore a preview that is reachable from the
+examiner's actual browser surface, then repeat the source-blind observation before committing.
+
+**Repeated browser-artifact conflict, 2026-08-09:** after a fresh `npm run build`, the generated
+`dist/index.html` contained Spanish title `¿Dónde se surfea hoy?` and `VE A Playa Venao` with
+`Pecho a cabeza, viento limpio, mejor de 06:00 a 09:30.`. Two fresh Terra browser walks at the
+same URL instead showed English title `Where's the surfing going today?` and English reason
+`Chest to head, clear wind, best from 06:00 to 09:30.`; screenshots are
+`/private/tmp/terra-vera-127-0-0-1-58532-repeat.png` and
+`/private/tmp/terra-vera-127-0-0-1-58532-final.png`. This is an environment artifact conflict,
+so the only valid result remains **INDETERMINATE**. Do not commit Slice-04 until Terra can inspect
+the exact rebuilt public artifact, preferably through a separately hosted preview URL.
+
+**AWS preview attempt, 2026-08-09:** Andres explicitly requested an isolated hosted preview.
+`arn:aws:iam::602167897909:user/andres-cli` created private bucket
+`surfs-up-panama-preview-602167897909` in `us-east-1`, tagged it as an ephemeral preview, and
+uploaded the fresh `dist/` artifact. The account denies `s3:PutBucketPublicAccessBlock` and
+`cloudfront:CreateOriginAccessControl`, so the bucket remains private (anonymous HTTPS fetch of
+`index.html` returns 403) and no preview URL exists yet. No CDK stack, DNS, database, Lambda, or
+production bucket was touched. Required least-privilege path: permit creation of a CloudFront
+origin access control and distribution plus the narrowly scoped bucket policy for this preview
+bucket, or have Andres create that CloudFront distribution himself.
+
+**AWS preview resolved, 2026-08-09:** the same identity successfully created legacy CloudFront
+origin access identity `E3NNZ9FL9FTR4`, a non-public S3 policy scoped to that canonical identity,
+and distribution `EH95FHQ75WCL3`. The public HTTPS preview is
+`https://d1j9u9fxnap4es.cloudfront.net/`; it returned HTTP 200 and its fetched HTML contains
+`¿Dónde se surfea hoy?`, `VE A Playa Venao`, and
+`Pecho a cabeza, viento limpio, mejor de 06:00 a 09:30.`. No production resource changed.
+The permanent Terra agent's Chrome surface still auto-translates Spanish and lacks the in-app
+browser; its result remains **INDETERMINATE** until Chrome translation is disabled for this site.
+
+**Hosted smoke, 2026-08-09:** direct HTTPS smoke against the CloudFront preview passed: home
+and `/spots/playa-venao/ayer.html` both returned HTTP 200; the home returned the exact Spanish
+title, `VE A Playa Venao`, and the Slice-04 reason. `PREVIEW_URL` was not usable for the existing
+Playwright command because its `webServer.reuseExistingServer: false` treats an already-live
+external URL as a conflict before a test begins. That test-runner configuration issue is outside
+Slice-04 and does not alter the hosted smoke result.
+
+After a valid PASS, run the relevant DES commit command available in the new session, commit only
+the Slice-04 paths listed below, then open `http://127.0.0.1:58532/` in a browser tab for Andres.
+Remove the generated untracked `test-results/` directory before the commit. Do not alter the
+unrelated existing `.nwave/.gitignore` and `.nwave/des-config.json` changes.
+
+### Files owned by Slice-04
+
+- `data/published-surface.json`
+- `src/components/RankedList.astro`
+- `src/data/forecast.ts`
+- `src/pipeline/build.ts`
+- `tests/e2e/daily-call-with-permanent-receipts/walking-skeleton.spec.ts`
+- `tests/acceptance/daily-call-with-permanent-receipts/top-call-card.feature`
+- `tests/acceptance/daily-call-with-permanent-receipts/top-call-card.steps.ts`
+- `tests/acceptance/daily-call-with-permanent-receipts/fixtures/slice-04-top-call-variants.json`
+- Slice-04 expectation, requirement-checklist, RED classification, and feature-delta documentation
+  already modified under `docs/feature/daily-call-with-permanent-receipts/` and `docs/product/expectations/`.
+
+### Cross-terminal state
+
+- `agent-hub` CLI is working. This terminal is `codex-ttys001`, rejoined as coordinator for
+  `/Users/andres/panama-surf`.
+- Message 22 from `codex-ttys000` is unacknowledged because this old Codex session's MCP transport
+  is closed. It asks the fresh client to join, call whoami, enable direct input while idle, reply
+  with evidence, and acknowledge it.
+- This terminal replied through CLI as message 23. `codex mcp list` shows `agent_hub` enabled. The
+  new Codex session should start with `join_workspace`, `whoami`, `inbox`, and `status`, then
+  acknowledge message 22 before continuing Slice-04.
+
+### nWave install note
+
+`nw-codex-user-examiner` is installed and verified at
+`/Users/andres/.codex/agents/nw-codex-user-examiner.toml`. The global DES shim at
+`/Users/andres/.claude/bin/des` currently has a stale uv Python shebang and fails if invoked from
+this old session. This is an installer issue outside Slice-04. A fresh Codex session may expose a
+working DES hook. If it does not, repair the nWave installer path separately; do not hand-edit the
+Slice-04 code to work around it.
+
+---
+
+## 10. Slices 06, 07, 08 build, 2026-08-09
+
+**Base for all of it is `63d5b1ec577c5dd6fda24020948483cda99649c8`**, the verified Slice-05
+candidate on `slice05-repair-combine`. That base was re-run green from scratch before anything
+stacked on it: `npm run ci:local`, 9 of 9, real exit code 0. Do not use `design-round-1` as the
+build base; its Slice-05 source is a different implementation.
+
+### Branch reconciliation, decided by Andres
+
+`design-round-1` and the verified candidate had diverged across 12 files, 451 insertions and 338
+deletions, including two genuinely different Slice-05 implementations and 133 lines of HANDOFF
+history. The decision: keep the candidate's code exactly, carry `design-round-1`'s section 9
+across as documentation only, leave `design-round-1` itself untouched. Section 9 was verified
+purely additive first, sections 1 through 8 were byte-identical on both branches. That carry is
+done and this file now matches `design-round-1` exactly through section 9.
+
+### Waivers, recorded rather than hidden
+
+1. **The JIT DISTILL rule was relaxed on Andres's instruction.** Slices 06, 07 and 08 opened their
+   acceptance tests in parallel instead of strictly one at a time. `des carpaccio-slice-gate` is
+   absent from the installed DES surface so nothing mechanically enforces the rule today. It was a
+   deliberate call for throughput, not an oversight, and it is written here so the next reader does
+   not mistake it for drift.
+2. **The legacy DES commit gates do not exist and were not faked.** `carpaccio-slice-gate`,
+   `verify-slice-commit` and `run-contract-gate` are not in the installed build; only shims such as
+   `des-roadmap` and `des-verify-ui` are. What replaced them, per slice: `npm run ci:local` fully
+   green with its real exit code, the focused slice tags, `npm run test:at` whole-suite,
+   `git diff --check`, and a live examiner walk against the hosted preview. No legacy gate was
+   reported as passing.
+
+### Decisions made 2026-08-09
+
+- **No domain yet. Build against the CloudFront hostname.** `astro.config.mjs` still has no `site`.
+  This gates all five F-PASTE-THE-CALL-INTO-THE-GROUP slices, because that feature's share message
+  ends in a `{url}` line. Setting `site` is a one-line change when a domain exists.
+- **Model tiering was wiped again** by the nWave installs at 11:27 and 11:36 today; every agent spec
+  had reverted to `model: inherit`. Re-pinned with `~/nwave-pin-models.sh`. Check this after every
+  install, it is silent.
+
+### Verified against live sources, and each contradicts something written down
+
+- **There is no $20 billing alarm.** `system-architecture.md` section 9 guardrail 9 says one exists.
+  The account has ZERO CloudWatch alarms and the only budget belongs to a different project. Fix
+  the document or create the alarm, but do not keep relying on the claim.
+- **Every spot link on the hosted preview returned 403.** All 20 of them. The site links to the
+  directory form `/spots/{slug}/` while `build.format: 'file'` emits `spots/{slug}.html`, and an S3
+  REST origin serves no index document. `astro preview` resolves directory URLs itself, which is
+  exactly why this never showed up locally and why the `manana/` key had to be created by hand.
+  The proper fix is a CloudFront viewer-request function; its code is committed at
+  `scripts/preview/clean-urls.js` but `andres-cli` is denied `cloudfront:CreateFunction`, so
+  `scripts/preview/publish-preview.mjs` closes it at publish time instead.
+- **There was no 404 page anywhere.** No `src/pages/404.astro`, no `dist/404.html`, and CloudFront
+  had zero custom error responses, so any bad route served raw S3 `AccessDenied` XML. Slice-06 owns
+  the page; mapping origin 403 to it at the CDN is a deploy concern.
+- **A null wind score renders as `clean`.** `src/pipeline/build.ts` `windState` returns `'clean'`
+  when the score is null, so missing wind data displays as `limpio`, the most favourable reading
+  available. For a product whose premise is never claiming more certainty than the data earns, that
+  default is backwards. Slice-04 code, flagged not fixed.
+- **The wind vocabulary disagrees across two documents.** `05-scoring-engine.md` section 498 says
+  `clean|bumpy|choppy` with the middle bucket at 0.40; the code says `clean|choppy|blown_out` with
+  the middle at 0.35. The code matches the report labels in `application-architecture.md` section
+  403, so the scoring document is the stale one, but the 0.35 against 0.40 threshold gap is real.
+
+### The failure that green tests could not see
+
+`data/published-surface.json` carried `conf_level` on ZERO of its 60 rows, and `size_band`,
+`size_range_m`, `wind_state` and `best_window` on exactly 1 of 20 calls. Those fields are optional
+on `SurfaceCall`, so typecheck passed, all CI jobs passed, and nineteen of twenty spot pages would
+still have rendered undefined. There was also no way to regenerate the file: `runBuildOnce` has no
+production caller outside tests, and `publish:surface` demands an `--input` bundle that nothing
+emitted. A dedicated producer lane owns building that path and, more importantly, the guard that
+fails when any of the five fields goes missing. Without that guard this silently returns.
+
+### Preview tooling added
+
+- `scripts/preview/publish-preview.mjs` publishes `dist/` and writes each page a second time at its
+  literal directory key, generalising the `manana/` workaround so directory links resolve.
+- `scripts/preview/verify-preview.mjs` smokes the hosted preview against the charters: every spot
+  link resolves, no page prints a bare exact metre value, two spots do not show identical numbers,
+  and a misspelled route does not serve raw XML. It was proved falsifiable against the broken state
+  before being trusted, and it fails with a real exit code.
+- `scripts/preview/clean-urls.js` is the CloudFront function that should replace the publish-time
+  workaround once the account permits `cloudfront:CreateFunction`.
