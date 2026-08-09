@@ -25,6 +25,12 @@ import { describe, expect, it } from 'vitest';
 import type { StaticSurface, SurfaceCall } from '../../src/publish/static-surface';
 
 const SURFACE_PATH = resolve('data/published-surface.json');
+// The launch-policy invariant, read from the other end: loadLaunchSpotSeeds
+// (src/data/launch-spots.ts) throws unless launch_spot_ids.length === 20.
+// A guard that only checks the SHAPE of present entries and never the COUNT
+// would pass on a surface that silently dropped spots — the same
+// green-tests-broken-page failure class this guard exists to close.
+const LAUNCH_SPOT_COUNT = 20;
 
 function loadSurface(): StaticSurface {
   return JSON.parse(readFileSync(SURFACE_PATH, 'utf8')) as StaticSurface;
@@ -80,6 +86,12 @@ function fieldFindings(call: SurfaceCall, where: string): string[] {
 describe.skip('published surface: every spot, both days, carries the five structured fields', () => {
   it('has no gaps in current.days[0], current.days[1], or current.calls', () => {
     const surface = loadSurface();
+
+    expect(surface.current.calls, 'calls must carry all 20 launch spots, not a partial ranking').toHaveLength(LAUNCH_SPOT_COUNT);
+    for (const [index, day] of surface.current.days.entries()) {
+      expect(day.spots, `days[${index}] must carry all 20 launch spots, not a partial ranking`).toHaveLength(LAUNCH_SPOT_COUNT);
+    }
+
     const findings = [
       ...surface.current.calls.flatMap((call) => fieldFindings(call, 'calls')),
       ...surface.current.days.flatMap((day, index) => day.spots.flatMap((call) => fieldFindings(call, `days[${index}]`))),
