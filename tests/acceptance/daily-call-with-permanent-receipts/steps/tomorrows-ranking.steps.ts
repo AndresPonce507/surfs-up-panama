@@ -91,6 +91,11 @@ function applyDefect(surface: PublishedSurface, defect: string): void {
       validDays(surface)[1]!.date = '2026-08-10';
       validDays(surface)[1]!.spots = structuredClone(surface.current.calls);
       return;
+    case 'días-copiados-con-alias-distinto':
+      surface.current.calls = structuredClone(surface.current.calls);
+      surface.current.calls[0]!.score_q = 99;
+      validDays(surface)[1]!.spots = structuredClone(validDays(surface)[0]!.spots);
+      return;
     default:
       assert.fail(`test fixture error: unknown Slice-05 defect ${defect}`);
   }

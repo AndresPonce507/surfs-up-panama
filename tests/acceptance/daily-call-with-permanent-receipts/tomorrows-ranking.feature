@@ -27,3 +27,4 @@ Feature: Mañana conserva su propia lista publicada
       | fechas-no-consecutivas |
       | mañana-vacía |
       | mañana-copiada |
+      | días-copiados-con-alias-distinto |
