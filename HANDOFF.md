@@ -526,3 +526,205 @@ fails when any of the five fields goes missing. Without that guard this silently
   before being trusted, and it fails with a real exit code.
 - `scripts/preview/clean-urls.js` is the CloudFront function that should replace the publish-time
   workaround once the account permits `cloudfront:CreateFunction`.
+
+## 11. Eleven-lane wave build, 2026-08-09, PAUSED for cross-session handoff
+
+**Base for everything below is `82be859`** on `build/f2-integration`, which is `origin/main`
+(`7be753d`) plus two serial contract commits. Every lane branched from it. Nothing has merged to
+`main`. Nothing has been deployed.
+
+This section exists because the session was paused mid-flight on Andres's instruction so another
+session could continue. Several commits below are deliberately unfinished and say so in their own
+commit messages. Read those messages before building on them.
+
+### The two contract commits, both green
+
+- `535de91` **enum canon and the absolute site host.** Closed `f-tell-us-what-you-saw-cold`
+  Pre-requisite 1. Canon is `clean | choppy | blown_out` and `bad | ok | good | epic`, with
+  `src/data/report-vocab.ts` as the one home; `src/publish/static-surface.ts` re-exports `WindState`
+  from it, and `src/i18n/strings.ts` emits the tokens as its option values. The wind half was never
+  genuinely open: `bumpy` appears in zero lines of code and the live surface carries 28/27/5 across
+  the three shipped tokens, so `05-scoring-engine.md` was the stale side and is corrected, threshold
+  moved to the code's live 0.35 rather than the document's 0.40. `site` is set to the CloudFront
+  hostname. `ci:local` 10 passed / 0 failed / 0 skipped, real exit 0. The placeholder scan was proved
+  falsifiable by poisoning `src/data/size-bands.ts` and watching it name that exact file and token.
+- `82be859` **project `CLAUDE.md`**, declaring the functional paradigm (Andres's call, closing
+  `nw-deliver` step 1.5) and mutation strategy disabled to match the rigor profile.
+
+### Lane branches, all pushed, none merged
+
+| Branch | Head | State |
+|---|---|---|
+| `build/f2-integration` | `82be859` | the contract base |
+| `build/f2-paste` | `84dd4fb` | DISTILL slice-01 DONE and verified; DELIVER roadmap UNFINISHED |
+| `build/f2-report` | `6060587` | DISTILL slice-01 authored, RED run NOT verified |
+| `build/f2-infra` | `0e9885d` | four stacks authored; deploy blocked at IAM; budget guard live |
+| `build/f2-bugfix` | `7a3ca6b` | bug 1 DONE; bugs 2 and 3 are WIP with no tests, do not ship |
+| `build/f2-signal` | `674c3ce` | DISCUSS done, 5 slices |
+| `build/f2-deltas` | `6037fc1` | DISCUSS done, F-SEE-WHAT-KILLED-IT |
+| `build/f2-trust` | `b9ddff3` | DISCUSS done, F-KNOW-HOW-MUCH-TO-TRUST-IT |
+| `build/f2-record` | `ffa4176` | DISCUSS done, F-SHOW-OUR-TRACK-RECORD |
+| `build/f2-learning` | `e99a099` | DISCUSS done, F-FORECAST-LEARNS-FROM-THE-BEACH |
+| `build/f2-push` | `9be788e` | DISCUSS done, F-TELL-ME-WHEN-ITS-WORTH-THE-DRIVE |
+| `build/f2-i18n` | `b00676e` | DISCUSS done, F-READ-IT-IN-YOUR-LANGUAGE, slices READ-01..08 |
+
+Worktrees are at `/Users/andres/psb-<lane>`, each with its own real `npm ci`. They are NOT
+symlinked, so no shared Astro or Vite cache.
+
+### What changed structurally: every feature now has a plan
+
+At the start of this session seven of eight features had no slice plan at all, which is why
+`nw-deliver` could not run on them: DELIVER builds its roadmap from DISTILL's scenarios, and DISTILL
+needs a slice plan. Those seven workspaces now exist, each with a Slice Plan, Slice classification,
+Definition of Done, Out-of-scope and Pre-requisites in the house shape.
+
+The wave order for anything not yet built is therefore DISCUSS (done) then DISTILL then DELIVER.
+
+### The single biggest blocker, and it is Andres's
+
+**`andres-cli` cannot deploy.** `cloudformation:CreateChangeSet` and `cloudformation:CreateStack`
+are both denied, so `cdk bootstrap` fails at its first call and there is no changeset-free fallback.
+Full observed probe log at `docs/product/architecture/aws-permission-inventory.md`. This blocks
+F-BILL 04-05, the entire write path, every `f-tell-us` slice past 01, and all of
+`f-tell-me-when-its-worth-the-drive`.
+
+Smallest durable fix, from an identity that can already do it:
+
+```sh
+npx cdk bootstrap aws://602167897909/us-east-1
+aws iam put-user-policy --user-name andres-cli --policy-name cdk-deploy-via-bootstrap-roles \
+  --policy-document '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Action":"sts:AssumeRole","Resource":"arn:aws:iam::602167897909:role/cdk-hnb659fds-*"}]}'
+```
+
+As of the pause this had NOT been done: `iam:ListAttachedUserPolicies` was still denied when
+re-probed, so no admin policy had taken effect.
+
+### Security finding, unresolved, needs a deliberate decision
+
+The deny list is bypassable and it was observed end to end, then torn down without being used:
+`iam:CreateRole` then `iam:AttachRolePolicy` (arbitrary managed policy accepted) then
+`iam:UpdateAssumeRolePolicy` (trust pointed at andres-cli) then `sts:AssumeRole` SUCCEEDED.
+
+Any code holding this credential can mint itself an administrator role in four calls. The infra lane
+refused to deploy through that path because agents do not self-escalate. The consequence stands: the
+denials in the inventory are advisory, not a boundary. Either accept that knowingly, or remove
+`iam:CreateRole`, `iam:AttachRolePolicy` and `iam:UpdateAssumeRolePolicy` from andres-cli and grant
+deploy capability deliberately. Today `dynamodb:CreateTable` and all data-plane writes are denied,
+which is the correct end state to preserve when regranting.
+
+### The billing guard is now real
+
+`surfs-up-panama-guard-20`, AWS Budgets, COST, $20/month, verified by read-back, email at actual
+25%, actual 100% and forecast 100%. Month-to-date spend at creation was $0.00, so nothing billable
+preceded it.
+
+A CloudWatch billing alarm was deliberately NOT created. The `AWS/Billing` namespace is empty
+because the console-only "Receive CloudWatch billing alerts" preference has never been enabled, so
+such an alarm would watch a metric that does not exist. `system-architecture.md` section 9 guardrail
+9 claimed an alarm existed; it was wrong in two ways at once.
+
+### Decisions Andres made this session, do not relitigate
+
+1. Quality enum canon `bad | ok | good | epic`, and `05-scoring-engine.md` amended to the code's
+   live `clean | choppy | blown_out` at threshold 0.35.
+2. OG card cadence: per-spot, regenerated on EVERY build. About 14,400 S3 PUTs/month, about $0.07.
+   Chosen over dawn-only so a link pasted at 3pm never previews 6am numbers while the page it links
+   to shows 3pm numbers.
+3. CDK stacks: Claude builds AND deploys. Risk was raised and explicitly accepted. Execution is
+   blocked only by the IAM wall above, not by the decision.
+4. Photos in the report flow: BUILD them, but only after a research-grade abuse re-analysis of the
+   presigned upload surface, which `07-write-path.md` section 9 says in bold is not done. Photos are
+   in no current slice; `photo_ids: []` stays on the record shape.
+5. Development paradigm: functional. Written into project `CLAUDE.md`.
+
+### Decisions still open, none guessed
+
+1. **Push notification threshold.** No document fixes it. Worse, `07-write-path.md` "What I am
+   unsure about" item 4 admits "default 70 is an unfit prior; no research names the right default",
+   and neither Decisions-needing-Andres table ever asked. The push lane recommends surfer-chosen
+   with a default, staged: hidden server default at slice-01, surfer-facing picker at slice-04.
+   Andres must separately ratify the default's VALUE.
+2. **The A2HS iPhone hint is claimed by two committed plans**, `f-tell-me-when` slice-02 and
+   `f-works-with-no-signal` slice-05. Exactly one should own it. Recommendation on record: it ships
+   with the no-signal slice, with the condition that the avisos words never render publicly before a
+   live subscribe path exists.
+3. **`design-round-1`**: delete or keep as archive. Recommendation: keep. It is already pushed, it
+   costs nothing, and deletion is the irreversible direction.
+4. **Stall detection timing.** The epic promises "within the hour"; `08-devops.md` section 7 sets a
+   2 to 3 hour floor and refuses to tighten it.
+
+### Findings that correct written-down claims
+
+- **`runBuildOnce` DOES have a production caller.** Section 10 of this file says it does not.
+  `src/pipeline/run-build-cli.ts` exists and its header comment says it was written to close exactly
+  that gap. Section 10 is stale on this point.
+- **The midnight break is a runbook, not a code change.** `publish:surface --verify` compares to
+  Panama civil today, so a surface regenerated for one day reds `npm run build` the next morning.
+  The whole chain was proved this session with real exit codes:
+
+  ```sh
+  npm run pipeline:capture                         # exit 0, 4 ingest events, live API
+  npm run pipeline:build -- --at <ISO>             # exit 0 for the captured day
+  npm run publish:surface -- --input .pipeline-out/pub/v1/regions/pa-pacific/bundle.json
+  ```
+
+  At a date rollover `pipeline:build` refuses honestly with "no usable wave members", because
+  predictions exist only for the captured day. Run capture first. Nothing needs loosening.
+- **`BUILD-ORDER.md` and `plan-cluster-*.md` do not exist and never did.** Two lanes independently
+  swept every ref, the reflog and `git fsck --lost-found`. They are cited by name across the project
+  as the source of the D-numbered decisions (D1, D4, D5, D17, D19, D20, D21). Those decisions survive
+  only as quotations inside feature files. Treat any citation of those two filenames as unverifiable.
+- **`05-scoring-engine.md` has no section 4.** Its headings jump from `### 3.` to `### 5.`, while its
+  own line 107 cites "§4". Documents in this project that cite "05 §4" are copying that internal
+  inconsistency faithfully, not hallucinating.
+- **The counterfactual in F-SEE-WHAT-KILLED-IT is honestly computable**, which was an open question.
+  `05-scoring-engine.md` lines 281 to 296 give the identity: `damage_dir = -ln(S_dir)`,
+  `damage_i = (w_i / sumW) * -ln(S_i)`, and `Q = exp(-(damage_dir + damage_size + damage_wind +
+  damage_tide))`, with the decomposition as law L10. Removing one factor's damage and
+  re-exponentiating is exact arithmetic from the shipped model, so "sin él este spot marcaría 79" is
+  a real number, not an invention.
+- **Bug 3's honest behaviour is already specified.** `05-scoring-engine.md` line 254: a null wind
+  observation yields `sWind` null, wind leaves the geometric mean AND `w_wind` leaves `sumW`, no
+  damage entry, `sub.wind = null`, `missing` contains `"wind"`, confidence capped at
+  `cap_missing_wind = 0.4`. The scoring layer already models absence correctly. Only the presentation
+  mapping collapses null onto `clean`.
+
+### Two shipped gates will fail the moment `/sin-senal` is built
+
+`scripts/page-weight-core.mjs:68` and the keystone-owned
+`tests/acceptance/daily-call-with-permanent-receipts/steps/page-weight.steps.ts:88` both currently
+assert that `/sin-senal` is unbuilt. The no-signal lane's slice-01 owns amending them, strictly
+serial with the keystone lane. Found by the signal lane, not fixed.
+
+### Operational lesson from this session, learned expensively
+
+**Eleven concurrent agents does not go faster than three. It goes slower.** A fleet of eleven
+produced four commits and seven stream-watchdog stalls at 600s. Nothing was lost, because every
+lane's work was on disk uncommitted, but the recovery cost more than the parallelism saved. Andres's
+existing note that low-concurrency workflows survive API overload at width 2 or under is correct and
+was ignored. Run three or four lanes, not eleven.
+
+### Exact next actions for the session that picks this up
+
+1. Clear the AWS blocker with the two commands above, then let the infra lane finish: `cdk synth`
+   green for all four stacks, deploy read side first, `write-stack` last, and treat a
+   `PutFunctionConcurrency` rejection at deploy time as the answer to the Lambda quota question.
+2. Finish `build/f2-paste`: re-validate the roadmap with
+   `des-verify-integrity docs/feature/f-paste-the-call-into-the-group/deliver/ --roadmap-only`, then
+   dispatch `@nw-functional-software-crafter` per DELIVER phase 2 with the full DES template from
+   `~/.claude/skills/nw-execute/SKILL.md`. After GREEN run `des-verify-ui`, then Vera against the
+   charter, and only then authorise COMMIT. Slice-01's RED is already recorded: 8 runs, all
+   `MISSING_FUNCTIONALITY`, real exit 1.
+3. Finish `build/f2-report`'s RED verification before any crafter touches it. Its filtered run was
+   never confirmed; the agent had just discovered the positional path argument does not override the
+   cucumber config, so the whole suite ran instead of the slice.
+4. Redo `build/f2-bugfix` bugs 2 and 3 test-first. The WIP commit is a starting point, not a fix.
+5. Everything else is DISTILL-ready but not started.
+
+### Standing rules that bit this session
+
+- `ci:local` exits 0 when jobs are SKIPPED. Read the summary line and confirm `0 skipped`.
+- Never pipe a gate into `tail`, `head`, `grep` or a redactor. A pipeline returns the last command's
+  status. This was violated once here, caught, and the pattern corrected to redirect-then-read.
+- `git stash` is global across worktrees. With twelve worktrees live it will corrupt other lanes.
+- Cucumber tags do not inherit from `Feature:` down to scenarios.
