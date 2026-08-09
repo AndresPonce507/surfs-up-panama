@@ -83,8 +83,8 @@ Then('the prediction log holds one row per model per forecast hour', async funct
     const forSource = rows.filter((r) => r.source === source);
     assert.equal(
       forSource.length,
-      VALID_HOURS_UTC.length,
-      `model ${source}: expected one row per forecast hour (${VALID_HOURS_UTC.length}), found ${forSource.length}.${this.failureContext()}`,
+      VALID_HOURS_UTC.length * 2,
+      `model ${source}: expected one row per forecast hour across today and tomorrow (${VALID_HOURS_UTC.length * 2}), found ${forSource.length}.${this.failureContext()}`,
     );
     const distinctHours = new Set(forSource.map((r) => r.valid_ts));
     assert.equal(
@@ -107,13 +107,13 @@ Then(
         `unknown source in log row: ${row.source}`,
       );
       assert.equal(row.run_ts, this.source.runTs, 'row must carry the model run it came from');
-      assert.ok(row.valid_ts.startsWith(this.today), 'row must carry its forecast hour');
-      const validHour = Number(row.valid_ts.slice(11, 13));
-      const runHour = Number(row.run_ts.slice(11, 13));
-      assert.equal(row.lead_h, validHour - runHour, 'lead_h must be valid_ts minus run_ts in hours');
+      assert.ok(row.valid_ts.startsWith(this.today) || row.valid_ts.startsWith(nextCivilDate(this.today)), 'row must carry a forecast hour for today or tomorrow');
+      assert.equal(row.lead_h, (Date.parse(row.valid_ts) - Date.parse(row.run_ts)) / 3_600_000, 'lead_h must be valid_ts minus run_ts in hours');
     }
   },
 );
+
+function nextCivilDate(date: string): string { const tomorrow = new Date(`${date}T12:00:00Z`); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1); return tomorrow.toISOString().slice(0, 10); }
 
 Then('every row records exactly what that model said, unchanged', async function (this: PipelineWorld) {
   const rows = await this.predictionRows();
