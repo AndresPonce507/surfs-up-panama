@@ -232,6 +232,10 @@ The label is **absolute** (how big / how was the wind / worth it) — not "vs fo
 | `head_overhead` | 1.6 – 2.4 | Cabeza a un metro más | Head to overhead |
 | `double_overhead_plus` | 2.4 + | Doble o más | Double overhead + |
 
+**Display format, settled 2026-08-09 (shared-contract lane, before slices 06 and 07 ran in parallel).** The canonical formatter is `formatSizeEs(size_band, size_range_m)` in `src/publish/display-format.ts`, and every surface calls it rather than composing its own sentence: **body-height word first, approximate metre range second, always carrying `≈`** (application-architecture §10, decision 18). `Cintura a pecho ≈0.7–1.1 m`. A bare exact metre such as `1.2 m` is a contract violation, not a style choice — it claims a precision four models do not agree on — and a property test makes it unreachable for any band and any published range. Two edges settled with it: the open band reads `Doble o más ≈2.4 m o más`, because §7.2's `2.4 +` has no honest ceiling to name; and the range never renders below zero, because `flat`'s lower edge is a classification sentinel that opens just under 0, not a wave height. The parenthesised form in application-architecture §14's wireframes (`Al pecho (≈1.0–1.4 m)`) is superseded on both counts: §10 already declared those strings to predate this band table, and "Al pecho" is not one of the seven canonical words.
+
+**Best window, same lane, same date.** `best_window{start,end}` stays `HH:MM` spot-local on the wire, and `formatBestWindowEs(best_window)` in the same module renders it as `Ventana 6:00–9:30` — one range, both edges, leading zero dropped from the hour only (application-architecture §14). A single hour never ships: it would tell a surfer when to arrive and never when it stops working.
+
 Range edges are **v1 convention (unfit priors)** — they live in ONE canonical constants file consumed by C2 (form), C4 (display) and C3 (residual math). Changing an edge requires bumping `size_band_schema`, because old observations become incomparable otherwise. C3 treats a band as an **interval**, never a point — the residual math on intervals (midpoint vs distance-to-edge vs interval regression) is the learning lane's decision (design doc 06), but the *fact stored* is the band.
 
 #### 7.3 The record — concrete example (DynamoDB item, 654 B measured)
@@ -472,6 +476,17 @@ Route → render input (the builder's whole read contract per route):
 | `call` | `narration_es` / `narration_en` | one `{es,en}` object, not two fields |
 | `scorecard.n_obs` `.n_reporters` `.counter` `.claim_ok` `.headline` | `n_reports`, `n_distinct_reporters`, window | `counter` is decision-19's `"22 / 30"` string; the 30-day window is fixed by §9, never a payload field |
 | `build_id` | `cycle_id` | header, once (settled earlier in the 2026-08-08 round) |
+
+**Implemented names, settled 2026-08-09 by the shared-contract lane** so the per-spot-page lane and the per-row-confidence lane could not each mint a name for the same value (the failure §17 and HANDOFF §7 record twice). The bundle type is `src/publish/region-bundle.ts`; the producer is `src/pipeline/build.ts`:
+
+| Where | Fields, verbatim |
+|---|---|
+| Bundle header | `schema: "region-bundle/1"` · `region_id` · `build_id` · `published_at` |
+| `days[d].spots[i]` | `spot_id` · `score_q` · `conf_level` · `call{es}` · `size_band` · `size_range_m` · `wind_state` · `best_window{start,end}` · `weakest_link` |
+| `spot_detail[spot_id]` | `name` |
+| PublishedCall log row only | `conf_value` (continuous), beside its `conf_level` |
+
+Two consequences worth stating plainly. **`conf_level` is a DAY field, not a spot field** — it sits in each day summary because confidence genuinely drops with lead, so tomorrow's is legitimately lower than today's and there is no single per-spot confidence to hold in `spot_detail`. **`conf_value` never enters the bundle**: a page prints a level, and keeping the continuous value in the call receipt is what lets a later threshold change be replayed against what was actually shown. `spot_detail` ships with `name` only; the other §13 members (`tide`, `scorecard`, `reports`, `members`, `hourly`) have no producer yet and are deliberately absent rather than fabricated. `size_range_m` for `double_overhead_plus` is published as `[2.4, 3]`, a finite placeholder with no reader — the display format ignores its upper edge and reads the band as open-ended.
 
 Bare `confidence` is retired as a field name in every C4 artifact (bundle and PublishedCall log): round 1 used it for a float in §6 and a string in §13 — one name, two types in the same document. The `conf_value`/`conf_level` split closes that. The seed's `"confidence":"2+sources"` (§11, `spot-seed/1`) is a different concept (per-spot research evidence grade) in a different schema namespace and keeps its name — flagged, not renamed.
 

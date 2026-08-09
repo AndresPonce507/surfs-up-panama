@@ -15,6 +15,18 @@
 import type { BuildDeps, BuildOutcome } from './ports';
 import { confidence } from '../scoring/confidence';
 import { loadLaunchSpotSeeds } from '../data/launch-spots';
+import { sizeBands, type SizeBandToken } from '../data/size-bands';
+import type {
+  BundleDay,
+  BundleDaySummary,
+  RegionBundle,
+} from '../publish/region-bundle';
+import type {
+  BestWindow,
+  ConfLevel,
+  SizeRangeM,
+  WindState,
+} from '../publish/static-surface';
 import {
   applyCorrection,
   blend,
@@ -26,8 +38,10 @@ import {
   sTide,
   sWind,
   type DeclaredMember,
+  type Factor,
   type MemberRow,
   type ScoreResult,
+  type SizeBandTable,
   type TideObs,
   type WindObs,
 } from '../scoring/engine';
@@ -39,15 +53,14 @@ const DECLARED_MEMBER_SOURCES = [
   'dwd_gwam',
 ] as const;
 
-const SIZE_BANDS = [
-  { band: 'flat', lo_m: -Number.EPSILON, hi_m: 0.1 },
-  { band: 'ankle_knee', lo_m: 0.1, hi_m: 0.4 },
-  { band: 'knee_waist', lo_m: 0.4, hi_m: 0.7 },
-  { band: 'waist_chest', lo_m: 0.7, hi_m: 1.1 },
-  { band: 'chest_head', lo_m: 1.1, hi_m: 1.6 },
-  { band: 'head_overhead', lo_m: 1.6, hi_m: 2.4 },
-  { band: 'double_overhead_plus', lo_m: 2.4, hi_m: Number.POSITIVE_INFINITY },
-] as const;
+// The classification intervals come from the one canonical vocabulary file
+// (domain-model.md section 7.2), the same rows the capture form offers, so a
+// published band and a reported band can never mean different waves.
+const SIZE_BANDS: SizeBandTable = sizeBands.map(({ value, lo_m, hi_m }) => ({
+  band: value,
+  lo_m,
+  hi_m,
+}));
 
 type PredictionRow = {
   spot_id: string;
@@ -66,25 +79,31 @@ type PredictionRow = {
   land_masked: boolean;
 };
 
+/**
+ * One PublishedCall receipt row. `conf_value` (continuous) lives here and
+ * ONLY here; the bundle publishes `conf_level`, so a display threshold can be
+ * retuned later without rewriting what was actually shown
+ * (domain-model.md sections 6 and 13).
+ */
 type CallRow = {
   spot_id: string;
   build_id: string;
   valid_ts: string;
   score_q: number;
   conf_value: number;
-  conf_level: string;
+  conf_level: ConfLevel;
   sub: ScoreResult['sub'];
   h_eff_m: number;
-  size_band: string;
-  size_range_m: readonly [number, number];
-  wind_state: 'clean' | 'choppy' | 'blown_out';
-  best_window: { readonly start: string; readonly end: string };
+  size_band: SizeBandToken;
+  size_range_m: SizeRangeM;
+  wind_state: WindState;
+  best_window: BestWindow;
   bias_applied: number;
   bias_gate: string;
   members_used: number;
   members_null: number;
   missing: ('wind' | 'tide')[];
-  weakest_link: string | null;
+  weakest_link: Factor | null;
 };
 
 export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
@@ -105,32 +124,31 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
   if (rankedCallsByDay.some((day) => day.length !== spots.length)) return { published: false, reason: 'missing complete today or tomorrow ranking' };
   if (sameRankedCalls(rankedCallsByDay[0]!, rankedCallsByDay[1]!)) return { published: false, reason: 'tomorrow ranking duplicates today' };
   const rankedCalls = rankedCallsByDay[0]!;
-  const bundle = {
+  const publishedAt = now.toISOString();
+  const days: readonly [BundleDay, BundleDay] = [
+    bundleDay(dates[0], rankedCallsByDay[0] ?? []),
+    bundleDay(dates[1], rankedCallsByDay[1] ?? []),
+  ];
+  const bundle: RegionBundle = {
+    schema: 'region-bundle/1',
+    region_id: deps.region_id,
+    build_id,
+    published_at: publishedAt,
+    days,
+    // Day-independent identity, held once. An object has no order, so it can
+    // never encode a ranking that disagrees with either day array.
+    spot_detail: Object.fromEntries(spots.map((spot) => [spot.spot_id, { name: spot.name }])),
     publish_surface: {
       schema: 'published-surface-update/v1' as const,
       surf_date: date,
-      published_at: now.toISOString(),
+      published_at: publishedAt,
       build_kind: hour === '11' ? 'dawn' as const : 'hourly' as const,
-      calls: rankedCalls.map((call) => ({
-        spot_id: call.spot_id,
-        score_q: call.score_q,
-        call_es: spanishCall(call),
-        size_band: call.size_band,
-        size_range_m: call.size_range_m,
-        wind_state: call.wind_state,
-        best_window: call.best_window,
-      })),
-      days: dates.map((civilDate, index) => ({ date: civilDate, spots: (rankedCallsByDay[index] ?? []).map((call) => ({ spot_id: call.spot_id, score_q: call.score_q, call_es: spanishCall(call), size_band: call.size_band, size_range_m: call.size_range_m, wind_state: call.wind_state, best_window: call.best_window })) })),
+      calls: rankedCalls.map(surfaceCall),
+      days: [
+        { date: dates[0], spots: (rankedCallsByDay[0] ?? []).map(surfaceCall) },
+        { date: dates[1], spots: (rankedCallsByDay[1] ?? []).map(surfaceCall) },
+      ],
     },
-    days: dates.map((civilDate, index) => ({
-      date: civilDate,
-      spots: (rankedCallsByDay[index] ?? []).map((call) => ({
-        spot_id: call.spot_id,
-        score_q: call.score_q,
-        weakest_link: call.weakest_link,
-        call: { es: spanishCall(call) },
-      })),
-    })),
   };
   await deps.store.putBundle(`pub/v1/regions/${deps.region_id}/bundle.json`, JSON.stringify(bundle));
   await deps.store.putManifest('pub/v1/manifest.json', JSON.stringify({ build_id }));
@@ -189,6 +207,9 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
     }, correction.params, correction.delta_q);
     const members = declared.filter((member): member is MemberRow => !('exclusion' in member));
     const confidenceResult = confidence(members, { kind: 'absolute' }, null, null, score.missing);
+    // SIZE_BANDS is derived from the one canonical vocabulary whose tokens ARE
+    // the v1 enum, so classification can only land on one of them.
+    const band = sizeBand(effectiveHeight, SIZE_BANDS) as SizeBandToken;
     return [{
       spot_id: spot.spot_id,
       build_id: `b_${dates[0]}T${hour}Z`,
@@ -198,8 +219,8 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
       conf_level: confidenceResult.level,
       sub: score.sub,
       h_eff_m: effectiveHeight,
-      size_band: sizeBand(effectiveHeight, SIZE_BANDS),
-      size_range_m: sizeRange(sizeBand(effectiveHeight, SIZE_BANDS)),
+      size_band: band,
+      size_range_m: sizeRange(band),
       wind_state: windState(score.sub.wind),
       best_window: bestWindow(validTs, spot.timezone),
       bias_applied: correction.delta_q,
@@ -212,6 +233,38 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
   });
 }
 
+function bundleDay(date: string, calls: readonly CallRow[]): BundleDay {
+  return { date, spots: calls.map(daySummary) };
+}
+
+/** Every field is that day's own value; nothing here is shared with the other day. */
+function daySummary(call: CallRow): BundleDaySummary {
+  return {
+    spot_id: call.spot_id,
+    score_q: call.score_q,
+    conf_level: call.conf_level,
+    call: { es: spanishCall(call) },
+    size_band: call.size_band,
+    size_range_m: call.size_range_m,
+    wind_state: call.wind_state,
+    best_window: call.best_window,
+    weakest_link: call.weakest_link,
+  };
+}
+
+function surfaceCall(call: CallRow) {
+  return {
+    spot_id: call.spot_id,
+    score_q: call.score_q,
+    call_es: spanishCall(call),
+    conf_level: call.conf_level,
+    size_band: call.size_band,
+    size_range_m: call.size_range_m,
+    wind_state: call.wind_state,
+    best_window: call.best_window,
+  };
+}
+
 function spanishCall(call: CallRow): string {
   return `${spanishSizeBand(call.size_band)}, viento ${spanishWind(call.wind_state)}, mejor de ${call.best_window.start} a ${call.best_window.end}.`;
 }
@@ -220,14 +273,18 @@ function followingCivilDate(civilDate: string): string { const date = new Date(`
 function regionalCivilDate(instant: Date, timezone: string): string { const fields = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(instant); const part = (type: Intl.DateTimeFormatPartTypes) => fields.find((field) => field.type === type)?.value ?? ''; return `${part('year')}-${part('month')}-${part('day')}`; }
 function sameRankedCalls(left: readonly CallRow[], right: readonly CallRow[]): boolean { return left.length === right.length && left.every((call, index) => { const other = right[index]; return other !== undefined && call.spot_id === other.spot_id && call.score_q === other.score_q && call.size_band === other.size_band && call.wind_state === other.wind_state && call.best_window.start === other.best_window.start && call.best_window.end === other.best_window.end; }); }
 
-function sizeRange(sizeBand: string): readonly [number, number] {
+function sizeRange(sizeBand: string): SizeRangeM {
   const band = SIZE_BANDS.find((candidate) => candidate.band === sizeBand);
+  // Never publish a negative metre: the flat band's lower edge is a
+  // classification sentinel that opens just below zero, not a wave height.
+  const lo_m = Math.max(0, band?.lo_m ?? 0);
   if (band === undefined || !Number.isFinite(band.hi_m)) {
     // The display range remains finite even for the open-ended final band.
-    // The categorical band is still the primary claim.
-    return [band?.lo_m ?? 0, 3];
+    // The categorical band is still the primary claim, and the display format
+    // reads that band as "2.4 m o más" rather than claiming this ceiling.
+    return [lo_m, 3];
   }
-  return [band.lo_m, band.hi_m];
+  return [lo_m, band.hi_m];
 }
 
 function windState(score: number | null): 'clean' | 'choppy' | 'blown_out' {
