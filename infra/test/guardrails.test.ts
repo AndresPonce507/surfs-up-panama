@@ -8,6 +8,8 @@ import { describe, expect, it } from 'vitest';
 import { runLocalCi } from '../../scripts/ci-local.mjs';
 import { createGuardrailStack, stack } from '../bin/app.js';
 import {
+  archiveBucketVersioning,
+  costAllocationTag,
   guardrailDeclarations,
   lifecycleRules,
   predictionLifecyclePolicy,
@@ -175,6 +177,37 @@ function assertPredictionLifecycleSafety(
   }
 }
 
+function bucketVersioningStatus(bucket: SynthesizedResource): string | undefined {
+  const configuration = bucket.properties.VersioningConfiguration;
+  if (typeof configuration !== 'object' || configuration === null || Array.isArray(configuration)) return undefined;
+  const status = (configuration as Readonly<Record<string, unknown>>).Status;
+  return typeof status === 'string' ? status : undefined;
+}
+
+function assertBucketVersioningEnabled(buckets: readonly SynthesizedResource[], required: string): void {
+  const unversioned = buckets.filter((bucket) => bucketVersioningStatus(bucket) !== required);
+  if (unversioned.length > 0) {
+    throw new Error(`bucket(s) ${unversioned.map((bucket) => bucket.logicalId).join(', ')} lack ${required} versioning: the prediction archive has no other recovery path if a single console delete happens`);
+  }
+}
+
+function resourceTagValue(properties: ResourceProperties, key: string): string | undefined {
+  const tags = properties.Tags;
+  if (!Array.isArray(tags)) return undefined;
+  const found = tags.find((tag) => (
+    typeof tag === 'object' && tag !== null && !Array.isArray(tag) && (tag as Readonly<Record<string, unknown>>).Key === key
+  ));
+  const value = found ? (found as Readonly<Record<string, unknown>>).Value : undefined;
+  return typeof value === 'string' ? value : undefined;
+}
+
+function assertCostAllocationTagPresent(resources: readonly SynthesizedResource[], key: string, value: string): void {
+  const untagged = resources.filter((resource) => resourceTagValue(resource.properties, key) !== value);
+  if (untagged.length > 0) {
+    throw new Error(`resource(s) ${untagged.map((resource) => resource.logicalId).join(', ')} lack cost-allocation tag ${key}=${value}: a project-scoped $0.00 is not provable without it`);
+  }
+}
+
 function lambdaLogicalId(functionName: string): string {
   return `${functionName.split('-').map((segment) => `${segment[0]?.toUpperCase()}${segment.slice(1)}`).join('')}Function`;
 }
@@ -241,6 +274,46 @@ describe('synthesized infrastructure guardrails', () => {
     template.allResourcesProperties('AWS::S3::Bucket', {
       PublicAccessBlockConfiguration: expectedPublicAccessBlockConfiguration,
     });
+  });
+
+  it('keeps every synthesized S3 bucket versioned so a single console delete cannot permanently destroy the prediction log', () => {
+    // covers: R1, R3, R4
+    const buckets = synthesizedResources('AWS::S3::Bucket');
+    expect(buckets).not.toHaveLength(0);
+    assertBucketVersioningEnabled(buckets, archiveBucketVersioning['archive-bucket-versioning']);
+  });
+
+  it('rejects a constructed bucket missing the declared versioning status', () => {
+    // covers: R1, R2, R4
+    expect(() => assertBucketVersioningEnabled(
+      [{ logicalId: 'RedProofArchiveBucket', properties: {} }],
+      archiveBucketVersioning['archive-bucket-versioning'],
+    )).toThrow(/RedProofArchiveBucket.*Enabled versioning.*no other recovery path/s);
+  });
+
+  it('carries the project cost-allocation tag on every synthesized resource this project declares', () => {
+    // covers: R16
+    const requiredKey = costAllocationTag['cost-allocation-tag-key'];
+    const requiredValue = costAllocationTag['cost-allocation-tag-value'];
+    const taggableResources = [
+      ...synthesizedResources('AWS::Lambda::Function'),
+      ...synthesizedResources('AWS::S3::Bucket'),
+      ...synthesizedResources('AWS::IAM::Role'),
+      ...synthesizedResources('AWS::Logs::LogGroup'),
+    ];
+    expect(taggableResources).toHaveLength(
+      declaredLambdaTimeouts.length * 2 + 2, // Lambda + LogGroup pairs, plus the bucket and the execution role
+    );
+    assertCostAllocationTagPresent(taggableResources, requiredKey, requiredValue);
+  });
+
+  it('rejects a constructed resource missing the project cost-allocation tag', () => {
+    // covers: R16
+    expect(() => assertCostAllocationTagPresent(
+      [{ logicalId: 'RedProofUntaggedFunction', properties: {} }],
+      costAllocationTag['cost-allocation-tag-key'],
+      costAllocationTag['cost-allocation-tag-value'],
+    )).toThrow(/RedProofUntaggedFunction.*cost-allocation tag/s);
   });
 
   it('keeps the launch stack to its three declared non-prediction lifecycle rules', () => {

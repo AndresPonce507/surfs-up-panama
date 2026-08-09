@@ -210,6 +210,39 @@ async function evaluateCommittedInfrastructureDeclarations({ root, environment, 
   return evaluateInfrastructureDeclarations({ root, environment, output });
 }
 
+// F-BILL-STAYS-ZERO-AND-STAYS-UP slices 01-03. A separate phase from
+// `evaluateCommittedInfrastructureDeclarations` above: it runs only inside
+// the full infra job (never through `declarationInput`-mode calls), so the
+// keystone `daily-call-with-permanent-receipts` feature's own
+// `declarationInput`-mode fixtures -- which predate this feature and cannot
+// declare these keys -- never reach it.
+async function evaluateBillGuardrails({ root, output }) {
+  const definition = infrastructureDefinition(root);
+  if (!definition.available) {
+    return unavailableInfrastructureDefinition({ root, output, path: definition.infraRoot });
+  }
+
+  let evaluateBill;
+  try {
+    ({ evaluateBillGuardrails: evaluateBill } = await import('../infra/guardrail-evaluator.mjs'));
+  } catch {
+    return unavailableInfrastructureDefinition({
+      root,
+      output,
+      path: resolve(definition.infraRoot, 'guardrail-evaluator.mjs'),
+    });
+  }
+  if (typeof evaluateBill !== 'function') {
+    return unavailableInfrastructureDefinition({
+      root,
+      output,
+      path: resolve(definition.infraRoot, 'guardrail-evaluator.mjs'),
+    });
+  }
+
+  return evaluateBill({ root, output });
+}
+
 async function runInfrastructureJob({ repoRoot, output, commandRunner, environment }) {
   const definition = infrastructureDefinition(repoRoot);
   if (!definition.available) {
@@ -230,6 +263,9 @@ async function runInfrastructureJob({ repoRoot, output, commandRunner, environme
       output,
     });
     if (declarationResult.exitCode !== 0) return { status: declarationResult.exitCode, failure: 'declaration evaluation' };
+
+    const billGuardrailResult = await evaluateBillGuardrails({ root: repoRoot, output });
+    if (billGuardrailResult.exitCode !== 0) return { status: billGuardrailResult.exitCode, failure: 'bill guardrail declaration evaluation' };
 
     const vitest = resolve(repoRoot, 'node_modules/vitest/vitest.mjs');
     const guardrailTest = resolve(repoRoot, 'infra/test/guardrails.test.ts');
