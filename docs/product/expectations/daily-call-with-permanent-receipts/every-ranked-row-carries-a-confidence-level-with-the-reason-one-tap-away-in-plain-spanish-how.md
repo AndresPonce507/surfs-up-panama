@@ -20,7 +20,17 @@ Explore the confidence signal everywhere it appears: home rows, tomorrow's rows,
 - Cada fila de la lista, en Hoy y en Mañana, trae su nivel de confianza con la palabra al lado ("confianza alta", "media" o "baja"). Ninguna fila sin nivel.
 - La razón está a un toque: se abre ahí mismo y explica en español de a pie qué tanto acuerdan los modelos y si alguien confirmó desde la playa.
 - Recién arrancando, sin reportes de gente, la razón dice claro que todavía nadie reportó desde la playa: el nivel se presenta como acuerdo entre modelos, no como puntería comprobada.
-- Con la confianza sumada, las filas siguen limpias: dos líneas por fila, nada cortado ni amontonado en ancho de teléfono, y las dos señales (puntaje y confianza) se leen sin esfuerzo.
+- Con la confianza sumada, las filas siguen limpias: tres líneas por fila, nada cortado ni amontonado en ancho de teléfono, y las dos señales (puntaje y confianza) se leen sin esfuerzo.
+
+  > Enmienda de producto, 2026-08-09, decidida por Andres. Esta fila decía "dos
+  > líneas por fila". La confianza se probó primero compartiendo la segunda línea
+  > y el llamado quedaba recortado en las filas 10 y 12 con los textos reales.
+  > La salida barata era acortar la etiqueta a "Baja" sola, pero al lado de un
+  > puntaje de olas "Baja" se lee como olas chicas, no como poca confianza. El
+  > llamado es el producto y la etiqueta tiene que decir "Confianza baja"
+  > completa, así que la confianza ocupa su propia tercera línea. No se cambió
+  > la carta para que pasara el código: se cambió porque el dueño del producto
+  > decidió la forma de la fila.
 - Negative: la razón nunca puede reclamar más certeza de la que hay: si ese spot no tiene ni un reporte, la razón no puede decir ni sugerir que alguien confirmó las condiciones desde la playa.
 - Negative: el nivel no puede venir solo como color o puntitos sin la palabra al lado: sin la palabra, es FALLA.
 - Negative: ninguna fila puede quedar sin su nivel de confianza, y ninguna razón puede abrirse vacía o con texto crudo de datos.
