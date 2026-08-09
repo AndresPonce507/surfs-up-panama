@@ -22,3 +22,6 @@ dist/
 # ephemeral pipeline:build output (log/calls, pub/, manifest) — the
 # committed input is data/predictions-capture/, this is scratch
 .pipeline-out/
+
+# CDK synth output — regenerated every synth, never project content
+cdk.out/
