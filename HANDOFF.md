@@ -114,6 +114,17 @@ mechanisms as first-class integration points, not copied prompt text:
 - Restore independent-slice worktree fan-out where dependencies permit it. Distillation,
   implementation and review may run concurrently; shared-file integration and commits
   remain serialized and dependency-ordered.
+- Keep the experimental worktree safety model: each lane has its own checkout, environment
+  and declared touched-path/schema/user-flow boundary. The scheduler may fan out only lanes
+  with disjoint boundaries, then merges one verified lane at a time and runs the shared suite.
+  Dead-agent recovery starts from the preserved worktree contents, not a speculative rewrite.
+- Keep one fresh, independent acceptance reviewer that self-records an APPROVED verdict. Do
+  not reintroduce manual approval or a fixed reviewer quorum. Re-review only after a contract
+  mutation or a failed gate, and scale additional specialist review from measured blast radius.
+- Keep deterministic, actionable gates: each failure must state the failed observable, why it
+  matters and the next repair command. Preserve feature-end health checks and `des blast-radius`,
+  but do not port the global future-AT requirement, duplicate ledgers or standing review loops
+  that made legal JIT delivery look incomplete.
 
 Do not switch workflow or create this migration while Slice-03 is in flight. First
 complete Slice-03 under its current contract, then implement and verify the migration
