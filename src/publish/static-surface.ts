@@ -1,3 +1,4 @@
+import type { WindStateToken } from '../data/report-vocab';
 import type { SizeBandToken } from '../data/size-bands';
 
 /** Spot-local `HH:MM` strings, precomputed at publish time; pages never compute them. */
@@ -9,7 +10,13 @@ export type BestWindow = {
 /** `[lo, hi]` metres of the breaking face. Always rendered as a range, never a point. */
 export type SizeRangeM = readonly [number, number];
 
-export type WindState = 'clean' | 'choppy' | 'blown_out';
+/**
+ * Re-exported from src/data/report-vocab.ts so the published surface, the
+ * capture form and the write-path wire contract cannot drift. The arrow points
+ * data -> publish and never back: the report route may not reach the forecast
+ * layer (leak path L1).
+ */
+export type WindState = WindStateToken;
 
 /**
  * The published projection of the continuous `C_total`. The level is what a

@@ -4,6 +4,13 @@
 // placeholders: no exact copy exists for them yet, and inventing product copy
 // is out of scope (copy register check pending, Decisions needing Andres #6).
 
+import {
+  QUALITY_TOKENS,
+  WIND_STATE_TOKENS,
+  type QualityToken,
+  type WindStateToken,
+} from '../data/report-vocab';
+
 export type Locale = 'es' | 'en';
 
 export const locales: readonly Locale[] = ['es', 'en'];
@@ -20,8 +27,14 @@ interface HomeStrings {
   readonly honestyFooter: string;
 }
 
+/**
+ * `value` is the canonical wire token, never a display string: it is what the
+ * capture form commits to IndexedDB and what gets POSTed on replay. `label` is
+ * the settled Spanish or English copy of application-architecture.md section
+ * 10 and is free to change on a copy review; the token is not.
+ */
 interface ReportOption {
-  readonly value: string;
+  readonly value: WindStateToken | QualityToken;
   readonly label: string;
 }
 
@@ -46,9 +59,13 @@ export interface UiStrings {
   readonly spot: SpotStrings;
 }
 
-// Option `value` tokens are scaffold placeholders. The canonical wind and
-// quality enum tokens are owned by the domain model and the write-path wire
-// contract (07-write-path.md section 4.1); replace before any report submits.
+// Option `value` tokens come from src/data/report-vocab.ts, the one home for
+// the canonical wind and quality enums (decided 2026-08-09, closing
+// f-tell-us-what-you-saw-cold Pre-requisite 1). Order here is the order there,
+// which is why the tokens are indexed rather than retyped: a reordered array
+// and a retyped literal are exactly how the form and the wire contract drift
+// apart, and domain-model.md section 7.4 replays a queued report byte-
+// identical, so drift is unrepairable once a record is committed.
 export const strings: Record<Locale, UiStrings> = {
   es: {
     home: {
@@ -64,16 +81,16 @@ export const strings: Record<Locale, UiStrings> = {
       sizeQuestion: '¿Qué tan grande?', // verbatim
       windQuestion: '¿El viento?', // verbatim
       windOptions: [
-        { value: 'wind-placeholder-1', label: 'Limpio' }, // verbatim
-        { value: 'wind-placeholder-2', label: 'Picado' }, // verbatim
-        { value: 'wind-placeholder-3', label: 'Destrozado' }, // verbatim
+        { value: WIND_STATE_TOKENS[0]!, label: 'Limpio' }, // verbatim
+        { value: WIND_STATE_TOKENS[1]!, label: 'Picado' }, // verbatim
+        { value: WIND_STATE_TOKENS[2]!, label: 'Destrozado' }, // verbatim
       ],
       qualityQuestion: '¿Cómo estuvo?', // verbatim
       qualityOptions: [
-        { value: 'quality-placeholder-1', label: 'Malo' }, // verbatim
-        { value: 'quality-placeholder-2', label: 'Normal' }, // verbatim
-        { value: 'quality-placeholder-3', label: 'Bueno' }, // verbatim
-        { value: 'quality-placeholder-4', label: 'Épico' }, // verbatim
+        { value: QUALITY_TOKENS[0]!, label: 'Malo' }, // verbatim
+        { value: QUALITY_TOKENS[1]!, label: 'Normal' }, // verbatim
+        { value: QUALITY_TOKENS[2]!, label: 'Bueno' }, // verbatim
+        { value: QUALITY_TOKENS[3]!, label: 'Épico' }, // verbatim
       ],
       submit: 'Mandar', // verbatim
       noscript:
@@ -97,16 +114,16 @@ export const strings: Record<Locale, UiStrings> = {
       sizeQuestion: 'How big?', // verbatim
       windQuestion: 'Wind?', // verbatim
       windOptions: [
-        { value: 'wind-placeholder-1', label: 'Clean' }, // verbatim
-        { value: 'wind-placeholder-2', label: 'Choppy' }, // verbatim
-        { value: 'wind-placeholder-3', label: 'Blown out' }, // verbatim
+        { value: WIND_STATE_TOKENS[0]!, label: 'Clean' }, // verbatim
+        { value: WIND_STATE_TOKENS[1]!, label: 'Choppy' }, // verbatim
+        { value: WIND_STATE_TOKENS[2]!, label: 'Blown out' }, // verbatim
       ],
       qualityQuestion: 'How was it?', // verbatim
       qualityOptions: [
-        { value: 'quality-placeholder-1', label: 'Bad' }, // verbatim
-        { value: 'quality-placeholder-2', label: 'OK' }, // verbatim
-        { value: 'quality-placeholder-3', label: 'Good' }, // verbatim
-        { value: 'quality-placeholder-4', label: 'Epic' }, // verbatim
+        { value: QUALITY_TOKENS[0]!, label: 'Bad' }, // verbatim
+        { value: QUALITY_TOKENS[1]!, label: 'OK' }, // verbatim
+        { value: QUALITY_TOKENS[2]!, label: 'Good' }, // verbatim
+        { value: QUALITY_TOKENS[3]!, label: 'Epic' }, // verbatim
       ],
       submit: 'Send', // verbatim
       noscript:
