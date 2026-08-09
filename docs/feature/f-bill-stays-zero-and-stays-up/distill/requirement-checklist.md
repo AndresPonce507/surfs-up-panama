@@ -54,9 +54,18 @@ Slices 01, 02 and 03 entered DISTILL and shipped (2026-08-09). R1-R17 covered in
 `tests/acceptance/f-bill-stays-zero-and-stays-up/bill-and-uptime-guardrails.feature`
 (`@covers-R1` through `@covers-R17` tags) plus unit-level red-proof coverage in
 `infra/test/guardrails.test.ts`: `assertBucketVersioningEnabled` (R1, R2, R4) and
-`assertCostAllocationTagPresent` (R16). Slices 04 and 05 have no authorable test at all: their
-observables are a live email and a live account read, gated on pre-requisites 3 to 8 in
-`feature-delta.md`; R18-R24 remain uncovered by design.
+`assertCostAllocationTagPresent` (R16).
+
+Updated 2026-08-09 (DEVOPS/platform lane): slice-05 shipped. R20-R24 are covered by the three
+`@slice-05` scenarios (recorded-reads mode of `infra/month-close.mjs`) plus 13 unit tests in
+`infra/test/month-close.test.ts`, and the live half of R20/R21/R23/R24 was proven once against
+the real account (exit 0 at $0.00; see `red-classification.md`). R22's live half (a real
+above-zero month) is unprovable until such a month exists, by construction; its logic is covered
+by the negative scenario and units. Slice-04 remains blocked: R18/R19 are live email proofs
+gated on the first deploy, which is hard-blocked on andres-cli permissions
+(`docs/product/architecture/aws-permission-inventory.md` §1, §5). R26 held: the slice-05 reader
+runs on read-only `ce`/`freetier` grants alone, and no credential that can write a production
+data store was created or held by this lane.
 
 Architectural note recorded here because it changes how future slices must be authored: the
 declaration checks for slices 01-03 do NOT live inside the pre-existing
