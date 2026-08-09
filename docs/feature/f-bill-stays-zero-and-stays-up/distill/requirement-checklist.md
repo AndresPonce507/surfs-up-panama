@@ -1,0 +1,59 @@
+# Requirement checklist: f-bill-stays-zero-and-stays-up
+
+Extracted at workspace-open (2026-08-09) from `feature-delta.md` (Slice Plan + Definition of
+Done + plan notes), `system-architecture.md` §5, §9, §10, §11, `08-devops.md` §7, §9, §11,
+`04-ingest-pipeline.md` §3, and the live account state verified read-only 2026-08-09
+(HANDOFF §10). One row per requirement. Category from the closed set
+{ui, e2e, nfr, security, validation, build, functional}.
+
+This file is the SSOT of what must be covered. Coverage markers: a test covers `Rn` iff it
+carries a Gherkin `@covers-Rn` tag or a `// covers: Rn` comment inside the test body.
+Acceptance tests are written Just In Time, per slice, when each slice legally enters DISTILL
+(HANDOFF §1, §4); every row below is expected-uncovered today and visible from day one so no
+requirement is silently dropped.
+
+UI mandate classification: this feature is NON-VISUAL end to end, so it carries zero `ui`
+rows on purpose. Rationale recorded in `feature-delta.md` §"UI quality classification": every
+observable is a terminal output with a real exit code, an email in Andres's inbox, or a
+command's printed report. U1-U7 checks and the U8 observation are N/A; fabricating pixel
+checks for a CI gate would be the exact theater the workflow rule forbids (HANDOFF §4,
+post-Slice-03 workflow decision).
+
+| # | Requirement | Category |
+|---|---|---|
+| R1 | Archive bucket versioning is declared in `infra/` on the bucket holding the `predictions/` prefix, and the default `infra` job of `npm run ci:local` rejects a synthesized definition whose archive bucket lacks it (slice-01; `08-devops.md` §11 decision 1 option b) | build |
+| R2 | The versioning rejection names the bucket, the missing versioning, and that the prediction log has no other recovery path; exit code non-zero, never a warning (slice-01) | build |
+| R3 | The versioning assert iterates every synthesized `AWS::S3::Bucket` (extending the existing loop in `infra/test/guardrails.test.ts`), so the real bucket is covered the day it exists without editing the test (slice-01) | build |
+| R4 | The versioning assert is demonstrated red once before green (`system-architecture.md` §11 doctrine) (slice-01) | build |
+| R5 | A deploy is rejected when the dead-man's switch alarm declaration is missing entirely (slice-02) | build |
+| R6 | A deploy is rejected when the switch's missing-data handling is anything other than BREACHING, the property that converts absence into failure (`08-devops.md` §7) (slice-02) | build |
+| R7 | A deploy is rejected when the switch evaluates fewer than 2 consecutive 1 h periods (slice-02) | build |
+| R8 | A deploy is rejected when the switch lacks either its ALARM action or its OK action (slice-02) | build |
+| R9 | Every slice-02 rejection names WHICH of the four properties broke, in words, never a generic "alarm invalid" (slice-02) | build |
+| R10 | The declared switch watches the `IngestSuccess` metric produced by the metric filter, never the Lambda directly (`system-architecture.md` §10 alarm 1; `04-ingest-pipeline.md` §3 step 8) (slice-02) | validation |
+| R11 | The slice-02 asserts are demonstrated red once before green (slice-02) | build |
+| R12 | A deploy is rejected when the $18 action-enabled budget is absent or its threshold drifts from $18, and the rejection names the expected and found values (slice-03) | build |
+| R13 | The $18 deny scope is guarded to exactly the four write Function URLs (report, mint, push, photo-presign per `system-architecture.md` §6); a scope reaching any other resource is rejected naming the extra resource (slice-03) | security |
+| R14 | A deny scope naming the ingest role is rejected, and the rejection names the archive as the reason: a billing flood must never stop the prediction log (`system-architecture.md` §9 guardrail 8 regression guard) (slice-03) | security |
+| R15 | The $1, $5, $15 alert lines and the $20 last line are declared in the same place as the $18 line; the $20 line is CREATED by this project, never claimed as imported, because zero CloudWatch alarms exist on the account and the only $20 budget belongs to the other project (verified 2026-08-09, HANDOFF §10; corrects `system-architecture.md` §9 guardrail 9) (slice-03) | build |
+| R16 | Every resource this project declares carries the project cost-allocation tag, the step that makes a project-scoped budget and a project-scoped $0.00 possible on a shared account (`system-architecture.md` §19 flag 6) (slice-03) | build |
+| R17 | The slice-03 rejections each name which money line or scope broke; the asserts are demonstrated red once before green (slice-03) | build |
+| R18 | Live, once, post-deploy: with the ingest schedule disabled for a test window, the ALARM email arrives at the confirmed subscription naming the alarm, the region and the state reason, within the honest 2 to 3 hour floor of `08-devops.md` §7, never promised within the hour (slice-04) | e2e |
+| R19 | Live, once, post-deploy: after re-enabling the schedule and a successful run, the OK email arrives and closes the loop; the site's freshness stamp advances (`08-devops.md` §7 runbook step 4) (slice-04) | e2e |
+| R20 | One command prints this project's month-to-date spend read from the account (Cost Explorer data, not a design estimate), with currency and period, exit zero at $0.00 (slice-05) | functional |
+| R21 | The same command prints every free-tier line the project consumes this month with that line's type (always-free vs 12-month), the field that closes HANDOFF §6 item 8 automatically at month 13 (slice-05) | functional |
+| R22 | The command exits non-zero and names the service the first month anything on this project is above $0.00 (slice-05) | functional |
+| R23 | The command reports the Anthropic $5 console limit as an external audit obligation and never claims it was checked; no API exists for it (`system-architecture.md` §9 guardrail 10; pattern in `infra/lib/audit-obligations.ts`) (slice-05) | validation |
+| R24 | While the project cost-allocation tag is inactive, the command presents account-wide spend AS account-wide, shared with the other project's Amplify and RDS, and never as this project's number (slice-05) | validation |
+| R25 | Feature-wide: every gate above runs inside the local `npm run ci:local` gate with its real exit code; nothing depends on hosted CI, which is billing-capped and rejected on reliability grounds (`08-devops.md` §8) | nfr |
+| R26 | Feature-wide: read paths never require write credentials; the slice-05 reader works with the read-only identity verified 2026-08-09, and no slice hands an agent a credential that can write to the account (`08-devops.md` §4) | security |
+
+## Current DISTILL coverage
+
+None. No acceptance test exists for this feature yet, deliberately: this project writes
+acceptance tests Just In Time, per slice, at the moment that slice enters DISTILL (HANDOFF §1,
+§4). Slices 01 to 03 additionally share one serial file lane (`infra/lib/guardrail-declarations.ts`,
+`infra/bin/app.ts`, `infra/test/guardrails.test.ts`, plus the `scripts/ci-local-core.mjs` job
+registry) and must not open concurrently with keystone slice-08. Slices 04 and 05 have no
+authorable test at all: their observables are a live email and a live account read, gated on
+pre-requisites 3 to 8 in `feature-delta.md`.
