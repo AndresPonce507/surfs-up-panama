@@ -1,0 +1,64 @@
+{
+  "schema": "launch-seed-policy/1",
+  "region_id": "pa-pacific",
+  "purpose": "Versioned, citable v1 scoring priors for the first twenty Pacific spots. The human-owned source seed remains unmodified.",
+  "source_seed": "data/spots/pa-pacific.yaml",
+  "launch_spot_ids": [
+    "playa-malibu",
+    "playa-serena",
+    "playa-teta",
+    "playa-el-palmar",
+    "playa-rio-mar",
+    "san-carlos-point",
+    "hawaiisito",
+    "punta-chame",
+    "playa-venao",
+    "playa-los-destiladeros",
+    "playa-cambutal",
+    "playa-guanico",
+    "santa-catalina-la-punta",
+    "punta-brava",
+    "playa-morrillo",
+    "playa-reina",
+    "playa-torio",
+    "mariatos",
+    "playa-la-barqueta",
+    "las-lajas"
+  ],
+  "excluded": {
+    "playa-caracol": "orientation-and-swell-window-unsettled",
+    "playa-blanca-farallon": "source-mismatch",
+    "playa-el-toro": "low-confidence-mixed-exposure"
+  },
+  "scoring_priors": {
+    "h_ref_m": 1.3,
+    "s_size": 0.5,
+    "t_min_s": 10,
+    "wind_optimum": {
+      "u_star_kt": 5,
+      "k_on_kt": 6,
+      "k_off_kt": 15,
+      "k_cross_kt": 12
+    },
+    "tide_stage": {
+      "low": 0.1,
+      "low_mid": 0.3,
+      "mid": 0.5,
+      "mid_rising": 0.5,
+      "mid_falling": 0.5,
+      "mid_high": 0.7,
+      "high": 0.9,
+      "any": null
+    },
+    "tide_sigma_by_bottom": {
+      "sand": "wide",
+      "rock": "narrow",
+      "reef": "narrow"
+    }
+  },
+  "provenance": {
+    "scoring": "docs/product/architecture/05-scoring-engine.md section 3.1 and 3.5, citing docs/research/raw/09-ai-forecast-methodology.md section 7",
+    "membership": "docs/research/raw/14-panama-pacific-spot-seed-list.md and data/spots/pa-pacific.yaml",
+    "decision_record": "docs/research/slice-03-launch-seed-readiness.md"
+  }
+}

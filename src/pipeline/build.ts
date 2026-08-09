@@ -14,6 +14,7 @@
 
 import type { BuildDeps, BuildOutcome } from './ports';
 import { confidence } from '../scoring/confidence';
+import { loadLaunchSpotSeeds } from '../data/launch-spots';
 import {
   applyCorrection,
   blend,
@@ -88,20 +89,24 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
   const date = now.toISOString().slice(0, 10);
   const hour = now.toISOString().slice(11, 13);
   const rows = await predictionRows(deps, date);
-  const calls = deps.spots.flatMap((spot) => callsForSpot(spot, rows, date, hour));
+  const spots = deps.spots ?? loadLaunchSpotSeeds(deps.launchData);
+  const calls = spots.flatMap((spot) => callsForSpot(spot, rows, date, hour));
   if (calls.length === 0) return { published: false, reason: 'no usable wave members' };
 
   const build_id = `b_${date}T${hour}Z`;
   const callsKey = `log/calls/v1/dt=${date}/build=${hour}Z/${deps.region_id}.jsonl.gz`;
   const callsBody = calls.map((call) => JSON.stringify({ ...call, build_id })).join('\n');
   await deps.store.putCallIfAbsent(callsKey, callsBody);
+  const rankedCalls = calls
+    .filter((call) => call.valid_ts.endsWith('T18:00Z'))
+    .sort((left, right) => right.score_q - left.score_q || left.spot_id.localeCompare(right.spot_id));
   const bundle = {
     publish_surface: {
       schema: 'published-surface-update/v1' as const,
       surf_date: date,
       published_at: now.toISOString(),
       build_kind: hour === '11' ? 'dawn' as const : 'hourly' as const,
-      calls: calls.filter((call) => call.valid_ts.endsWith('T18:00Z')).map((call) => ({
+      calls: rankedCalls.map((call) => ({
         spot_id: call.spot_id,
         score_q: call.score_q,
         call_es: spanishCall(call),
@@ -109,8 +114,9 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
     },
     days: [{
       date,
-      spots: calls.filter((call) => call.valid_ts.endsWith('T18:00Z')).map((call) => ({
+      spots: rankedCalls.map((call) => ({
         spot_id: call.spot_id,
+        score_q: call.score_q,
         weakest_link: call.weakest_link,
         call: { es: spanishCall(call) },
       })),
@@ -134,7 +140,7 @@ async function predictionRows(deps: BuildDeps, date: string): Promise<Prediction
   return rows;
 }
 
-function callsForSpot(spot: BuildDeps['spots'][number], rows: PredictionRow[], date: string, hour: string): CallRow[] {
+function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: PredictionRow[], date: string, hour: string): CallRow[] {
   const validHours = [...new Set(rows.filter((row) => row.spot_id === spot.spot_id).map((row) => row.valid_ts))].sort();
   const correction = applyCorrection(spot, null);
   return validHours.flatMap((validTs) => {

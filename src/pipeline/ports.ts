@@ -16,6 +16,7 @@
 //   - Clock is passed in because nothing in the core may read the ambient
 //     clock (contract:declared-inputs-not-ambient-reads).
 
+import type { LaunchSeedData } from '../data/launch-spots';
 import type { SpotSeed, SwellTrain, WindObs } from '../scoring/engine';
 
 export interface IngestStore {
@@ -77,7 +78,10 @@ export interface IngestDeps {
   source: ForecastSource;
   store: IngestStore;
   clock: Clock;
-  spots: SpotSeed[];
+  /** Omit for the normal Pacific publication path, which loads its data-owned launch seed. */
+  spots?: SpotSeed[];
+  /** Isolated immutable source/policy paths for a controlled publication run. */
+  launchData?: LaunchSeedData;
 }
 
 export type IngestOutcome = {
@@ -90,7 +94,10 @@ export type IngestOutcome = {
 export interface BuildDeps {
   store: BuildStore;
   clock: Clock;
-  spots: SpotSeed[];
+  /** Omit for the normal Pacific publication path, which loads its data-owned launch seed. */
+  spots?: SpotSeed[];
+  /** Isolated immutable source/policy paths for a controlled publication run. */
+  launchData?: LaunchSeedData;
   region_id: string;
 }
 

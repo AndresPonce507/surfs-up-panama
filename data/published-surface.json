@@ -8,8 +8,103 @@
     "calls": [
       {
         "spot_id": "playa-venao",
-        "score_q": 80,
+        "score_q": 88,
+        "call_es": "Pecho a cabeza y limpio temprano."
+      },
+      {
+        "spot_id": "playa-cambutal",
+        "score_q": 84,
+        "call_es": "Pecho a cabeza y limpio temprano."
+      },
+      {
+        "spot_id": "playa-guanico",
+        "score_q": 81,
+        "call_es": "Cintura a pecho y viento limpio temprano."
+      },
+      {
+        "spot_id": "playa-morrillo",
+        "score_q": 78,
         "call_es": "Cintura a pecho y limpio temprano."
+      },
+      {
+        "spot_id": "punta-brava",
+        "score_q": 75,
+        "call_es": "Cintura a pecho y viento limpio temprano."
+      },
+      {
+        "spot_id": "santa-catalina-la-punta",
+        "score_q": 72,
+        "call_es": "Rodilla a cintura y limpio temprano."
+      },
+      {
+        "spot_id": "playa-los-destiladeros",
+        "score_q": 70,
+        "call_es": "Rodilla a cintura y viento limpio temprano."
+      },
+      {
+        "spot_id": "mariatos",
+        "score_q": 68,
+        "call_es": "Rodilla a cintura y limpio temprano."
+      },
+      {
+        "spot_id": "playa-reina",
+        "score_q": 66,
+        "call_es": "Rodilla a cintura y viento limpio temprano."
+      },
+      {
+        "spot_id": "playa-torio",
+        "score_q": 63,
+        "call_es": "Rodilla a cintura y limpio temprano."
+      },
+      {
+        "spot_id": "las-lajas",
+        "score_q": 61,
+        "call_es": "Tobillo a rodilla y viento limpio temprano."
+      },
+      {
+        "spot_id": "playa-la-barqueta",
+        "score_q": 59,
+        "call_es": "Tobillo a rodilla y limpio temprano."
+      },
+      {
+        "spot_id": "playa-malibu",
+        "score_q": 57,
+        "call_es": "Tobillo a rodilla y viento limpio temprano."
+      },
+      {
+        "spot_id": "playa-serena",
+        "score_q": 55,
+        "call_es": "Tobillo a rodilla y limpio temprano."
+      },
+      {
+        "spot_id": "playa-teta",
+        "score_q": 53,
+        "call_es": "Tobillo a rodilla y viento limpio temprano."
+      },
+      {
+        "spot_id": "playa-el-palmar",
+        "score_q": 50,
+        "call_es": "Tobillo a rodilla y limpio temprano."
+      },
+      {
+        "spot_id": "playa-rio-mar",
+        "score_q": 47,
+        "call_es": "Plano y viento limpio temprano."
+      },
+      {
+        "spot_id": "san-carlos-point",
+        "score_q": 44,
+        "call_es": "Plano y limpio temprano."
+      },
+      {
+        "spot_id": "hawaiisito",
+        "score_q": 42,
+        "call_es": "Plano y viento limpio temprano."
+      },
+      {
+        "spot_id": "punta-chame",
+        "score_q": 39,
+        "call_es": "Plano y limpio temprano."
       }
     ]
   },

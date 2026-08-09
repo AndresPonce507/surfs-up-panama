@@ -17,7 +17,7 @@ This is a Node 22 project; everything runs through npm scripts and a browser. No
 Explore the home page in the browser as the surfer scanning the whole coast before coffee. Walk the full list, not just the top: compare every score with the one below it, all the way down. Then run the publish again later in the session (`npm run build`, then reload) and look again: if the numbers moved, did the rows move with them? Also try the page wide and narrow, and reload a few times to see the list hold steady.
 
 ## Expected observations (oracle)
-- La home lista los spots del Pacífico del lanzamiento (veinte, o el subconjunto verificado que se lanzó), cada fila con su nombre real, su puntaje entero y su línea de tamaño y viento en español.
+- La home lista exactamente los veinte spots del Pacífico del lanzamiento, cada fila con su nombre real, su puntaje entero y su línea de tamaño y viento en español.
 - El orden es el de los puntajes: el mejor arriba, y bajando la lista nunca aparece un puntaje mayor debajo de uno menor. Hay que recorrerla entera, fila por fila, no confiar en las tres primeras.
 - En ancho de teléfono cada fila entra completa: sin scroll horizontal, nada cortado, y los puntajes caen en columna alineada que se lee de un vistazo de arriba a abajo.
 - Negative: el orden no puede contradecir los puntajes a la vista: un 61 arriba de un 74 es FALLA.
@@ -32,3 +32,4 @@ Deferred, not this slice: the oversized call card (slice-04) and per-row confide
 ## Session log (append-only)
 | date | examiner | verdict | observations |
 |------|----------|---------|--------------|
+| 2026-08-09 | /root/slice03_vera_examination | PASS | Rendered at 390px and 1280px: 20 named rows, integer scores 88→39 strictly descending, Spanish size/wind calls, no horizontal cut-off, raw errors, English, or filler; same pixels after rebuild and two reloads. |

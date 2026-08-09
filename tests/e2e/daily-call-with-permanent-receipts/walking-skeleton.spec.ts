@@ -1,5 +1,5 @@
 // @walking_skeleton
-// covers: R1, R7, R38, R39, R40, R41, R43, R46, R47, R48, R49
+// covers: R1, R7, R30, R38, R39, R40, R41, R43, R46, R47, R48, R49
 // The sole browser E2E for this feature. It exercises the published reading
 // surface, not a mock component or a forecast JSON request.
 
@@ -16,6 +16,15 @@ type DawnReceipt = {
 type PublishedSurface = {
   current: { surf_date: string };
   dawn_receipts: DawnReceipt[];
+};
+
+type LaunchPolicy = {
+  launch_spot_ids: readonly string[];
+};
+
+type SpotIdentity = {
+  spot_id: string;
+  name: string;
 };
 
 function priorCivilDate(surfDate: string): string {
@@ -40,6 +49,29 @@ function priorDawnReceiptFromPublishedSurface(): DawnReceipt {
     );
   }
   return matchingReceipts[0]!;
+}
+
+function launchSpotIdentities(): readonly SpotIdentity[] {
+  const policyPath = join(process.cwd(), 'data', 'spots', 'pa-pacific-launch-v1.json');
+  const policy = JSON.parse(readFileSync(policyPath, 'utf8')) as LaunchPolicy;
+  if (policy.launch_spot_ids.length !== 20) {
+    throw new Error(`launch seed policy must name exactly 20 spots; received ${policy.launch_spot_ids.length}`);
+  }
+  const sourcePath = join(process.cwd(), 'data', 'spots', 'pa-pacific.yaml');
+  const sourceIdentities = [...readFileSync(sourcePath, 'utf8').matchAll(
+    /^\s+- spot_id: ([^\n]+)\n\s+name: ([^\n]+)$/gm,
+  )].map((match) => ({
+    spot_id: match[1]!.trim(),
+    name: match[2]!.trim().replace(/^"(.*)"$/, '$1'),
+  }));
+  const namesById = new Map(sourceIdentities.map((identity) => [identity.spot_id, identity.name]));
+  return policy.launch_spot_ids.map((spotId) => {
+    const name = namesById.get(spotId);
+    if (name === undefined) {
+      throw new Error(`launch seed policy references ${spotId}, which has no identity in the human-owned Pacific source seed`);
+    }
+    return { spot_id: spotId, name };
+  });
 }
 
 async function auditReadingSurface(page: Page, requiresPrimaryAction: boolean): Promise<void> {
@@ -126,6 +158,7 @@ async function auditReadingSurface(page: Page, requiresPrimaryAction: boolean): 
 
 test('a surfer can read a real Spanish call and yesterday remains a separate public receipt', async ({ page }) => {
   const expectedPriorDawnReceipt = priorDawnReceiptFromPublishedSurface();
+  const expectedLaunchSpots = launchSpotIdentities();
   const requestedUrls: string[] = [];
   page.on('request', (request) => requestedUrls.push(request.url()));
   await page.setViewportSize({ width: 390, height: 844 });
@@ -133,6 +166,39 @@ test('a surfer can read a real Spanish call and yesterday remains a separate pub
   await page.goto('/');
 
   await expect.soft(page.getByRole('link', { name: 'Playa Venao' })).toBeVisible({ timeout: 1_000 });
+  const rankedRows = page.locator('ol.ranked li');
+  await expect.soft(
+    rankedRows,
+    'the home page must show every one of the 20 data-defined Pacific launch spots',
+  ).toHaveCount(expectedLaunchSpots.length, { timeout: 1_000 });
+  const visibleRanking = await rankedRows.evaluateAll((rows) => rows.map((row) => ({
+    spotId: row.querySelector('a')?.getAttribute('href')?.split('/').filter(Boolean).at(-1) ?? '',
+    name: row.querySelector('a')?.textContent?.trim() ?? '',
+    score: Number(row.querySelector('strong')?.textContent?.trim()),
+    call: row.querySelector('p')?.textContent?.trim() ?? '',
+  })));
+  expect.soft(
+    visibleRanking.map((row) => row.spotId).sort(),
+    'the visible home rows must be exactly the policy-selected launch spots, not placeholders or hidden substitutions',
+  ).toEqual(expectedLaunchSpots.map((spot) => spot.spot_id).sort());
+  expect.soft(
+    visibleRanking.map((row) => ({ spot_id: row.spotId, name: row.name })).sort((left, right) => left.spot_id.localeCompare(right.spot_id)),
+    'every visible home row must use its real data-owned spot name, not a fabricated or placeholder label',
+  ).toEqual([...expectedLaunchSpots].sort((left, right) => left.spot_id.localeCompare(right.spot_id)));
+  expect.soft(
+    visibleRanking.every((row, index) => Number.isInteger(row.score)
+      && row.score >= 0
+      && row.score <= 100
+      && (index === 0 || visibleRanking[index - 1]!.score >= row.score)
+      && /(?:Plano|Tobillo|Rodilla|Cintura|Pecho|Cabeza|Doble)/.test(row.call)
+      && /(?:limpio|viento)/i.test(row.call)
+      && !/\b(?:undefined|nan|error|test|demo|lorem|placeholder|updated|tomorrow)\b/i.test(`${row.name} ${row.call}`)),
+    'every visible row must carry a Spanish size-and-wind call, with no raw error, English, test, demo, or placeholder text',
+  ).toBe(true);
+  expect.soft(
+    new Set(visibleRanking.map((row) => row.score)).size,
+    'the twenty home rows cannot all show the same score, because that would be filler rather than a coast ranking',
+  ).toBeGreaterThan(1);
   await expect.soft(page.locator('ol.ranked li').first().locator('strong')).toHaveText(/^(?:[1-9][0-9]?|100)$/, { timeout: 1_000 });
   await expect.soft(page.locator('ol.ranked li').first().locator('p')).not.toHaveText(/placeholder/i, { timeout: 1_000 });
   await expect.soft(page.locator('body')).not.toContainText(/placeholder/i, { timeout: 1_000 });

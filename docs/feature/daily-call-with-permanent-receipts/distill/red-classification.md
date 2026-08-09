@@ -117,6 +117,38 @@ reading route.
 The slice is ready for the DISTILL review gate, not yet for DELIVER until the
 independent human AT-review verdict is recorded.
 
+## Slice-03 RED classification
+
+Status: `active RED, observed 2026-08-09`
+
+The launch policy intentionally partitions the 23 human-owned Pacific source records into 20
+launch records and three named exclusions. `loadLaunchSpotSeeds` is the only new production
+entry. It returns an empty array while RED, so the scenarios execute its exported production
+surface and then fail at their individual behavior assertions.
+
+```sh
+npm run test:at -- --tags @slice-03
+```
+
+The command collects six scenarios and 36 steps. All six reach the existing production
+`runIngestOnce` and `runBuildOnce` ports, which own the data-policy loader whenever the caller
+omits an explicit spot set, before their own assertion fails. There
+is no import, world construction, fixture, step matching, or runner failure.
+
+| Scenario | Observable exercised | Classification | Evidence |
+| --- | --- | --- | --- |
+| Twenty published launch spots | `runIngestOnce` then `runBuildOnce` | `MISSING_FUNCTIONALITY` | production morning publication has 0 rows where the declared launch policy names 20 |
+| Explicit launch exclusions | `runIngestOnce` then `runBuildOnce` | `MISSING_FUNCTIONALITY` | an empty publication cannot prove the source set and its three exclusions reach the home surface |
+| Empty launch policy | `runIngestOnce` over an isolated policy copy | `MISSING_FUNCTIONALITY` | a zero-record policy reaches publication instead of being refused before a public bundle can exist |
+| One-record launch policy | `runIngestOnce` over an isolated policy copy | `MISSING_FUNCTIONALITY` | a one-record policy reaches publication instead of naming the exact 20-record repair rule |
+| Descending Spanish public ranking | `runIngestOnce` then `runBuildOnce` | `MISSING_FUNCTIONALITY` | public day bundle has 0 rows where it must contain 20 ranked, Spanish calls |
+| Direction-sensitive coast ranking | `runIngestOnce` and `runBuildOnce` over two published mornings | `MISSING_FUNCTIONALITY` | neither day has 20 rows, so a true order comparison cannot yet occur |
+
+The sole existing browser journey is extended in this DISTILL turn, not duplicated. It builds and
+opens the real home page, then fails on its added 20-row observable while the one-row Slice-01
+surface remains in place. This makes R30 an assembled-surface requirement without adding a second
+subprocess browser journey. Slice-04 through Slice-08 acceptance tests remain absent.
+
 ## Slice-02 RED scaffold classification history
 
 Status: `scaffold-present, RED observed before delivery`

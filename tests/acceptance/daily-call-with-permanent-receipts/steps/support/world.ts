@@ -77,7 +77,7 @@ export class PipelineWorld extends World {
         source: this.source,
         store: this.store,
         clock: this.clock,
-        spots: this.spots,
+        ...(this.spots.length === 0 ? {} : { spots: this.spots }),
       });
       return this.ingestOutcome;
     } catch (error) {
@@ -91,7 +91,7 @@ export class PipelineWorld extends World {
       this.buildOutcome = await runBuildOnce({
         store,
         clock: this.clock,
-        spots: this.spots,
+        ...(this.spots.length === 0 ? {} : { spots: this.spots }),
         region_id: 'pa-pacific',
       });
       return this.buildOutcome;

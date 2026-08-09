@@ -10,6 +10,7 @@
 // One row per member per valid hour, natural key
 // (spot_id, source, run_ts, valid_ts), fields per domain-model section 5.1.
 
+import { loadLaunchSpotSeeds } from '../data/launch-spots';
 import type { IngestDeps, IngestOutcome, MemberSeries, TideHour, WindHour } from './ports';
 
 type PredictionRow = {
@@ -36,7 +37,8 @@ type PredictionRow = {
 export async function runIngestOnce(deps: IngestDeps): Promise<IngestOutcome> {
   const events: IngestOutcome['events'] = [];
   const recordsByKey = new Map<string, PredictionRow[]>();
-  for (const spot of deps.spots) {
+  const spots = deps.spots ?? loadLaunchSpotSeeds(deps.launchData);
+  for (const spot of spots) {
     const waves = await deps.source.fetchWaveMembers(spot.spot_id);
     if (!waves.ok) {
       events.push({ type: 'wave_source_unavailable', detail: waves.reason });
