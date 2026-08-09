@@ -1,0 +1,63 @@
+---
+// Base document shell. Constraints it carries (application-architecture.md):
+// system font stack only, no webfonts; critical CSS inlined, zero
+// render-blocking subresources; lang set per page; hreflang alternates on
+// every page; the language toggle is a plain link to the twin URL, 44 px
+// target. hreflang hrefs are relative until the production domain is settled;
+// they must become absolute then.
+//
+// Styling: the design system (docs/product/architecture/09-design-system.md).
+// All authored CSS — tokens, base, components — is raw-imported, minified at
+// BUILD time (this code runs in the builder, never the browser) and inlined
+// as one <style> block. Deliberate deviation from §5's async-stylesheet line
+// item, same byte envelope: at the current CSS scale inlining costs ~2 KB gz
+// per document, saves one request per session (the request-count guardrail,
+// research 08 §12.4), and avoids the async-CSS-needs-JS trap ("zero JS for
+// anything visual"). Reversal trigger: authored CSS > 8 KB gz → split into a
+// hashed cached stylesheet (design doc §11).
+import type { Locale } from '../i18n/strings';
+import tokens from '../styles/tokens.css?raw';
+import base from '../styles/base.css?raw';
+import components from '../styles/components.css?raw';
+
+interface Props {
+  locale: Locale;
+  title: string;
+  currentPath: string;
+  /** Deferred until the English tree ships with its own feature. */
+  altPath?: string;
+}
+
+const { locale, title, currentPath } = Astro.props;
+
+// Build-time CSS minifier: comments out, whitespace collapsed. Safe for this
+// codebase by construction: no CSS strings/content values contain spaces or
+// the collapsed punctuation (design doc §11 records the constraint).
+function minify(css: string): string {
+  return css
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/\s+/g, ' ')
+    .replace(/ ?([{}:;,]) ?/g, '$1')
+    .replace(/;}/g, '}')
+    .trim();
+}
+
+const inlineCss = minify(`${tokens}\n${base}\n${components}`);
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#10141A" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate" hreflang="es" href={currentPath} />
+    <Fragment set:html={`<style>${inlineCss}</style>`} />
+  </head>
+  <body>
+    <slot />
+  </body>
+</html>

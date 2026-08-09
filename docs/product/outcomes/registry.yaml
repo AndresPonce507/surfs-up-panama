@@ -1,0 +1,47 @@
+schema_version: '0.1'
+outcomes:
+- id: OUT-DAILY-CALL-ARCHIVE-STATE
+  kind: operation
+  summary: Selects only the previous dawn receipt and preserves its publish time.
+  feature: daily-call-with-permanent-receipts
+  inputs:
+  - shape: prior civil day receipts plus current build result
+  output:
+    shape: empty, success, or stale static reading state
+  keywords:
+  - ayer
+  - dawn
+  - staleness
+  artifact: src/publish/reading-state.ts
+  related: []
+  superseded_by: null
+- id: OUT-DAILY-CALL-INGEST
+  kind: operation
+  summary: Snapshots every declared morning model member before scoring.
+  feature: daily-call-with-permanent-receipts
+  inputs:
+  - shape: IngestDeps{source,store,clock,spots}
+  output:
+    shape: IngestOutcome plus append-only prediction rows
+  keywords:
+  - ingest
+  - prediction-log
+  - append-only
+  artifact: src/pipeline/ingest.ts
+  related: []
+  superseded_by: null
+- id: OUT-DAILY-CALL-BUILD
+  kind: operation
+  summary: Builds a public Spanish reading only from persisted predictions.
+  feature: daily-call-with-permanent-receipts
+  inputs:
+  - shape: BuildDeps{store,clock,spots,region_id}
+  output:
+    shape: BuildOutcome plus immutable call receipt and public bundle
+  keywords:
+  - build
+  - call-receipt
+  - publish
+  artifact: src/pipeline/build.ts
+  related: []
+  superseded_by: null

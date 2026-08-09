@@ -1,0 +1,419 @@
+/* Component layer. Rule of this file: only selectors that exist in current
+   markup ship; recipes for components whose markup has not landed live in
+   src/styles/recipes.css (not imported, zero wire bytes) and move here WITH
+   their markup. SSOT: docs/product/architecture/09-design-system.md. */
+
+/* ---- language pill: glass surface #1 (fixed, small, content scrolls
+   beneath it — the one place translucency earns its GPU cost). Solid first,
+   glass only where supported, solid again under reduced transparency.
+   Only --ink text may sit on glass (worst-case composites are AAA). */
+.lang-toggle {
+  position: fixed;
+  top: var(--sp-3);
+  right: var(--sp-3);
+  z-index: 10;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-full);
+  background: var(--bg);
+  box-shadow: var(--shadow-1);
+  color: var(--ink);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .lang-toggle {
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+  }
+}
+
+/* ---- day tabs (Hoy · Mañana): real links to separate routes */
+nav {
+  display: flex;
+  gap: var(--sp-4);
+  margin: var(--sp-3) 0 var(--sp-4);
+  border-bottom: 1px solid var(--hairline);
+}
+
+nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-2);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+nav a[aria-current='page'] {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
+}
+
+/* ---- ranked list. Array position IS the rank; row 1 IS the call
+   (decision 3), so the hero treatment binds to :first-child and no
+   markup change is ever needed to keep hero and rank agreeing. */
+ol.ranked {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+ol.ranked li {
+  display: grid;
+  grid-template-columns: 1.75rem 1fr auto;
+  column-gap: var(--sp-2);
+  align-items: baseline;
+  padding: var(--sp-3) 0;
+  border-top: 1px solid var(--hairline);
+}
+
+ol.ranked li > span {
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+ol.ranked li > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* the score: always ink, always tabular. Colour never carries it */
+ol.ranked li > strong {
+  justify-self: end;
+  font-size: var(--score-row);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: var(--track-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+ol.ranked li > p {
+  /* Columns 2-3, its original span: confidence now has its own third line
+     (below) rather than sharing this one, so the call keeps its full
+     width regardless of how long the published text runs. */
+  grid-column: 2 / 4;
+  margin: var(--sp-1) 0 0;
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  letter-spacing: var(--track-meta);
+  line-height: var(--leading-snug);
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+/* hero call card: rank 1, oversized, solid dawn gradient — deliberately
+   NOT glass: it carries the number read in direct sun */
+ol.ranked li:first-child {
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  margin-bottom: var(--sp-4);
+  padding: var(--sp-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-l);
+  background: var(--hero-grad);
+  box-shadow: var(--shadow-1);
+}
+
+ol.ranked li:first-child > span {
+  display: none;
+}
+
+ol.ranked li:first-child > a {
+  font-size: var(--text-title1);
+  font-weight: 800;
+  line-height: var(--leading-tight);
+  letter-spacing: var(--track-tight);
+}
+
+ol.ranked li:first-child > strong {
+  font-size: var(--score-hero);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+ol.ranked li:first-child > p {
+  /* Original full span: confidence now has its own third line (below). */
+  grid-column: 1 / 3;
+  margin-top: var(--sp-2);
+  display: block;
+  color: var(--ink);
+  font-size: var(--text-body);
+  font-weight: 400;
+  line-height: var(--leading-body);
+}
+
+/* ---- confidence: the level word always visible on its own third line
+   (product decision, Andres, superseding the earlier second-line-sharing
+   cut -- see Confidence.astro's header comment: "Confianza {word}" reads
+   clearer than a bare word next to a wave score, and that phrase does not
+   fit the row's original two lines without clipping real call text). The
+   honest reason one tap away via native <details>/<summary> (zero JS,
+   adr-publish-time-html-rendering.md), in normal document flow -- opening
+   one grows its own row and pushes the rows below it down; nothing needs
+   positioning tricks now that confidence is not fighting the call for
+   space. No transition or animation anywhere in this block: the
+   disclosure is instant, so prefers-reduced-motion has nothing to opt out
+   of, and the hero row (U4) stays exempt from motion by construction. */
+ol.ranked li > details.confidence {
+  grid-column: 1 / -1;
+  margin-top: var(--sp-1);
+}
+
+ol.ranked li > details.confidence > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-s);
+  color: var(--ink-2);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: var(--track-meta);
+  list-style: none;
+  cursor: pointer;
+}
+
+ol.ranked li > details.confidence > summary::-webkit-details-marker {
+  display: none;
+}
+
+ol.ranked li > details.confidence > summary::after {
+  content: '›';
+}
+
+ol.ranked li > details.confidence[open] > summary::after {
+  content: '⌄';
+}
+
+ol.ranked li > details.confidence > div {
+  padding: 0 var(--sp-2) var(--sp-2);
+  color: var(--ink-2);
+  font-size: var(--text-caption);
+  line-height: var(--leading-snug);
+}
+
+/* hero card: both the closed summary and the opened reason sit directly on
+   --hero-grad (normal document flow now, no separate solid backdrop), so
+   both need the darker ink already proven readable against the worst
+   gradient stop (09-design-system.md) -- the same token the hero's own
+   call paragraph already uses. */
+ol.ranked li:first-child > details.confidence > summary,
+ol.ranked li:first-child > details.confidence > div {
+  color: var(--ink);
+}
+
+/* ---- spot page day cards */
+section {
+  margin-bottom: var(--sp-3);
+  padding: var(--sp-4);
+  border-radius: var(--r-m);
+  background: var(--surface);
+}
+
+section strong {
+  font-size: var(--score-row);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: var(--track-tight);
+  font-variant-numeric: tabular-nums;
+  margin-right: var(--sp-1);
+}
+
+/* ---- report CTA: glass surface #2, the tray. Fixed in the thumb zone
+   (decision 23). The button itself is solid --go: the primary action is
+   never translucent. */
+p:has(> a.cta) {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4)
+    max(var(--sp-3), env(safe-area-inset-bottom));
+  border-top: 1px solid var(--hairline);
+  background: var(--bg);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  p:has(> a.cta) {
+    background: var(--glass);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+  }
+}
+
+/* content never hides behind the fixed tray */
+body:has(a.cta) {
+  padding-bottom: 7rem;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 38rem;
+  min-height: 48px;
+  border-radius: var(--r-m);
+  background: var(--go);
+  box-shadow: var(--shadow-2);
+  color: var(--on-go);
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-decoration: none;
+}
+
+.home-primary {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4)
+    max(var(--sp-3), env(safe-area-inset-bottom));
+  border-top: 1px solid var(--hairline);
+  background: var(--bg);
+}
+
+.home-primary a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 38rem;
+  min-height: 48px;
+  border-radius: var(--r-m);
+  background: var(--go);
+  box-shadow: var(--shadow-2);
+  color: var(--on-go);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+body:has(.home-primary) {
+  padding-bottom: 7rem;
+}
+
+/* reduced-transparency: both glass surfaces go solid */
+@media (prefers-reduced-transparency: reduce) {
+  .lang-toggle,
+  p:has(> a.cta),
+  .home-primary {
+    background: var(--bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+/* ---- report capture: the three taps. Radio cards, 48px targets, state
+   shown by border + wash + native dot together, never colour alone */
+fieldset {
+  margin: var(--sp-5) 0;
+  padding: 0;
+  border: 0;
+}
+
+legend {
+  margin-bottom: var(--sp-2);
+  padding: 0;
+  font-size: var(--text-title2);
+  font-weight: 700;
+}
+
+fieldset label {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 48px;
+  margin-bottom: var(--sp-2);
+  padding: 0 var(--sp-3);
+  border: 1.5px solid var(--ctrl);
+  border-radius: var(--r-m);
+  font-weight: 500;
+}
+
+fieldset label:has(input:checked) {
+  border-color: var(--go);
+  box-shadow: inset 0 0 0 0.5px var(--go);
+  background: var(--go-tint);
+}
+
+input[type='radio'] {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--go);
+}
+
+button {
+  appearance: none;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 var(--sp-5);
+  border: 0;
+  border-radius: var(--r-m);
+  background: var(--go);
+  color: var(--on-go);
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* disabled stays readable in sunlight: 7.91:1 day / 8.14:1 dark */
+button:disabled {
+  background: var(--sunken);
+  color: var(--ink-2);
+}
+
+/* ---- notices (noscript today; offline banner reuses this recipe) */
+noscript p {
+  margin: var(--sp-4) 0;
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--warn);
+  border-radius: var(--r-m);
+  background: var(--warn-bg);
+  color: var(--ink);
+}
+
+/* ---- honesty footer */
+footer {
+  margin-top: var(--sp-6);
+  border-top: 1px solid var(--hairline);
+  padding-top: var(--sp-4);
+}
+
+footer p {
+  color: var(--ink-2);
+  font-size: var(--text-meta);
+  font-weight: 500;
+  letter-spacing: var(--track-meta);
+}

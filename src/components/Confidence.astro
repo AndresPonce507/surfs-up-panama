@@ -1,0 +1,55 @@
+---
+// WHY-NEW-FILE: src/components/Confidence.astro
+//   CLOSEST-EXISTING: src/components/RankedList.astro
+//   EXTENSION-COST: RankedList.astro renders the whole ranked row (rank,
+//     name, score, call); folding the confidence disclosure's markup and
+//     honesty copy inline would duplicate it into every future caller
+//     (RankedList rows here, SpotDetail's own layout in slice-06) instead of
+//     importing one component.
+//   PARALLEL-RATIONALE: a different lifecycle and a second real caller. This
+//     component is reused as-is by slice-06's spot detail page (a one-line
+//     import per the roadmap), which never renders a ranked row and would
+//     have no reason to depend on RankedList.astro.
+//
+// The confidence disclosure: the level word beside the score, always
+// visible; the honest reason one tap away via native <details>/<summary>.
+// Zero JavaScript (adr-publish-time-html-rendering.md) — the browser's own
+// disclosure widget does the work, no script ships.
+//
+// Day-one confidence is model agreement only (HANDOFF.md section 5, settled,
+// not to be relitigated): the reason is derived from `level` alone so no
+// caller can accidentally pass in a reason that overstates certainty.
+//
+// `name="confidence"` makes every disclosure on the page an exclusive HTML5
+// details group: opening one auto-closes any other already open, natively,
+// no JS.
+//
+// Product decision (Andres, via coordinator, superseding the bare-word cut):
+// the visible trigger reads the full "Confianza alta/media/baja", not a
+// bare level word. A bare "Baja" beside a wave score reads as small waves,
+// not low confidence -- this product's whole premise is understanding the
+// call at a glance at 5:40am, and clarity wins over width budget. That
+// phrase no longer fits on the row's existing two lines without clipping
+// real call text (measured: "Confianza baja" cost ~121px of a 314px
+// column budget), so confidence now gets its own third line
+// (grid-column: 1 / -1, its own grid row) instead of sharing one -- a
+// third line per row is authorised for this reason, not an accident.
+//
+// No aria-label: the visible text already says the full phrase, and
+// <summary>'s native disclosure-triangle semantics already announce the
+// expand/collapse state, so adding one would double-announce both.
+import { CONFIDENCE_LEVEL_WORD_ES, confidenceReasonEs, type ConfidenceLevel } from '../scoring/confidence';
+
+interface Props {
+  level: ConfidenceLevel;
+}
+
+const { level } = Astro.props;
+const word = CONFIDENCE_LEVEL_WORD_ES[level];
+const reason = confidenceReasonEs(level);
+---
+
+<details class="confidence" name="confidence" data-level={level}>
+  <summary>Confianza {word}</summary>
+  <div>{reason}</div>
+</details>

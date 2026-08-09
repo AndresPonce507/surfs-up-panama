@@ -1,0 +1,17 @@
+---
+import type { GetStaticPaths } from 'astro';
+import SpotDetail from '../../../components/SpotDetail.astro';
+import { region } from '../../../data/region';
+
+export const getStaticPaths = (() =>
+  region.spots.map((spot) => ({
+    params: { slug: spot.spot_id },
+  }))) satisfies GetStaticPaths;
+
+const { slug } = Astro.params;
+if (slug === undefined) {
+  throw new Error('spots/[slug]: slug param missing');
+}
+---
+
+<SpotDetail locale="es" spotId={slug} />

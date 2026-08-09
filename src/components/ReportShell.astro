@@ -1,0 +1,41 @@
+---
+// Report screen 2: the reveal SHELL only.
+//
+// The reveal is rendered by the report island from the POST response (payload
+// P3) and from nothing else. No standalone data URL exists for it, and this
+// static document must stay forecast-free: baking any forecast value in here
+// would reopen the anchoring leak that the two-screen flow exists to close
+// (application-architecture.md sections 7 and 8, leak paths L1 to L4). Same
+// import rule as screen 1: spot identity only, never src/data/forecast.
+import Base from '../layouts/Base.astro';
+import { spotById } from '../data/region';
+import { strings, type Locale } from '../i18n/strings';
+import { paths } from '../i18n/routes';
+
+interface Props {
+  locale: Locale;
+  spotId: string;
+}
+
+const { locale, spotId } = Astro.props;
+const t = strings[locale];
+const spot = spotById(spotId);
+if (spot === undefined) {
+  throw new Error(`ReportShell: no spot identity for spot_id "${spotId}"`);
+}
+---
+
+<Base
+  locale={locale}
+  title={spot.name}
+  currentPath={paths.reported(locale, spotId)}
+  altPath={paths.reported(locale === 'es' ? 'en' : 'es', spotId)}
+>
+  <main data-reveal-shell></main>
+  <p>
+    <a href={paths.spot(locale, spotId)}>{spot.name}</a>
+  </p>
+  <noscript>
+    <p>{t.report.noscript}</p>
+  </noscript>
+</Base>

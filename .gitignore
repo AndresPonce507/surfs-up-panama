@@ -2,7 +2,9 @@
 .DS_Store
 
 # tooling state, not project content
-.nwave/
+.nwave/*
+!.nwave/config.yaml
+!.nwave/des-config.json
 .claude/
 
 # secrets — nothing here should ever be committed
@@ -15,3 +17,8 @@
 node_modules/
 dist/
 .astro/
+.ci-local-logs/
+
+# ephemeral pipeline:build output (log/calls, pub/, manifest) — the
+# committed input is data/predictions-capture/, this is scratch
+.pipeline-out/

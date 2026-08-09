@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# pre-commit — commit-author email check.
+#
+# Hard-rejects any commit whose author email ends in `.local`, contains
+# `noreply@anthropic.com`, looks fake, or is empty. Deploy systems that
+# validate commit authorship (Vercel Deployment Protection, some CI) silently
+# refuse to build commits with unverified author emails — the site just stops
+# updating with no error in chat. This hook stops the bad commit at the source.
+# (Installed on TradelyHQ 2026-05-19 after a half-day debug of exactly this.)
+#
+# Bypass: `git commit --no-verify`. NOT recommended.
+# Maintenance: edit GOOD_EMAILS / BAD_PATTERN below.
+
+set -euo pipefail
+
+GOOD_EMAILS=(
+  "andresponce0001@gmail.com"
+  "andres@tradelyhq.com"
+)
+BAD_PATTERN='\.local$|noreply@anthropic\.com|@example\.|^\s*$'
+
+# `git var GIT_AUTHOR_IDENT` returns "Name <email> ts +tz" with the
+# fully-resolved author identity (env vars + config layers + defaults).
+ident="$(git var GIT_AUTHOR_IDENT 2>/dev/null || true)"
+email="$(printf '%s' "$ident" | sed -nE 's/.*<([^>]+)>.*/\1/p')"
+
+if [ -z "$email" ]; then
+  echo "[pre-commit] could not resolve author email — refusing commit." >&2
+  echo "[pre-commit] set one with: git config user.email YOUR_VERIFIED_GH_EMAIL" >&2
+  exit 1
+fi
+
+if printf '%s' "$email" | grep -qE "$BAD_PATTERN"; then
+  echo "[pre-commit] ❌ commit rejected: author email '$email' will be blocked by deploy systems." >&2
+  echo "[pre-commit] Vercel (and similar) only deploy commits whose author email is a verified GitHub email." >&2
+  echo "[pre-commit]" >&2
+  echo "[pre-commit] Fix in this repo (picks up across all worktrees):" >&2
+  echo "[pre-commit]   git config user.email ${GOOD_EMAILS[0]}" >&2
+  echo "[pre-commit]" >&2
+  echo "[pre-commit] Then re-run your git commit. Bypass (NOT recommended) with --no-verify." >&2
+  exit 1
+fi
+
+# Soft-allowlist: warn if email isn't in the known-good list, but don't block.
+ok=0
+for g in "${GOOD_EMAILS[@]}"; do
+  if [ "$email" = "$g" ]; then ok=1; break; fi
+done
+if [ "$ok" -ne 1 ]; then
+  echo "[pre-commit] ⚠️  author email '$email' is not on the known-verified list." >&2
+  echo "[pre-commit]    Allowing the commit, but if the deploy blocks, add it via:" >&2
+  echo "[pre-commit]      https://github.com/settings/emails" >&2
+fi
+
+exit 0

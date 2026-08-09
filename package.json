@@ -1,0 +1,42 @@
+{
+  "name": "surfs-up-panama",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "description": "Free community surf forecast that shows its own track record. Panama first, global by design.",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "npm run publish:surface -- --verify && astro build",
+    "budget": "node scripts/check-page-weight.mjs",
+    "publish:surface": "tsx src/publish/publish-static-surface.ts",
+    "pipeline:capture": "tsx src/pipeline/capture-cli.ts",
+    "pipeline:build": "tsx src/pipeline/run-build-cli.ts",
+    "dev": "astro dev",
+    "preview": "astro preview",
+    "test": "vitest run",
+    "test:at": "NODE_OPTIONS=\"--import tsx\" cucumber-js",
+    "test:ui": "npm run build && node scripts/check-ui-quality.mjs",
+    "test:e2e": "npm run build && playwright test",
+    "typecheck": "tsc --noEmit",
+    "ci:local": "node scripts/ci-local.mjs",
+    "ci:local:fast": "node scripts/ci-local.mjs --fast",
+    "merge:pr": "node scripts/merge-pr.mjs",
+    "postinstall": "bash scripts/git-hooks/install.sh >/dev/null 2>&1 || true"
+  },
+  "devDependencies": {
+    "@cucumber/cucumber": "^13.2.1",
+    "@playwright/test": "^1.62.1",
+    "@types/node": "^26.2.0",
+    "astro": "^7.2.0",
+    "aws-cdk": "^2.1135.1",
+    "aws-cdk-lib": "^2.263.0",
+    "constructs": "^10.8.1",
+    "fast-check": "^4.9.0",
+    "tsx": "^4.23.11",
+    "typescript": "^7.0.2",
+    "vitest": "^4.1.10"
+  }
+}

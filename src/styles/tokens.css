@@ -1,0 +1,97 @@
+/* Design tokens. SSOT: docs/product/architecture/09-design-system.md.
+   Every text/surface pair here has a computed WCAG ratio in that document's
+   contrast table; change a hex only together with a recomputed ratio.
+   Core palette adopted verbatim from application-architecture.md §11
+   (verified by recomputation, 2026-08-08). Day theme is default; dark
+   follows prefers-color-scheme only (Decisions needing Andres #5). */
+:root {
+  color-scheme: light dark;
+
+  /* colour — day */
+  --ink: #14181d;        /* body text, 17.82:1 on --bg */
+  --ink-2: #40484f;      /* secondary text, 9.30:1 on --bg */
+  --bg: #ffffff;
+  --surface: #f2f4f6;    /* cards */
+  --sunken: #e9edf1;     /* wells, image placeholders, disabled fills */
+  --hairline: #d9dee3;   /* decorative separators only, never meaning */
+  --ctrl: #5f6a73;       /* form control borders, 5.53:1 non-text */
+  --go: #0a6a2d;         /* primary action. 6.75:1 as text-on-bg carrier */
+  --on-go: #ffffff;      /* 6.75:1 on --go */
+  --go-tint: rgba(10, 106, 45, 0.08); /* selected-control wash */
+  --warn: #7a5200;       /* staleness, offline. 6.92:1 on --bg */
+  --warn-bg: #f6eedc;
+  --danger: #9e1c23;     /* errors, weakest link. 7.94:1 on --bg */
+  --accent: #0b57d0;     /* links, focus ring. 6.39:1 on --bg */
+  --hero-grad: linear-gradient(180deg, #f7fafc, #eaf1f5); /* dawn sky; worst stop #EAF1F5 */
+
+  /* glass. Solid-fallback-first everywhere; only text using --ink may sit on
+     glass (worst-case composite ratios in the design doc, all AAA) */
+  --glass: rgba(255, 255, 255, 0.88);
+  --glass-blur: blur(12px) saturate(140%);
+
+  /* elevation. Sunlight kills subtle shadows: edges come from borders and
+     surface steps, shadows are secondary */
+  --shadow-1: 0 1px 2px rgba(20, 24, 29, 0.08);
+  --shadow-2: 0 4px 16px rgba(20, 24, 29, 0.14);
+
+  /* type. System stack only: SF Pro on iOS, Roboto on Android, 0 bytes */
+  --font: system-ui, sans-serif;
+  --text-caption: 0.8125rem; /* 13px */
+  --text-meta: 0.875rem;     /* 14px */
+  --text-body: 1.0625rem;    /* 17px */
+  --text-title2: 1.1875rem;  /* 19px */
+  --text-title1: 1.375rem;   /* 22px */
+  --score-row: 1.375rem;     /* 22px, weight 700, tabular */
+  --score-hero: 3.25rem;     /* 52px, weight 800, tabular */
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-body: 1.5;
+  --track-tight: -0.02em;
+  --track-meta: 0.01em;
+
+  /* space, 4px grid */
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+
+  /* radius */
+  --r-s: 8px;
+  --r-m: 12px;
+  --r-l: 16px;
+  --r-full: 999px;
+
+  /* motion */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --dur-1: 120ms;
+  --dur-2: 200ms;
+
+  /* touch */
+  --tap: 44px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #edf1f4;      /* 16.26:1 on --bg */
+    --ink-2: #aab4be;    /* 8.78:1 on --bg */
+    --bg: #10141a;
+    --surface: #1a2029;
+    --sunken: #161c24;
+    --hairline: #2a323c;
+    --ctrl: #8a949e;     /* 5.99:1 non-text */
+    --go: #57c785;
+    --on-go: #10141a;    /* 8.72:1 on --go */
+    --go-tint: rgba(87, 199, 133, 0.12);
+    --warn: #e3a83b;     /* 8.73:1 on --bg */
+    --warn-bg: #2b2412;
+    --danger: #f2707a;   /* 6.49:1 on --bg */
+    --accent: #8ab4f8;   /* 8.76:1 on --bg */
+    --hero-grad: linear-gradient(180deg, #1a2029, #1e2a36); /* pre-dawn; worst stop #1E2A36 */
+    --glass: rgba(16, 20, 26, 0.84);
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.5);
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "profiles": {
+    "primera-luz": {
+      "spot_id": "playa-venao",
+      "today": {
+        "size_band": "chest_head",
+        "size_range_m": [1.1, 1.6],
+        "wind_state": "clean",
+        "best_window": { "start": "06:00", "end": "09:30" },
+        "expected_size": "Pecho a cabeza ≈1.1–1.6 m",
+        "expected_window": "Ventana 6:00–9:30"
+      },
+      "tomorrow": {
+        "size_band": "waist_chest",
+        "size_range_m": [0.7, 1.1],
+        "wind_state": "choppy",
+        "best_window": { "start": "07:15", "end": "10:45" },
+        "expected_size": "Cintura a pecho ≈0.7–1.1 m",
+        "expected_window": "Ventana 7:15–10:45"
+      }
+    },
+    "medio-flojo": {
+      "spot_id": "playa-morrillo",
+      "today": {
+        "size_band": "knee_waist",
+        "size_range_m": [0.4, 0.7],
+        "wind_state": "blown_out",
+        "best_window": { "start": "14:00", "end": "16:30" },
+        "expected_size": "Rodilla a cintura ≈0.4–0.7 m",
+        "expected_window": "Ventana 14:00–16:30"
+      },
+      "tomorrow": {
+        "size_band": "double_overhead_plus",
+        "size_range_m": [2.4, 2.4],
+        "wind_state": "clean",
+        "best_window": { "start": "05:30", "end": "08:00" },
+        "expected_size": "Doble o más ≈2.4 m o más",
+        "expected_window": "Ventana 5:30–8:00"
+      }
+    },
+    "sin-datos": {
+      "spot_id": "playa-teta",
+      "today": {
+        "degraded": true
+      },
+      "tomorrow": {
+        "size_band": "ankle_knee",
+        "size_range_m": [0.1, 0.4],
+        "wind_state": "clean",
+        "best_window": { "start": "05:45", "end": "07:15" },
+        "expected_size": "Tobillo a rodilla ≈0.1–0.4 m",
+        "expected_window": "Ventana 5:45–7:15"
+      }
+    }
+  }
+}

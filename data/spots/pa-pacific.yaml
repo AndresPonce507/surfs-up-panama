@@ -1,0 +1,1125 @@
+# =============================================================================
+# Panama Pacific coast surf spot seed - region pa-pacific
+#
+# HUMAN-OWNED. This file is edited ONLY by pull request, ONLY by a person.
+# No machine path may ever write it (domain-model.md section 10, SpotDefinition
+# invariant). Learned corrections live separately in learned/corrections/v1/
+# and NEVER touch this file. Deleting a correction file reverts a spot to the
+# values below.
+#
+# Content transcribed 2026-08-08 from
+# docs/research/raw/14-panama-pacific-spot-seed-list.md (the coordinate
+# research). Field names conform to docs/product/architecture/domain-model.md
+# section 11 (spot-seed/1); the research's theta_n_deg is shore_normal_deg
+# here, country_code is country, tide_pref is tide.optimum.
+#
+# Provenance rules, non-negotiable:
+# - Every coordinate carries `confidence` (verified | single-source) and
+#   `coord_source`. Definitions in data/spots/README.md.
+# - shore_normal_deg is DERIVED on every row where present. No source anywhere
+#   states a shore normal in degrees. Each row says how it was derived and how
+#   uncertain it is. It drives the S_dir gate, so corrections to it matter.
+# - Never add a spot, coordinate, or parameter without a citable source.
+#
+# Deliberately unseeded fields (null on every row, do not fill without a
+# citable source):
+# - h_ref_m, s_size, t_min_s: no source gives an optimal size or a scoring
+#   reference height for any spot. Only Playa Cambutal has a sourced size
+#   window (0.8-3.0 m, 15-16 s), kept in its notes, not converted.
+# - wind_optimum: the S_wind scoring constants were never researched. The
+#   researched fact is the offshore wind direction, carried per row as
+#   offshore_wind_from_deg / offshore_wind_text.
+# - tide.sigma: no source gives a numeric or comparable tide-window width.
+#   Punta Brava's sourced "one hour either side of low" is in its tide_source.
+# - tide_station: not researched; the tide adapter's fallback chain resolves
+#   by lat/lon (domain-model.md section 11).
+# - There is NO season field, on purpose. The one mass source for "best month"
+#   (surf-forecast.com) conflates clean wind with rideable swell and labels
+#   January "best" at spots its own data shows 100% too small in January.
+#   Research 14, problem 3. Never import a season, consistency or star rating.
+#
+# Scope: DISCUSS decisions 15 (Pacific coast only) and 16 (well-known spots
+# only, no secret breaks). Playa Duartes is deliberately absent - it could not
+# be located under that name in any source. See README open questions.
+# =============================================================================
+
+schema: spot-seed/1
+
+spots:
+
+  # ---- Bay of Panama, Coronado and San Carlos corridor ----
+
+  - spot_id: playa-malibu
+    name: Playa Malibu
+    alt_names: [Malibú, Gorgona rivermouth]
+    lat: 8.5577187
+    lon: -79.8444761
+    confidence: verified
+    coord_source: "OpenStreetMap natural=beach, Nueva Gorgona, Chame, Panamá Oeste, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Playa-Malibu_2 at 8.55N 79.87W, 2.9 km apart"
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Panamá Oeste"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: rivermouth
+    bottom: sand
+    shore_normal_deg: 135
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED as sourced offshore wind (NW, 315) minus 180. Cross-checked against the coastline trend from Playa Malibu to Farallón, which runs about 235/055, giving a seaward normal of about 145. The two agree within 10 degrees."
+    shore_normal_uncertainty_deg: 20
+    orientation_text: "not stated as words by any source; offshore wind given as northwest"
+    orientation_source: "surf-forecast.com/breaks/Playa-Malibu_2, accessed 2026-08-08"
+    optimal_swell_dir_deg: 202
+    swell_window_deg: [157, 225]
+    swell_window_method: "DERIVED. Sourced ideal direction SSW (202) plus or minus 45 for a sandbar, clipped to shore normal plus or minus 90."
+    offshore_wind_from_deg: 315
+    offshore_wind_text: "Northwest"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: any
+      sigma: null
+      range_class: macrotidal
+    tide_source: "surf-forecast.com: good surf at all stages of the tide, accessed 2026-08-08"
+    skill: intermediate
+    crowd: moderate
+    hazards: ["shallow barrel", "post-rain river debris"]
+    source_confidence: medium
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+      - url: https://www.surf-forecast.com/breaks/Playa-Malibu_2
+        accessed: 2026-08-08
+      - url: https://www.tourismpanama.com/places-to-visit/pacific-riviera/things-to-do/watersports-and-beaches/surf/
+        accessed: 2026-08-08
+    notes: "Named by the Panama tourism board as a Pacific Riviera surf spot. River-mouth sandbar, so the bank moves after every wet season and the learned-correction layer should be allowed to move H_ref here more than elsewhere."
+
+  - spot_id: playa-serena
+    name: Playa Serena
+    alt_names: [Serena, Coronado point]
+    lat: 8.5221725
+    lon: -79.8991118
+    confidence: verified
+    coord_source: "OpenStreetMap natural=beach, Coronado, Chame, Panamá Oeste, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Playa-Serena at 8.53N 79.89W, 1.3 km apart"
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Panamá Oeste"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: point
+    bottom: rock
+    shore_normal_deg: 135
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED as sourced offshore wind (NW, 315) minus 180. Same corridor coastline cross-check as Playa Malibu."
+    shore_normal_uncertainty_deg: 20
+    orientation_text: "rocky right point break next to a sandy beach; offshore wind given as northwest by two sources"
+    orientation_source: "surf-forecast.com/breaks/Playa-Serena and deepswell.com/surf-guide/Central-America/Panama/Playa-Serena/1751, both accessed 2026-08-08"
+    optimal_swell_dir_deg: 202
+    swell_window_deg: [172, 225]
+    swell_window_method: "DERIVED. Sourced ideal direction SSW (202) plus or minus 30 for a point break, clipped to shore normal plus or minus 90."
+    offshore_wind_from_deg: 315
+    offshore_wind_text: "Northwest"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: low_mid
+      sigma: null
+      range_class: macrotidal
+    tide_source: "deepswell.com says low to mid; surf-forecast.com says best around low tide. Both accessed 2026-08-08."
+    skill: mixed
+    crowd: heavy
+    hazards: ["rock bottom on the first section"]
+    source_confidence: high
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+      - url: https://www.surf-forecast.com/breaks/Playa-Serena
+        accessed: 2026-08-08
+      - url: https://deepswell.com/surf-guide/Central-America/Panama/Playa-Serena/1751
+        accessed: 2026-08-08
+    notes: "Three sections. First is hollow and hard, third is beginner and longboard friendly. Most crowded spot in the Bay of Panama because Coronado access is easy. Season conflict resolved in research 14: real season is April to November; surf-forecast's January label is a clean-wind artifact (0% rideable in January by its own data). See README open questions."
+
+  - spot_id: playa-teta
+    name: Playa Teta
+    alt_names: [Teta, Three Points]
+    lat: 8.5068401
+    lon: -79.9166689
+    confidence: verified
+    coord_source: "OpenStreetMap natural=beach, San Carlos, Panamá Oeste, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Playa-Teta at 8.51N 79.91W, 0.8 km apart"
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Panamá Oeste"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: reef
+    bottom: reef
+    shore_normal_deg: 135
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED as sourced offshore wind (NW, 315) minus 180. Same corridor coastline cross-check as Playa Malibu."
+    shore_normal_uncertainty_deg: 20
+    orientation_text: "reef and point; right and better left hand reef breaks plus a left point; offshore wind given as northwest"
+    orientation_source: "surf-forecast.com/breaks/Playa-Teta, accessed 2026-08-08"
+    optimal_swell_dir_deg: 202
+    swell_window_deg: [172, 225]
+    swell_window_method: "DERIVED. SSW (202) plus or minus 30 for a reef, clipped to shore normal plus or minus 90."
+    offshore_wind_from_deg: 315
+    offshore_wind_text: "Northwest"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: any
+      sigma: null
+      range_class: macrotidal
+    tide_source: "surf-forecast.com: surfable at all stages of the tide, accessed 2026-08-08"
+    skill: intermediate
+    crowd: moderate
+    hazards: ["reef bottom"]
+    source_confidence: medium
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+      - url: https://www.surf-forecast.com/breaks/Playa-Teta
+        accessed: 2026-08-08
+      - url: https://www.tourismpanama.com/places-to-visit/pacific-riviera/things-to-do/watersports-and-beaches/surf/
+        accessed: 2026-08-08
+    notes: "Named by the Panama tourism board as three points with incredible waves. Reef bottom means sigma_tide should be narrower here than at the sandbars nearby."
+
+  - spot_id: playa-el-palmar
+    name: Playa El Palmar
+    alt_names: [El Palmar, El Palmer, The Front]
+    lat: 8.4674196
+    lon: -79.9544055
+    confidence: verified
+    coord_source: "OpenStreetMap natural=beach, El Palmar, San Carlos, Panamá Oeste, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/El-Palmer at 8.46N 79.96W, 1.0 km apart"
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Panamá Oeste"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: beach
+    bottom: sand
+    shore_normal_deg: 135
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED as sourced offshore wind (NW, 315) minus 180. Same corridor coastline cross-check as Playa Malibu."
+    shore_normal_uncertainty_deg: 20
+    orientation_text: "beach and point; offshore wind given as northwest"
+    orientation_source: "surf-forecast.com/breaks/El-Palmer, accessed 2026-08-08"
+    optimal_swell_dir_deg: 202
+    swell_window_deg: [157, 225]
+    swell_window_method: "DERIVED. SSW (202) plus or minus 45 for a beach break, clipped to shore normal plus or minus 90."
+    offshore_wind_from_deg: 315
+    offshore_wind_text: "Northwest"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: high
+      sigma: null
+      range_class: macrotidal
+    tide_source: "surf-forecast.com: best around high tide, accessed 2026-08-08"
+    skill: beginner
+    crowd: light
+    hazards: []
+    source_confidence: medium
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+      - url: https://www.surf-forecast.com/breaks/El-Palmer
+        accessed: 2026-08-08
+      - url: https://www.tourismpanama.com/places-to-visit/pacific-riviera/things-to-do/watersports-and-beaches/surf/
+        accessed: 2026-08-08
+    notes: "The main surf-school beach on this coast. Named by the Panama tourism board. Surf-forecast notes it is unlikely to be too crowded."
+
+  - spot_id: playa-rio-mar
+    name: Playa Rio Mar
+    alt_names: [Río Mar, Rio Mar]
+    lat: 8.4561993
+    lon: -79.9691509
+    confidence: verified
+    coord_source: "OpenStreetMap natural=beach, San Carlos, Panamá Oeste, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Rio-Mar at 8.45N 79.98W, 1.4 km apart"
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Panamá Oeste"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: rivermouth
+    bottom: sand
+    shore_normal_deg: 135
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED as sourced offshore wind (NW, 315) minus 180. Same corridor coastline cross-check as Playa Malibu."
+    shore_normal_uncertainty_deg: 20
+    orientation_text: "point and river-mouth sandbar; offshore wind given as northwest"
+    orientation_source: "surf-forecast.com/breaks/Rio-Mar, accessed 2026-08-08"
+    optimal_swell_dir_deg: 202
+    swell_window_deg: [157, 225]
+    swell_window_method: "DERIVED. SSW (202) plus or minus 45 for a sandbar, clipped to shore normal plus or minus 90."
+    offshore_wind_from_deg: 315
+    offshore_wind_text: "Northwest"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: low
+      sigma: null
+      range_class: macrotidal
+    tide_source: "surf-forecast.com: best around low tide, accessed 2026-08-08"
+    skill: beginner
+    crowd: moderate
+    hazards: []
+    source_confidence: medium
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+      - url: https://www.surf-forecast.com/breaks/Rio-Mar
+        accessed: 2026-08-08
+      - url: https://www.tourismpanama.com/places-to-visit/pacific-riviera/things-to-do/watersports-and-beaches/surf/
+        accessed: 2026-08-08
+    notes: "Named by the Panama tourism board. Mellow, multiple peaks. River-mouth bank moves seasonally."
+
+  - spot_id: san-carlos-point
+    name: San Carlos Point
+    alt_names: [San Carlos]
+    lat: 8.47
+    lon: -79.96
+    confidence: single-source
+    coord_source: "surf-forecast.com/breaks/San-Carlos-Point, accessed 2026-08-08. Two decimal precision only."
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Panamá Oeste"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: reef
+    bottom: reef
+    shore_normal_deg: 135
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED as sourced offshore wind (NW, 315) minus 180."
+    shore_normal_uncertainty_deg: 25
+    orientation_text: "reef and point; offshore wind given as northwest"
+    orientation_source: "surf-forecast.com/breaks/San-Carlos-Point, accessed 2026-08-08"
+    optimal_swell_dir_deg: 202
+    swell_window_deg: [172, 225]
+    swell_window_method: "DERIVED. SSW (202) plus or minus 30 for a reef and point."
+    offshore_wind_from_deg: 315
+    offshore_wind_text: "Northwest"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: null   # no source states a tide preference
+      sigma: null
+      range_class: macrotidal
+    tide_source: null
+    skill: intermediate
+    crowd: unknown
+    hazards: ["reef bottom"]
+    source_confidence: low
+    sources:
+      - url: https://www.surf-forecast.com/breaks/San-Carlos-Point
+        accessed: 2026-08-08
+    notes: "Sits about 0.4 km from the El Palmar beach node. At surf-forecast's two decimal precision this spot and El Palmar are almost the same point, so the forecast inputs will be identical and only the per-spot parameters will separate them. Named by the Panama tourism board as Stanley and San Carlos are in the same cluster."
+
+  - spot_id: hawaiisito
+    name: Hawaiisito
+    alt_names: [Hawaiicito, Hawaisito]
+    lat: 8.45
+    lon: -79.98
+    confidence: single-source
+    coord_source: "surf-forecast.com/breaks/Hawaiisito, accessed 2026-08-08. Two decimal precision only."
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Panamá Oeste"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: point
+    bottom: rock
+    shore_normal_deg: 135
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED as sourced offshore wind (NW, 315) minus 180."
+    shore_normal_uncertainty_deg: 25
+    orientation_text: "rocky-bottom left point; offshore wind given as northwest by surf-forecast, northwest also by manglarlodge.com per research file 10"
+    orientation_source: "surf-forecast.com/breaks/Hawaiisito, accessed 2026-08-08"
+    optimal_swell_dir_deg: 202
+    swell_window_deg: [172, 225]
+    swell_window_method: "DERIVED. SSW (202) plus or minus 30 for a point."
+    offshore_wind_from_deg: 315
+    offshore_wind_text: "Northwest"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: mid
+      sigma: null
+      range_class: macrotidal
+    tide_source: "surf-forecast.com: best around mid tide, accessed 2026-08-08"
+    skill: mixed
+    crowd: unknown
+    hazards: ["rock bottom"]
+    source_confidence: medium
+    sources:
+      - url: https://www.surf-forecast.com/breaks/Hawaiisito
+        accessed: 2026-08-08
+    notes: "Named by the Panama tourism board. Coordinate lands within 1.2 km of the Rio Mar beach node, so the same precision caveat as San Carlos Point applies."
+
+  - spot_id: punta-chame
+    name: Punta Chame
+    alt_names: [Chame Banks, Chame]
+    lat: 8.6464073
+    lon: -79.7066296
+    confidence: single-source
+    coord_source: "OpenStreetMap place=village centroid, Chame, Panamá Oeste, via Nominatim, accessed 2026-08-08. This is the village, not the break."
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Panamá Oeste"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: beach
+    bottom: sand
+    shore_normal_deg: 180
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED, low confidence. The Chame spit runs roughly northeast to southwest with the kite lagoon on its inner bay side, so the wave side faces roughly south. No source gives a number."
+    shore_normal_uncertainty_deg: 35
+    orientation_text: "ocean-facing side of the peninsula, shaped by strong offshore wind; the kite lagoon is on the bay side"
+    orientation_source: "theriderexperience.com Punta Chame spot guide, via research file 10, accessed 2026-08-08"
+    optimal_swell_dir_deg: 202
+    swell_window_deg: [157, 247]
+    swell_window_method: "DERIVED, low confidence. Regional Bay of Panama SSW, wide window for a beach break."
+    offshore_wind_from_deg: 0
+    offshore_wind_text: "North, the same gap-wind jet that powers the kite lagoon"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: null   # no source states a tide preference
+      sigma: null
+      range_class: macrotidal
+    tide_source: null
+    skill: mixed
+    crowd: unknown
+    hazards: ["strong wind chop when the gap-wind jet is up"]
+    source_confidence: low
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+    notes: "Published coordinate is the village centroid, so it is a locator, not the break. The wave side and the kite lagoon are different water. Only the wave side belongs in a surf ranking. Named by the Panama tourism board as Chame. Do not seed the lagoon."
+
+  - spot_id: playa-caracol
+    name: Playa Caracol
+    alt_names: [La Boca de Chame]
+    lat: 8.5762804
+    lon: -79.7896077
+    confidence: single-source
+    coord_source: "OpenStreetMap landuse=residential named Playa Caracol Residences & Beach Club, Chame, Panamá Oeste, via Nominatim, accessed 2026-08-08. This is the resort polygon, not a beach node."
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Panamá Oeste"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: beach
+    bottom: sand
+    # Orientation CONTESTED. shore_normal_deg is null on purpose: the one
+    # available claim (south is offshore, so the beach faces north) contradicts
+    # the whole surrounding corridor and could not be confirmed or refuted.
+    # With shore_normal_deg null the S_dir gate cannot run. DO NOT SCORE until
+    # a human settles the orientation. Research 14, human-check question 5.
+    shore_normal_deg: null
+    shore_normal_derived: null
+    shore_normal_method: "NOT DERIVED. The one available claim (south is offshore, so the beach faces north) contradicts the whole surrounding corridor and could not be confirmed or refuted. Publishing a number here would be a guess."
+    shore_normal_uncertainty_deg: null
+    orientation_text: "CONTESTED. Research file 10 carries a single source saying south is offshore here because the coastline bends at Chame, which would flip the regional pattern and make this a north-facing beach. No second source found."
+    orientation_source: "Surfline synthesis via research file 10, single source, unconfirmed"
+    optimal_swell_dir_deg: null
+    swell_window_deg: null
+    swell_window_method: null
+    offshore_wind_from_deg: null
+    offshore_wind_text: "CONTESTED, see orientation_text"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: null   # no source states a tide preference
+      sigma: null
+      range_class: macrotidal
+    tide_source: null
+    skill: beginner
+    crowd: unknown
+    hazards: []
+    source_confidence: low
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+    notes: "DO NOT SCORE UNTIL ORIENTATION IS SETTLED. With shore_normal_deg null the S_dir gate cannot run. Either settle the orientation with a human or hold this spot out of launch. A north-facing beach behind the Chame spit would get very little Pacific swell, which is a testable claim."
+
+  # ---- Coclé ----
+
+  - spot_id: playa-blanca-farallon
+    name: Playa Blanca
+    alt_names: [Farallón, Playa Farallón, Río Hato]
+    lat: 8.3498482
+    lon: -80.1493100
+    confidence: single-source
+    coord_source: "OpenStreetMap tourism=hotel Hotel Riu Playa Blanca, Farallón, Antón, Coclé, via Nominatim, accessed 2026-08-08. Beachfront hotel node, not a beach node."
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Coclé"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: beach
+    bottom: sand
+    shore_normal_deg: 160
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED, low confidence. Coastline trend from Playa Malibu (8.5577, -79.8445) to Farallón (8.3498, -80.1493) runs about 235/055, giving a seaward normal near 145 to 165. No source states it."
+    shore_normal_uncertainty_deg: 30
+    orientation_text: "not stated by any source I trust; research file 10 explicitly doubts its own single source for this spot"
+    orientation_source: null
+    optimal_swell_dir_deg: 202
+    swell_window_deg: [157, 247]
+    swell_window_method: "DERIVED, low confidence. Regional Bay of Panama pattern."
+    offshore_wind_from_deg: 340
+    offshore_wind_text: "North-northwest, derived from shore normal, not sourced"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: null   # no source states a tide preference
+      sigma: null
+      range_class: macrotidal
+    tide_source: null
+    skill: beginner
+    crowd: unknown
+    hazards: []
+    source_confidence: low
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+    notes: "Research file 10 flags its own source for this spot as a probable name mismatch with a different Playa Blanca elsewhere in Central America. I did not find a better one. Mellow, mushy, beginner beach. Lowest-value row in this file; drop it first if the list has to shrink."
+
+  # ---- Azuero peninsula, Los Santos ----
+
+  - spot_id: playa-venao
+    name: Playa Venao
+    alt_names: [Venao, Playa Venado]
+    lat: 7.4320526
+    lon: -80.1928532
+    confidence: verified
+    coord_source: "OpenStreetMap natural=beach, Las Escobas del Venado, Pedasí, Los Santos, via Nominatim, accessed 2026-08-08. Corroborated by a separately mapped Playa Venao business at the same point, and by a distance check: the OSM Pedasí town node is at 7.5298888, -80.0259726, which puts this beach 21.2 km southwest of Pedasí. The surf-forecast coordinate would put it 9.6 km from Pedasí, on the wrong side of the peninsula corner."
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Los Santos"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: beach
+    bottom: sand
+    shore_normal_deg: 158
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED two ways, and they agree. (1) Sourced offshore wind (NNW, 337.5) minus 180 gives 157.5. (2) Coastline trend from the OSM beach nodes either side of it: Guánico to Venao runs 55/235 giving a normal of 145, Venao to Destiladeros runs 81/261 giving a normal of 172, and the mean of the two segments is 158.2. The descriptive south-facing bay wording in research file 10 would give 180, which is the outlier of the three."
+    shore_normal_uncertainty_deg: 25
+    orientation_text: "south-facing bay; offshore wind given as north-northwest"
+    orientation_source: "surf-forecast.com/breaks/Playa-Venao, accessed 2026-08-08, plus research file 10"
+    optimal_swell_dir_deg: 180
+    swell_window_deg: [135, 225]
+    swell_window_method: "DERIVED. Sourced ideal direction S (180) plus or minus 45 for a sandbar, clipped to shore normal plus or minus 90."
+    offshore_wind_from_deg: 337
+    offshore_wind_text: "North-northwest"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: mid_falling
+      sigma: null
+      range_class: macrotidal
+    tide_source: "surf-forecast.com: best around mid tide when the tide is falling, accessed 2026-08-08"
+    skill: mixed
+    crowd: heavy
+    hazards: ["dangerous rips"]
+    source_confidence: high
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+      - url: https://www.surf-forecast.com/breaks/Playa-Venao
+        accessed: 2026-08-08
+    notes: "COORDINATE CONFLICT, RESOLVED. surf-forecast.com publishes 7.45N 80.06W for this break. That point reverse-geocodes to Los Desfiladeros, Pedasí, about 15 km east, right next to the separate Destiladeros break. Do not use the surf-forecast coordinate. Research file 10 carried the same wrong number."
+
+  - spot_id: playa-los-destiladeros
+    name: Playa Los Destiladeros
+    alt_names: [Destiladeros, Los Destiladeros]
+    lat: 7.4586516
+    lon: -80.0143765
+    confidence: verified
+    coord_source: "OpenStreetMap natural=beach, Pedasí, Los Santos, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Destiladeros at 7.47N 80.00W, 2.0 km apart"
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Los Santos"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: point
+    bottom: rock
+    shore_normal_deg: 135
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED as sourced offshore wind (NW, 315) minus 180. Sits just west of Punta Mala on the corner where the Azuero coast turns from east-facing to south-facing, so a southeast-facing normal is physically consistent."
+    shore_normal_uncertainty_deg: 25
+    orientation_text: "point break; offshore wind given as northwest"
+    orientation_source: "surf-forecast.com/breaks/Destiladeros, accessed 2026-08-08"
+    optimal_swell_dir_deg: 202
+    swell_window_deg: [172, 225]
+    swell_window_method: "DERIVED. SSW (202) plus or minus 30 for a point, clipped to shore normal plus or minus 90."
+    offshore_wind_from_deg: 315
+    offshore_wind_text: "Northwest"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: null   # no source states a tide preference
+      sigma: null
+      range_class: macrotidal
+    tide_source: null
+    skill: intermediate
+    crowd: light
+    hazards: []
+    source_confidence: medium
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+      - url: https://www.surf-forecast.com/breaks/Destiladeros
+        accessed: 2026-08-08
+    notes: "surf-forecast's own clean-day statistic picks July at 82 percent for this spot, not January. That is the opposite of the Bay of Panama spots and is a genuine spot-to-spot difference, not an error. See research 14's clean-days section."
+
+  - spot_id: playa-el-toro
+    name: Playa El Toro
+    alt_names: [El Toro]
+    lat: 7.5296834
+    lon: -80.0025477
+    confidence: single-source
+    coord_source: "OpenStreetMap natural=beach, Pedasí, Los Santos, via Nominatim, accessed 2026-08-08"
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Los Santos"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: beach
+    bottom: sand
+    shore_normal_deg: 90
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED, low confidence. The beach node sits north of Punta Mala on the eastern side of the Azuero peninsula, facing into the Gulf of Panama, so the normal is roughly east. No source states it. The mixed south-swell plus north-windswell exposure recorded in research file 10 is what an east-facing beach here would see."
+    shore_normal_uncertainty_deg: 35
+    orientation_text: "not stated; research file 10 records mixed exposure, long-period south swell plus short-period north windswell"
+    orientation_source: "deepswell.com and Surfline synthesis via research file 10, accessed 2026-08-08"
+    optimal_swell_dir_deg: 135
+    swell_window_deg: [90, 180]
+    swell_window_method: "DERIVED, low confidence. Wide window because an east-facing Gulf of Panama beach picks up both wrapped south groundswell and local north windswell."
+    offshore_wind_from_deg: 270
+    offshore_wind_text: "West, derived from shore normal, not sourced"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: null   # no source states a tide preference
+      sigma: null
+      range_class: macrotidal
+    tide_source: null
+    skill: beginner
+    crowd: light
+    hazards: ["very large tidal swing"]
+    source_confidence: low
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+    notes: "This is the one spot in the list whose orientation is completely different from its neighbours. It faces east into the Gulf of Panama while Destiladeros a few km south faces southeast and Venao faces south-southeast. If the S_dir gate treats them the same the ranking will be wrong. Worth confirming with a human before launch. Research 14, human-check question 6."
+
+  - spot_id: playa-cambutal
+    name: Playa Cambutal
+    alt_names: [Cambutal]
+    lat: 7.2508628
+    lon: -80.4934187
+    confidence: verified
+    coord_source: "OpenStreetMap tourism=hotel Hotel Playa Cambutal, Cambutal, Tonosí, Los Santos, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Cambutal at 7.25N 80.49W, 0.4 km apart"
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Los Santos"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: mixed
+    bottom: mixed
+    shore_normal_deg: 180
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED as sourced offshore wind (N, 360) minus 180. Agrees with the descriptive south-facing wording in research file 10, so two independent statements give the same answer here."
+    shore_normal_uncertainty_deg: 20
+    orientation_text: "south-facing; beach and reef, lefts and rights; offshore wind given as north"
+    orientation_source: "surf-forecast.com/breaks/Cambutal, accessed 2026-08-08, plus research file 10"
+    optimal_swell_dir_deg: 180
+    swell_window_deg: [150, 210]
+    swell_window_method: "DERIVED. Sourced ideal direction S (180) plus or minus 30 for a mixed beach and reef."
+    offshore_wind_from_deg: 0
+    offshore_wind_text: "North"
+    # Only spot in this file with a sourced size window: 0.8 to 3.0 m at 15 to
+    # 16 s dominant period (research file 10, kept in notes). Not converted to
+    # h_ref_m because no sourced mapping from size window to reference height
+    # exists; inventing one would poison the seed.
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: any
+      sigma: null
+      range_class: macrotidal
+    tide_source: "surf-forecast.com: surfable at all stages of the tide, accessed 2026-08-08"
+    skill: mixed
+    crowd: light
+    hazards: ["reef sections"]
+    source_confidence: high
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+      - url: https://www.surf-forecast.com/breaks/Cambutal
+        accessed: 2026-08-08
+    notes: "Research file 10 records a sourced swell size window of 0.8 to 3.0 m and a 15 to 16 second dominant period, which is the only numeric size window sourced anywhere in this list. Rarely crowded."
+
+  - spot_id: playa-guanico
+    name: Playa Guánico
+    alt_names: [Guánico, Guanico Abajo]
+    lat: 7.2733268
+    lon: -80.4186134
+    confidence: verified
+    coord_source: "OpenStreetMap tourism=attraction Playa Guánico Abajo, Tonosí, Los Santos, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Playa-Guanico at 7.27N 80.42W, 0.4 km apart"
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Los Santos"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: mixed
+    bottom: mixed
+    shore_normal_deg: 180
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED as sourced offshore wind (N, 360) minus 180. Same south-facing Azuero coast as Cambutal, 8 km east."
+    shore_normal_uncertainty_deg: 20
+    orientation_text: "beach and reef; offshore wind given as north"
+    orientation_source: "surf-forecast.com/breaks/Playa-Guanico, accessed 2026-08-08"
+    optimal_swell_dir_deg: 180
+    swell_window_deg: [150, 210]
+    swell_window_method: "DERIVED. S (180) plus or minus 30 for a mixed beach and reef."
+    offshore_wind_from_deg: 0
+    offshore_wind_text: "North"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: any
+      sigma: null
+      range_class: macrotidal
+    tide_source: "surf-forecast.com: good surf at all stages of the tide, accessed 2026-08-08"
+    skill: intermediate
+    crowd: light
+    hazards: ["reef sections"]
+    source_confidence: medium
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+      - url: https://www.surf-forecast.com/breaks/Playa-Guanico
+        accessed: 2026-08-08
+    notes: "Sits between Cambutal and Venao on the same south-facing stretch."
+
+  # ---- Veraguas, Santa Catalina ----
+
+  - spot_id: santa-catalina-la-punta
+    name: "Santa Catalina - La Punta"
+    alt_names: [La Punta, Punta Santa Catalina, Santa Catalina]
+    lat: 7.6342047
+    lon: -81.2546103
+    confidence: verified
+    coord_source: "OpenStreetMap place=hamlet Santa Catalina, Hicaco, Soná, Veraguas, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Playa-Santa-Catalina at 7.61N 81.24W, 3.1 km apart"
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Veraguas"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: point
+    bottom: reef
+    shore_normal_deg: 180
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED as sourced offshore wind (N, 360) minus 180. Agrees with the descriptive south-facing point wording in research file 10."
+    shore_normal_uncertainty_deg: 30
+    orientation_text: "south-facing point, mostly rights; offshore wind given as north"
+    orientation_source: "surf-forecast.com/breaks/Playa-Santa-Catalina, accessed 2026-08-08, plus thesurfatlas.com via research file 10"
+    optimal_swell_dir_deg: 202
+    swell_window_deg: [172, 232]
+    swell_window_method: "DERIVED. Sourced ideal direction SSW (202) plus or minus 30 for a point break."
+    offshore_wind_from_deg: 0
+    offshore_wind_text: "North"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: mid_high
+      sigma: null
+      range_class: macrotidal
+    tide_source: "research file 10, from thesurfatlas.com and coiba-island.com: mid to high, incoming. Low tide exposes the reef. Accessed 2026-08-08."
+    skill: advanced
+    crowd: moderate
+    hazards: ["shallow reef and rock at low tide", "holds very large swell"]
+    source_confidence: high
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+      - url: https://www.surf-forecast.com/breaks/Playa-Santa-Catalina
+        accessed: 2026-08-08
+    notes: "Named by the Panama tourism board in Spanish as Punta Santa Catalina. The published coordinate is the town, and the break is within about 3 km of it. Research file 10 documents that Isla Coiba shadows the mainland coast behind it and Santa Catalina is the first point that emerges from that shadow, so a global model will over-forecast swell for anything tucked further into the lee. That is a per-spot exposure correction the learning layer will need."
+
+  - spot_id: punta-brava
+    name: Punta Brava
+    alt_names: [Punta Brava Santa Catalina]
+    lat: 7.6161695
+    lon: -81.2384345
+    confidence: verified
+    coord_source: "OpenStreetMap tourism=attraction Punta Brava, Vía El Estero, Santa Catalina, Hicaco, Soná, Veraguas, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Punta-Brava at 7.62N 81.24W, 0.5 km apart"
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Veraguas"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: reef
+    bottom: reef
+    shore_normal_deg: 180
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED as sourced offshore wind (N, 360) minus 180."
+    shore_normal_uncertainty_deg: 30
+    orientation_text: "left-hand reef; offshore wind given as north"
+    orientation_source: "surf-forecast.com/breaks/Punta-Brava, accessed 2026-08-08"
+    optimal_swell_dir_deg: 202
+    swell_window_deg: [172, 232]
+    swell_window_method: "DERIVED. SSW (202) plus or minus 30 for a reef."
+    offshore_wind_from_deg: 0
+    offshore_wind_text: "North"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: low
+      sigma: null
+      range_class: macrotidal
+    tide_source: "surf-forecast.com: best around low tide. Research file 10 from thesurfatlas.com is narrower: one hour either side of low only. Both accessed 2026-08-08."
+    skill: advanced
+    crowd: light
+    hazards: ["shallow reef", "very narrow tide window"]
+    source_confidence: high
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+      - url: https://www.surf-forecast.com/breaks/Punta-Brava
+        accessed: 2026-08-08
+    notes: "Named by the Panama tourism board in Spanish, level experto. The one-hour-either-side-of-low window is the tightest sigma_tide in this whole list. If the tide term is modelled with a single global width this spot will score wrong most of the day."
+
+  # ---- Veraguas, Mariato "Sunset Coast" ----
+  # This coast faces WEST, not south. Its offshore wind comes from the east,
+  # not the north. Do not apply the Bay of Panama regional pattern here.
+
+  - spot_id: playa-morrillo
+    name: Playa Morrillo
+    alt_names: [Morrillo, Morillo, Morrillo Break]
+    lat: 7.4905439
+    lon: -80.9533624
+    confidence: verified
+    coord_source: "OpenStreetMap natural=beach, La Barra, Mariato, Veraguas, via Nominatim, accessed 2026-08-08. Corroborated by puntaduarte.com/location, which places its beachfront hotel at Punta Duarte, Morillo, Veraguas, 5 km past Torío, and by es.tourismpanama.com naming Playa Morrillo as one of five Veraguas surf beaches. Existence check, not a second coordinate: one of the two weakest verified rows, eyeball on a map first."
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Veraguas"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: beach
+    bottom: sand
+    shore_normal_deg: 250
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED, cross-checked two ways that share no input. (1) Coastline trend using only the three OSM beach nodes on this stretch, Playa Reina (7.6209369, -80.9972459) to Playa Morrillo (7.4905439, -80.9533624), runs 161/341, giving a seaward normal of 251.4. (2) surf-forecast.com gives east-northeast (67.5) as the offshore wind for the Mariatos break on the same coast, implying a normal of 247.5. The two agree within 4 degrees, and method 1 does not use the Mariatos coordinate at all, so the west-facing finding does not depend on it. Segment-level normals run 237 at the Reina end and 272 at the Morrillo end, which is why uncertainty is 25 and not 20."
+    shore_normal_uncertainty_deg: 25
+    orientation_text: "no source states it in words; the local name for this stretch is the Sunset Coast, which is only true of a west-facing shore"
+    orientation_source: "booksurfcamps.com and puntaduarte.com both describe this stretch as Panama's Sunset Coast, accessed 2026-08-08"
+    optimal_swell_dir_deg: 200
+    swell_window_deg: [160, 250]
+    swell_window_method: "DERIVED. This coast takes regional south to southwest groundswell at a very oblique angle and west swell straight on. Window is wide and skewed west of the regional S/SSW because of the west-facing normal."
+    offshore_wind_from_deg: 70
+    offshore_wind_text: "East-northeast"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: null   # no source states a tide preference
+      sigma: null
+      range_class: macrotidal
+    tide_source: null
+    skill: advanced
+    crowd: light
+    hazards: ["steep, heavy, fast beach break"]
+    source_confidence: medium
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+      - url: https://puntaduarte.com/location/
+        accessed: 2026-08-08
+      - url: https://es.tourismpanama.com/blog/post/playas-de-surf-en-la-costa-pacfica-de-veraguas/
+        accessed: 2026-08-08
+      - url: https://www.booksurfcamps.com/hotel-el-sol-morrillo/surf-hotel-el-sol-morillo-in-punta-duarte-panama
+        accessed: 2026-08-08
+    notes: "The Panama tourism board in Spanish rates it intermedio to experto and calls it one of the most consistent swell zones in Panama, with international competitions. Research file 10 put this spot at 7.65N 81.15W, which is about 28 km northwest of where OSM has it. Research file 10 also inferred north-northeast offshore wind here from the regional pattern. That inference is wrong. This coast faces west."
+
+  - spot_id: playa-reina
+    name: Playa Reina
+    alt_names: [Reina]
+    lat: 7.6209369
+    lon: -80.9972459
+    confidence: verified
+    coord_source: "OpenStreetMap natural=beach, Mariato, Veraguas, via Nominatim, accessed 2026-08-08. Corroborated by es.tourismpanama.com naming Playa Reina as one of five Veraguas surf beaches. Existence check, not a second coordinate: one of the two weakest verified rows, eyeball on a map first."
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Veraguas"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: rivermouth
+    bottom: sand
+    shore_normal_deg: 250
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED. Same two-method derivation as Playa Morrillo, using only OSM beach nodes for method 1. The Reina to Torío segment on its own gives a normal of 237, which is the southwesterly end of the spread on this coast."
+    shore_normal_uncertainty_deg: 25
+    orientation_text: "no source states it in words; same Sunset Coast west-facing shore as Morrillo"
+    orientation_source: "derived from the same coastline trend as Playa Morrillo"
+    optimal_swell_dir_deg: 200
+    swell_window_deg: [165, 255]
+    swell_window_method: "DERIVED. Same reasoning as Playa Morrillo."
+    offshore_wind_from_deg: 75
+    offshore_wind_text: "East-northeast, derived, not sourced"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: null   # no source states a tide preference
+      sigma: null
+      range_class: macrotidal
+    tide_source: null
+    skill: intermediate
+    crowd: light
+    hazards: ["river-mouth currents"]
+    source_confidence: medium
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+      - url: https://es.tourismpanama.com/blog/post/playas-de-surf-en-la-costa-pacfica-de-veraguas/
+        accessed: 2026-08-08
+    notes: "Panama tourism board in Spanish rates it Intermedio to Experto. Sits at a river mouth, so the bank moves after the wet season."
+
+  - spot_id: playa-torio
+    name: Playa Torío
+    alt_names: [Torio, Torío]
+    lat: 7.5488957
+    lon: -80.9508330
+    confidence: verified
+    coord_source: "OpenStreetMap natural=beach, Torio, Veraguas, via Nominatim, accessed 2026-08-08. Corroborated by puntaduarte.com/location, which gives the road distance from Torío to Punta Duarte as 5 km. The straight-line distance between the OSM Torío beach node and the OSM Punta Duarte hotel node is 5.8 km, which is consistent. Geometry check, not a second coordinate."
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Veraguas"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: beach
+    bottom: sand
+    shore_normal_deg: 252
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED. Same two-method derivation as Playa Morrillo, using only OSM beach nodes for method 1. Torío sits between Reina and Morrillo, so its normal is the mean of the two adjoining segments, 255."
+    shore_normal_uncertainty_deg: 25
+    orientation_text: "no source states it in words; same Sunset Coast west-facing shore as Morrillo"
+    orientation_source: "derived from the same coastline trend as Playa Morrillo"
+    optimal_swell_dir_deg: 200
+    swell_window_deg: [162, 252]
+    swell_window_method: "DERIVED. Same reasoning as Playa Morrillo."
+    offshore_wind_from_deg: 72
+    offshore_wind_text: "East-northeast, derived, not sourced"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: null   # no source states a tide preference
+      sigma: null
+      range_class: macrotidal
+    tide_source: null
+    skill: intermediate
+    crowd: light
+    hazards: []
+    source_confidence: low
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+      - url: https://puntaduarte.com/location/
+        accessed: 2026-08-08
+    notes: "Coordinate is solid. Surf parameters are thin. No surf guide gives Torío its own swell, wind or tide entry, so everything except the coordinate rides on the Sunset Coast regional pattern."
+
+  - spot_id: mariatos
+    name: Mariatos
+    alt_names: [Mariato]
+    lat: 7.41
+    lon: -80.94
+    confidence: single-source
+    coord_source: "surf-forecast.com/breaks/Mariatos, accessed 2026-08-08. Two decimal precision only. A Nominatim reverse geocode on this point returned only the Veraguas administrative boundary with no feature, which neither confirms nor refutes it."
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Veraguas"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: reef
+    bottom: reef
+    shore_normal_deg: 248
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED as sourced offshore wind (ENE, 67.5) minus 180. This is the only spot on the Sunset Coast where the offshore direction is actually sourced, and it is what anchors the west-facing normal for Morrillo, Reina and Torío."
+    shore_normal_uncertainty_deg: 20
+    orientation_text: "exposed reef break; offshore wind given as east-northeast"
+    orientation_source: "surf-forecast.com/breaks/Mariatos, accessed 2026-08-08"
+    optimal_swell_dir_deg: 180
+    swell_window_deg: [158, 240]
+    swell_window_method: "DERIVED. Sourced ideal direction S (180), but the west-facing normal means south swell arrives about 68 degrees off normal, which is near the edge of the exposure window. Wide window skewed west."
+    offshore_wind_from_deg: 68
+    offshore_wind_text: "East-northeast"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: null   # no source states a tide preference
+      sigma: null
+      range_class: macrotidal
+    tide_source: null
+    skill: intermediate
+    crowd: unknown
+    hazards: ["reef bottom"]
+    source_confidence: low
+    sources:
+      - url: https://www.surf-forecast.com/breaks/Mariatos
+        accessed: 2026-08-08
+    notes: "surf-forecast files this break under the region label Pedasi and Vicinity, which is wrong. The coordinate is in Mariato district, Veraguas, about 101 km in a straight line from the OSM Pedasí town node at 7.5298888, -80.0259726, and much further by road around the Azuero peninsula. The coordinate looks right and the region label is a data error on their side. Its clean-day statistic picks April at 41 percent, the only spot in the list where the automated best month lands inside the real swell season."
+
+  # ---- Chiriquí ----
+
+  - spot_id: playa-la-barqueta
+    name: Playa La Barqueta
+    alt_names: [Barqueta, La Barqueta]
+    lat: 8.2993980
+    lon: -82.5670155
+    confidence: single-source
+    coord_source: "OpenStreetMap natural=beach, Guarumal, Alanje, Chiriquí, via Nominatim, accessed 2026-08-08"
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Chiriquí"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: beach
+    bottom: sand
+    shore_normal_deg: 190
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED. Coastline trend between the two mapped Chiriquí beach nodes, La Barqueta (8.2994, -82.5670) and Playa Jobo at Las Lajas (8.1732, -81.8792), runs about 100/280, giving a seaward normal of about 190. No source states it."
+    shore_normal_uncertainty_deg: 30
+    orientation_text: "not stated by any source"
+    orientation_source: null
+    optimal_swell_dir_deg: 200
+    swell_window_deg: [155, 245]
+    swell_window_method: "DERIVED, low confidence. Regional Pacific south to southwest groundswell, wide window for a long open beach."
+    offshore_wind_from_deg: 10
+    offshore_wind_text: "North, derived, not sourced"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: null   # no source states a tide preference
+      sigma: null
+      range_class: macrotidal
+    tide_source: null
+    skill: beginner
+    crowd: light
+    hazards: ["long exposed beach with rips"]
+    source_confidence: low
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+    notes: "Research file 10 has it as a beginner beach from thesurfatlas.com. No dedicated surf guide with swell, wind or tide data was found. Coordinate is good, parameters are not."
+
+  - spot_id: las-lajas
+    name: Playa Las Lajas
+    alt_names: [Las Lajas, Playa Jobo]
+    lat: 8.1732155
+    lon: -81.8791965
+    confidence: single-source
+    coord_source: "OpenStreetMap natural=beach named Playa Jobo, Las Lajas, San Félix, Chiriquí, via Nominatim, accessed 2026-08-08. Nominatim has no feature under the exact name Playa Las Lajas; Playa Jobo is the mapped beach inside the Las Lajas locality."
+    coord_accessed: 2026-08-08
+    country: PA
+    admin_area: "Chiriquí"
+    region_id: pa-pacific
+    timezone: America/Panama
+    coast: pacific
+    break_type: beach
+    bottom: sand
+    shore_normal_deg: 190
+    shore_normal_derived: true
+    shore_normal_method: "DERIVED. Same two-node Chiriquí coastline trend as Playa La Barqueta."
+    shore_normal_uncertainty_deg: 30
+    orientation_text: "not stated by any source"
+    orientation_source: null
+    optimal_swell_dir_deg: 200
+    swell_window_deg: [155, 245]
+    swell_window_method: "DERIVED, low confidence."
+    offshore_wind_from_deg: 10
+    offshore_wind_text: "North, derived, not sourced"
+    h_ref_m: null
+    s_size: null
+    t_min_s: null
+    wind_optimum: null
+    tide:
+      optimum: null   # no source states a tide preference
+      sigma: null
+      range_class: macrotidal
+    tide_source: null
+    skill: beginner
+    crowd: light
+    hazards: []
+    source_confidence: low
+    sources:
+      - url: https://nominatim.openstreetmap.org/search
+        accessed: 2026-08-08
+    notes: "Well known as a long beach with mellow surf. No surf guide entry with numeric parameters found. The name mismatch between the locality (Las Lajas) and the mapped beach (Playa Jobo) is worth a human check. Research 14, human-check question 10."

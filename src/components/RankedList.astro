@@ -1,0 +1,102 @@
+---
+// Home and tomorrow are the same ranked-list screen over a different day
+// array. They are separate prerendered routes, not a JS tab, so each stays
+// inside its own byte budget and the refusal to forecast past tomorrow is
+// visible in the information architecture itself (application-architecture.md
+// section 4). Array position IS the rank; no rank field exists.
+import Base from '../layouts/Base.astro';
+import Confidence from './Confidence.astro';
+import { forecast } from '../data/forecast';
+import { spotById } from '../data/region';
+import { strings, type Locale } from '../i18n/strings';
+import { paths } from '../i18n/routes';
+
+interface Props {
+  locale: Locale;
+  day: 0 | 1;
+}
+
+const { locale, day } = Astro.props;
+const t = strings[locale];
+const daySpots = forecast.days[day];
+const currentPath = day === 0 ? paths.home(locale) : paths.tomorrow(locale);
+
+function nameOf(spotId: string): string {
+  const spot = spotById(spotId);
+  if (spot === undefined) {
+    // A day array entry with no identity is a broken build input. Fail the
+    // build LOUD; never render a page with invented data (P1 contract).
+    throw new Error(`RankedList: no spot identity for spot_id "${spotId}"`);
+  }
+  return spot.name;
+}
+
+const spanishSizeBand: Readonly<Record<string, string>> = {
+  flat: 'Plano',
+  ankle_knee: 'Tobillo a rodilla',
+  knee_waist: 'Rodilla a cintura',
+  waist_chest: 'Cintura a pecho',
+  chest_head: 'Pecho a cabeza',
+  head_overhead: 'Cabeza a un metro más',
+  double_overhead_plus: 'Doble o más',
+};
+
+const spanishWind: Readonly<Record<string, string>> = {
+  clean: 'limpio',
+  choppy: 'picado',
+  blown_out: 'destrozado',
+};
+
+function repeatableCall(summary: (typeof daySpots)[number]): string {
+  const size = summary.size_band === undefined ? undefined : spanishSizeBand[summary.size_band];
+  const wind = summary.wind_state === undefined ? undefined : spanishWind[summary.wind_state];
+  const window = summary.best_window;
+  if (size !== undefined && wind !== undefined && window !== undefined) {
+    return `${size}, viento ${wind}, mejor de ${window.start} a ${window.end}.`;
+  }
+  return summary.call[locale] ?? 'Condiciones publicadas para hoy.';
+}
+---
+
+<Base
+  locale={locale}
+  title={t.home.header}
+  currentPath={currentPath}
+>
+  <h1>{t.home.header}</h1>
+  <p>{t.home.updatedPrefix} {forecast.published_at}</p>
+  <nav>
+    <a href={paths.home(locale)} aria-current={day === 0 ? 'page' : undefined}>
+      {t.home.tabToday}
+    </a>
+    <a
+      href={paths.tomorrow(locale)}
+      aria-current={day === 1 ? 'page' : undefined}
+    >
+      {t.home.tabTomorrow}
+    </a>
+  </nav>
+  <ol class="ranked">
+    {
+      daySpots.map((summary, index) => (
+        <li>
+          <span>{index + 1}</span>
+          <a href={paths.spot(locale, summary.spot_id)}>
+            {index === 0 ? `VE A ${nameOf(summary.spot_id)}` : nameOf(summary.spot_id)}
+          </a>
+          <strong>{summary.score_q}</strong>
+          <p>{index === 0 ? repeatableCall(summary) : summary.call[locale]}</p>
+          {summary.conf_level !== undefined && <Confidence level={summary.conf_level} />}
+        </li>
+      ))
+    }
+  </ol>
+  <footer>
+    <p>{t.home.honestyFooter}</p>
+  </footer>
+  <p class="home-primary">
+    <a data-primary-action href={paths.spot(locale, daySpots[0]!.spot_id)}>
+      Ver el llamado
+    </a>
+  </p>
+</Base>

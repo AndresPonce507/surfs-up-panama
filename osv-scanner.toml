@@ -1,0 +1,5 @@
+# This is the sole temporary OSV exception. Keep the lockfile scan enabled.
+[[IgnoredVulns]]
+id = "GHSA-rgw5-rvv9-x895"
+ignoreUntil = 2026-08-23
+reason = "Temporary exception for aws-cdk-lib@2.263.0's bundled minimatch@10.2.5 -> brace-expansion@5.0.8; remove immediately when AWS CDK bundles brace-expansion >=5.0.9."

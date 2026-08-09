@@ -10,7 +10,7 @@ Date: 2026-08-08
 
 | # | Question | Decision |
 |---|---|---|
-| 1 | What do you see first at 5:40am | **Ranked list of every spot**, both coasts |
+| 1 | What do you see first at 5:40am | **Ranked list of every spot**. ~~both coasts~~ → **SUPERSEDED by decision 15**: launch is Pacific coast only, ~20 spots. Caribbean is a second launch. |
 | 2 | How opinionated | **Make the call, show the work.** Names a best spot, every score breaks down into why |
 | 3 | How the two combine | **Top spot is visually the call** — oversized with plain-language reason, compact rows below |
 | 4 | How people report back | **Three taps, no photo required.** Good/bad, size vs forecast, wind |
@@ -75,7 +75,7 @@ only ever see it on a phone.**
 
 | # | Question | Decision |
 |---|---|---|
-| 28 | What the three taps ask | **Compare to the forecast.** "We said 82, chest to head, clean. Were we right?" |
+| 28 | What the three taps ask | ~~**Compare to the forecast.** "We said 82, chest to head, clean. Were we right?"~~ → **SUPERSEDED by the RESOLVED section below**: ask cold and absolute first, reveal after. Screen one shows no prediction at all. |
 | 29 | License | **MIT** |
 | 30 | Who posts the WhatsApp card | **Anyone, from any spot page** |
 | 31 | Domain | **Wait.** Register surfsuppanama.com when there is something to host |
@@ -106,6 +106,26 @@ naturally lives.
 
 **Build implication:** the label must be captured and committed before screen two renders.
 Never let the reveal round-trip back and allow an edit, or the bias comes straight back in.
+
+**Known cost, recorded 2026-08-08. The decision stands; this is not a reopening.**
+
+"Strictly better" above is too strong, and the cost was not priced when the call was made.
+`docs/research/raw/09-ai-forecast-methodology.md` §13.2 calls the comparative field ("were we
+too big or too small?") the single most valuable field in the whole report, because asking one
+person to compare against a number cancels out *that person's own* size-inflation habit. Two
+surfers who both call chest-high "head-high" still both answer "a bit over" correctly. Cold
+absolute capture removes that field, so their personal offsets no longer cancel and instead land
+in the data as noise.
+
+The signal is recoverable server-side by differencing the cold label against what we predicted,
+which we have in the prediction log. What is **not** recoverable is the per-person offset
+cancellation. The learning layer therefore has to estimate a per-reporter bias term from
+accumulated history rather than getting it for free per report, which means it needs more
+reports per person before a correction is trustworthy.
+
+Net: the anti-anchoring call is still right, because training on our own prior is a
+self-reinforcing error and a noisy honest signal beats a clean contaminated one. It just is not
+free. Whoever designs the learning layer must budget for the per-reporter bias term.
 
 ---
 

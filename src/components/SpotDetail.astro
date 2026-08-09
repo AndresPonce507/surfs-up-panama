@@ -1,0 +1,96 @@
+---
+// Spot detail: identity, both day summaries with size and best-window, a
+// path back to the list, and the report CTA in the bottom thumb zone
+// (decisions 13, 23). Breakdown bars, scorecard, static map and report
+// photos arrive with their data contracts; not scaffolded because each would
+// mean inventing content the bundle owns.
+//
+// Size and window are always rendered through formatSizeEs/formatBestWindowEs
+// (src/publish/display-format.ts) -- never formatted by hand here, so every
+// surface says the same thing about the same wave (application-architecture.md
+// section 10, decision 18). When a spot has no structured size or window yet,
+// the page says so in words rather than showing nothing or a raw value.
+import Base from '../layouts/Base.astro';
+import { forecast, type DaySummary } from '../data/forecast';
+import { spotById } from '../data/region';
+import { strings, type Locale } from '../i18n/strings';
+import { paths } from '../i18n/routes';
+import { formatBestWindowEs, formatSizeEs } from '../publish/display-format';
+
+interface Props {
+  locale: Locale;
+  spotId: string;
+}
+
+const { locale, spotId } = Astro.props;
+const t = strings[locale];
+const spot = spotById(spotId);
+if (spot === undefined) {
+  // Only known slugs are generated; an unknown one is a broken build input.
+  throw new Error(`SpotDetail: no spot identity for spot_id "${spotId}"`);
+}
+
+function summaryFor(day: 0 | 1): DaySummary | undefined {
+  return forecast.days[day].find((entry) => entry.spot_id === spotId);
+}
+
+function sizeText(summary: DaySummary | undefined): string {
+  if (summary?.size_band === undefined || summary.size_range_m === undefined) {
+    return 'Sin datos de tamaño para este spot todavía.';
+  }
+  return formatSizeEs(summary.size_band, summary.size_range_m);
+}
+
+function windowText(summary: DaySummary | undefined): string {
+  if (summary?.best_window === undefined) {
+    return 'Sin ventana estimada todavía.';
+  }
+  return formatBestWindowEs(summary.best_window);
+}
+
+const today = summaryFor(0);
+const tomorrow = summaryFor(1);
+---
+
+<Base
+  locale={locale}
+  title={spot.name}
+  currentPath={paths.spot(locale, spotId)}
+>
+  <h1>{spot.name}</h1>
+  <p>{t.home.updatedPrefix} {forecast.published_at}</p>
+  <nav>
+    <a data-field="back-to-list" href={paths.home(locale)}>Volver a la lista</a>
+  </nav>
+  <section data-day="today">
+    <h2>{t.home.tabToday}</h2>
+    {
+      today ? (
+        <>
+          <p><strong data-field="score">{today.score_q}</strong> {today.call[locale]}</p>
+          <p data-field="size">{sizeText(today)}</p>
+          <p data-field="window">{windowText(today)}</p>
+        </>
+      ) : (
+        <p>Todavía no hay número de hoy para este spot.</p>
+      )
+    }
+  </section>
+  <section data-day="tomorrow">
+    <h2>{t.home.tabTomorrow}</h2>
+    {
+      tomorrow ? (
+        <>
+          <p><strong data-field="score">{tomorrow.score_q}</strong> {tomorrow.call[locale]}</p>
+          <p data-field="size">{sizeText(tomorrow)}</p>
+          <p data-field="window">{windowText(tomorrow)}</p>
+        </>
+      ) : (
+        <p>Todavía no hay número de mañana para este spot.</p>
+      )
+    }
+  </section>
+  <p>
+    <a class="cta" href={paths.report(locale, spotId)}>{t.spot.reportCta}</a>
+  </p>
+</Base>

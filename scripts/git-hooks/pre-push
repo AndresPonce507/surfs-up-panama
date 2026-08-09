@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# pre-push — run the CI pipeline LOCALLY before anything reaches origin.
+#
+# Depth scales with the target:
+#   main / develop / master → FULL gate
+#   anything else           → FAST gate (jobs' fast steps where defined)
+#
+# NOTE: if the trunks are protected (every landing is a PR merged server-side),
+# this hook only ever runs the FAST gate — the full-gate branch below is a
+# backstop in case protection is ever lifted. The trunk gate lives on the
+# MERGE:  npm run merge:pr -- <pr-number>
+# Merging from the GitHub UI or a bare `gh pr merge` skips every check.
+#
+# Bypass with `git push --no-verify` when you know what you're doing.
+# Wire it once per clone: bash scripts/git-hooks/install.sh
+
+set -uo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT" || exit 1
+
+# The installed hook is a COPY living outside the working tree (see
+# install.sh). A copy can drift from its tracked source — say so loudly
+# rather than running a stale gate.
+TRACKED="$REPO_ROOT/scripts/git-hooks/pre-push"
+if [ -f "$TRACKED" ] && [ -n "${BASH_SOURCE[0]:-$0}" ]; then
+  SELF="${BASH_SOURCE[0]:-$0}"
+  if ! cmp -s "$TRACKED" "$SELF" 2>/dev/null; then
+    echo ""
+    echo "  ⚠ pre-push hook differs from scripts/git-hooks/pre-push on this branch."
+    echo "    Running the INSTALLED copy. To sync:  bash scripts/git-hooks/install.sh"
+    echo ""
+  fi
+fi
+
+# stdin gives us "<local ref> <local sha> <remote ref> <remote sha>" per ref.
+TARGETS=""
+while read -r _local_ref _local_sha remote_ref _remote_sha; do
+  [ -n "$remote_ref" ] && TARGETS="$TARGETS ${remote_ref#refs/heads/}"
+done
+
+# Nothing on stdin — don't block.
+[ -z "${TARGETS// /}" ] && exit 0
+
+MODE="fast"
+for t in $TARGETS; do
+  case "$t" in
+    main|develop|master) MODE="full" ;;
+  esac
+done
+
+echo ""
+echo "──────────────────────────────────────────────────────────────"
+echo "  pre-push → running CI LOCALLY"
+echo "  target(s):$TARGETS"
+echo "  mode: $MODE"
+echo "──────────────────────────────────────────────────────────────"
+
+if [ "$MODE" = "full" ]; then
+  node scripts/ci-local.mjs
+else
+  node scripts/ci-local.mjs --fast
+fi
+STATUS=$?
+
+if [ $STATUS -ne 0 ]; then
+  echo ""
+  echo "  ✗ Local CI failed — push blocked."
+  echo "    Fix it, or bypass with:  git push --no-verify"
+  echo "    Nothing else is checking this repo."
+  echo ""
+  exit 1
+fi
+
+echo ""
+echo "  ✓ Local CI passed — pushing."
+echo ""
+exit 0
