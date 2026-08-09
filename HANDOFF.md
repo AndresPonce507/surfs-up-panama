@@ -98,7 +98,7 @@ Two things about it were nearly lost and are now fixed:
 ### Post-Slice-03 workflow decision
 
 After Slice-03 is shipped, move this project off the 4.0.0 experimental `atdd_pure`
-workflow and onto a pinned pre-4.0 workflow release. Preserve the valuable quality
+workflow and onto pinned nWave 3.15.1 with the classic delivery spine. Preserve the valuable quality
 mechanisms as first-class integration points, not copied prompt text:
 
 - Classify every slice as user-visible or non-visual at DISTILL open. User-visible
