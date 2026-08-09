@@ -176,14 +176,14 @@ export class FixtureSource implements ForecastSource {
       .map((m) => ({
         source: m.source,
         run_ts: this.runTs,
-        hours: VALID_HOURS_UTC.map((h) => ({
-          valid_ts: utcHourKey(this.date, h),
+        hours: [this.date, nextCivilDate(this.date)].flatMap((date, day) => VALID_HOURS_UTC.map((h) => ({
+          valid_ts: utcHourKey(date, h),
           swell: this.masked.has(m.source)
             ? { h_m: 0, t_s: 0, dir_deg: 0 }
-            : { h_m: m.h_m + this.bump, t_s: m.t_s, dir_deg: m.dir_deg },
+            : { h_m: m.h_m + this.bump + day * 0.4, t_s: m.t_s, dir_deg: m.dir_deg },
           swell2: null,
           land_masked: this.masked.has(m.source),
-        })),
+        }))),
       }));
     return {
       ok: true,
@@ -197,10 +197,10 @@ export class FixtureSource implements ForecastSource {
     return {
       ok: true,
       verbatim: JSON.stringify({ provider: 'open-meteo-wind', date: this.date }),
-      data: VALID_HOURS_UTC.map((h) => ({
-        valid_ts: utcHourKey(this.date, h),
+      data: [this.date, nextCivilDate(this.date)].flatMap((date) => VALID_HOURS_UTC.map((h) => ({
+        valid_ts: utcHourKey(date, h),
         wind: { speed_kt: venaoWind.speed_kt, dir_deg: venaoWind.dir_deg },
-      })),
+      }))),
     };
   }
 
@@ -209,7 +209,9 @@ export class FixtureSource implements ForecastSource {
     return {
       ok: true,
       verbatim: JSON.stringify({ provider: 'coops', date: this.date }),
-      data: venaoTideCurve.map(([h, m]) => ({ valid_ts: utcHourKey(this.date, h), tide_m: m })),
+      data: [this.date, nextCivilDate(this.date)].flatMap((date) => venaoTideCurve.map(([h, m]) => ({ valid_ts: utcHourKey(date, h), tide_m: m }))),
     };
   }
 }
+
+function nextCivilDate(date: string): string { const tomorrow = new Date(`${date}T12:00:00Z`); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1); return tomorrow.toISOString().slice(0, 10); }
