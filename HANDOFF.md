@@ -95,6 +95,30 @@ Two things about it were nearly lost and are now fixed:
 
 **Begin Slice-03 JIT DISTILL.** Slice-02 is shipped; Slice-03's launch spot-list data prerequisite remains pending for its seed-file content. Current facts:
 
+### Post-Slice-03 workflow decision
+
+After Slice-03 is shipped, move this project off the 4.0.0 experimental `atdd_pure`
+workflow and onto a pinned pre-4.0 workflow release. Preserve the valuable quality
+mechanisms as first-class integration points, not copied prompt text:
+
+- Classify every slice as user-visible or non-visual at DISTILL open. User-visible
+  slices must load `nw-ui-quality-mandates`, carry `ui` requirement rows and induced
+  automated checks for U1-U7, plus a U8 charter observation. Non-visual slices record
+  an explicit N/A rationale instead of fabricating pixel checks.
+- Reuse feature-level UI fixtures and static checks, while each changed visible slice
+  proves its own affected states, minimum viewport, target sizes, motion treatment,
+  token usage and contrast against the actual backdrop.
+- Require Vera (`nw-user-examiner`) after GREEN and before the slice commit. Vera uses
+  only the user surface, never source, and records PASS, FAIL or INDETERMINATE against
+  the slice charter. The final visible slice also receives a feature-level smoke walk.
+- Restore independent-slice worktree fan-out where dependencies permit it. Distillation,
+  implementation and review may run concurrently; shared-file integration and commits
+  remain serialized and dependency-ordered.
+
+Do not switch workflow or create this migration while Slice-03 is in flight. First
+complete Slice-03 under its current contract, then implement and verify the migration
+in the nWave repository before using it for Slice-04.
+
 1. The eight charters are filled and pass their charter checks. The requirement checklist and
    red-classification record live under `docs/feature/daily-call-with-permanent-receipts/distill/`.
 2. Slice-01 and Slice-02 scenarios are on disk and green. Slice-03 is legally next for JIT
