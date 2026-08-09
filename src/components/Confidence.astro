@@ -22,18 +22,22 @@
 //
 // `name="confidence"` makes every disclosure on the page an exclusive HTML5
 // details group: opening one auto-closes any other already open, natively,
-// no JS. Without it, two open reasons could overlap on a phone screen since
-// each reason renders as a positioned dropdown the width of its row.
+// no JS.
 //
-// The visible trigger shows the bare level word ("baja"), not "Confianza
-// baja": real published call text (build/producer, 2026-08-09) runs up to
-// 65 characters, and "Confianza " alone cost ~70px this narrow column could
-// not spare without clipping that text -- measured, not guessed (rows
-// 10/12 "...viento destrozado..." on the real regenerated surface). The
-// charter's hard rule is the LEVEL WORD itself ("sin la palabra, es
-// FALLA"), not the word "confianza" as a prefix, so this still satisfies
-// it. `aria-label` keeps the full "Confianza {word}" context for assistive
-// tech, without spending visible-layout width on it.
+// Product decision (Andres, via coordinator, superseding the bare-word cut):
+// the visible trigger reads the full "Confianza alta/media/baja", not a
+// bare level word. A bare "Baja" beside a wave score reads as small waves,
+// not low confidence -- this product's whole premise is understanding the
+// call at a glance at 5:40am, and clarity wins over width budget. That
+// phrase no longer fits on the row's existing two lines without clipping
+// real call text (measured: "Confianza baja" cost ~121px of a 314px
+// column budget), so confidence now gets its own third line
+// (grid-column: 1 / -1, its own grid row) instead of sharing one -- a
+// third line per row is authorised for this reason, not an accident.
+//
+// No aria-label: the visible text already says the full phrase, and
+// <summary>'s native disclosure-triangle semantics already announce the
+// expand/collapse state, so adding one would double-announce both.
 import { CONFIDENCE_LEVEL_WORD_ES, confidenceReasonEs, type ConfidenceLevel } from '../scoring/confidence';
 
 interface Props {
@@ -46,6 +50,6 @@ const reason = confidenceReasonEs(level);
 ---
 
 <details class="confidence" name="confidence" data-level={level}>
-  <summary aria-label={`Confianza ${word}, toca para la razón`}>{word}</summary>
+  <summary>Confianza {word}</summary>
   <div>{reason}</div>
 </details>
