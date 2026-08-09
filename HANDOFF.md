@@ -19,23 +19,23 @@ recollection, this file wins. Update it before you stop working.
 | DISCUSS | ✅ 31 product decisions + an 11-feature epic plan |
 | DESIGN | ✅ 8 documents, ~30 ADRs, **two full review rounds and two fix rounds** |
 | DEVOPS | ✅ `08-devops.md` |
-| DISTILL | 🟡 Slices 01 and 02 are shipped. Slice-03 is active RED in JIT DISTILL with a 20-spot launch policy; Slice-04 through Slice-08 tests remain absent. |
-| DELIVER | 🟡 Slice-01 is committed through DES (`0f04f07`) and Slice-02 through DES (`592d660`). Slice-03 is active RED; Slice-04 through Slice-08 tests remain absent. |
+| DISTILL | ✅ Slices 01 through 03 are shipped. Slice-04 through Slice-08 tests remain absent until each legally enters JIT DISTILL. |
+| DELIVER | 🟡 Slice-01 (`0f04f07`), Slice-02 (`592d660`), and Slice-03 (`df25ee6`) are committed through DES. The workflow migration to upgraded nWave 3.15.1 starts now, before Slice-04. |
 
 **There is a working Slice-01 site** (16 pages, zero JS) and **a real spot data file** (23 spots).
 Its pipeline, scoring, Spanish reading surface, permanent receipt and mobile journey are committed
 in `0f04f07`. Slice-02 adds the pre-deploy CI guardrail. Its eight scenarios now drive the
 production-owned local-CI entry green against real CDK guardrails and credential-free synth. The
 default local gate passes all nine jobs, including the documented narrow OSV exception. Slice-02
-shipped through DES in `592d660`. Slice-03 is active RED in JIT DISTILL with an explicit 20-spot
-launch policy and three documented exclusions. DISTILL writes each slice's acceptance test before
-DELIVER writes that slice's production behavior.
+shipped through DES in `592d660`. Slice-03 shipped through DES in `df25ee6`: it loads the
+explicit 20-spot launch policy, ranks the coast, and renders the real static Spanish home. DISTILL
+writes each slice's acceptance test before DELIVER writes that slice's production behavior.
 
 ---
 
 ## Restart checkpoint for Codex
 
-**Slice-02 is shipped in `592d660`. Slice-03 is active RED in JIT DISTILL.**
+**Slice-03 is shipped in `df25ee6`. Upgrade and verify classic nWave 3.15.1 before beginning Slice-04 JIT DISTILL.**
 
 1. Start in this repository and read this file before touching the worktree:
    `cd /Users/andres/panama-surf`.
@@ -49,9 +49,10 @@ DELIVER writes that slice's production behavior.
    returns `SliceCleared`, exit 0.
 4. Slice-02 shipped as `592d660ab6235165a9522caadbd4ee80743b0c17`. Both
    `des verify-slice-commit --repo . --commit HEAD --feature-id daily-call-with-permanent-receipts`
-   and `des run-contract-gate --repo . --commit HEAD --verify-gate-scope` passed. Begin Slice-03
-   JIT DISTILL is active with `data/spots/pa-pacific-launch-v1.json`: exactly 20 launch records
-   and three documented exclusions. Slice-04 through Slice-08 tests remain absent.
+   and `des run-contract-gate --repo . --commit HEAD --verify-gate-scope` passed. Slice-03 shipped
+   as `df25ee6646615f6f267da7b40ef85cfd81e13509`: its 6 Slice-03 ATs and 36 steps, 29 unit tests,
+   UI gate, and browser journey pass; Vera recorded PASS after walking the 20-row coast. Both DES
+   commit gates passed. Slice-04 through Slice-08 tests remain absent.
 6. Codex nWave assets were reinstalled. `~/.agents/skills/nw-ui-quality-mandates/SKILL.md` now
    exists. Restart Codex to load the changed skill and agent specifications. In
    `/Users/andres/nWave-experimental`, the uncommitted installer fix is limited to
@@ -93,8 +94,8 @@ Two things about it were nearly lost and are now fixed:
 
 ## 4. Exact next step
 
-**Finish Slice-03 JIT DISTILL and DELIVER.** Its data prerequisite is closed by
-`docs/research/slice-03-launch-seed-readiness.md` and the versioned 20-spot policy. Current facts:
+**Finish the upgraded nWave 3.15.1 workflow migration, validate it, then begin Slice-04 JIT DISTILL.**
+Slice-03 is shipped in `df25ee6`; its versioned 20-spot policy is now production behavior.
 
 ### Post-Slice-03 workflow decision
 
@@ -127,15 +128,14 @@ mechanisms as first-class integration points, not copied prompt text:
   but do not port the global future-AT requirement, duplicate ledgers or standing review loops
   that made legal JIT delivery look incomplete.
 
-Do not switch workflow or create this migration while Slice-03 is in flight. First
-complete Slice-03 under its current contract, then implement and verify the migration
-in the nWave repository before using it for Slice-04.
+Slice-03 is complete under its current contract. Implement and verify this migration in the nWave
+repository now, before using it for Slice-04.
 
 1. The eight charters are filled and pass their charter checks. The requirement checklist and
    red-classification record live under `docs/feature/daily-call-with-permanent-receipts/distill/`.
-2. Slice-01 and Slice-02 scenarios are on disk and green. Slice-03 has six active RED scenarios
-   and the single existing browser journey now carries its 20-row home observable. Slice-04 through
-   Slice-08 scenarios remain absent. The delivered acceptance suite covers durable prediction writes,
+2. Slice-01 through Slice-03 scenarios are on disk and green. Slice-03's six scenarios and the
+   single browser journey prove the 20-row home observable. Slice-04 through Slice-08 scenarios
+   remain absent. The delivered acceptance suite covers durable prediction writes,
    scoring laws, the real built reading surface, source-failure modes, and the visual mandates.
 3. The mandatory four-reviewer DISTILL re-review has approved the corrected suite: the R43
    reading-state contract, port capabilities, prediction write-once documentation,
@@ -180,8 +180,8 @@ in the nWave repository before using it for Slice-04.
    credential-free CDK synth, and the full lockfile OSV scan. The one narrow, expiring OSV
    exception for AWS CDK's bundled `brace-expansion@5.0.8` is documented with its removal
    condition. `des verify-slice-commit --repo . --commit HEAD --feature-id daily-call-with-permanent-receipts`
-   and `des run-contract-gate --repo . --commit HEAD --verify-gate-scope` passed. Slice-03 is
-   active RED in JIT DISTILL; its launch spot-list data prerequisite is closed.
+   and `des run-contract-gate --repo . --commit HEAD --verify-gate-scope` passed. Slice-03 shipped
+   in `df25ee6` after fresh autonomous approval, green gates, and Vera PASS.
 
 **Two tags are mechanically load-bearing** and the carpaccio gate reads both. Get either wrong and
 the gate reports no scenarios for the slice:
@@ -241,8 +241,8 @@ proceed.**
    recreates them properly with real translation.
 4. **CLOSED.** Slice-01's independent approval and commit are recorded. Slice-02's fresh
    delegated APPROVED verdict, cleared carpaccio gate, DES commit (`592d660`), slice-commit
-   verification, and contract gate are recorded. Slice-03 is active RED in JIT DISTILL; its
-   spot-list data prerequisite is closed.
+   verification, and contract gate are recorded. Slice-03 shipped in `df25ee6`; its 20-spot policy
+   and three documented exclusions are live in the built home.
 
 **Needs Andres for launch, but not for the remaining local build:**
 

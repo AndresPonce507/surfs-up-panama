@@ -119,7 +119,7 @@ independent human AT-review verdict is recorded.
 
 ## Slice-03 RED classification
 
-Status: `active RED, observed 2026-08-09`
+Status: `historical RED observed 2026-08-09; green and shipped in df25ee6`
 
 The launch policy intentionally partitions the 23 human-owned Pacific source records into 20
 launch records and three named exclusions. `loadLaunchSpotSeeds` is the only new production
@@ -148,6 +148,16 @@ The sole existing browser journey is extended in this DISTILL turn, not duplicat
 opens the real home page, then fails on its added 20-row observable while the one-row Slice-01
 surface remains in place. This makes R30 an assembled-surface requirement without adding a second
 subprocess browser journey. Slice-04 through Slice-08 acceptance tests remain absent.
+
+## Slice-03 green result
+
+The production loader now reads the versioned policy and only the selected YAML records, rejects
+zero- and one-record policies before publication, applies the declared priors, publishes a
+descending 20-row 18Z ranking with `score_q`, and renders the static Spanish home from the
+published surface. On 2026-08-09, all six Slice-03 scenarios and 36 steps, 29 unit tests, the UI
+gate, and the sole browser journey passed. Source-blind Vera observed 20 named rows, scores 88 to
+39 in descending order, Spanish calls, no clipping or filler, and stable rebuilds/reloads. DES
+committed and verified the result in `df25ee6`.
 
 ## Slice-02 RED scaffold classification history
 
