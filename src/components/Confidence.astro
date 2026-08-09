@@ -24,6 +24,16 @@
 // details group: opening one auto-closes any other already open, natively,
 // no JS. Without it, two open reasons could overlap on a phone screen since
 // each reason renders as a positioned dropdown the width of its row.
+//
+// The visible trigger shows the bare level word ("baja"), not "Confianza
+// baja": real published call text (build/producer, 2026-08-09) runs up to
+// 65 characters, and "Confianza " alone cost ~70px this narrow column could
+// not spare without clipping that text -- measured, not guessed (rows
+// 10/12 "...viento destrozado..." on the real regenerated surface). The
+// charter's hard rule is the LEVEL WORD itself ("sin la palabra, es
+// FALLA"), not the word "confianza" as a prefix, so this still satisfies
+// it. `aria-label` keeps the full "Confianza {word}" context for assistive
+// tech, without spending visible-layout width on it.
 import { CONFIDENCE_LEVEL_WORD_ES, confidenceReasonEs, type ConfidenceLevel } from '../scoring/confidence';
 
 interface Props {
@@ -36,6 +46,6 @@ const reason = confidenceReasonEs(level);
 ---
 
 <details class="confidence" name="confidence" data-level={level}>
-  <summary>Confianza {word}</summary>
+  <summary aria-label={`Confianza ${word}, toca para la razón`}>{word}</summary>
   <div>{reason}</div>
 </details>
