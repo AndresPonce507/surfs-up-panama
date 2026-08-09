@@ -14,7 +14,7 @@ type DawnReceipt = {
 };
 
 type PublishedSurface = {
-  current: { surf_date: string };
+  current: { surf_date: string; days: readonly { spots: readonly { spot_id: string }[] }[] };
   dawn_receipts: DawnReceipt[];
 };
 
@@ -49,6 +49,21 @@ function priorDawnReceiptFromPublishedSurface(): DawnReceipt {
     );
   }
   return matchingReceipts[0]!;
+}
+
+// The hero "VE A {spot}" card names whichever spot is actually ranked first
+// today (slice-04). Deriving it here, rather than assuming a fixed spot,
+// keeps this assertion honest as the published surface is regenerated from
+// real pipeline output instead of a hand-authored fixture.
+function todaysTopRankedSpotName(expectedLaunchSpots: readonly SpotIdentity[]): string {
+  const fixturePath = join(process.cwd(), 'data', 'published-surface.json');
+  const surface = JSON.parse(readFileSync(fixturePath, 'utf8')) as PublishedSurface;
+  const topSpotId = surface.current.days[0]?.spots[0]?.spot_id;
+  const identity = expectedLaunchSpots.find((spot) => spot.spot_id === topSpotId);
+  if (identity === undefined) {
+    throw new Error(`published surface current.days[0].spots[0] (${String(topSpotId)}) has no identity among the 20 launch spots`);
+  }
+  return identity.name;
 }
 
 function launchSpotIdentities(): readonly SpotIdentity[] {
@@ -165,7 +180,8 @@ test('a surfer can read a real Spanish call and yesterday remains a separate pub
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/');
 
-  await expect.soft(page.getByRole('link', { name: 'VE A Playa Venao' })).toBeVisible({ timeout: 1_000 });
+  const expectedTopSpotName = todaysTopRankedSpotName(expectedLaunchSpots);
+  await expect.soft(page.getByRole('link', { name: `VE A ${expectedTopSpotName}` })).toBeVisible({ timeout: 1_000 });
   const rankedRows = page.locator('ol.ranked li');
   await expect.soft(
     rankedRows,
