@@ -3,11 +3,11 @@
 **This file is the truth.** If it disagrees with a transcript, a memory, or anyone's
 recollection, this file wins. Update it before you stop working.
 
-- **Rewritten:** 2026-08-08 (second write of the day; the first is in git history)
+- **Rewritten:** 2026-08-09
 - **Repo:** https://github.com/AndresPonce507/surfs-up-panama (public, MIT)
 - **Local:** `/Users/andres/panama-surf`
-- **Branch:** `design-round-1`; Slice-02 shipped through DES in `592d660`.
-- **nWave:** 4.0.0 experimental (atdd-pure). This matters, see §8.
+- **Branch:** `design-round-1`; Slice-03 shipped through DES in `df25ee6`.
+- **nWave:** upgraded local classic 3.15.1 at `/Users/andres/nWave-classic-3.15.1`, installed through `nwave-ai`. This matters, see §4.
 
 ---
 
@@ -20,7 +20,7 @@ recollection, this file wins. Update it before you stop working.
 | DESIGN | ✅ 8 documents, ~30 ADRs, **two full review rounds and two fix rounds** |
 | DEVOPS | ✅ `08-devops.md` |
 | DISTILL | ✅ Slices 01 through 03 are shipped. Slice-04 through Slice-08 tests remain absent until each legally enters JIT DISTILL. |
-| DELIVER | 🟡 Slice-01 (`0f04f07`), Slice-02 (`592d660`), and Slice-03 (`df25ee6`) are committed through DES. The workflow migration to upgraded nWave 3.15.1 starts now, before Slice-04. |
+| DELIVER | 🟡 Slice-01 (`0f04f07`), Slice-02 (`592d660`), and Slice-03 (`df25ee6`) are committed through DES. The upgraded classic 3.15.1 migration is installed and verified. Slice-04 is legally next for JIT DISTILL. |
 
 **There is a working Slice-01 site** (16 pages, zero JS) and **a real spot data file** (23 spots).
 Its pipeline, scoring, Spanish reading surface, permanent receipt and mobile journey are committed
@@ -35,7 +35,7 @@ writes each slice's acceptance test before DELIVER writes that slice's productio
 
 ## Restart checkpoint for Codex
 
-**Slice-03 is shipped in `df25ee6`. Upgrade and verify classic nWave 3.15.1 before beginning Slice-04 JIT DISTILL.**
+**Slice-03 is shipped in `df25ee6`. Upgraded classic nWave 3.15.1 is installed and verified. Begin Slice-04 JIT DISTILL.**
 
 1. Start in this repository and read this file before touching the worktree:
    `cd /Users/andres/panama-surf`.
@@ -53,8 +53,11 @@ writes each slice's acceptance test before DELIVER writes that slice's productio
    as `df25ee6646615f6f267da7b40ef85cfd81e13509`: its 6 Slice-03 ATs and 36 steps, 29 unit tests,
    UI gate, and browser journey pass; Vera recorded PASS after walking the 20-row coast. Both DES
    commit gates passed. Slice-04 through Slice-08 tests remain absent.
-6. Codex nWave assets were reinstalled. `~/.agents/skills/nw-ui-quality-mandates/SKILL.md` now
-   exists. Restart Codex to load the changed skill and agent specifications. In
+6. Classic 3.15.1 quality port is committed in `12de550` and the installer/shim repair in
+   `02e63e6`. It is installed as an editable `nwave-ai==3.15.1` tool. `nwave-ai doctor` passes
+   8 of 8 checks; the UI-mandate and expectation-charter skills, Vera agent, and both DES shims
+   exist on the Codex surface. The workflow now allows proven-safe worktree fan-out with isolated
+   evidence, while visible steps require U1-U7 checks and a sealed Vera PASS before COMMIT. In
    `/Users/andres/nWave-experimental`, the uncommitted installer fix is limited to
    `scripts/shared/agent_catalog.py` and
    `tests/installer/unit/plugins/test_codex_skills_plugin.py`; it retains the composed UI mandate
@@ -94,14 +97,15 @@ Two things about it were nearly lost and are now fixed:
 
 ## 4. Exact next step
 
-**Finish the upgraded nWave 3.15.1 workflow migration, validate it, then begin Slice-04 JIT DISTILL.**
-Slice-03 is shipped in `df25ee6`; its versioned 20-spot policy is now production behavior.
+**Begin Slice-04 JIT DISTILL under the upgraded classic 3.15.1 workflow.**
+Slice-03 is shipped in `df25ee6`; its versioned 20-spot policy is now production behavior. The
+classic migration is complete in `12de550` and `02e63e6`, installed and doctor-verified.
 
 ### Post-Slice-03 workflow decision
 
-After Slice-03 is shipped, move this project off the 4.0.0 experimental `atdd_pure`
-workflow and onto pinned nWave 3.15.1 with the classic delivery spine. Preserve the valuable quality
-mechanisms as first-class integration points, not copied prompt text:
+The project moved off the 4.0.0 experimental `atdd_pure` workflow and onto upgraded
+nWave 3.15.1 with the classic delivery spine. The following quality mechanisms are first-class
+integration points, not copied prompt text:
 
 - Classify every slice as user-visible or non-visual at DISTILL open. User-visible
   slices must load `nw-ui-quality-mandates`, carry `ui` requirement rows and induced
@@ -128,8 +132,8 @@ mechanisms as first-class integration points, not copied prompt text:
   but do not port the global future-AT requirement, duplicate ledgers or standing review loops
   that made legal JIT delivery look incomplete.
 
-Slice-03 is complete under its current contract. Implement and verify this migration in the nWave
-repository now, before using it for Slice-04.
+Slice-03 is complete under its current contract. The migration has passed focused quality,
+installer, packaging, and deployed-doctor verification. Use it for Slice-04.
 
 1. The eight charters are filled and pass their charter checks. The requirement checklist and
    red-classification record live under `docs/feature/daily-call-with-permanent-receipts/distill/`.
