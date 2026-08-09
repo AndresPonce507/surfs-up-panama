@@ -27,10 +27,17 @@ Feature: Cada fila trae su nivel de confianza y la razón a un toque
     And ninguna razón reclama ni sugiere una confirmación desde la playa
     And ninguna razón abre vacía ni con texto crudo de datos
 
-  @slice-07 @driving_port @real-io @adapter-integration @ui-u2 @ui-u3 @ui-u4 @ui-u6 @covers-R33
-  Scenario: Con la confianza sumada, las filas del teléfono siguen limpias y ambas señales se leen sin esfuerzo
+  @slice-07 @driving_port @real-io @adapter-integration @ui-u1 @ui-u2 @ui-u3 @ui-u4 @ui-u6 @covers-R33
+  Scenario Outline: Con la confianza sumada, las filas del teléfono siguen limpias en tema <tema> y movimiento <movimiento>
     Given una mañana publicada con spots de confianza alta, media y baja para hoy y mañana, con un destino de nombre largo
-    When el surfista abre "la home" buscando la confianza, a 390 px, con tema "claro" y movimiento "normal"
+    When el surfista abre "la home" buscando la confianza, a 390 px, con tema "<tema>" y movimiento "<movimiento>"
     Then ninguna fila se desborda el ancho de 390 px ni recorta su texto al sumar la confianza
+    And la confianza comparte la segunda línea de la fila en vez de agregar una tercera
     And el puntaje y la palabra de confianza de cada fila se leen sin abrir nada
     And el toque de confianza mide al menos 44 por 44 px y no tiene movimiento
+    And el texto de la confianza tiene suficiente contraste contra el fondo real de la tarjeta
+
+    Examples:
+      | tema | movimiento |
+      | claro | normal |
+      | oscuro | reducido |
