@@ -1,0 +1,46 @@
+{
+  "captured_at": "2026-08-09T18:42:49.282Z",
+  "spots_requested": 20,
+  "wave_endpoint": "https://marine-api.open-meteo.com/v1/marine",
+  "wind_endpoint": "https://api.open-meteo.com/v1/forecast",
+  "models": [
+    "ncep_gfswave016",
+    "ncep_gfswave025",
+    "meteofrance_wave",
+    "dwd_gwam"
+  ],
+  "tide": {
+    "fetched": false,
+    "reason": "no per-spot tide station reference exists in the spot seed schema yet (04-ingest-pipeline.md section 11, DELIVER BLOCKER); reusing one station for every spot would misattribute a real number to spots hundreds of km away"
+  },
+  "cycle_attribution": "simplified candidate-cycle rule only (04-ingest-pipeline.md section 5 steps 1-2); no change-detection probe, since this is a first standalone capture with no prior cycle to compare against",
+  "events": [
+    {
+      "type": "prediction_created",
+      "detail": "predictions/v1/dt=2026-08-09/src=ncep_gfswave016/cyc=12Z/all.jsonl.gz"
+    },
+    {
+      "type": "prediction_created",
+      "detail": "predictions/v1/dt=2026-08-09/src=ncep_gfswave025/cyc=12Z/all.jsonl.gz"
+    },
+    {
+      "type": "prediction_created",
+      "detail": "predictions/v1/dt=2026-08-09/src=meteofrance_wave/cyc=12Z/all.jsonl.gz"
+    },
+    {
+      "type": "prediction_created",
+      "detail": "predictions/v1/dt=2026-08-09/src=dwd_gwam/cyc=12Z/all.jsonl.gz"
+    }
+  ],
+  "coverage": [
+    {
+      "date": "2026-08-09",
+      "sources_present": [
+        "dwd_gwam",
+        "meteofrance_wave",
+        "ncep_gfswave016",
+        "ncep_gfswave025"
+      ]
+    }
+  ]
+}
