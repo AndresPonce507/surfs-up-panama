@@ -49,7 +49,13 @@ type PublishedCall = {
   readonly best_window?: { readonly start: string; readonly end: string };
 };
 
-const today: readonly DaySummary[] = (surface.current.calls as readonly PublishedCall[]).map((call) => ({
+type PublishedDay = {
+  readonly date: string;
+  readonly calls?: readonly PublishedCall[];
+};
+
+function summaries(calls: readonly PublishedCall[]): readonly DaySummary[] {
+  return calls.map((call) => ({
   spot_id: call.spot_id,
   score_q: call.score_q,
   call: { es: call.call_es },
@@ -57,9 +63,18 @@ const today: readonly DaySummary[] = (surface.current.calls as readonly Publishe
   ...(call.size_range_m === undefined ? {} : { size_range_m: call.size_range_m }),
   ...(call.wind_state === undefined ? {} : { wind_state: call.wind_state }),
   ...(call.best_window === undefined ? {} : { best_window: call.best_window }),
-}));
+  }));
+}
+
+const current = surface.current as {
+  readonly calls: readonly PublishedCall[];
+  readonly days?: readonly PublishedDay[];
+};
+const publishedDays = current.days;
+const today = summaries(publishedDays?.[0]?.calls ?? current.calls);
+const tomorrow = summaries(publishedDays?.[1]?.calls ?? []);
 
 export const forecast: ForecastPlaceholder = {
   published_at: surface.current.published_at,
-  days: [today, today],
+  days: [today, tomorrow],
 };

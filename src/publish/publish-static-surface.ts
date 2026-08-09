@@ -1,7 +1,7 @@
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-import { mergePublishedSurface, type PublishedSurfaceUpdate, type StaticSurface, type SurfaceCall } from './static-surface';
+import { mergePublishedSurface, type PublishedSurfaceDay, type PublishedSurfaceUpdate, type StaticSurface, type SurfaceCall } from './static-surface';
 
 const DEFAULT_SURFACE_PATH = 'data/published-surface.json';
 
@@ -44,6 +44,7 @@ async function readSurface(path: string): Promise<StaticSurface> {
   if (!isRecord(value) || value.schema !== 'static-surface/v1' || !isRecord(value.current) || !Array.isArray(value.dawn_receipts)) {
     throw new Error(`publish-surface refused: WHAT invalid static surface at ${path}; WHY the archive must contain a current publication and a receipt collection; HOW restore a valid data/published-surface.json or publish a verified bundle.`);
   }
+  validateTwoDays(value.current);
   return value as StaticSurface;
 }
 
@@ -62,7 +63,30 @@ function publishedUpdate(value: unknown): PublishedSurfaceUpdate {
     || !candidate.calls.every(isSurfaceCall)) {
     throw new Error('publish-surface refused: WHAT input lacks the published-surface-update/v1 contract; WHY static HTML may only render a completed build receipt; HOW pass the pub/v1 region bundle produced by runBuildOnce.');
   }
+  validateTwoDays(candidate);
   return candidate as PublishedSurfaceUpdate;
+}
+
+function validateTwoDays(candidate: Record<string, unknown>): void {
+  if (!Array.isArray(candidate.days) || candidate.days.length !== 2 || !candidate.days.every(isSurfaceDay)) {
+    throw new Error('publish-surface refused: WHAT publication does not contain exactly today and tomorrow; WHY the site must not copy today or promise a third day; HOW publish two valid consecutive day summaries from runBuildOnce.');
+  }
+  const [today, tomorrow] = candidate.days;
+  if (!isSurfaceDay(today) || !isSurfaceDay(tomorrow) || today.date !== candidate.surf_date || tomorrow.date !== nextDate(today.date) || !Array.isArray(tomorrow.calls) || tomorrow.calls.length === 0) {
+    throw new Error('publish-surface refused: WHAT day summaries are not current-date plus consecutive tomorrow with a ranking; WHY Mañana needs its own completed values; HOW preserve the two civil dates and tomorrow calls from the build bundle.');
+  }
+}
+
+function isSurfaceDay(value: unknown): value is PublishedSurfaceDay {
+  return isRecord(value)
+    && typeof value.date === 'string'
+    && (value.calls === undefined || (Array.isArray(value.calls) && value.calls.every(isSurfaceCall)));
+}
+
+function nextDate(civilDate: string): string {
+  const date = new Date(`${civilDate}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
 }
 
 function isSurfaceCall(value: unknown): value is SurfaceCall {

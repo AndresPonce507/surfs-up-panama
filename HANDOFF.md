@@ -307,3 +307,136 @@ for genuinely disjoint work, not for work that merely lives in different files.
 - The repo is public. Never commit credentials. `.nwave/config.yaml` and `des-config.json` are
   tracked on purpose; the rest of `.nwave/` is not
 - Git identity here is `andresponce0001@gmail.com`, which attributes correctly on `AndresPonce507`
+
+---
+
+## 9. Slice-04 pause point, 2026-08-09
+
+**Status: Slice-04 shipped.** The verified implementation commit is
+`fee3aadf91b2c8f48922a9cd999a498907be4bba`; the tracker update is
+`26df2b6`. The permanent source-blind Terra examiner recorded PASS against the HTTPS preview,
+with title `¿Dónde se surfea hoy?`, reason `Pecho a cabeza, viento limpio, mejor de 06:00 a
+09:30.`, and screenshot `/private/tmp/terra-vera-cloudfront-spanish-final.png`. DES recorded the
+examiner verdict and verified the slice commit. The local built page was opened at
+`http://127.0.0.1:58532/` in Chrome for Andres's smoke test.
+
+### What Slice-04 changes
+
+- The home page has an oversized winning call with literal Spanish `VE A Playa Venao`.
+- Its visible reason is Spanish plain language: `Pecho a cabeza, viento limpio, mejor de 06:00 a
+  09:30.`
+- The pipeline publishes the structured size, wind, and time fields that make this repeatable.
+- Slice-04 ATs include a disguised technical model token regression case. The E2E identity check
+  understands the added `VE A` presentation prefix.
+
+### Verified evidence
+
+- `npm run ci:local` passed on 2026-08-09 after the last AT change: 9 passed, 0 failed, 0 skipped.
+  This includes typecheck, unit, UI, infra, AT, E2E, security, secrets, and dependency gates.
+- Focused Slice-04 ATs passed: 9 scenarios, 61 steps.
+- `git diff --check` passed before the pause.
+- A fresh `npm run build` completed immediately before the pause. A local static server is still
+  running from `dist/` at `http://127.0.0.1:58532/` (parent agent session id 68427). Its direct
+  HTTP output includes `VE A Playa Venao` and `Pecho a cabeza, viento limpio, mejor de 06:00 a
+  09:30.`. Confirm it is still live with:
+
+  ```sh
+  curl -fsS http://127.0.0.1:58532/ | rg -o 'VE A[^<]*|Pecho a cabeza[^<]*'
+  ```
+
+### Vera blocker and correct next action
+
+The built public page and a direct 390x844 Playwright screenshot were Spanish. Three earlier
+examiner runs nevertheless claimed an English page. The final Terra run cited
+`/tmp/panama-surf-slice04-vera-58532-390x844.png` but again claimed English although the fresh
+server's direct HTML was Spanish. Treat those FAILs as conflicting examiner evidence, **not** as a
+product defect. Do not record them as a charter failure and do not commit on a guessed PASS.
+
+The permanent Codex-compatible replacement is installed globally as
+`nw-codex-user-examiner`, model `gpt-5.6-terra`; Codex config sets high reasoning. It requires a
+fresh public artifact and returns INDETERMINATE for conflicts. It will be visible only after a new
+Codex session starts. In that new session, run this examiner source-blind against port 58532 or a
+freshly built equivalent, requiring the final URL, exact title, exact reason, and a screenshot path.
+If its screenshot conflicts with the direct server output, inspect the screenshot and return
+INDETERMINATE rather than guessing.
+
+**Latest examiner evidence, 2026-08-09:** the permanent Terra examiner reached
+`http://127.0.0.1:58532/` but Chrome showed title `127.0.0.1`, reason
+`127.0.0.1 didn’t send any data.`, and `ERR_EMPTY_RESPONSE`; its screenshot is
+`/private/tmp/terra-vera-127-0-0-1-58532.png`. The verdict is **INDETERMINATE**.
+Do not reinterpret this as a product PASS or FAIL. Restore a preview that is reachable from the
+examiner's actual browser surface, then repeat the source-blind observation before committing.
+
+**Repeated browser-artifact conflict, 2026-08-09:** after a fresh `npm run build`, the generated
+`dist/index.html` contained Spanish title `¿Dónde se surfea hoy?` and `VE A Playa Venao` with
+`Pecho a cabeza, viento limpio, mejor de 06:00 a 09:30.`. Two fresh Terra browser walks at the
+same URL instead showed English title `Where's the surfing going today?` and English reason
+`Chest to head, clear wind, best from 06:00 to 09:30.`; screenshots are
+`/private/tmp/terra-vera-127-0-0-1-58532-repeat.png` and
+`/private/tmp/terra-vera-127-0-0-1-58532-final.png`. This is an environment artifact conflict,
+so the only valid result remains **INDETERMINATE**. Do not commit Slice-04 until Terra can inspect
+the exact rebuilt public artifact, preferably through a separately hosted preview URL.
+
+**AWS preview attempt, 2026-08-09:** Andres explicitly requested an isolated hosted preview.
+`arn:aws:iam::602167897909:user/andres-cli` created private bucket
+`surfs-up-panama-preview-602167897909` in `us-east-1`, tagged it as an ephemeral preview, and
+uploaded the fresh `dist/` artifact. The account denies `s3:PutBucketPublicAccessBlock` and
+`cloudfront:CreateOriginAccessControl`, so the bucket remains private (anonymous HTTPS fetch of
+`index.html` returns 403) and no preview URL exists yet. No CDK stack, DNS, database, Lambda, or
+production bucket was touched. Required least-privilege path: permit creation of a CloudFront
+origin access control and distribution plus the narrowly scoped bucket policy for this preview
+bucket, or have Andres create that CloudFront distribution himself.
+
+**AWS preview resolved, 2026-08-09:** the same identity successfully created legacy CloudFront
+origin access identity `E3NNZ9FL9FTR4`, a non-public S3 policy scoped to that canonical identity,
+and distribution `EH95FHQ75WCL3`. The public HTTPS preview is
+`https://d1j9u9fxnap4es.cloudfront.net/`; it returned HTTP 200 and its fetched HTML contains
+`¿Dónde se surfea hoy?`, `VE A Playa Venao`, and
+`Pecho a cabeza, viento limpio, mejor de 06:00 a 09:30.`. No production resource changed.
+The permanent Terra agent's Chrome surface still auto-translates Spanish and lacks the in-app
+browser; its result remains **INDETERMINATE** until Chrome translation is disabled for this site.
+
+**Hosted smoke, 2026-08-09:** direct HTTPS smoke against the CloudFront preview passed: home
+and `/spots/playa-venao/ayer.html` both returned HTTP 200; the home returned the exact Spanish
+title, `VE A Playa Venao`, and the Slice-04 reason. `PREVIEW_URL` was not usable for the existing
+Playwright command because its `webServer.reuseExistingServer: false` treats an already-live
+external URL as a conflict before a test begins. That test-runner configuration issue is outside
+Slice-04 and does not alter the hosted smoke result.
+
+After a valid PASS, run the relevant DES commit command available in the new session, commit only
+the Slice-04 paths listed below, then open `http://127.0.0.1:58532/` in a browser tab for Andres.
+Remove the generated untracked `test-results/` directory before the commit. Do not alter the
+unrelated existing `.nwave/.gitignore` and `.nwave/des-config.json` changes.
+
+### Files owned by Slice-04
+
+- `data/published-surface.json`
+- `src/components/RankedList.astro`
+- `src/data/forecast.ts`
+- `src/pipeline/build.ts`
+- `tests/e2e/daily-call-with-permanent-receipts/walking-skeleton.spec.ts`
+- `tests/acceptance/daily-call-with-permanent-receipts/top-call-card.feature`
+- `tests/acceptance/daily-call-with-permanent-receipts/top-call-card.steps.ts`
+- `tests/acceptance/daily-call-with-permanent-receipts/fixtures/slice-04-top-call-variants.json`
+- Slice-04 expectation, requirement-checklist, RED classification, and feature-delta documentation
+  already modified under `docs/feature/daily-call-with-permanent-receipts/` and `docs/product/expectations/`.
+
+### Cross-terminal state
+
+- `agent-hub` CLI is working. This terminal is `codex-ttys001`, rejoined as coordinator for
+  `/Users/andres/panama-surf`.
+- Message 22 from `codex-ttys000` is unacknowledged because this old Codex session's MCP transport
+  is closed. It asks the fresh client to join, call whoami, enable direct input while idle, reply
+  with evidence, and acknowledge it.
+- This terminal replied through CLI as message 23. `codex mcp list` shows `agent_hub` enabled. The
+  new Codex session should start with `join_workspace`, `whoami`, `inbox`, and `status`, then
+  acknowledge message 22 before continuing Slice-04.
+
+### nWave install note
+
+`nw-codex-user-examiner` is installed and verified at
+`/Users/andres/.codex/agents/nw-codex-user-examiner.toml`. The global DES shim at
+`/Users/andres/.claude/bin/des` currently has a stale uv Python shebang and fails if invoked from
+this old session. This is an installer issue outside Slice-04. A fresh Codex session may expose a
+working DES hook. If it does not, repair the nWave installer path separately; do not hand-edit the
+Slice-04 code to work around it.

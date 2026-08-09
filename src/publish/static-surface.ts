@@ -10,6 +10,14 @@ export type PublishedSurfaceUpdate = {
   readonly published_at: string;
   readonly build_kind: 'dawn' | 'hourly';
   readonly calls: readonly SurfaceCall[];
+  /** Ranked day summaries. Exactly today and tomorrow when Slice-05 ships. */
+  readonly days?: readonly PublishedSurfaceDay[];
+};
+
+export type PublishedSurfaceDay = {
+  readonly date: string;
+  /** Day zero may omit calls because `current.calls` is its canonical home. */
+  readonly calls?: readonly SurfaceCall[];
 };
 
 export type StaticSurface = {
