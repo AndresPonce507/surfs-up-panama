@@ -50,10 +50,31 @@ post-Slice-03 workflow decision).
 
 ## Current DISTILL coverage
 
-None. No acceptance test exists for this feature yet, deliberately: this project writes
-acceptance tests Just In Time, per slice, at the moment that slice enters DISTILL (HANDOFF §1,
-§4). Slices 01 to 03 additionally share one serial file lane (`infra/lib/guardrail-declarations.ts`,
-`infra/bin/app.ts`, `infra/test/guardrails.test.ts`, plus the `scripts/ci-local-core.mjs` job
-registry) and must not open concurrently with keystone slice-08. Slices 04 and 05 have no
-authorable test at all: their observables are a live email and a live account read, gated on
-pre-requisites 3 to 8 in `feature-delta.md`.
+Slices 01, 02 and 03 entered DISTILL and shipped (2026-08-09). R1-R17 covered in
+`tests/acceptance/f-bill-stays-zero-and-stays-up/bill-and-uptime-guardrails.feature`
+(`@covers-R1` through `@covers-R17` tags) plus unit-level red-proof coverage in
+`infra/test/guardrails.test.ts`: `assertBucketVersioningEnabled` (R1, R2, R4) and
+`assertCostAllocationTagPresent` (R16). Slices 04 and 05 have no authorable test at all: their
+observables are a live email and a live account read, gated on pre-requisites 3 to 8 in
+`feature-delta.md`; R18-R24 remain uncovered by design.
+
+Architectural note recorded here because it changes how future slices must be authored: the
+declaration checks for slices 01-03 do NOT live inside the pre-existing
+`evaluateInfrastructureDeclarations` function in `infra/guardrail-evaluator.mjs`. That function is
+exercised directly, via `declarationInput`-mode calls, by the keystone `daily-call-with-permanent-
+receipts` feature's own frozen, off-limits fixture
+(`tests/acceptance/daily-call-with-permanent-receipts/fixtures/controlled-infrastructure-
+declarations/`), which predates this feature and cannot declare F-BILL's new keys. Adding hard
+requirements there regressed that fixture's "clean declaration" scenario to a false failure. The
+fix: a new, separate `evaluateBillGuardrails` phase in the same file, wired into
+`scripts/ci-local-core.mjs`'s `runInfrastructureJob` immediately after the existing declaration
+phase and before the vitest/synth phases. It never runs under `declarationInput`-mode, so it never
+reaches -- and never breaks -- the keystone's fixture. This feature's own negative scenarios drive
+it through the "public-contained-root" pattern (`runLocalCi({ argv: ['--job=infra'], repoRoot:
+copy.root })`, no `declarationInput`), which the keystone's own suite already established as a
+precedent. Any future slice adding a new required declaration key must follow this same
+separate-phase pattern, never add to `evaluateInfrastructureDeclarations` directly.
+
+Slices 01 to 03 additionally share one serial file lane (`infra/lib/guardrail-declarations.ts`,
+`infra/bin/app.ts`, `infra/test/guardrails.test.ts`, `infra/guardrail-evaluator.mjs`, plus the
+`scripts/ci-local-core.mjs` job registry) and must not open concurrently with keystone slice-08.

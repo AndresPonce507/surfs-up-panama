@@ -1,10 +1,12 @@
-import { App, Fn, Stack } from 'aws-cdk-lib';
+import { App, Fn, Stack, Tags } from 'aws-cdk-lib';
 import type { Construct } from 'constructs';
 import { CfnRole } from 'aws-cdk-lib/aws-iam';
 import { CfnFunction } from 'aws-cdk-lib/aws-lambda';
 import { CfnLogGroup } from 'aws-cdk-lib/aws-logs';
 import { CfnBucket } from 'aws-cdk-lib/aws-s3';
 import {
+  archiveBucketVersioning,
+  costAllocationTag,
   guardrailDeclarations,
   lifecycleRules,
   predictionLifecyclePolicy,
@@ -59,6 +61,9 @@ export function createGuardrailStack(
       ignorePublicAcls: true,
       restrictPublicBuckets: true,
     },
+    versioningConfiguration: {
+      status: archiveBucketVersioning['archive-bucket-versioning'],
+    },
     lifecycleConfiguration: {
       rules: configuredLifecycleRules.map(asLifecycleRule),
     },
@@ -99,6 +104,11 @@ export function createGuardrailStack(
       retentionInDays: logRetentionDays,
     });
   }
+
+  // Slice-03 (F-BILL): project cost-allocation tag on every resource this
+  // project declares, so a project-scoped $0.00 is provable on a shared
+  // account once the tag key is activated.
+  Tags.of(stack).add(costAllocationTag['cost-allocation-tag-key'], costAllocationTag['cost-allocation-tag-value']);
 
   return stack;
 }
