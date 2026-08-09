@@ -77,7 +77,7 @@ Notes on the plan:
 
 | Origin | Commitment | DDD | Impact |
 | --- | --- | --- | --- |
-| DISCUSS Slice Plan slices 01-03 | Slice-01's Venao vertical remains unchanged; Slice-02 protects the irreplaceable archive and concrete cost limits before any deploy; Slice-03 expands the real public coast to the data-defined 20-spot ranking. | n/a | Slice-03 shipped in `df25ee6`; Slice-04 onward scenarios remain absent. |
+| DISCUSS Slice Plan slices 01-04 | Slice-01's Venao vertical remains unchanged; Slice-02 protects the irreplaceable archive and concrete cost limits before any deploy; Slice-03 expands the real public coast to the data-defined 20-spot ranking; Slice-04 turns its first row into the unmistakable daily call. | n/a | Slice-03 shipped in `df25ee6`; Slice-04 is active RED through the real built home; later-slice scenarios remain absent. |
 | DISCUSS Definition of Done 2, 9 | The prediction log is private, append-only, first-write-wins; `/spots/{slug}/ayer` reads the public call receipt. | n/a | Requires the tests to distinguish immutable `predictions/` from public `log/calls/` artifacts. |
 | HANDOFF §6 items 2, 3 | `/spots/{slug}/ayer` selects the prior Panama civil day's dawn receipt and exact publish time; slice-01 exposes no English tree. | n/a | Removes route and language ambiguity from R38, R43, R46, and R48. |
 | application-architecture §4, §12 | Reading pages are publish-time HTML. A first-morning archive is an explicit empty state; a refused build preserves the dated stale receipt. | n/a | Makes U5 testable without a browser data-fetch or a false loading indicator. |
@@ -95,6 +95,7 @@ Notes on the plan:
 | `tests/acceptance/daily-call-with-permanent-receipts/reading-state.test.ts` | `// covers: R43, R46` | `resolveYesterdayReading` | builder reading-state contract | Empty, success, stale, and static-loading-exemption states are selected honestly. |
 | `tests/e2e/daily-call-with-permanent-receipts/walking-skeleton.spec.ts` | `@walking_skeleton`; `// covers: R1, R7, R38-R41, R43, R46-R49` | `npm run build`, static preview, browser routes | immutable `dist/` candidate | A phone browser reads Spanish published HTML, reaches `/ayer`, and cannot fetch or expose the raw log. |
 | `infrastructure-guardrails.feature` | every scenario `@slice-02`, `@driving_port`, `@real-io`, `@contract-shape:bounded-change`, `@covers-R35`; archive scenarios also `@covers-R49`; coupled negative populations additionally `@negative @error @coupled` | production-owned `runLocalCi({ argv, repoRoot, output, commandRunner, environment, declarationInput })` from `scripts/ci-local.mjs` | captured production evaluator result over a contained declaration-only universe | Eight scenarios prove default registration plus real-root provenance for the `--job=infra` guardrail-test and credential-free synth phases, the named real `infra/` lifecycle and eleven-value Lambda population, clean traversal, exact allowance, every lifecycle near miss, every concrete in-scope safeguard value, and unavailable or malformed declaration failure with no repository-root side effect. |
+| `top-call-card.feature` | eight scenarios, each `@slice-04 @driving_port @real-io @adapter-integration`; R31 plus slice-local U1-U7 rows R50-R56; three scenarios are `@negative @error` | isolated credential-free `npm run build`, installed Vite preview over HTTP, Chromium at 390 px | real emitted `dist/index.html` plus rendered geometry and computed styles | The first ranked entry is the sole "VE A" call, shares the top spot and score, gives a repeatable Spanish size, wind and time-window reason, degrades empty or technical narrative from structured fields, and remains finished in both themes with reduced motion. One scenario builds from a byte-identical copy of the installed public input. Two contrasting profiles require exact Spanish values for `size_band`, `wind_state`, and `best_window`, so fixture-only adapter wiring or a fixed fallback sentence cannot satisfy the contract. |
 
 ### [REF] Walking-skeleton strategy
 
@@ -103,6 +104,7 @@ Notes on the plan:
 | Browser reading journey | ASSEMBLED-SURFACE | One Playwright mobile journey builds `dist/`, serves it as a static candidate, and walks home, `/ayer`, and raw-log denial. | It is the feature's sole subprocess browser test and proves the user receives a built reading surface. |
 | Pipeline and scoring contracts | DIRECT-SURFACE | Cucumber drives the application ports in memory; fast-check drives pure scoring functions. | These assertions are faster and give precise archive and invariant failures without adding browser processes. |
 | Static reading states | DIRECT-SURFACE | Vitest drives the explicit builder selection seam. | Empty and stale state selection must be deterministic before Astro consumes it. |
+| Slice-04 public call | ASSEMBLED-SURFACE | Each Cucumber scenario copies only the source and controlled public input to a temporary root, reuses the exact installed dependency tree, runs the real build, serves `dist/` over HTTP and observes it with Chromium. | Layer 5 is required because contrast against the real gradient, 390 px geometry, touch size and reduced-motion behavior do not exist at an in-memory port. The feature keeps the single inherited walking skeleton and adds no second `@walking_skeleton`. |
 
 ### [REF] Adapter coverage
 
@@ -110,7 +112,7 @@ Notes on the plan:
 | --- | --- | --- |
 | Forecast source port | In-memory contract fixture | `FixtureSource` exercises all declared success and failure shapes. No concrete network adapter exists yet, so a real-network scenario would be false coverage; the eventual adapter owes a separate real-I/O contract test. |
 | Prediction and call storage ports | In-memory conditional-put fixture | `InMemoryStore` preserves the port's first-write-wins semantics, state deltas, and byte identity. Production S3 adapter is not yet on disk. |
-| Static publish artifact | Real local build and browser preview | The walking skeleton consumes actual generated HTML from `dist/`, not a component mock. |
+| Static publish artifact | Real local build and browser preview | The walking skeleton and Slice-04 Cucumber suite consume actual generated HTML from `dist/`, not a component mock. Slice-04 runs in temporary copies so malformed narrative fixtures cannot mutate the worktree. Its installed-input scenario proves the copied `data/published-surface.json` is byte-identical to the real input before building. |
 | Local CI protection command | Production-owned in-process `runLocalCi({ argv, repoRoot, output, commandRunner, environment, declarationInput })` composition; every mutation runs over a fully copied controlled declaration input | The AT imports no guard internals, starts no child process, supplies no `commandRunner`, and never mutates global process state. Each call receives a fresh empty temporary `HOME` with every `AWS_*` credential/configuration override removed. The evaluator runs declaration-only for the copy; the public job owns the reported `infra/test/guardrails.test.ts` and credential-free synth phases. No cloud account is used. |
 
 ### [REF] RED scaffold history
@@ -131,8 +133,52 @@ Notes on the plan:
 | Property placement | `tests/unit/scoring-laws.test.ts` | Laws are pure, generated invariants and do not require a browser or store. |
 | Browser placement | `tests/e2e/daily-call-with-permanent-receipts/` | Exactly one feature-level subprocess journey, required for the built public surface. |
 | CI-guardrail placement | `tests/acceptance/daily-call-with-permanent-receipts/infrastructure-guardrails.feature` + `steps/infrastructure-guardrails.steps.ts` + `fixtures/controlled-infrastructure-declarations/` | Cucumber drives the production in-process composition root. The fixture rejects source symlinks, is copied without dereferencing, never identifies as production, and requires no `node_modules`; every declaration-only failure snapshots and preserves both the real `infra/` tree and `.ci-local-logs`. The feature adds no browser E2E. |
+| Slice-04 call-card placement | `tests/acceptance/daily-call-with-permanent-receipts/top-call-card.feature` + `steps/top-call-card.steps.ts` + `fixtures/slice-04-top-call-variants.json` | The existing Cucumber runner drives the real installed build and HTTP preview. One outline covers the two negative narrative states and one covers light/dark plus reduced motion. A controlled long-name row uses `head_overhead`, `choppy`, and 10:15 to 12:45 to prove field fidelity and 390 px Spanish fit without adding another feature-level browser journey. |
 | User-facing prerequisites | Closed | HANDOFF §6 resolves the route, dawn selector, Spanish-only scope, and size-band build blocker. |
-| DELIVER prerequisite | Slice-01 through Slice-03 shipped; Slice-04 is next after the nWave 3.15.1 migration | Slice-03's fresh delegated independent APPROVED verdict and `SliceCleared` preceded DES commit `df25ee6`. Its 6 ATs, UI gate, browser journey, Vera PASS, `des verify-slice-commit`, and `des run-contract-gate --verify-gate-scope` passed. Slice-04 through Slice-08 ATs remain absent. |
+| DELIVER prerequisite | Slice-01 through Slice-03 shipped; Slice-04 JIT DISTILL is active RED under nWave 3.15.1 | Slice-03's fresh delegated independent APPROVED verdict and `SliceCleared` preceded DES commit `df25ee6`. Slice-04 has eight production-driven RED scenarios and a sealed source-blind charter ready for independent review; no approval is recorded here. |
+
+### [REF] Slice-04 UI quality contract
+
+```json
+{
+  "slice_id": "slice-04",
+  "surface_classification": "user-visible",
+  "charter_path": "docs/product/expectations/daily-call-with-permanent-receipts/the-top-spot-is-unmistakably-the-call-an-oversized-card-names-it-and-gives-a-plain-language.md",
+  "u8_observation": "La tarjeta se ve terminada: el puntaje se lee con el brazo estirado, es obvio de un vistazo cuál es EL llamado del día, nada está desalineado ni cortado y nada se mueve solo.",
+  "ui_checks": {
+    "U1": ["npm", "run", "test:at", "--", "--tags", "@slice-04 and @ui-u1"],
+    "U2": ["npm", "run", "test:at", "--", "--tags", "@slice-04 and @ui-u2"],
+    "U3": ["npm", "run", "test:at", "--", "--tags", "@slice-04 and @ui-u3"],
+    "U4": ["npm", "run", "test:at", "--", "--tags", "@slice-04 and @ui-u4"],
+    "U5": ["npm", "run", "test:at", "--", "--tags", "@slice-04 and @ui-u5"],
+    "U6": ["npm", "run", "test:at", "--", "--tags", "@slice-04 and @ui-u6"],
+    "U7": ["npm", "run", "test:at", "--", "--tags", "@slice-04 and @ui-u7"]
+  }
+}
+```
+
+The two outline examples are deliberate layer-5 examples, not PBT candidates. Browser geometry,
+theme media queries and reduced-motion state are environment observations at layer 5. The
+negative outline varies only the published narrative while retaining its first structured profile;
+the fixture cannot model real cellular latency or a deployed CDN and makes no such claim.
+Its contrasting long-name profile changes all three structured source fields and their exact
+Spanish expectations, so no single fixed fallback sentence can pass both profiles. That row also
+measures the long destination and reason at 390 px for U2 and U6.
+The separate installed-input scenario never overlays those fields. U7 reads the emitted hero rule
+and requires named tokens for its background, outer and inner spacing, radius, and elevation.
+Motion is explicitly not applicable to this static card: any computed transition or animation is
+a failure.
+
+### [REF] Slice-04 reconciliation and typed outcomes
+
+Reconciliation passed - 0 contradictions. This feature uses the unified `feature-delta.md`; the
+legacy DISCUSS, DESIGN and DEVOPS `wave-decisions.md` files are absent. The binding sources agree
+that array position zero is the top rank, the home top card says `VE A {SPOT}`, the score remains
+an integer 0 to 100, and the reason uses Spanish body size, wind and `best_window`. Slice-04 adds
+no new operation, rule module, endpoint or system invariant, so the outcomes registry inherits
+the existing publication operation and receives no duplicate OUT row. No production scaffold is
+needed: all tests import or execute existing production entry points, reach emitted HTML, and fail
+at a user-visible behavior oracle.
 
 ### [REF] Historical gate evidence at pre-delivery RED
 
@@ -156,7 +202,7 @@ Notes on the plan:
 | `npm run ci:local` | PASS, 9/9 jobs | The default gate runs the real infra guardrail suite, credential-free CDK synth, and the full lockfile OSV scan. |
 | `osv-scanner.toml` | One expiring GHSA exception | Only `GHSA-rgw5-rvv9-x895` is filtered for the AWS CDK bundled `brace-expansion@5.0.8` path. Its rationale, expiry, and removal condition live in `docs/security/osv-exceptions.md`. |
 
-Slice-02 shipped in `592d660`. Slice-03 shipped in `df25ee6` with its launch policy as verified production behavior. Migrate to upgraded classic nWave 3.15.1 before opening Slice-04.
+Slice-02 shipped in `592d660`. Slice-03 shipped in `df25ee6` with its launch policy as verified production behavior. Slice-04 is now open in JIT DISTILL with active RED acceptance evidence under upgraded classic nWave 3.15.1.
 
 ## Wave: DESIGN / [REF] Architecture & Contract Tests
 

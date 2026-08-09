@@ -1,5 +1,5 @@
 // @walking_skeleton
-// covers: R1, R7, R30, R38, R39, R40, R41, R43, R46, R47, R48, R49
+// covers: R1, R7, R30, R31, R38, R39, R40, R41, R43, R46, R47, R48, R49
 // The sole browser E2E for this feature. It exercises the published reading
 // surface, not a mock component or a forecast JSON request.
 
@@ -165,7 +165,7 @@ test('a surfer can read a real Spanish call and yesterday remains a separate pub
   await page.emulateMedia({ colorScheme: 'light' });
   await page.goto('/');
 
-  await expect.soft(page.getByRole('link', { name: 'Playa Venao' })).toBeVisible({ timeout: 1_000 });
+  await expect.soft(page.getByRole('link', { name: 'VE A Playa Venao' })).toBeVisible({ timeout: 1_000 });
   const rankedRows = page.locator('ol.ranked li');
   await expect.soft(
     rankedRows,
@@ -182,7 +182,10 @@ test('a surfer can read a real Spanish call and yesterday remains a separate pub
     'the visible home rows must be exactly the policy-selected launch spots, not placeholders or hidden substitutions',
   ).toEqual(expectedLaunchSpots.map((spot) => spot.spot_id).sort());
   expect.soft(
-    visibleRanking.map((row) => ({ spot_id: row.spotId, name: row.name })).sort((left, right) => left.spot_id.localeCompare(right.spot_id)),
+    visibleRanking.map((row) => ({
+      spot_id: row.spotId,
+      name: row.name.replace(/^VE A\s+/, ''),
+    })).sort((left, right) => left.spot_id.localeCompare(right.spot_id)),
     'every visible home row must use its real data-owned spot name, not a fabricated or placeholder label',
   ).toEqual([...expectedLaunchSpots].sort((left, right) => left.spot_id.localeCompare(right.spot_id)));
   expect.soft(

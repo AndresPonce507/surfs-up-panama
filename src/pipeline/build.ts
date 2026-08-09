@@ -76,6 +76,9 @@ type CallRow = {
   sub: ScoreResult['sub'];
   h_eff_m: number;
   size_band: string;
+  size_range_m: readonly [number, number];
+  wind_state: 'clean' | 'choppy' | 'blown_out';
+  best_window: { readonly start: string; readonly end: string };
   bias_applied: number;
   bias_gate: string;
   members_used: number;
@@ -110,6 +113,10 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
         spot_id: call.spot_id,
         score_q: call.score_q,
         call_es: spanishCall(call),
+        size_band: call.size_band,
+        size_range_m: call.size_range_m,
+        wind_state: call.wind_state,
+        best_window: call.best_window,
       })),
     },
     days: [{
@@ -189,6 +196,9 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
       sub: score.sub,
       h_eff_m: effectiveHeight,
       size_band: sizeBand(effectiveHeight, SIZE_BANDS),
+      size_range_m: sizeRange(sizeBand(effectiveHeight, SIZE_BANDS)),
+      wind_state: windState(score.sub.wind),
+      best_window: bestWindow(validTs, spot.timezone),
       bias_applied: correction.delta_q,
       bias_gate: correction.gate,
       members_used: blended.members_used,
@@ -200,7 +210,39 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
 }
 
 function spanishCall(call: CallRow): string {
-  return `${spanishSizeBand(call.size_band)} y limpio temprano.`;
+  return `${spanishSizeBand(call.size_band)}, viento ${spanishWind(call.wind_state)}, mejor de ${call.best_window.start} a ${call.best_window.end}.`;
+}
+
+function sizeRange(sizeBand: string): readonly [number, number] {
+  const band = SIZE_BANDS.find((candidate) => candidate.band === sizeBand);
+  if (band === undefined || !Number.isFinite(band.hi_m)) {
+    // The display range remains finite even for the open-ended final band.
+    // The categorical band is still the primary claim.
+    return [band?.lo_m ?? 0, 3];
+  }
+  return [band.lo_m, band.hi_m];
+}
+
+function windState(score: number | null): 'clean' | 'choppy' | 'blown_out' {
+  if (score === null || score >= 0.75) return 'clean';
+  if (score >= 0.35) return 'choppy';
+  return 'blown_out';
+}
+
+function bestWindow(validTs: string, timezone: string): { readonly start: string; readonly end: string } {
+  const start = new Date(validTs);
+  const end = new Date(start.getTime() + 3 * 60 * 60 * 1000);
+  const format = (instant: Date): string => new Intl.DateTimeFormat('en-GB', {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).format(instant);
+  return { start: format(start), end: format(end) };
+}
+
+function spanishWind(windState: CallRow['wind_state']): string {
+  return ({ clean: 'limpio', choppy: 'picado', blown_out: 'destrozado' })[windState];
 }
 
 function spanishSizeBand(sizeBand: string): string {
@@ -210,8 +252,8 @@ function spanishSizeBand(sizeBand: string): string {
     knee_waist: 'Rodilla a cintura',
     waist_chest: 'Cintura a pecho',
     chest_head: 'Pecho a cabeza',
-    head_overhead: 'Cabeza a pasada',
-    double_overhead_plus: 'Doble por encima de la cabeza',
+    head_overhead: 'Cabeza a un metro más',
+    double_overhead_plus: 'Doble o más',
   };
   return labels[sizeBand] ?? 'Condiciones variables';
 }

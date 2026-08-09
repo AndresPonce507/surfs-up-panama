@@ -321,3 +321,58 @@ The fresh delegated APPROVED review verdict is recorded and
 `des carpaccio-slice-gate --repo-root . --feature-id daily-call-with-permanent-receipts --entering-slice slice-02`
 returns `SliceCleared`. Slice-02 is green, but no Slice-02 commit exists yet;
 the slice is not shipped until its DES commit and verification gate complete.
+
+## Slice-04 JIT RED classification
+
+Observed: 2026-08-09
+
+Reconciliation passed - 0 contradictions. The unified feature delta carries the binding DISCUSS,
+DESIGN and DEVOPS decisions; the legacy per-wave decision files are absent. Slice-03 is shipped in
+`df25ee6`, so Slice-04 is the next legal JIT slice. No later-slice acceptance tag was authored.
+
+### Commands observed
+
+```sh
+npm run typecheck
+npm test
+npm run test:at -- --tags 'not @slice-04'
+npm run test:at -- --tags @slice-04
+/Users/andres/nWave-experimental/.venv/bin/des verify-negative-at --repo . --test-file tests/acceptance/daily-call-with-permanent-receipts/top-call-card.feature --all-critical
+/Users/andres/nWave-experimental/.venv/bin/des verify-charter-filled --charter docs/product/expectations/daily-call-with-permanent-receipts/the-top-spot-is-unmistakably-the-call-an-oversized-card-names-it-and-gives-a-plain-language.md
+/Users/andres/nWave-experimental/.venv/bin/des validate-feature-delta --require-slice-plan --require-reuse-analysis --require-prefactoring-assessment docs/feature/daily-call-with-permanent-receipts/feature-delta.md
+python3 /Users/andres/nWave-classic-3.15.1/scripts/validation/validate_feature_delta.py docs/feature/daily-call-with-permanent-receipts/feature-delta.md
+```
+
+Every Slice-04 scenario copies production source plus its public input into a temporary root.
+The installed-input scenario proves that copy is byte-identical before the build; controlled
+narrative scenarios add only their declared fields inside the temporary root. Each scenario links
+the exact already-installed `node_modules`, removes credential environment variables,
+runs the real `npm run build`, serves the emitted `dist/` over HTTP with installed Vite, and opens
+the home in Chromium. The production build and `scripts/check-ui-quality.mjs` pass before each
+behavior oracle. A test setup, import, browser or fixture failure would therefore be distinct from
+the recorded RED and would block handoff.
+
+### Scenario classification
+
+| Scenario | Observable exercised | Classification | Behavior oracle reached |
+| --- | --- | --- | --- |
+| El mejor spot se convierte en un llamado que se puede repetir | Built 390 px public home | `MISSING_FUNCTIONALITY` | No visible row begins with `VE A`; the hero size and twenty rows are already present. |
+| El llamado nace de la entrada pública instalada, no de un contrato paralelo | Byte-identical installed `data/published-surface.json` through the real build and 390 px home | `MISSING_FUNCTIONALITY` | The installed reason already names body size and clean conditions but has no initial and final time window. No test-only structured field can satisfy this oracle. |
+| La tarjeta nunca contradice el primer lugar de la costa | First ranked link and score on built home | `MISSING_FUNCTIONALITY` | The linked top spot and score agree, but the first place is not presented as `VE A {spot}`. |
+| Una razón vacía o técnica nunca llega a la tarjeta, empty example | Built home from empty narrative plus canonical structured size, wind and window | `MISSING_FUNCTIONALITY` | The production renderer leaves the reason empty instead of degrading to the structured Spanish reason. |
+| Una razón vacía o técnica nunca llega a la tarjeta, technical example | Built home from technical narrative plus canonical structured size, wind and window | `MISSING_FUNCTIONALITY` | The production renderer exposes internal terms and omits the safe structured Spanish reason. |
+| Un destino largo conserva su propia razón sin recortarse | Santa Catalina - La Punta at 390 px with `head_overhead`, `choppy`, and 10:15 to 12:45 | `MISSING_FUNCTIONALITY` | The long destination fits, but the empty renderer omits the exact `Cabeza a un metro más`, `picado`, and `10:15 a 12:45` values. Together with the first profile's exact expectations, this rejects a fixed fallback sentence. |
+| El llamado sigue terminado en el teléfono, light example | Real gradient, 390 px geometry, touch size, normal motion, built token source | `MISSING_FUNCTIONALITY` | U1-U7 checks execute and find only the absent visible `VE A PLAYA VENAO` behavior. U7 directly confirms named background, outer and inner spacing, radius and elevation tokens, plus the static-card motion exemption. |
+| El llamado sigue terminado en el teléfono, dark and reduced-motion example | Dark real gradient, 390 px geometry, touch size, reduced motion, built token source | `MISSING_FUNCTIONALITY` | U1-U7 checks execute and find only the absent visible `VE A PLAYA VENAO` behavior. U7 directly confirms named background, outer and inner spacing, radius and elevation tokens, plus the static-card motion exemption. |
+
+Focused result: 8 scenarios failed at their behavior oracles, 54 steps collected, 40 passed before
+the expected failures, 6 skipped after an earlier expected failure, and 8 failed. No scenario is
+BROKEN. The static negative gate reports `NegativeAtVerified`, one critical scope and two negative
+AT definitions. The source-blind charter reports `PASS`, filled with negative observations. Both
+feature-delta validators pass: DES accepts all eight slice rows and the classic schema validator
+checks seven wave sections. The classic feature-layout validator still reports the two pre-existing
+legacy loose files, this file and `requirement-checklist.md`; resolving that feature-wide migration
+is outside Slice-04 and no new loose DISTILL file was created.
+
+No approval or examiner verdict is recorded during DISTILL. U8 remains the exact source-blind
+observation in the Slice-04 charter and quality contract.

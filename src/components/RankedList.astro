@@ -29,6 +29,32 @@ function nameOf(spotId: string): string {
   }
   return spot.name;
 }
+
+const spanishSizeBand: Readonly<Record<string, string>> = {
+  flat: 'Plano',
+  ankle_knee: 'Tobillo a rodilla',
+  knee_waist: 'Rodilla a cintura',
+  waist_chest: 'Cintura a pecho',
+  chest_head: 'Pecho a cabeza',
+  head_overhead: 'Cabeza a un metro más',
+  double_overhead_plus: 'Doble o más',
+};
+
+const spanishWind: Readonly<Record<string, string>> = {
+  clean: 'limpio',
+  choppy: 'picado',
+  blown_out: 'destrozado',
+};
+
+function repeatableCall(summary: (typeof daySpots)[number]): string {
+  const size = summary.size_band === undefined ? undefined : spanishSizeBand[summary.size_band];
+  const wind = summary.wind_state === undefined ? undefined : spanishWind[summary.wind_state];
+  const window = summary.best_window;
+  if (size !== undefined && wind !== undefined && window !== undefined) {
+    return `${size}, viento ${wind}, mejor de ${window.start} a ${window.end}.`;
+  }
+  return summary.call[locale] ?? 'Condiciones publicadas para hoy.';
+}
 ---
 
 <Base
@@ -55,10 +81,10 @@ function nameOf(spotId: string): string {
         <li>
           <span>{index + 1}</span>
           <a href={paths.spot(locale, summary.spot_id)}>
-            {nameOf(summary.spot_id)}
+            {index === 0 ? `VE A ${nameOf(summary.spot_id)}` : nameOf(summary.spot_id)}
           </a>
           <strong>{summary.score_q}</strong>
-          <p>{summary.call[locale]}</p>
+          <p>{index === 0 ? repeatableCall(summary) : summary.call[locale]}</p>
         </li>
       ))
     }

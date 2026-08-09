@@ -21,6 +21,12 @@ export interface DaySummary {
   readonly score_q: number;
   /** The Spanish call text rendered into the static reading surface. */
   readonly call: Partial<Record<Locale, string>>;
+  /** Structured publish fields let the reading surface repeat the call without
+   * trusting a free-form narrative. */
+  readonly size_band?: string;
+  readonly size_range_m?: readonly [number, number];
+  readonly wind_state?: string;
+  readonly best_window?: { readonly start: string; readonly end: string };
 }
 
 export interface ForecastPlaceholder {
@@ -33,10 +39,24 @@ export interface ForecastPlaceholder {
   readonly days: readonly [readonly DaySummary[], readonly DaySummary[]];
 }
 
-const today: readonly DaySummary[] = surface.current.calls.map((call) => ({
+type PublishedCall = {
+  readonly spot_id: string;
+  readonly score_q: number;
+  readonly call_es: string;
+  readonly size_band?: string;
+  readonly size_range_m?: readonly [number, number];
+  readonly wind_state?: string;
+  readonly best_window?: { readonly start: string; readonly end: string };
+};
+
+const today: readonly DaySummary[] = (surface.current.calls as readonly PublishedCall[]).map((call) => ({
   spot_id: call.spot_id,
   score_q: call.score_q,
   call: { es: call.call_es },
+  ...(call.size_band === undefined ? {} : { size_band: call.size_band }),
+  ...(call.size_range_m === undefined ? {} : { size_range_m: call.size_range_m }),
+  ...(call.wind_state === undefined ? {} : { wind_state: call.wind_state }),
+  ...(call.best_window === undefined ? {} : { best_window: call.best_window }),
 }));
 
 export const forecast: ForecastPlaceholder = {

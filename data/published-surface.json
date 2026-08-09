@@ -9,7 +9,14 @@
       {
         "spot_id": "playa-venao",
         "score_q": 88,
-        "call_es": "Pecho a cabeza y limpio temprano."
+        "call_es": "Pecho a cabeza, viento limpio, mejor de 06:00 a 09:30.",
+        "size_band": "chest_head",
+        "size_range_m": [1.1, 1.6],
+        "wind_state": "clean",
+        "best_window": {
+          "start": "06:00",
+          "end": "09:30"
+        }
       },
       {
         "spot_id": "playa-cambutal",

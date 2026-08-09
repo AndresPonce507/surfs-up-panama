@@ -1,0 +1,44 @@
+{
+  "schema": "slice-04-top-call-fixtures/v1",
+  "profiles": {
+    "primera-luz": {
+      "structured_call": {
+        "size_band": "chest_head",
+        "size_range_m": [1.1, 1.6],
+        "wind_state": "clean",
+        "best_window": {
+          "start": "06:00",
+          "end": "09:30"
+        }
+      },
+      "expected_spanish": {
+        "size": "Pecho a cabeza",
+        "wind": "limpio",
+        "window": "06:00 a 09:30"
+      }
+    },
+    "nombre-largo": {
+      "spot_id": "santa-catalina-la-punta",
+      "structured_call": {
+        "size_band": "head_overhead",
+        "size_range_m": [1.6, 2.2],
+        "wind_state": "choppy",
+        "best_window": {
+          "start": "10:15",
+          "end": "12:45"
+        }
+      },
+      "expected_spanish": {
+        "size": "Cabeza a un metro más",
+        "wind": "picado",
+        "window": "10:15 a 12:45"
+      }
+    }
+  },
+  "narratives": {
+    "completo": "Pecho a cabeza y viento limpio temprano. Ventana 06:00 a 09:30.",
+    "vacío": "",
+    "técnico": "ncep_gfswave016 score_q=88 best_window JSON",
+    "técnico-disfrazado": "Pecho a cabeza, viento limpio, 06:00 a 09:30; modelo ncep_gfswave016."
+  }
+}
