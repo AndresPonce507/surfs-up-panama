@@ -1,0 +1,41 @@
+{
+  "note": "The target end state: the Project tag is Active, the other project on this shared account billed $7.10 of RDS, and this project's tag-filtered spend is empty, so the project-scoped month is provably $0.00.",
+  "costByService": {
+    "ResultsByTime": [
+      {
+        "TimePeriod": { "Start": "2026-08-01", "End": "2026-08-10" },
+        "Groups": [
+          {
+            "Keys": ["Amazon Relational Database Service"],
+            "Metrics": { "UnblendedCost": { "Amount": "7.10", "Unit": "USD" } }
+          }
+        ]
+      }
+    ]
+  },
+  "costAllocationTags": {
+    "CostAllocationTags": [
+      { "TagKey": "Project", "Type": "UserDefined", "Status": "Active" }
+    ]
+  },
+  "projectCostByService": {
+    "ResultsByTime": [
+      {
+        "TimePeriod": { "Start": "2026-08-01", "End": "2026-08-10" },
+        "Groups": []
+      }
+    ]
+  },
+  "freeTierUsage": {
+    "freeTierUsages": [
+      {
+        "service": "AWS Lambda",
+        "description": "AWS Lambda - Total Requests",
+        "actualUsageAmount": 42,
+        "limit": 1000000,
+        "unit": "Request",
+        "freeTierType": "Always Free"
+      }
+    ]
+  }
+}

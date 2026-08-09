@@ -438,8 +438,19 @@ point. "CDK + assert" means the value is set in the CDK stack AND checked by
    ingest role too, which would let a billing flood stop the prediction log — destroying the
    irreplaceable artifact (HANDOFF §3) to save dollars. The narrowed deny means no flood can
    ever take down ingest. A real improvement over my round-1 design.) Enforced: CDK.
-9. **CloudWatch billing alarm at $20** — already exists on the account; imported/asserted in
-   CDK so a rebuild cannot silently drop it. Enforced: CDK.
+9. **The $20 last line — CREATED by this project as an AWS Budget, never imported.**
+   (Corrected 2026-08-09: round 1 claimed a $20 CloudWatch billing alarm "already exists on
+   the account". Verified false against the live account: zero CloudWatch alarms exist, and
+   the only $20 budget is the other project's `agentflow-guardrail`. Additionally the
+   `AWS/Billing` metric namespace is empty because the console-only "Receive CloudWatch
+   billing alerts" preference has never been enabled, so a CloudWatch billing alarm would
+   sit in INSUFFICIENT_DATA forever — the alarm form of this guardrail cannot work on this
+   account today.) The line is implemented as the `surfs-up-panama-last-line-20` AWS Budget
+   in `infra/lib/observability-stack.ts` (email notification at 100% actual), matching the
+   shipped slice-03 declaration `budget-last-line-source: created-by-project`. A standalone
+   pre-deploy guard budget (`surfs-up-panama-guard-20`, CLI-created 2026-08-09 with actual
+   and forecast notifications) existed before any billable resource and remains as a
+   belt-and-suspenders duplicate. Enforced: CDK + assert + the F-BILL declaration gate.
 10. **Anthropic Console spend limit = $5/month hard limit.** Direct-API spend is invisible to
     every AWS guardrail (research 08 §6.5). Enforced: console setting (no API for it) +
     documented in the runbook + the builder is the ONLY code path holding the key, at
