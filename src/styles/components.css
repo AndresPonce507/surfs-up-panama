@@ -200,6 +200,8 @@ ol.ranked li > details.confidence > summary {
   font-size: var(--text-caption);
   font-weight: 600;
   letter-spacing: var(--track-meta);
+  text-transform: capitalize; /* "baja" -> "Baja": a floating label reads
+    as a label, not a stray lowercase word, with zero extra layout width. */
   list-style: none;
   cursor: pointer;
 }

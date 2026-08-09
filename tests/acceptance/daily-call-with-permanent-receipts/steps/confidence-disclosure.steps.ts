@@ -246,7 +246,16 @@ function assertBehavior(findings: readonly string[], how: string): void {
   );
 }
 
-const LEVEL_WORD_PATTERN = /confianza\s+(alta|media|baja)/iu;
+// The visible trigger text is the bare level word ("baja"), not "Confianza
+// baja": at real published call lengths (up to 65 chars) the "Confianza "
+// prefix cost more width than the row's second line could spare without
+// clipping the call -- see Confidence.astro's header comment for the
+// measured numbers. The charter's hard rule is the level word itself
+// ("sin la palabra, es FALLA"), not "confianza" as a visible prefix, so
+// full "Confianza {word}" context lives in aria-label instead, checked
+// separately below.
+const LEVEL_WORD_PATTERN = /\b(alta|media|baja)\b/iu;
+const ACCESSIBLE_LEVEL_LABEL_PATTERN = /confianza\s+(alta|media|baja)/iu;
 
 /** The exact regression the honesty negative test guards against: a reason
  * that claims or implies anyone checked the actual waves. Zero beach
@@ -324,14 +333,19 @@ Then(
     if (count === 0) findings.push('la página no tiene ni una fila');
     for (let index = 0; index < count; index += 1) {
       const summary = rows.nth(index).locator('details.confidence summary');
-      const summaryText = (await summary.count()) === 0 ? '' : ((await summary.textContent()) ?? '').trim();
+      const summaryExists = (await summary.count()) > 0;
+      const summaryText = summaryExists ? ((await summary.textContent()) ?? '').trim() : '';
+      const ariaLabel = summaryExists ? ((await summary.getAttribute('aria-label')) ?? '') : '';
       if (!LEVEL_WORD_PATTERN.test(summaryText)) {
-        findings.push(`la fila ${index + 1} no muestra "confianza alta/media/baja" en su texto visible (encontrado: "${summaryText}")`);
+        findings.push(`la fila ${index + 1} no muestra "alta/media/baja" en su texto visible (encontrado: "${summaryText}")`);
+      }
+      if (!ACCESSIBLE_LEVEL_LABEL_PATTERN.test(ariaLabel)) {
+        findings.push(`la fila ${index + 1} no da contexto de accesibilidad "Confianza alta/media/baja" (aria-label encontrado: "${ariaLabel}")`);
       }
     }
     assertBehavior(
       findings,
-      'renderizar <Confidence level={summary.conf_level} /> en cada fila, con la palabra dentro del texto de <summary>, nunca solo un color o un atributo data-level.',
+      'renderizar <Confidence level={summary.conf_level} /> en cada fila, con la palabra dentro del texto de <summary> y el contexto completo en aria-label, nunca solo un color o un atributo data-level.',
     );
   },
 );
