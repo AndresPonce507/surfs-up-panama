@@ -30,10 +30,11 @@ Feature: A deploy is rejected before it can freeze the forecast, drop the archiv
     Then the infrastructure job finishes successfully
     And the produced result names the dead-man's switch metric, its BREACHING handling, its evaluation periods, its actions, and the honest detection floor
 
-  @slice-02 @driving_port @real-io @negative @error @coupled @covers-R6 @covers-R7 @covers-R8 @covers-R9 @covers-R11
+  @slice-02 @driving_port @real-io @negative @error @coupled @covers-R6 @covers-R7 @covers-R8 @covers-R9 @covers-R10 @covers-R11
   Scenario: Every dead-man's switch property regression is rejected naming exactly that property
     When the site owner checks each contained dead-man's-switch property regression
       | witness                | required value | regressed value |
+      | watched metric         | IngestSuccess   | IngestFailure    |
       | missing-data handling  | BREACHING       | RECOVERY_POINTS |
       | evaluation periods     | 2               | 1                |
       | ALARM action           | present         | missing          |
@@ -56,11 +57,12 @@ Feature: A deploy is rejected before it can freeze the forecast, drop the archiv
     And the produced result names the deny scope as exactly the four write Function URLs, the ingest role deliberately excluded, and that those URLs do not exist yet
     And the produced result names the project cost-allocation tag
 
-  @slice-03 @driving_port @real-io @negative @error @coupled @covers-R12 @covers-R13 @covers-R14 @covers-R17
+  @slice-03 @driving_port @real-io @negative @error @coupled @covers-R12 @covers-R13 @covers-R14 @covers-R15 @covers-R17
   Scenario: Every money-line or deny-scope regression is rejected naming exactly what broke
     When the site owner checks each contained money-line or deny-scope regression
       | witness                        | observed value                     |
       | $18 threshold drift            | 25                                  |
+      | $20 last line claims import    | imported-from-account               |
       | deny scope widened             | write-report-function-url, write-mint-function-url, write-push-function-url, write-photo-presign-function-url, write-extra-function-url |
       | deny scope names the ingest role | write-report-function-url, write-mint-function-url, write-push-function-url, write-photo-presign-function-url, ingest-lambda-execution-role |
     Then declaration-only failures leave the source fixture and the repository infrastructure unchanged

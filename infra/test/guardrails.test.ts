@@ -291,15 +291,19 @@ describe('synthesized infrastructure guardrails', () => {
     )).toThrow(/RedProofArchiveBucket.*Enabled versioning.*no other recovery path/s);
   });
 
-  it('carries the project cost-allocation tag on every synthesized Lambda function and the archive bucket', () => {
+  it('carries the project cost-allocation tag on every synthesized resource this project declares', () => {
     // covers: R16
     const requiredKey = costAllocationTag['cost-allocation-tag-key'];
     const requiredValue = costAllocationTag['cost-allocation-tag-value'];
     const taggableResources = [
       ...synthesizedResources('AWS::Lambda::Function'),
       ...synthesizedResources('AWS::S3::Bucket'),
+      ...synthesizedResources('AWS::IAM::Role'),
+      ...synthesizedResources('AWS::Logs::LogGroup'),
     ];
-    expect(taggableResources).not.toHaveLength(0);
+    expect(taggableResources).toHaveLength(
+      declaredLambdaTimeouts.length * 2 + 2, // Lambda + LogGroup pairs, plus the bucket and the execution role
+    );
     assertCostAllocationTagPresent(taggableResources, requiredKey, requiredValue);
   });
 

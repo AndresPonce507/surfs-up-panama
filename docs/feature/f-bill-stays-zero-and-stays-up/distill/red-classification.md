@@ -68,6 +68,15 @@ npm run test:at -- --tags @slice-NN
 - $18 threshold drifted to `25`: `$18 action-enabled budget: observed 25; required $18; restore budget-action-18` (exit 1).
 - Deny scope widened past the four write Function URLs: `budget deny scope: observed extra target(s) write-extra-function-url; required exactly the four write Function URLs (report, mint, push, photo-presign); remove write-extra-function-url from budgetDenyScopeTargets` (exit 1).
 - Deny scope names the ingest role: `budget deny scope: observed ingest-lambda-execution-role included; a billing flood must never be able to stop the prediction log at predictions/; remove ingest-lambda-execution-role from budgetDenyScopeTargets` (exit 1). This is the heaviest negative in the feature (system-architecture.md §9 guardrail 8 regression guard).
+- $20 last line claims import (`budget-last-line-source` drifted to `imported-from-account`): `$20 last line source: observed imported-from-account; required created-by-project; the account has zero CloudWatch alarms and the only $20 budget belongs to another project, so this line must be created, never imported; restore budget-last-line-source` (exit 1). Added post-review: R11/R17 require the drift asserts demonstrated red, and this specific one (R15's "created, never imported" claim) had no negative until this addition.
+- Dead-man's switch watched-metric drifted to `IngestFailure`: `dead-man's switch watched metric: observed IngestFailure; required IngestSuccess; the switch must watch the metric the fetch Lambda emits, never the Lambda directly; restore dead-mans-switch-metric` (exit 1). Added post-review to give R10 a negative, not just a positive assertion.
+
+### Post-commit hardening (advisor review, same day)
+
+Three gaps found after the first commit (`a4e93e1`), fixed before reporting done:
+1. The cost-allocation-tag vitest test only asserted `AWS::Lambda::Function` and `AWS::S3::Bucket`, silently passing regardless of whether `AWS::IAM::Role` and `AWS::Logs::LogGroup` were tagged, even though R16 says "every resource". Verified via a real `cdk synth` + JSON inspection that `Tags.of(stack).add(...)` does propagate to all four types (24 taggable resources total); the test now asserts over all four and pins the exact count.
+2. The acceptance assertion for the cost-allocation tag checked for the words `'Project'` and `'surfs-up-panama'` independently, which is true of several unrelated lines in the evaluator's own output (tautological). Tightened to the joined `Project=surfs-up-panama` string.
+3. Added the two negatives above ($20 import claim, watched-metric drift) to close R10 and R15's "demonstrated red" requirement, which had positive-only coverage.
 
 ### Known collision, resolved (record for future slices)
 

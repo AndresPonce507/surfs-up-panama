@@ -51,6 +51,7 @@ function denyScopeBlockWith(targets: readonly string[]): string {
 }
 
 const DEAD_MANS_SWITCH_WITNESSES: Readonly<Record<string, readonly [key: string, requiredDisplay: string, requiredValue: string, label: string]>> = {
+  'watched metric': ['dead-mans-switch-metric', 'IngestSuccess', 'IngestSuccess', 'watched metric'],
   'missing-data handling': ['dead-mans-switch-treat-missing-data', 'BREACHING', 'BREACHING', 'missing-data handling'],
   'evaluation periods': ['dead-mans-switch-evaluation-periods', '2', '2', 'evaluation periods'],
   'ALARM action': ['dead-mans-switch-alarm-action', 'present', 'sns-alarm-topic', 'ALARM action'],
@@ -282,8 +283,7 @@ Then('the produced result names the deny scope as exactly the four write Functio
 
 Then('the produced result names the project cost-allocation tag', function (this: BillWorld) {
   const output = observed(this).output;
-  assertIncludes(output, 'Project', 'must name the tag key');
-  assertIncludes(output, 'surfs-up-panama', 'must name the tag value');
+  assertIncludes(output, 'Project=surfs-up-panama', 'must name the exact tag key=value pair, not just either word in isolation');
 });
 
 When('the site owner checks each contained money-line or deny-scope regression', async function (this: BillWorld, table: DataTable) {
@@ -295,6 +295,8 @@ When('the site owner checks each contained money-line or deny-scope regression',
     const copy = copyFixture(this);
     if (witness === '$18 threshold drift') {
       mutate(copy, DECLARATION_SOURCE, "'budget-action-18': '18'", `'budget-action-18': '${observedValue}'`);
+    } else if (witness === '$20 last line claims import') {
+      mutate(copy, DECLARATION_SOURCE, "'budget-last-line-source': 'created-by-project'", `'budget-last-line-source': '${observedValue}'`);
     } else {
       const targets = observedValue.split(',').map((target) => target.trim());
       mutate(copy, DECLARATION_SOURCE, DENY_SCOPE_BLOCK, denyScopeBlockWith(targets));
@@ -317,6 +319,10 @@ Then('each money-line or deny-scope regression is rejected naming its own witnes
   const widenedResult = found.get('deny scope widened');
   assert.ok(widenedResult, 'no widened-deny-scope outcome captured');
   assertIncludes(widenedResult.output, 'write-extra-function-url', 'must name the extra resource reached');
+  const importClaimResult = found.get('$20 last line claims import');
+  assert.ok(importClaimResult, 'no $20-import-claim outcome captured');
+  assertIncludes(importClaimResult.output, 'imported-from-account', 'must name the observed false-import claim');
+  assertIncludes(importClaimResult.output, 'created, never imported', 'must say the $20 line must be created by this project, never imported');
 });
 
 Then('the ingest-role regression names the prediction archive as the reason', function (this: BillWorld) {
