@@ -5,9 +5,11 @@
 
 import type {
   Clock,
+  BuildStore,
   ForecastSource,
+  IngestStore,
   MemberSeries,
-  ObjectStore,
+  SourceFailure,
   SourceResult,
   TideHour,
   WindHour,
@@ -21,7 +23,7 @@ import {
   type MemberSpec,
 } from './fixtures';
 
-export class InMemoryStore implements ObjectStore {
+export class InMemoryStore implements IngestStore, BuildStore {
   readonly objects = new Map<string, string>();
 
   async putIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
@@ -44,6 +46,38 @@ export class InMemoryStore implements ObjectStore {
     return [...this.objects.keys()].filter((k) => k.startsWith(prefix)).sort();
   }
 
+  async putRaw(key: string, body: string): Promise<void> {
+    return this.put(key, body);
+  }
+
+  async putPredictionIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
+    return this.putIfAbsent(key, body);
+  }
+
+  async getPrediction(key: string): Promise<string | null> {
+    return this.get(key);
+  }
+
+  async listPredictions(prefix: string): Promise<string[]> {
+    return this.list(prefix);
+  }
+
+  async getCorrection(key: string): Promise<string | null> {
+    return this.get(key);
+  }
+
+  async putCallIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
+    return this.putIfAbsent(key, body);
+  }
+
+  async putBundle(key: string, body: string): Promise<void> {
+    return this.put(key, body);
+  }
+
+  async putManifest(key: string, body: string): Promise<void> {
+    return this.put(key, body);
+  }
+
   /** Universe snapshot for state-delta assertions: every key under a prefix. */
   snapshot(prefix: string): Map<string, string> {
     return new Map([...this.objects].filter(([k]) => k.startsWith(prefix)));
@@ -55,7 +89,7 @@ export class InMemoryStore implements ObjectStore {
  * the given prefixes. Simulates a build dying before it publishes, so the
  * scenario can prove the snapshot survives everything downstream of it.
  */
-export class CrashingStore implements ObjectStore {
+export class CrashingStore implements BuildStore {
   constructor(
     private readonly inner: InMemoryStore,
     private readonly crashOnPrefixes: readonly string[],
@@ -67,22 +101,31 @@ export class CrashingStore implements ObjectStore {
     }
   }
 
-  async putIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
+  async getPrediction(key: string): Promise<string | null> {
+    return this.inner.getPrediction(key);
+  }
+
+  async listPredictions(prefix: string): Promise<string[]> {
+    return this.inner.listPredictions(prefix);
+  }
+
+  async getCorrection(key: string): Promise<string | null> {
+    return this.inner.getCorrection(key);
+  }
+
+  async putCallIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
     this.guard(key);
-    return this.inner.putIfAbsent(key, body);
+    return this.inner.putCallIfAbsent(key, body);
   }
 
-  async put(key: string, body: string): Promise<void> {
+  async putBundle(key: string, body: string): Promise<void> {
     this.guard(key);
-    return this.inner.put(key, body);
+    return this.inner.putBundle(key, body);
   }
 
-  async get(key: string): Promise<string | null> {
-    return this.inner.get(key);
-  }
-
-  async list(prefix: string): Promise<string[]> {
-    return this.inner.list(prefix);
+  async putManifest(key: string, body: string): Promise<void> {
+    this.guard(key);
+    return this.inner.putManifest(key, body);
   }
 }
 
@@ -113,6 +156,8 @@ export class FixtureSource implements ForecastSource {
   readonly dark = new Set<string>();
   readonly masked = new Set<string>();
   windDark = false;
+  tideDark = false;
+  waveFailure: SourceFailure | null = null;
 
   configureMorning(date: string, cycleHour = '06', bump = 0): void {
     this.date = date;
@@ -125,6 +170,7 @@ export class FixtureSource implements ForecastSource {
   }
 
   async fetchWaveMembers(_spot_id: string): Promise<SourceResult<MemberSeries[]>> {
+    if (this.waveFailure !== null) return { ok: false, reason: this.waveFailure };
     const series: MemberSeries[] = this.members
       .filter((m) => !this.dark.has(m.source))
       .map((m) => ({
@@ -159,6 +205,7 @@ export class FixtureSource implements ForecastSource {
   }
 
   async fetchTide(_spot_id: string): Promise<SourceResult<TideHour[]>> {
+    if (this.tideDark) return { ok: false, reason: 'dark' };
     return {
       ok: true,
       verbatim: JSON.stringify({ provider: 'coops', date: this.date }),

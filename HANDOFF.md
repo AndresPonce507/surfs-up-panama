@@ -6,7 +6,7 @@ recollection, this file wins. Update it before you stop working.
 - **Rewritten:** 2026-08-08 (second write of the day; the first is in git history)
 - **Repo:** https://github.com/AndresPonce507/surfs-up-panama (public, MIT)
 - **Local:** `/Users/andres/panama-surf`
-- **Branch:** `design-round-1`, 10 commits ahead of `main`, not pushed
+- **Branch:** `design-round-1`, 12 commits ahead of `main`, pushed. The active DISTILL worktree changes are uncommitted.
 - **nWave:** 4.0.0 experimental (atdd-pure). This matters, see §8.
 
 ---
@@ -19,12 +19,14 @@ recollection, this file wins. Update it before you stop working.
 | DISCUSS | ✅ 31 product decisions + an 11-feature epic plan |
 | DESIGN | ✅ 8 documents, ~30 ADRs, **two full review rounds and two fix rounds** |
 | DEVOPS | ✅ `08-devops.md` |
-| DISTILL | ⬜ **Next.** Charters, then acceptance tests |
-| DELIVER | ⬜ Not started |
+| DISTILL | ✅ Slice-01 active-RED suite authored, exercised, and approved by the mandatory four-reviewer gate. |
+| DELIVER | 🟡 Slice-01 is green and Vera has recorded a PASS after the `/ayer` repair. Commit through DES next; slice-02 remains JIT until that commit clears. |
 
 **There is a site that builds** (16 pages, zero JS) and **a real spot data file** (23 spots).
-There is **no feature code and no test** yet. That is correct at this point: DISTILL writes
-every acceptance test before DELIVER writes the code that satisfies it.
+There is no implemented feature behaviour yet. DISTILL has authored 17 Cucumber scenarios,
+18 fast-check scoring-law tests, and one built mobile walking skeleton for slice-01. They run
+and fail only on explicit missing-behaviour scaffolds, not imports or runner setup. DISTILL
+writes every acceptance test before DELIVER writes the code that satisfies it.
 
 ---
 
@@ -59,18 +61,48 @@ Two things about it were nearly lost and are now fixed:
 
 ## 4. Exact next step
 
-**DISTILL for `daily-call-with-permanent-receipts`.** In order:
+**Finish tonight's one-session browser examination of the retained receipt, record its verdict, and commit slice-01 through DES.** Current facts:
 
-1. `des charter-scaffold --feature-id daily-call-with-permanent-receipts` gives one charter per
-   observable slice, Intent seeded from the slice's Value statement
-2. A **fresh** `nw-product-owner` context fills each charter (start recipe, expected observations
-   including at least one negative, session log). Independent of AT authoring, both derive from
-   the same Value statement, neither reads the other
-3. `des verify-charter-filled --charter <path>` on each
-4. Extract the requirement checklist to `docs/feature/{id}/distill/requirement-checklist.md`
-5. `nw-acceptance-designer` authors every AT as an **active-RED scaffold**: it runs and fails on
-   the missing behaviour, never `@skip`. Current slice's scenarios on disk, future slices absent
-6. Final wave review gate: four reviewers in parallel over the whole four-wave chain
+1. The eight charters are filled and pass their charter checks. The requirement checklist and
+   red-classification record live under `docs/feature/daily-call-with-permanent-receipts/distill/`.
+2. Slice-01 scenarios are on disk. Future-slice scenarios remain absent. The active RED suite
+   covers durable prediction writes, scoring laws, the real built reading surface, source-failure
+   modes, and the visual mandates.
+3. The mandatory four-reviewer DISTILL re-review has approved the corrected suite: the R43
+   reading-state contract, port capabilities, prediction write-once documentation,
+   source-failure coverage, UI checks, and CI wiring have zero remaining blocker or high findings.
+4. Andres recorded the independent slice-01 AT-review verdict as `andres-human`, `APPROVED`.
+   `des carpaccio-slice-gate --feature-id daily-call-with-permanent-receipts --entering-slice slice-01`
+   returned `SliceCleared`, exit 0. The crafter changed production code only, and its green result
+   was independently confirmed: typecheck; 22/22 Vitest tests; 17 Cucumber scenarios and 138
+   steps; the UI gate; and the one mobile E2E journey all pass.
+5. `des verify-deliver-entry-contract` currently reports a tooling conflict: it requires authored
+   AT modules for every future Slice Plan row, while this feature's explicit JIT rule requires
+   slices 02-08 to remain absent until their turn. No future tests were added to bypass that rule.
+6. The first non-technical examiner walk recorded `INDETERMINATE` in
+   `.nwave/telemetry/examine/daily-call-with-permanent-receipts.jsonl`. It observed Playa Venao,
+   score 80, Spanish call, stable reloads, a dated `/ayer` receipt, and a normal 404. It could not
+   honestly perform the original charter's required Day-2 identity comparison because no genuine
+   next-day publish existed. The fixed data exposed a production wiring gap, now closed: `npm run
+   publish:surface -- --input <pub-v1-bundle.json>` atomically promotes a completed call, retains
+   dawn receipts, and `npm run build` refuses if the current receipt is not for the actual Panama
+   civil day. The reloop is independently green: typecheck, 22/22 Vitest tests, 17 Cucumber
+   scenarios and 138 steps, UI gate, and mobile E2E pass. Tests remain unchanged.
+7. A fresh product-owner context amended the charter and `des verify-charter-filled` now passes.
+   Its local oracle is the observable one-session proof: today's page and the retained prior-dawn
+   `/ayer` receipt, each stable through reload and navigation. The first independent examiner
+   recorded `FAIL`: three valid `/spots/playa-venao/ayer` opens alternated blank, receipt, blank.
+   This was a real user-visible correctness failure. A production-only repair removed the optional
+   cross-document transition from that permanent receipt route and independently held under 40
+   browser reloads and 10 repeated E2E journeys. The repair also made R23's angular computation
+   canonical at the stated precision after a deterministic floating-point counterexample. All
+   declared checks are green. A fresh Vera walk has now recorded `PASS` against the current charter
+   seal: today and the distinct retained `/ayer` receipt were stable through reload and navigation,
+   readable, Spanish, and free of raw errors. `des commit-slice` is the next action.
+   The genuine two-real-morning comparison is a post-deploy launch verification only, when the
+   unattended deployed ingest has actually run overnight. It is not local slice evidence and no
+   local midnight wait is required. After the commit, author slice-02's CI-guardrail tests just in
+   time; later slice tests remain absent.
 
 **Two tags are mechanically load-bearing** and the carpaccio gate reads both. Get either wrong and
 the gate reports no scenarios for the slice:
@@ -102,23 +134,52 @@ Beyond the 31 in the decisions log:
 
 ## 6. Open items
 
-**Needs Andres, blocking nothing today:**
+**DECISIONS RECORDED 2026-08-08 19:30. Items 1 to 3 below are CLOSED, treat them as settled and
+proceed. Only item 4 still needs Andres.**
 
-1. **His cousin.** Three questions, one conversation: the spot list (is Punta Duarte in Mariato the
-   "Playa Duartes" he meant?), the metre ranges behind the body-height words, and the seven Spanish
-   size band strings the report form uses. Slice-01 cannot be honestly examined without the size words
-2. **Email Open-Meteo** (`info@open-meteo.com`). Their terms are silent on serving derived data to
+1. **CLOSED, downgraded to a launch-checklist item, not a blocker.** The seven Spanish size-band
+   strings already exist and are canonical in `domain-model.md` §7.2. The cousin's review is a
+   VALIDATION of wording by a native surfer, not the source of it. Slice-01 proceeds on the
+   current strings. If he corrects them it is a copy change against a settled schema, not rework.
+   Ship, then verify. His answer on Punta Duarte is likewise a spot-list correction and Playa
+   Duartes is already excluded from the seed file, so nothing depends on it.
+2. **CLOSED. Route is `/spots/{slug}/ayer`, English twin `/en/spots/{slug}/yesterday`.** Settled,
+   not a proposal. It matches the existing `/manana` and `/en/tomorrow` pattern and there is
+   nothing else to weigh.
+   **The day's call is the DAWN build, stamped with its exact publish time on the page.** The
+   product is framed around the 5:40am decision, so the call that mattered is the one that was live
+   when someone decided whether to drive. Showing a later build shows them something they never
+   saw. Every hourly build stays in the calls log; this only decides which one the yesterday page
+   displays. Known and accepted: showing one build slightly hides that the forecast moved during
+   the day. Adding "updated N times" later is cheap and is not slice-01's problem.
+3. **CLOSED. Slice-01 ships Spanish only. The Definition of Done is right and the scaffold is
+   wrong.** English is feature 11 in the epic (`F-READ-IT-IN-YOUR-LANGUAGE`), placed last on
+   purpose so one translation pass covers settled copy. The `/en/` tree exists because the
+   scaffolding brief told an agent to build the full route map from the architecture document,
+   which spans all eleven features. That was an error in the brief, not a design conflict.
+   Remove the `/en/` routes from the build. They are placeholder files with bracketed English
+   copy in them, and a half-English site is worse than an honestly Spanish one. Feature 11
+   recreates them properly with real translation.
+4. **STILL NEEDS ANDRES. Independent AT approval.** After the corrected tests are re-reviewed, he
+   records the slice-01 verdict. The carpaccio gate fails closed with exit 45 until then. This one
+   genuinely cannot be delegated: nWave classifies the orchestrator recording its own commissioned
+   verdict as self-approval and denies it, and it denies proxying through another agent too. Do not
+   attempt a workaround. Hold the slice and say so.
+
+**Needs Andres for launch, but not for the remaining local build:**
+
+5. **Email Open-Meteo** (`info@open-meteo.com`). Their terms are silent on serving derived data to
    third parties, and precomputing to public static JSON *is* redistribution. Fallback is raw NOAA
    GRIB2, live-verified working. Not sent
 
 **Needs AWS console access, deliberately not attempted (owner asked to leave AWS alone):**
 
-3. Account Lambda concurrency quota. If ≤102, the rate-limit design does not exist and the attack
+6. Account Lambda concurrency quota. If ≤102, the rate-limit design does not exist and the attack
    ceiling is ~$130/mo
-4. Whether AWS meters egress for a 429 emitted before the function runs. Can move the whole abuse answer
-5. DynamoDB 25 WCU/RCU perpetuity. **Marked UNVERIFIED after a reviewer found the repo's own research
+7. Whether AWS meters egress for a 429 emitted before the function runs. Can move the whole abuse answer
+8. DynamoDB 25 WCU/RCU perpetuity. **Marked UNVERIFIED after a reviewer found the repo's own research
    contradicts the "always free" claim.** $0 if perpetual, ~$14.24/mo from month 13 if not
-6. Bucket versioning on `predictions/` (see §3)
+9. Bucket versioning on `predictions/` (see §3)
 
 **Research gaps still open:** Copernicus Marine licence terms; Windy webcam Panama coverage; ACP
 AQUARIUS tide API. Resolved today by live test: the `gfswave` grib_filter URL works, the GFS Zarr

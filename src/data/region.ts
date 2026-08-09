@@ -2,9 +2,7 @@
 // field so the report capture route can import spot identity without ever
 // touching forecast data (application-architecture.md section 8, leak path L1).
 //
-// Placeholder seed. Nothing here is region-specific by design: the real
-// region and spot list arrive as seed data keyed by region_id, owned by the
-// data lane. Nothing in src/ may hardcode a region or a spot.
+// Slice-01's verified seed record. Future spot expansion remains data-only.
 
 export interface SpotIdentity {
   /** spot_id IS the URL slug. Language-neutral kebab, one value, one home. */
@@ -19,10 +17,9 @@ export interface RegionSeed {
 }
 
 export const region: RegionSeed = {
-  region_id: 'region-placeholder',
+  region_id: 'pa-pacific',
   spots: [
-    { spot_id: 'spot-placeholder-1', name: 'Placeholder Spot One' },
-    { spot_id: 'spot-placeholder-2', name: 'Placeholder Spot Two' },
+    { spot_id: 'playa-venao', name: 'Playa Venao' },
   ],
 };
 

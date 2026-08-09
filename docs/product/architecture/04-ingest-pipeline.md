@@ -237,7 +237,8 @@ EventBridge Scheduler is at-least-once and the async invoke config is retry 0 + 
 | Provider calls | Repeated (~42 calls) | 2x one hour's calls is 0.4% of the daily cap |
 | `raw/` | Keyed `(provider, dt, HH)`: second write overwrites with an equivalent payload | raw/ is forensic, not the record of truth |
 | `predictions/` | Conditional PUT returns **412**; treated as duplicate ack; the log is untouched | First write wins = insert-only enforced by the substrate, not by convention |
-| `log/calls/` + bundle | Same `build_id` key (`b_<date>T<HH>Z`) overwritten with content derived from the same log state | Deterministic scoring (no LLM at launch, System Architecture §18 decision 4); a report arriving between the two runs changes reports.json only, both states valid |
+| `log/calls/` | Conditional PUT returns **412** for the same `build_id`; treated as duplicate acknowledgement and the receipt remains untouched | A call receipt is an append-only record of what the site said |
+| bundle + manifest | Same public key is regenerated deterministically from the same log state | Public projections are mutable serving artifacts; receipt logs preserve the historical evidence |
 | DynamoDB | Untouched: ingest writes no DynamoDB | The write path is a different lane (07) |
 
 The row-level natural key `(spot_id, source, run_ts, valid_ts)` and file-level key

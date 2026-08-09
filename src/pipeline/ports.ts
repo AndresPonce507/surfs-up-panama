@@ -8,22 +8,34 @@
 //     anti-corruption ladder (04 section 8) and cycle attribution (04
 //     section 5) live inside the adapter, with their own unit tests owed in
 //     DELIVER (04 section 3 step 5 names the land-mask unit test explicitly).
-//   - ObjectStore carries S3's contract, including the conditional PUT that
-//     enforces the prediction log's insert-only guarantee (04 section 7):
-//     putIfAbsent is If-None-Match:*, first write wins, a duplicate gets
-//     'already-exists' and treats it as a duplicate ack, never an error.
+//   - Storage capabilities are deliberately split. Ingest can archive raw
+//     source payloads and create prediction receipts, while build can only
+//     read those receipts and publish its own named artifacts. Neither run
+//     receives a broad bucket client capable of writing in the other run's
+//     durable universe.
 //   - Clock is passed in because nothing in the core may read the ambient
 //     clock (contract:declared-inputs-not-ambient-reads).
 
 import type { SpotSeed, SwellTrain, WindObs } from '../scoring/engine';
 
-export interface ObjectStore {
-  /** S3 conditional PUT (If-None-Match:*): first write wins. */
-  putIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'>;
-  /** Plain PUT (raw archive, published artifacts, manifest). */
-  put(key: string, body: string): Promise<void>;
-  get(key: string): Promise<string | null>;
-  list(prefix: string): Promise<string[]>;
+export interface IngestStore {
+  /** Archive a verbatim provider response in the raw forensic prefix. */
+  putRaw(key: string, body: string): Promise<void>;
+  /** S3 conditional PUT (If-None-Match:*): first prediction write wins. */
+  putPredictionIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'>;
+}
+
+export interface BuildStore {
+  /** Read a durable prediction receipt, never a raw provider payload. */
+  getPrediction(key: string): Promise<string | null>;
+  listPredictions(prefix: string): Promise<string[]>;
+  /** Learned corrections are optional build inputs. */
+  getCorrection(key: string): Promise<string | null>;
+  /** A call receipt is immutable after its first successful write. */
+  putCallIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'>;
+  /** The public bundle and manifest are the build's only mutable artifacts. */
+  putBundle(key: string, body: string): Promise<void>;
+  putManifest(key: string, body: string): Promise<void>;
 }
 
 export interface Clock {
@@ -63,7 +75,7 @@ export interface ForecastSource {
 
 export interface IngestDeps {
   source: ForecastSource;
-  store: ObjectStore;
+  store: IngestStore;
   clock: Clock;
   spots: SpotSeed[];
 }
@@ -76,7 +88,7 @@ export type IngestOutcome = {
 };
 
 export interface BuildDeps {
-  store: ObjectStore;
+  store: BuildStore;
   clock: Clock;
   spots: SpotSeed[];
   region_id: string;

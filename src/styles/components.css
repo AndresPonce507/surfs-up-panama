@@ -48,6 +48,8 @@ nav {
 nav a {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  min-width: var(--tap);
   min-height: var(--tap);
   margin-bottom: -1px;
   border-bottom: 2px solid transparent;
@@ -87,6 +89,9 @@ ol.ranked li > span {
 }
 
 ol.ranked li > a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
   color: var(--ink);
   font-weight: 600;
   text-decoration: none;
@@ -165,7 +170,7 @@ section {
 }
 
 section strong {
-  font-size: 1.75rem;
+  font-size: var(--score-row);
   font-weight: 800;
   line-height: 1;
   letter-spacing: var(--track-tight);
@@ -219,10 +224,44 @@ body:has(a.cta) {
   text-decoration: none;
 }
 
+.home-primary {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: center;
+  margin: 0;
+  padding: var(--sp-3) var(--sp-4)
+    max(var(--sp-3), env(safe-area-inset-bottom));
+  border-top: 1px solid var(--hairline);
+  background: var(--bg);
+}
+
+.home-primary a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 38rem;
+  min-height: 48px;
+  border-radius: var(--r-m);
+  background: var(--go);
+  box-shadow: var(--shadow-2);
+  color: var(--on-go);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+body:has(.home-primary) {
+  padding-bottom: 7rem;
+}
+
 /* reduced-transparency: both glass surfaces go solid */
 @media (prefers-reduced-transparency: reduce) {
   .lang-toggle,
-  p:has(> a.cta) {
+  p:has(> a.cta),
+  .home-primary {
     background: var(--bg);
     backdrop-filter: none;
     -webkit-backdrop-filter: none;

@@ -15,7 +15,7 @@
 // research 08 §12.4), and avoids the async-CSS-needs-JS trap ("zero JS for
 // anything visual"). Reversal trigger: authored CSS > 8 KB gz → split into a
 // hashed cached stylesheet (design doc §11).
-import { otherLocale, type Locale } from '../i18n/strings';
+import type { Locale } from '../i18n/strings';
 import tokens from '../styles/tokens.css?raw';
 import base from '../styles/base.css?raw';
 import components from '../styles/components.css?raw';
@@ -24,12 +24,11 @@ interface Props {
   locale: Locale;
   title: string;
   currentPath: string;
-  /** Twin URL of this page in the other language. */
-  altPath: string;
+  /** Deferred until the English tree ships with its own feature. */
+  altPath?: string;
 }
 
-const { locale, title, currentPath, altPath } = Astro.props;
-const altLang = otherLocale(locale);
+const { locale, title, currentPath } = Astro.props;
 
 // Build-time CSS minifier: comments out, whitespace collapsed. Safe for this
 // codebase by construction: no CSS strings/content values contain spaces or
@@ -55,14 +54,10 @@ const inlineCss = minify(`${tokens}\n${base}\n${components}`);
     <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#10141A" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="alternate" hreflang={locale} href={currentPath} />
-    <link rel="alternate" hreflang={altLang} href={altPath} />
+    <link rel="alternate" hreflang="es" href={currentPath} />
     <Fragment set:html={`<style>${inlineCss}</style>`} />
   </head>
   <body>
-    <a class="lang-toggle" href={altPath} lang={altLang}>
-      {altLang.toUpperCase()}
-    </a>
     <slot />
   </body>
 </html>

@@ -1,4 +1,4 @@
-// Placeholder stand-in for the publish-build render input (payload P1).
+// The slice-01 publish-build render input (payload P1).
 // At publish time the site builder consumes the region bundle server-side and
 // bakes real values into the HTML routes; the browser never fetches forecast
 // JSON (adr-publish-time-html-rendering.md). This module exists so the route
@@ -10,6 +10,8 @@
 // transitively. The report capture screen is forecast-free by construction;
 // that is an anti-anchoring correctness constraint, not a style preference.
 
+import surface from '../../data/published-surface.json';
+
 import type { Locale } from '../i18n/strings';
 
 export interface DaySummary {
@@ -17,12 +19,12 @@ export interface DaySummary {
   readonly spot_id: string;
   /** Published score: an integer 0 to 100, rendered as-is, never rescaled. */
   readonly score_q: number;
-  /** The call text. Placeholder here; real text arrives from the bundle. */
-  readonly call: Record<Locale, string>;
+  /** The Spanish call text rendered into the static reading surface. */
+  readonly call: Partial<Record<Locale, string>>;
 }
 
 export interface ForecastPlaceholder {
-  /** Placeholder for the build stamp fields (build_id, published_at). */
+  /** Publish stamp for the static candidate. */
   readonly published_at: string;
   /**
    * days[0] = today, days[1] = tomorrow. Array position IS that day's rank;
@@ -31,20 +33,13 @@ export interface ForecastPlaceholder {
   readonly days: readonly [readonly DaySummary[], readonly DaySummary[]];
 }
 
-const placeholderDay: readonly DaySummary[] = [
-  {
-    spot_id: 'spot-placeholder-1',
-    score_q: 0,
-    call: { es: '[llamado placeholder]', en: '[call placeholder]' },
-  },
-  {
-    spot_id: 'spot-placeholder-2',
-    score_q: 0,
-    call: { es: '[llamado placeholder]', en: '[call placeholder]' },
-  },
-];
+const today: readonly DaySummary[] = surface.current.calls.map((call) => ({
+  spot_id: call.spot_id,
+  score_q: call.score_q,
+  call: { es: call.call_es },
+}));
 
 export const forecast: ForecastPlaceholder = {
-  published_at: '[placeholder]',
-  days: [placeholderDay, placeholderDay],
+  published_at: surface.current.published_at,
+  days: [today, today],
 };

@@ -1,0 +1,44 @@
+{
+  "schema": "static-surface/v1",
+  "current": {
+    "schema": "published-surface-update/v1",
+    "surf_date": "2026-08-08",
+    "published_at": "2026-08-08T11:22:00Z",
+    "build_kind": "dawn",
+    "calls": [
+      {
+        "spot_id": "playa-venao",
+        "score_q": 80,
+        "call_es": "Cintura a pecho y limpio temprano."
+      }
+    ]
+  },
+  "dawn_receipts": [
+    {
+      "schema": "published-surface-update/v1",
+      "surf_date": "2026-08-07",
+      "published_at": "2026-08-07T11:22:00Z",
+      "build_kind": "dawn",
+      "calls": [
+        {
+          "spot_id": "playa-venao",
+          "score_q": 74,
+          "call_es": "Cintura a pecho y limpio temprano."
+        }
+      ]
+    },
+    {
+      "schema": "published-surface-update/v1",
+      "surf_date": "2026-08-08",
+      "published_at": "2026-08-08T11:22:00Z",
+      "build_kind": "dawn",
+      "calls": [
+        {
+          "spot_id": "playa-venao",
+          "score_q": 80,
+          "call_es": "Cintura a pecho y limpio temprano."
+        }
+      ]
+    }
+  ]
+}

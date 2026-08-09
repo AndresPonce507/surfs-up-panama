@@ -1,0 +1,54 @@
+---
+import type { GetStaticPaths } from 'astro';
+
+import Base from '../../../layouts/Base.astro';
+import surface from '../../../../data/published-surface.json';
+import { region } from '../../../data/region';
+import { formatPanamaTime, resolveYesterdayReading, type PublishedReceipt } from '../../../publish/reading-state';
+import { previousCivilDate } from '../../../publish/static-surface';
+
+export const getStaticPaths = (() =>
+  region.spots.map((spot) => ({
+    params: { slug: spot.spot_id },
+  }))) satisfies GetStaticPaths;
+
+const { slug } = Astro.params;
+if (slug === undefined) throw new Error('spots/[slug]/ayer: slug param missing');
+const spot = region.spots.find((candidate) => candidate.spot_id === slug);
+if (spot === undefined) throw new Error(`spots/[slug]/ayer: unknown slug ${slug}`);
+
+const reading = resolveYesterdayReading({
+  spot_id: spot.spot_id,
+  prior_surf_date: previousCivilDate(surface.current.surf_date),
+  receipts: surface.dawn_receipts.flatMap((receipt): PublishedReceipt[] => receipt.calls.map((call) => ({
+    surf_date: receipt.surf_date,
+    published_at: receipt.published_at,
+    build_kind: receipt.build_kind,
+    spot_id: call.spot_id,
+    score_q: call.score_q,
+    call_es: call.call_es,
+  }))),
+  current_build_refused: false,
+});
+---
+
+<Base locale="es" title={`${spot.name} ayer`} currentPath={`/spots/${spot.spot_id}/ayer/`}>
+  <style is:inline>
+    @view-transition {
+      navigation: none;
+    }
+  </style>
+  <h1>{spot.name}</h1>
+  {
+    reading.kind === 'success' && (
+      <section>
+        <h2>Así estuvo ayer</h2>
+        <p><strong>{reading.receipt.score_q}</strong> puntos</p>
+        <p>{reading.receipt.call_es}</p>
+        <time datetime={reading.published_at}>Publicado a las {formatPanamaTime(reading.published_at)}</time>
+      </section>
+    )
+  }
+  {reading.kind === 'empty' && <p>{reading.message_es}</p>}
+  {reading.kind === 'stale' && <p>{reading.notice_es}</p>}
+</Base>

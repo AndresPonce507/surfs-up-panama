@@ -711,7 +711,7 @@ exceeds them, my §8/§12 numbers are void and we re-negotiate:
 | 7 | Photos: exactly **3 variants ≤ 300 KB total** per photo; original deleted after resize | per research 08 §9.1 | storage floor $0.12/mo steady-state at 90-day retention; egress/session cap |
 | 8 | Reports bundle per region, rebuilt on write | ≤ **50 KB** | build input; reports render into routes at publish time, and any client fetch of this file is the frontend lane's call inside §15's budget (amended 2026-08-08) |
 | 9 | No per-user or per-request variance in any published S3 payload | absolute | CDN cacheability — one URL, one cached object, for everyone |
-| 10 | Idempotency: re-running an hour's build writes byte-identical keys or same-key overwrites | absolute | duplicate EventBridge delivery must be a no-op (research 08 §10.5) |
+| 10 | Idempotency: duplicate ingest and call-receipt writes receive a conditional-PUT acknowledgement; public build artifacts regenerate byte-identically | absolute | duplicate EventBridge delivery must be a no-op (research 08 §10.5) |
 
 ### 15. Request-budget requirement — owed by the frontend lane
 

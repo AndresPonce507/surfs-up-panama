@@ -109,6 +109,7 @@ No JS locale sniffing and no redirects: both break caching and surprise people o
 | `/` | `/en/` | Home: ranked list, today. Top spot is the call (decisions 1, 3) | 14 KB | ~1.5 KB inline |
 | `/manana` | `/en/tomorrow` | Same list for tomorrow (decision 10) | 14 KB | ~1.5 KB inline |
 | `/spots/{slug}` | `/en/spots/{slug}` | The breakdown: sub-scores, weakest link, scorecard, map, reports (decisions 13, 17, 20) | 14 KB + lazy images | ~3.5 KB |
+| `/spots/{slug}/ayer` | `/en/spots/{slug}/yesterday` | Prior Panama civil day's **dawn-build** receipt. It renders that receipt's exact `published_at`, never a later hourly revision. No receipt yet is a Spanish empty state; a refused current build leaves the prior dated receipt in place, visibly stale rather than freshly scored. | 14 KB | ~0.3 KB inline stamp |
 | `/spots/{slug}/reportar` | `/en/spots/{slug}/report` | Report screen 1, cold capture. Forecast-free by construction | 6 KB | 5 KB island |
 | `/spots/{slug}/reportado` | `/en/spots/{slug}/reported` | Report screen 2 shell. Reveal rendered from POST response only | 4 KB | (island already loaded) |
 | `/sin-senal` | `/en/offline` | Offline fallback, precached | 3 KB | 0 |
@@ -117,6 +118,11 @@ No JS locale sniffing and no redirects: both break caching and surprise people o
 Today and tomorrow are separate prerendered routes, not a JS tab, so each stays inside its own
 budget and the refusal to go further than tomorrow is visible in the information architecture
 itself: there is no third route to navigate to, and the home footer says so in words (copy in §10).
+
+**Slice-01 scope.** Although this architecture records the eventual mirrored language map, the
+first delivery ships only the Spanish root tree. `/en/` and every English twin above are deferred
+to F-READ-IT-IN-YOUR-LANGUAGE. The archive route is therefore `/spots/{slug}/ayer` in slice-01.
+This is a release-scope rule, not an alternate route decision (HANDOFF §6 items 2 and 3).
 
 **Render source per route** (amended 2026-08-08 coherence round, second pass: the bundle is
 two-day shaped — `days[0]`/`days[1]` ranked day-summary arrays plus an unordered `spot_detail`
@@ -129,6 +135,7 @@ names its source):
 | `/` , `/en/` | `days[0].spots` in array order (position = rank; no `rank` field); `name` and the last-report line joined from `spot_detail[spot_id]` |
 | `/manana` , `/en/tomorrow` | `days[1].spots`, same joins. Tomorrow's `score_q`, `call`, `size_band`, `size_range_m`, `wind_state`, `conf_level`, `confidence_reason`, `best_window`, `weakest_link`, `damages` are that array's own values — genuinely different from today's (confidence drops with lead) |
 | `/spots/{slug}` | `spot_detail[spot_id]` (slug = spot_id) + that spot's summary object from each of the two day arrays; breakdown bars derived per the §7 sub-scores decision |
+| `/spots/{slug}/ayer` | `log/calls/v1` receipt for the prior Panama civil date's dawn build. The receipt carries its own immutable `published_at`; no receipt produces the explicit empty document, never a synthetic score. |
 
 Flagged for the domain lane, not silently diverged: domain §13's route-read table lists only
 `name` as the home routes' `spot_detail` join, but the home top card also renders the last-report
@@ -386,7 +393,7 @@ wireframe strings in §14 predate the band table and render the same fields.)
 - Header: es "¿Dónde se surfea hoy?" / en "Where's it working today?"
 - Tabs: es "Hoy · Mañana" / en "Today · Tomorrow"
 - Top card verb: es "VE A {SPOT}" / en "GO TO {SPOT}"
-- Staleness stamp: es "Actualizado 6:04 a.m." / en "Updated 6:04 a.m."; stale (>3 h, JS): es "Viejo. Lo último que vimos fue a las 6:04." / en "Old. Last thing we saw was at 6:04."
+- Staleness stamp: es "Actualizado 6:04 a.m." / en "Updated 6:04 a.m."; stale (>3 h, JS): es "Viejo. Lo último que vimos fue a las 6:04. No pudimos sacar datos nuevos esta mañana." / en "Old. Last thing we saw was at 6:04. We could not get new data this morning."
 - Honesty footer (decision 10 made legible): es "Solo hoy y mañana. Más allá nadie sabe de verdad, y no vamos a inventar." / en "Today and tomorrow only. Past that nobody really knows, so we don't pretend."
 - Confidence levels: es "confianza alta / media / baja" / en "high / medium / low confidence"
 
@@ -472,6 +479,14 @@ CloudFront requests, inside research 08 §12.4's target):
 (true even with JS off, and true for a SW-served stale copy, because the stamp travels inside the
 document it describes). The 0.3 KB inline script upgrades it to a relative age and flips the amber
 "Viejo" chip past 3 h. The SW adds no header tricks: truth lives in the document.
+
+**Reading states.** Reading routes are completed static documents, so they have no client-side
+loading state or forecast fetch to decorate. That is the explicit loading-state exemption: the
+first meaningful reading content is in the response HTML. The three materialized states are: a
+success receipt, an empty `/ayer` document on the first morning before a prior dawn receipt
+exists, and a stale prior receipt after a current no-data refusal. The stale document keeps the
+receipt's original machine-readable `published_at` and says both "Viejo" and that no new data
+could be obtained that morning. It never labels that old score as a new call.
 
 **Offline report queue.** IndexedDB, records keyed by `report_id`, append at commit, delete on
 server ack. Flush triggers: `online` event, page open, SW activation. **Background Sync is

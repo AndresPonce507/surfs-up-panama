@@ -9,12 +9,14 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "astro build",
+    "build": "npm run publish:surface -- --verify && astro build",
+    "publish:surface": "tsx src/publish/publish-static-surface.ts",
     "dev": "astro dev",
     "preview": "astro preview",
     "test": "vitest run",
     "test:at": "NODE_OPTIONS=\"--import tsx\" cucumber-js",
-    "test:e2e": "playwright test",
+    "test:ui": "npm run build && node scripts/check-ui-quality.mjs",
+    "test:e2e": "npm run build && playwright test",
     "typecheck": "tsc --noEmit",
     "ci:local": "node scripts/ci-local.mjs",
     "ci:local:fast": "node scripts/ci-local.mjs --fast",

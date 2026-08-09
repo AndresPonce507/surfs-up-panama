@@ -41,8 +41,8 @@ function have(bin) {
 //   - `heavy: true` = CPU-saturating job (big test suites, semgrep). Heavy
 //     jobs run in a second wave AFTER the light ones — running them next to
 //     timing-sensitive tests causes flaky assertion failures under contention.
-//   - If any job reads a build artifact (dist/), hoist the build into
-//     PRELUDE so concurrent jobs never scan a half-written bundle.
+//   - If multiple jobs read a build artifact (dist/), serialize their package
+//     scripts in separate waves so none scans a half-written bundle.
 // Adapted for surfs-up-panama 2026-08-08. TypeScript throughout: Astro for the
 // site, CDK for infrastructure. There is no linter configured yet, so the
 // `lint` job the template ships is replaced by `typecheck` — a job that runs a
@@ -59,8 +59,6 @@ function have(bin) {
 //   - `budget`: the 100 KB / per-route byte gate from application-architecture.md
 //     §5. Needs a build to measure. Add as PRELUDE + a job once `astro build`
 //     produces output.
-//   - `at`: cucumber acceptance tests. Flip `default: true` when DISTILL
-//     authors the first .feature file.
 const PRELUDE = null;
 const JOBS = [
   {
@@ -104,18 +102,27 @@ const JOBS = [
   },
   {
     name: 'at',
-    default: false,
-    needs: ['npx'],
+    default: true,
+    needs: ['npm'],
     steps: [
-      ['cucumber acceptance', 'npx', ['cucumber-js']],
+      ['cucumber acceptance', 'npm', ['run', 'test:at']],
     ],
   },
   {
     name: 'ui',
     default: true,
+    needs: ['npm'],
     steps: [
-      ['build', 'npm', ['run', 'build']],
-      ['ui quality mandates', 'node', ['scripts/check-ui-quality.mjs']],
+      ['ui quality mandates', 'npm', ['run', 'test:ui']],
+    ],
+  },
+  {
+    name: 'e2e',
+    default: true,
+    heavy: true,
+    needs: ['npm'],
+    steps: [
+      ['browser acceptance', 'npm', ['run', 'test:e2e']],
     ],
   },
 ];

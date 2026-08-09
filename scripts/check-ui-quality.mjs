@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// covers: R42, R44, R45
 // UI quality gate. Blocks a merge when a user-visible surface misses the bar.
 //
 // WHY THIS IS CI AND NOT A REVIEW NOTE
@@ -37,6 +38,10 @@ function walk(dir, out = []) {
 const files = walk(DIST);
 const html = files.filter((f) => extname(f) === '.html');
 const css = files.filter((f) => extname(f) === '.css');
+const shippedSourceStyles = [
+  'src/styles/base.css',
+  'src/styles/components.css',
+].filter((f) => existsSync(f));
 
 if (html.length === 0) {
   console.log(`ui-quality: SKIPPED, no built HTML under ${DIST}/`);
@@ -119,6 +124,22 @@ if (rawHex.size > 4) {
     `${rawHex.size} distinct colours used outside the token system: ${[...rawHex].slice(0, 6).join(' ')}`);
 }
 
+// ── U6: type values come from the declared scale ─────────────────────
+// Shipped component and base styles may choose a token, never a one-off
+// size. Tokens themselves remain the one deliberate place where values live.
+for (const f of shippedSourceStyles) {
+  const source = readFileSync(f, 'utf8');
+  const rawType = [...source.matchAll(/font-size\s*:\s*([^;]+);/gi)]
+    .filter((match) => {
+      const value = match[1]?.trim().toLowerCase();
+      return value !== undefined && !value.startsWith('var(') && value !== 'inherit';
+    })
+    .map((match) => match[0].trim());
+  if (rawType.length > 0) {
+    note('U6', f, `raw type value outside the token scale: ${rawType[0]}`);
+  }
+}
+
 // ── report ───────────────────────────────────────────────────────────
 console.log(`ui-quality: ${html.length} documents, ${css.length} stylesheets`);
 console.log('');
@@ -126,6 +147,7 @@ console.log('');
 if (findings.length === 0) {
   console.log('  U2 viewport and width  ok');
   console.log(`  U4 reduced motion      ${animates ? 'ok' : 'n/a, nothing animates'}`);
+  console.log('  U6 type scale          ok');
   console.log('  U7 tokens              ok');
   console.log('');
   console.log('Passed. Note U1 (contrast) and U3 (touch targets) need rendered');

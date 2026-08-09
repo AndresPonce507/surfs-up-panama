@@ -19,8 +19,6 @@ const { locale, day } = Astro.props;
 const t = strings[locale];
 const daySpots = forecast.days[day];
 const currentPath = day === 0 ? paths.home(locale) : paths.tomorrow(locale);
-const altLocale: Locale = locale === 'es' ? 'en' : 'es';
-const altPath = day === 0 ? paths.home(altLocale) : paths.tomorrow(altLocale);
 
 function nameOf(spotId: string): string {
   const spot = spotById(spotId);
@@ -37,7 +35,6 @@ function nameOf(spotId: string): string {
   locale={locale}
   title={t.home.header}
   currentPath={currentPath}
-  altPath={altPath}
 >
   <h1>{t.home.header}</h1>
   <p>{t.home.updatedPrefix} {forecast.published_at}</p>
@@ -69,4 +66,9 @@ function nameOf(spotId: string): string {
   <footer>
     <p>{t.home.honestyFooter}</p>
   </footer>
+  <p class="home-primary">
+    <a data-primary-action href={paths.spot(locale, daySpots[0]!.spot_id)}>
+      Ver el llamado
+    </a>
+  </p>
 </Base>

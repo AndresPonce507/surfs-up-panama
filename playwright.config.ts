@@ -15,7 +15,7 @@ export default defineConfig({
   retries: 0, // a flaky acceptance test is a defect, not a retry candidate
   reporter: [['list']],
   use: {
-    baseURL: process.env.PREVIEW_URL ?? 'http://localhost:4321',
+    baseURL: process.env.PREVIEW_URL ?? 'http://127.0.0.1:4322',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
@@ -25,4 +25,9 @@ export default defineConfig({
       use: { ...devices['Pixel 7'] },
     },
   ],
+  webServer: {
+    command: 'npx vite preview --host 127.0.0.1 --port 4322',
+    url: process.env.PREVIEW_URL ?? 'http://127.0.0.1:4322',
+    reuseExistingServer: false,
+  },
 });

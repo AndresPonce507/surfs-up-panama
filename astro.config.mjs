@@ -6,4 +6,7 @@ import { defineConfig } from 'astro/config';
 // runtime (docs/product/architecture/adr-publish-time-html-rendering.md).
 export default defineConfig({
   output: 'static',
+  build: {
+    format: 'file',
+  },
 });

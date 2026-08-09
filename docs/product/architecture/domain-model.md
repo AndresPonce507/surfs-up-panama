@@ -177,7 +177,7 @@ s3://<data-bucket>/raw/<provider>/dt=YYYY-MM-DD/<HH>/...        # verbatim paylo
 
 - **Partitioned by run date first** — retention, backfill and learning-job scans are all date-scoped (research 09 §13.1).
 - **Format: gzipped JSONL now, Parquet compaction when a region exceeds ~500 spots** — see `adr-prediction-log-format.md`. DuckDB/pandas read both.
-- **Idempotency:** the natural key of a record is `(spot_id, source, run_ts, valid_ts)`; the natural key of a *file* is `(run_date, source, cycle, partition)`. Re-running ingest for the same cycle rewrites the same key with content derived from the same upstream run → idempotent overwrite. The `raw/` archive makes any file reconstructible for 30 days without re-hitting providers.
+- **Idempotency:** the natural key of a record is `(spot_id, source, run_ts, valid_ts)`; the natural key of a *file* is `(run_date, source, cycle, partition)`. Ingest creates a file with conditional PUT (`If-None-Match: *`). A duplicate returns a verified already-exists acknowledgement and leaves the first bytes untouched. Gap repair may create an absent key from `raw/`, but may never replace an existing prediction receipt.
 - **Timestamps: UTC everywhere in logs.** Local time is a display concern derived from the spot's `timezone` field.
 
 #### 5.3 Volume math (measured, gzip JSONL, full fidelity: 4 sources × 4 runs/day × 168 lead-hours, hourly)
@@ -197,7 +197,7 @@ S3 has **no verified perpetual free allowance** (research 08 §12.3) — figures
 What we showed, per build, per spot, per valid hour — required by every evaluation metric (research 09 §10.3: "log … for every spot, every day, whether or not anyone looked"). Snapshotted because recomputing history with a later formula is a lie (research 09 §13.1).
 
 ```json
-{"spot_id":"playa-venao","build_id":"b_2026-08-08T11Z","built_at":"2026-08-08T11:00:00Z","valid_ts":"2026-08-09T12:00Z","lead_h":25,"score_q":74,"conf_value":0.31,"conf_level":"low","sub":{"dir":1.0,"size":0.81,"wind":0.66,"tide":0.92},"h_eff_m":1.1,"size_band":"waist_chest","bias_applied":0.0,"bias_gate":"n_lt_10","baseline_rank_raw":3,"our_rank":1,"members_used":4,"members_null":3}
+{"spot_id":"playa-venao","build_id":"b_2026-08-08T11Z","built_at":"2026-08-08T11:00:00Z","valid_ts":"2026-08-09T12:00Z","lead_h":25,"score_q":74,"conf_value":0.31,"conf_level":"low","sub":{"dir":1.0,"size":0.81,"wind":0.66,"tide":0.92},"h_eff_m":1.1,"size_band":"waist_chest","bias_applied":0.0,"bias_gate":"n_lt_10","baseline_rank_raw":3,"our_rank":1,"members_used":4,"members_null":0}
 ```
 
 | Field | Consumer |
@@ -206,7 +206,7 @@ What we showed, per build, per spot, per valid hour — required by every evalua
 | `baseline_rank_raw, our_rank` | B1 skill metric — pairwise ranking vs raw model, THE metric. Baseline = rank spots by raw significant wave height, formula per research 09 §10.1–10.2; the scoring lane implements it | 
 | `conf_level` | display projection of continuous `conf_value` (renamed from `confidence` 2026-08-08 coherence round second pass — the bare name also held §13's string level, one name naming two types; split per §13's canonical-names table); **thresholds are the round-2 scoring lane's to set** — both values are logged so thresholds can change without losing history |
 | `bias_applied, bias_gate` | C3 audit: which correction was live when; scorecard honesty guard |
-| `members_used, members_null` | per-source availability tracking; confidence `f(M)` audit |
+| `members_used, members_null` | availability across the declared four-member source registry; confidence `f(M)` audit |
 
 Layout: `log/calls/v1/dt=<date>/build=<HH>Z/<region>.jsonl.gz`. One file per hourly build per region. Member selection when several runs cover the same `valid_ts`: the builder uses **the latest run per source with `run_ts ≤ build time`** (freshest opinion wins; older runs stay in the prediction log for the lead-time skill curve). Any blend beyond that is the round-2 scoring lane's decision. Measured: 392 B/line; **20 spots: 0.19 MB/day gz → 0.07 GB/yr ($0.002/mo)**; 500: 1.58 GB/yr; 5,000: 15.8 GB/yr (same Parquet/Glacier levers as §5.3).
 
@@ -322,7 +322,7 @@ PredictionSnapshot and PublishedCall are **not aggregates** — they are immutab
  "h_ref_m":1.3,"s_size":0.5,"t_min_s":11,
  "tide":{"optimum":"mid_falling","sigma":"wide","range_class":"macrotidal"},
  "tide_station":{"source":"coops","station_id":"9812501"},
- "wind_optimum":{"u_off_kt":5,"k_on":6,"k_off":15,"k_cross":12},
+ "wind_optimum":{"u_star_kt":5,"k_on_kt":6,"k_off_kt":15,"k_cross_kt":12},
  "hazards":["rips"],"skill":"all",
  "season_note":{"es":"Abril–octubre para tamaño; diciembre más limpio.","en":"April–October for size; December cleanest."},
  "sources":[{"url":"https://www.surf-forecast.com/breaks/Playa-Venao","accessed":"2026-08-08"}],

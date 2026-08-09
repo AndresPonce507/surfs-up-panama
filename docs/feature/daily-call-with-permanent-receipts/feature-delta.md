@@ -22,7 +22,7 @@ Notes on the plan:
 - slice-02 sits directly behind the skeleton on purpose. `system-architecture.md` §11 names the guardrail assertion suite a DELIVER precondition, proven red then green before any human `cdk deploy` counts as guarded, and the archive starts accumulating irreplaceable data at the first deployed hour. Protection lands before the first deploy can happen.
 - All four Open-Meteo wave members are fetched, snapshotted and blended from slice-01 on (Andres, 2026-08-08: use every free source; the archive cannot be backfilled). Wave sources beyond that one call land in F-KNOW-HOW-MUCH-TO-TRUST-IT. Fact for slice-07, stated so nobody promises past it: with four members the `members_used < 2` cap (05 §6.1) no longer binds, but with zero reports the freshness factor does not participate at all: a spot with no report ever is UNREPORTED, not stale, and flooring it at 0.3 was fabricating a staleness reading for something never observed (05 §6.3, D4 ANSWERED 2026-08-08 by Andres, "day-one confidence means model agreement"). So `c_total = c_spread` on day one and **all three levels are reachable from model agreement alone**: four members in tight agreement reads alta, a wide period split reads baja. A single-member day still caps at baja via the f(M) cap (05 §6.1), and freshness rejoins at a spot's first report and binds normally from then on. The reason string names that nobody has reported yet, so the level is an agreement claim and never an accuracy claim. Scoring D4 is closed; Pre-requisites row 4 no longer carries it.
 - The eleven cost guardrail VALUES (log retention, lifecycle rules, reserved concurrency, timeouts) ship inside whichever slice creates each resource, per the epic F-BILL-STAYS-ZERO-AND-STAYS-UP row. slice-02 is the gate that asserts them. The dead-man's switch observable belongs to that later feature, not this one.
-- The yesterday page needs a route the settled route map (`application-architecture.md` §4) does not carry. Proposed: `/spots/{slug}/ayer` (the English twin lands with F-READ-IT-IN-YOUR-LANGUAGE, not here). Owed by the frontend lane, plus one rule owed by the domain lane: which of the day's hourly builds counts as "what we said" for a civil day (recommendation: the dawn build surfers acted on). Carried in Pre-requisites rows 8-10, not solved here.
+- The yesterday page is `/spots/{slug}/ayer`. It renders the prior Panama civil day's dawn-build receipt and its exact `published_at` stamp, not a later hourly revision. On a first morning with no prior dawn receipt it renders an explicit Spanish empty state. If a current build refuses to publish, it keeps the prior receipt and its original stamp rather than minting a score or a fresh date. The English twin belongs to F-READ-IT-IN-YOUR-LANGUAGE and is absent from slice-01. Settled by HANDOFF §6 item 2, 2026-08-08.
 
 ## Wave: DISCUSS / [REF] Definition of Done
 
@@ -36,7 +36,7 @@ Notes on the plan:
 | 6 | Nothing keyed on Panama: spots, regions, tide stations, timezones all come from seed data files; rotational invariance (05 law L12) holds. |
 | 7 | All UI copy is the settled Spanish strings (`application-architecture.md` §10). No English routes exist. |
 | 8 | Every Slice Plan row above is flipped `shipped`. |
-| 9 | Yesterday's published call is readable in a browser, per spot, rendered from `log/calls/v1` (route owed by the frontend lane, Pre-requisites row 9). The raw prediction log stays private. |
+| 9 | Yesterday's published call is readable in a browser at `/spots/{slug}/ayer`, per spot, rendered from `log/calls/v1` using the previous civil day's dawn receipt and its exact publish time. The raw prediction log stays private. |
 
 ## Wave: DISCUSS / [REF] Out-of-scope
 
@@ -62,11 +62,121 @@ Notes on the plan:
 |---|---|---|---|---|
 | 1 | Launch spot list settled: Playa Duartes located or dropped, Playa Serena season resolved, the ~20 named (epic OQ2, HANDOFF §6 items 9-10) | slice-03 seed file content; build proceeds on the verified subset | Andres + cousin | open |
 | 2 | Open-Meteo redistribution email sent and launch posture chosen (04 §13 decision 1, epic OQ1) | public launch, not the build | Andres | open |
-| 3 | Size-band edges, tide word-to-number map, and Spanish register checked with the cousin's crew (domain-model §16 D7, scoring §13 D3, app-arch decision 6) | copy freeze at DISTILL | Andres | open |
+| 3 | Size-band edges, tide word-to-number map, and Spanish register checked with the cousin's crew (domain-model §16 D7, scoring §13 D3, app-arch decision 6) | launch wording validation only; the settled canonical schema does not block slice-01 | Andres | closed as a build blocker, HANDOFF §6 item 1 |
 | 4 | Design decision defaults confirmed or overridden where they change an observable: domain-model §16 D1-D6, scoring §13 D1-D6, ingest §13 1-4, app-arch decisions 1-5 (every one carries a recommendation) | DISTILL scenario authoring on the affected observables | Andres | open |
 | 5 | AWS account: Paid Plan upgrade, Lambda concurrency quota ≥ 102 check, S3/DynamoDB free-tier read, domain registration (system-architecture §11 step 1 + launch blockers; decision 31) | first human deploy, not the build | Andres | open |
 | 6 | `tide_station` field in the spot seed schema (was 04 §11's DELIVER blocker) | nothing | domain lane | closed, landed in amended domain-model §11 |
 | 7 | Wave-member scope: one member or all four from day one | nothing | Andres | ANSWERED 2026-08-08: all four Open-Meteo members (`ncep_gfswave016`, `ncep_gfswave025`, `meteofrance_wave`, `dwd_gwam`) from day one. Reason is the archive, not accuracy: the prediction log cannot be backfilled, per-source skill comparison per spot is its whole point, and the members arrive in the same API call at zero cost |
 | 8 | Read surface for "yesterday's numbers are still readable" | nothing | Andres | ANSWERED 2026-08-08: a page on the website, readable by anyone in a browser. The published call log (`log/calls/v1`) is what becomes publicly readable: what we actually told people, per spot per build. The raw prediction log (`predictions/v1`) stays private. Reasoning: the accuracy claim becomes checkable instead of asserted when anyone can read yesterday's call |
-| 9 | Yesterday-page route and day-stamp rule: the route is absent from `application-architecture.md` §4 (proposed `/spots/{slug}/ayer`), and no design doc says which of the day's hourly builds counts as "what we said" for a civil day (recommendation: the dawn build) | slice-01 scenario naming at DISTILL | frontend lane (route) + domain lane (day-stamp rule) | open, owed |
+| 9 | Yesterday-page route and day-stamp rule: `/spots/{slug}/ayer` renders the prior Panama civil day's dawn-build receipt, stamped with its exact publish time; its English twin is deferred with F-READ-IT-IN-YOUR-LANGUAGE | nothing | frontend lane + domain lane | closed, HANDOFF §6 item 2 |
 | 10 | `log/calls/v1` carries a Glacier IR transition at 90 days (system-architecture §5). Those files now back a public page. The yesterday page itself only reads day-old files, but any deeper backfill, page rebuild, or future archive-beyond-yesterday would hit cold storage: price the retrieval cost and latency, or exempt the range pages need. Raised, not solved | nothing at launch scale; an infra answer before any archive deeper than yesterday | infra lane | open |
+
+## Wave: DISTILL / [REF] Acceptance design
+
+### [REF] Inherited commitments
+
+| Origin | Commitment | DDD | Impact |
+| --- | --- | --- | --- |
+| DISCUSS Slice Plan slice-01 | One Venao vertical is the active slice: ingest all four members, snapshot before scoring, publish a Spanish reading, and retain the dawn receipt for browser reading. | n/a | Defines the only current-slice executable surface; all later slice scenarios remain absent. |
+| DISCUSS Definition of Done 2, 9 | The prediction log is private, append-only, first-write-wins; `/spots/{slug}/ayer` reads the public call receipt. | n/a | Requires the tests to distinguish immutable `predictions/` from public `log/calls/` artifacts. |
+| HANDOFF §6 items 2, 3 | `/spots/{slug}/ayer` selects the prior Panama civil day's dawn receipt and exact publish time; slice-01 exposes no English tree. | n/a | Removes route and language ambiguity from R38, R43, R46, and R48. |
+| application-architecture §4, §12 | Reading pages are publish-time HTML. A first-morning archive is an explicit empty state; a refused build preserves the dated stale receipt. | n/a | Makes U5 testable without a browser data-fetch or a false loading indicator. |
+| domain-model §5, §6 and 05-scoring-engine laws | Snapshot keys are immutable and the 17 scoring laws are invariants, including rotational invariance and confidence separation. | n/a | Induces Cucumber archive scenarios and fast-check properties rather than example-only scoring tests. |
+| nw-ui-quality-mandates U1-U8 | The mobile reading surface must meet the visual bar during the slice, with U8 examined by a person. | n/a | Adds R39-R46 checks and charter-visible finishedness observation before DELIVER. |
+
+### [REF] Scenario list
+
+| AT group | Tags / coverage | Production driving surface | Consumer artifact | Observable capability |
+| --- | --- | --- | --- | --- |
+| `morning-call-from-todays-models.feature` | `@feature-daily-call-with-permanent-receipts`, every scenario `@slice-01`, `@in-memory`, `@contract-shape:bounded-change`, `@covers-R1` through `@covers-R11` | `runIngestOnce`, `runBuildOnce` | in-memory object-store universe | Snapshot, scoring, partial failure, and publish behavior are observable without a network dependency. |
+| `yesterdays-numbers-still-readable.feature` | same feature and slice tags; `@covers-R4`, `@covers-R7` | `runIngestOnce`, `runBuildOnce` | in-memory call-log universe | A dawn receipt survives tomorrow and a later build cannot overwrite it. |
+| `tests/unit/scoring-laws.test.ts` | `// covers: R12` through `R29`; fast-check properties | pure scoring and confidence functions | DIRECT-SURFACE | The declared scoring laws hold across generated physical inputs. |
+| `tests/acceptance/daily-call-with-permanent-receipts/reading-state.test.ts` | `// covers: R43, R46` | `resolveYesterdayReading` | builder reading-state contract | Empty, success, stale, and static-loading-exemption states are selected honestly. |
+| `tests/e2e/daily-call-with-permanent-receipts/walking-skeleton.spec.ts` | `@walking_skeleton`; `// covers: R1, R7, R38-R41, R43, R46-R49` | `npm run build`, static preview, browser routes | immutable `dist/` candidate | A phone browser reads Spanish published HTML, reaches `/ayer`, and cannot fetch or expose the raw log. |
+
+### [REF] Walking-skeleton strategy
+
+| Surface | Classification | Strategy | Why |
+| --- | --- | --- | --- |
+| Browser reading journey | ASSEMBLED-SURFACE | One Playwright mobile journey builds `dist/`, serves it as a static candidate, and walks home, `/ayer`, and raw-log denial. | It is the feature's sole subprocess browser test and proves the user receives a built reading surface. |
+| Pipeline and scoring contracts | DIRECT-SURFACE | Cucumber drives the application ports in memory; fast-check drives pure scoring functions. | These assertions are faster and give precise archive and invariant failures without adding browser processes. |
+| Static reading states | DIRECT-SURFACE | Vitest drives the explicit builder selection seam. | Empty and stale state selection must be deterministic before Astro consumes it. |
+
+### [REF] Adapter coverage
+
+| Driven boundary | Current treatment | Evidence / limitation |
+| --- | --- | --- |
+| Forecast source port | In-memory contract fixture | `FixtureSource` exercises all declared success and failure shapes. No concrete network adapter exists yet, so a real-network scenario would be false coverage; the eventual adapter owes a separate real-I/O contract test. |
+| Prediction and call storage ports | In-memory conditional-put fixture | `InMemoryStore` preserves the port's first-write-wins semantics, state deltas, and byte identity. Production S3 adapter is not yet on disk. |
+| Static publish artifact | Real local build and browser preview | The walking skeleton consumes actual generated HTML from `dist/`, not a component mock. |
+
+### [REF] RED scaffolds
+
+| File | RED seam | Classification evidence |
+| --- | --- | --- |
+| `src/pipeline/ingest.ts` | `runIngestOnce` | Cucumber reaches the explicit ingest scaffold assertion. |
+| `src/pipeline/build.ts` | `runBuildOnce` | Cucumber reaches the explicit build scaffold assertion. |
+| `src/scoring/engine.ts`, `src/scoring/confidence.ts` | scoring laws and confidence | Fast-check reaches named scoring scaffold assertions. |
+| `src/publish/reading-state.ts` | `resolveYesterdayReading` | Four reading-state tests reach the explicit selection scaffold assertion. |
+
+### [REF] Test placement and prerequisite status
+
+| Item | Decision | Evidence |
+| --- | --- | --- |
+| Cucumber placement | `tests/acceptance/daily-call-with-permanent-receipts/` | Existing project convention keeps behavioral feature files, steps, fixtures, and support universe together. |
+| Property placement | `tests/unit/scoring-laws.test.ts` | Laws are pure, generated invariants and do not require a browser or store. |
+| Browser placement | `tests/e2e/daily-call-with-permanent-receipts/` | Exactly one feature-level subprocess journey, required for the built public surface. |
+| User-facing prerequisites | Closed | HANDOFF §6 resolves the route, dawn selector, Spanish-only scope, and size-band build blocker. |
+| DELIVER prerequisite | Still blocked | Andres must record the independent slice-01 AT-review verdict; the carpaccio gate fails closed until then. |
+
+### [REF] Gate evidence
+
+| Check | Result | Meaning |
+| --- | --- | --- |
+| `npm run typecheck` | PASS | The active RED scaffolds and tests type-check. |
+| `npm test` | 22 active RED failures | Every failure reaches an explicit missing-behavior scaffold. |
+| `npm run test:at` | 17 active RED scenarios | Every failure reaches a pipeline behavior assertion after steps execute. |
+| `npm run test:e2e` | one active RED journey | Built mobile surface exposes observable missing product behavior, including the missing dated receipt route. |
+| `npm run build && node scripts/check-ui-quality.mjs` | RED at U6 | The UI gate reports the raw type-scale violation by file and declaration. |
+
+## Wave: DESIGN / [REF] Architecture & Contract Tests
+
+| Contract | Architecture source | Induced witness |
+| --- | --- | --- |
+| Prediction snapshots precede all scoring and are conditional first writes (`OUT-DAILY-CALL-INGEST`). | `04-ingest-pipeline.md` §3, `domain-model.md` §5 | Cucumber snapshot, crash-survival, duplicate, and byte-identity scenarios. |
+| Four model members blend before scoring; scoring has 17 declared laws. | `05-scoring-engine.md`, `adr-scoring-member-blend.md` | Pipeline blend scenario and 18 generated fast-check properties. |
+| Call receipts are immutable, public reading artifacts; raw predictions never cross the public surface (`OUT-DAILY-CALL-BUILD`). | `domain-model.md` §6, `adr-prediction-log-format.md` | Cucumber archive scenarios plus browser raw-route denial. |
+| `/spots/{slug}/ayer` selects the previous civil day's dawn receipt, with original `published_at` (`OUT-DAILY-CALL-ARCHIVE-STATE`). | `application-architecture.md` §4, §12; HANDOFF §6 item 2 | Static reading-state scenarios and the sole browser walking skeleton. |
+| Spanish-only slice must be usable outdoors on a narrow phone. | `09-design-system.md`, UI mandates U1-U8; HANDOFF §6 item 3 | Built-surface contrast, 390px, target-size, token, motion, and charter observations. |
+
+## Wave: DESIGN / [REF] ADR Refs
+
+| ADR | Contract carried into DISTILL |
+| --- | --- |
+| `adr-prediction-log-format.md` | Prediction rows and published receipts preserve first-write-wins semantics. |
+| `adr-scoring-member-blend.md` | Usable members blend in input space before scoring. |
+| `adr-publish-time-html-rendering.md` | The browser consumes complete reading HTML, not forecast JSON. |
+| `adr-two-day-ranking.md` | Today and tomorrow are distinct, ordered read models. |
+
+## Reuse Analysis
+
+| Existing Component | File | Overlap | Decision | Justification |
+| --- | --- | --- | --- | --- |
+| Static Astro build | `astro.config.mjs`, `src/layouts/Base.astro` | **bounded-change**: builder capability may replace the `dist/` candidate atomically; browser code receives no write capability. | EXTEND | The receipt route and date stamp belong in the established static publish model, with an output universe bounded to one generated candidate. |
+| Typed pipeline boundaries | `src/pipeline/ports.ts` | **pure-function** type boundary: `IngestStore` and `BuildStore` declare the only injected capabilities. | EXTEND | Narrow capabilities keep prediction immutability reviewable: ingest cannot publish and build cannot mutate predictions. |
+| Ingest driving operation | `src/pipeline/ingest.ts` | **bounded-change**: injected `IngestStore` writes only `raw/` and conditional `predictions/`; the allowed delta is new immutable objects only. | EXTEND | The existing operation is the first durable-effect seam and must retain an explicit, minimal write universe. |
+| Build driving operation | `src/pipeline/build.ts` | **bounded-change**: injected `BuildStore` reads predictions and corrections, writes only call receipts, bundle, and manifest; prediction delta is empty. | EXTEND | The existing operation owns public publication while the restricted port makes archive preservation mechanically testable. |
+| Placeholder reading components | `src/components/RankedList.astro`, `src/components/SpotDetail.astro` | **pure-function** from builder-owned render input to HTML; browser performs no forecast-data fetch. | EXTEND | Replace placeholders with the published receipt contract instead of adding a parallel UI path. |
+| Static receipt selection | `src/publish/reading-state.ts` | **pure-function**: declared receipts and build outcome in, one empty, success, or stale value out. | CREATE_NEW | The settled archive rule needs one deterministic builder seam for empty, success, and stale selection. |
+
+Read-only protocols and scoring properties are consumed dependencies, not reuse rows: the ATs
+drive their declared application surfaces and observe resulting artifacts.
+
+## Test Reuse & Consolidation Analysis
+
+| Existing Test/DSL-Step | File | Overlap | Decision | Justification |
+| --- | --- | --- | --- | --- |
+| Feature browser journey | `tests/e2e/daily-call-with-permanent-receipts/walking-skeleton.spec.ts` | Built public reading capability and mobile visual obligations. | EXTEND | The single feature E2E absorbs archive-route and timestamp assertions rather than adding another browser process. |
+| Pipeline behavior scenarios | `tests/acceptance/daily-call-with-permanent-receipts/*.feature` | State changes in snapshots, receipts, and no-data failures. | EXTEND | New source-failure rows share the same in-memory universe and retain one scenario outline for four failure variants. |
+| Scoring-law properties | `tests/unit/scoring-laws.test.ts` | Pure algebraic scoring behavior. | EXTEND | Fast-check folds boundary and permutation values into the existing generated property suite. |
+| Static reading-state acceptance | `tests/acceptance/daily-call-with-permanent-receipts/reading-state.test.ts` | No existing test selects a dated archive receipt or materializes U5 states. | CREATE_NEW | This one in-process suite covers all four states without multiplying subprocess E2E tests. |

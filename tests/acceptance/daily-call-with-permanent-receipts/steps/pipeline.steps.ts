@@ -28,6 +28,7 @@ Given('the four wave models reported their morning opinions for it', function (t
 
 Given('the wind and tide sources reported their morning readings', function (this: PipelineWorld) {
   this.source.windDark = false;
+  this.source.tideDark = false;
 });
 
 // ---------- acting ----------
@@ -63,9 +64,6 @@ When('the same run fires a second time', async function (this: PipelineWorld) {
 });
 
 When('the build attempts to publish', async function (this: PipelineWorld) {
-  this.source.configureMorning(this.today);
-  this.clock.set(`${this.today}T11:02:14Z`);
-  await this.runIngest('ingest (every model dark)');
   this.takeSnapshot('before-refused-build-pub', 'pub/');
   this.takeSnapshot('before-refused-build-calls', 'log/calls/');
   this.clock.set(`${this.today}T11:22:00Z`);
@@ -192,6 +190,12 @@ Then('its size band is waist to chest', async function (this: PipelineWorld) {
   assert.equal(row.size_band, 'waist_chest');
 });
 
+Then('the call records four used models and zero absent models', async function (this: PipelineWorld) {
+  const row = await this.workedExampleCallRow();
+  assert.equal(row.members_used, 4, 'all four declared wave members must feed a healthy blend');
+  assert.equal(row.members_null, 0, 'a healthy four-member source registry has no absent members');
+});
+
 Then("its confidence level is low, from the models' own disagreement", async function (this: PipelineWorld) {
   const row = await this.workedExampleCallRow();
   assert.equal(row.conf_level, 'low');
@@ -208,6 +212,16 @@ Then('the call names size as what held the day back', async function (this: Pipe
   const venao = today.spots.find((s) => s.spot_id === 'playa-venao');
   assert.ok(venao, 'bundle must carry the spot');
   assert.equal(venao.weakest_link, 'size', 'the weakest link is the argmax of log-damage, size here');
+});
+
+Then('the published bundle carries the Spanish call a surfer reads', async function (this: PipelineWorld) {
+  const bundle = await this.bundle();
+  const today = bundle.days.at(0);
+  const venao = today?.spots.find((spot) => spot.spot_id === 'playa-venao');
+  assert.ok(venao, 'bundle must carry Playa Venao in the current day');
+  assert.equal(typeof venao.call.es, 'string', 'the public bundle needs a Spanish call string');
+  assert.ok(venao.call.es.trim().length > 0, 'the Spanish call must be readable copy, not an empty field');
+  assert.ok(!venao.call.es.includes('placeholder'), 'the public Spanish call must never ship as placeholder text');
 });
 
 // ---------- correction inertness ----------
@@ -236,7 +250,27 @@ Given('the wave model {string} went dark this morning', function (this: Pipeline
 });
 
 Given('every wave model went dark this morning', function (this: PipelineWorld) {
+  this.source.configureMorning(this.today);
   for (const m of venaoMorningMembers) this.source.dark.add(m.source);
+});
+
+Given('only wave model {string} is usable this morning', function (this: PipelineWorld, usable: string) {
+  assert.ok(
+    venaoMorningMembers.some((member) => member.source === usable),
+    `unknown fixture wave model: ${usable}`,
+  );
+  for (const member of venaoMorningMembers) {
+    if (member.source !== usable) this.source.dark.add(member.source);
+  }
+});
+
+Given('the forecast provider returned {string} this morning', function (this: PipelineWorld, failure: string) {
+  assert.ok(
+    ['error', 'malformed', 'stale', 'dark'].includes(failure),
+    `unknown source-failure fixture: ${failure}`,
+  );
+  this.source.configureMorning(this.today);
+  this.source.waveFailure = failure as 'error' | 'malformed' | 'stale' | 'dark';
 });
 
 Then('the prediction log holds no rows for the dark model this cycle', async function (this: PipelineWorld) {
@@ -258,6 +292,25 @@ Then('the spot still gets a score from the three remaining models', async functi
   const row = await this.workedExampleCallRow();
   assert.ok(Number.isInteger(row.score_q) && row.score_q >= 0 && row.score_q <= 100);
   assert.equal(row.members_used, 3, 'the blend must count exactly the three live members');
+  assert.equal(row.members_null, 1, 'the absent declared member must be visible in the call receipt');
+});
+
+Then('the spot still gets a score from the one usable model', async function (this: PipelineWorld) {
+  const row = await this.workedExampleCallRow();
+  assert.ok(Number.isInteger(row.score_q) && row.score_q >= 0 && row.score_q <= 100);
+  assert.equal(row.members_used, 1, 'one usable source must still be scored rather than discarded');
+});
+
+Then('the call records one used model and three absent models', async function (this: PipelineWorld) {
+  const row = await this.workedExampleCallRow();
+  assert.equal(row.members_used, 1);
+  assert.equal(row.members_null, 3, 'three unavailable declared members must not disappear from the receipt');
+});
+
+Then('the single-member confidence is capped honestly', async function (this: PipelineWorld) {
+  const row = await this.workedExampleCallRow();
+  assert.equal(row.conf_level, 'low', 'one model cannot claim medium or high confidence');
+  assert.ok(row.conf_value <= 0.4, `one member must cap confidence at 0.4; got ${row.conf_value}`);
 });
 
 Given("yesterday's dawn build published a call", async function (this: PipelineWorld) {
@@ -305,6 +358,10 @@ Given('the wind source went dark this morning', function (this: PipelineWorld) {
   this.source.windDark = true;
 });
 
+Given('the tide source went dark this morning', function (this: PipelineWorld) {
+  this.source.tideDark = true;
+});
+
 Then('the spot still gets a score, from swell and tide alone', async function (this: PipelineWorld) {
   const row = await this.workedExampleCallRow();
   assert.ok(
@@ -322,6 +379,33 @@ Then('the record shows wind as absent, not as a number', async function (this: P
     null,
     'a missing observation is recorded as null, never a fabricated sub-score',
   );
+  assert.ok(row.missing.includes('wind'), 'the call log must name wind as missing, not only omit its score');
+});
+
+Then('the missing-wind confidence is capped honestly', async function (this: PipelineWorld) {
+  const row = await this.workedExampleCallRow();
+  assert.ok(row.conf_value <= 0.4, `missing wind must cap confidence at 0.4; got ${row.conf_value}`);
+});
+
+Then('the spot still gets a score, from swell and wind alone', async function (this: PipelineWorld) {
+  const row = await this.workedExampleCallRow();
+  assert.ok(
+    Number.isInteger(row.score_q) && row.score_q >= 0 && row.score_q <= 100,
+    'the spot must still be scored from the factors we know',
+  );
+  assert.ok(typeof row.sub.size === 'number', 'size must still participate');
+  assert.ok(typeof row.sub.wind === 'number', 'wind must still participate');
+});
+
+Then('the record shows tide as absent, not as a number', async function (this: PipelineWorld) {
+  const row = await this.workedExampleCallRow();
+  assert.equal(row.sub.tide, null, 'a missing tide observation is recorded as null, never a fabricated sub-score');
+  assert.ok(row.missing.includes('tide'), 'the call log must name tide as missing, not only omit its score');
+});
+
+Then('the missing-tide confidence is capped honestly', async function (this: PipelineWorld) {
+  const row = await this.workedExampleCallRow();
+  assert.ok(row.conf_value <= 0.7, `missing tide must cap confidence at 0.7; got ${row.conf_value}`);
 });
 
 Given('the wave model {string} reported the fake flat sea for this spot', function (this: PipelineWorld, source: string) {
@@ -345,6 +429,7 @@ Then("that model's rows are flagged as land masked in the log", async function (
 Then('the call is blended from the three real opinions only', async function (this: PipelineWorld) {
   const row = await this.workedExampleCallRow();
   assert.equal(row.members_used, 3, 'a land-masked member must never be averaged into the blend');
+  assert.equal(row.members_null, 1, 'a land-masked member must be visible as unavailable, not silently dropped');
 });
 
 // ---------- yesterday's numbers, still readable ----------

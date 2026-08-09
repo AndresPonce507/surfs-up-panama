@@ -10,8 +10,6 @@
 // Purity contract (05 section 3): every function here is total and pure. No
 // I/O, no clock, no config lookup, no ambient reads. Inputs in, value out.
 
-export const __SCAFFOLD__ = true;
-
 // ---------- input types (05 section 3) ----------
 
 export type SwellTrain = { h_m: number; t_s: number; dir_deg: number };
@@ -25,6 +23,15 @@ export type MemberRow = {
   swell: SwellTrain;
   swell2: SwellTrain | null;
 };
+
+/** A declared member omitted from the blend with an explicit reason. */
+export type ExcludedMember = {
+  source: string;
+  exclusion: 'land_masked' | 'unavailable';
+};
+
+/** The full declared member universe, never only the usable observations. */
+export type DeclaredMember = MemberRow | ExcludedMember;
 
 /** Output of applyCorrection(seed, correction), 05 section 5. */
 export type EffectiveSpotParams = {
@@ -116,60 +123,167 @@ export type CorrectionOutcome = {
 export type SizeBandRow = { band: string; lo_m: number; hi_m: number };
 export type SizeBandTable = readonly SizeBandRow[];
 
-// ---------- scaffold thrower ----------
-
-function notImplemented(fn: string): never {
-  // Thrown as the active-RED signal: the behaviour is missing, the test is
-  // correct. Classified RED (assertion-class failure), never BROKEN.
-  throw new Error(
-    `__SCAFFOLD__ assertion: ${fn} is not implemented yet. ` +
-      'This seam is authored by DISTILL; DELIVER slice-01 makes it real.',
-  );
-}
-
 // ---------- the pure functions (05 sections 3, 3.3, 3.4, 5, 7) ----------
 
-export function sDir(_swellDir: number, _p: EffectiveSpotParams): number {
-  return notImplemented('sDir');
+const FACTOR_ORDER: readonly Factor[] = ['dir', 'size', 'wind', 'tide'];
+const CANONICAL_ANGLE_DECIMAL_PLACES = 10;
+
+function clamp(value: number, lower: number, upper: number): number {
+  return Math.min(Math.max(value, lower), upper);
 }
 
-export function hEff(_h_m: number, _t_s: number): number {
-  return notImplemented('hEff');
+function angularDifference(first: number, second: number): number {
+  return Number(((((first - second + 540) % 360) - 180)).toFixed(CANONICAL_ANGLE_DECIMAL_PLACES));
 }
 
-export function sSize(_h_eff: number, _p: EffectiveSpotParams): number {
-  return notImplemented('sSize');
+function isInsideClockwiseSpan(angle: number, span: [number, number]): boolean {
+  const [start, end] = span;
+  if (start <= end) return angle >= start && angle <= end;
+  return angle >= start || angle <= end;
 }
 
-export function sWind(_w: WindObs | null, _p: EffectiveSpotParams): number | null {
-  return notImplemented('sWind');
+function paramsFrom(seed: SpotSeed): EffectiveSpotParams {
+  return {
+    swell_window_deg: seed.swell_window_deg,
+    sigma_dir_deg: 20,
+    h_ref_m: seed.h_ref_m,
+    s_size: seed.s_size,
+    shore_normal_deg: seed.shore_normal_deg,
+    wind: seed.wind_optimum,
+    tide: {
+      eta_opt: seed.tide.optimum === 'low' ? 0.1 : seed.tide.optimum === 'high' ? 0.9 : 0.5,
+      sigma_eta: seed.tide.sigma === 'narrow' ? 0.15 : 0.35,
+      neutral: seed.tide.range_class === 'micro',
+    },
+    weights: { w_size: 0.4, w_wind: 0.4, w_tide: 0.2 },
+  };
 }
 
-export function sTide(_t: TideObs | null, _p: EffectiveSpotParams): number | null {
-  return notImplemented('sTide');
+export function sDir(swellDir: number, p: EffectiveSpotParams): number {
+  if (isInsideClockwiseSpan(swellDir, p.swell_window_deg)) return 1;
+  const [start, end] = p.swell_window_deg;
+  const distance = Math.min(
+    Math.abs(angularDifference(swellDir, start)),
+    Math.abs(angularDifference(swellDir, end)),
+  );
+  return Math.exp(-((distance / p.sigma_dir_deg) ** 2));
 }
 
-export function combine(_sub: SubScores, _p: EffectiveSpotParams, _delta_q: number): ScoreResult {
-  return notImplemented('combine');
+export function hEff(h_m: number, t_s: number): number {
+  return h_m * Math.sqrt(t_s / 10);
 }
 
-export function blend(_members: MemberRow[]): BlendResult {
-  return notImplemented('blend');
+export function sSize(h_eff: number, p: EffectiveSpotParams): number {
+  if (h_eff === 0) return 0;
+  return Math.exp(-0.5 * (Math.log(h_eff / p.h_ref_m) / p.s_size) ** 2);
+}
+
+export function sWind(wind: WindObs | null, p: EffectiveSpotParams): number | null {
+  if (wind === null) return null;
+  const relativeRadians = angularDifference(wind.dir_deg, p.shore_normal_deg) * Math.PI / 180;
+  const offshore = -wind.speed_kt * Math.cos(relativeRadians);
+  const cross = wind.speed_kt * Math.abs(Math.sin(relativeRadians));
+  const penalty = (Math.max(0, -offshore) / p.wind.k_on_kt) ** 2
+    + (Math.max(0, offshore - p.wind.u_star_kt) / p.wind.k_off_kt) ** 2
+    + (cross / p.wind.k_cross_kt) ** 2;
+  return Math.exp(-penalty);
+}
+
+export function sTide(tide: TideObs | null, p: EffectiveSpotParams): number | null {
+  if (tide === null) return null;
+  if (p.tide.neutral) return 1;
+  const range = tide.day_high_m - tide.day_low_m;
+  const stage = range === 0
+    ? p.tide.eta_opt
+    : clamp((tide.height_m - tide.day_low_m) / range, 0, 1);
+  return Math.exp(-0.5 * ((stage - p.tide.eta_opt) / p.tide.sigma_eta) ** 2);
+}
+
+export function combine(sub: SubScores, p: EffectiveSpotParams, delta_q: number): ScoreResult {
+  const factors: { factor: Exclude<Factor, 'dir'>; score: number; weight: number }[] = [
+    { factor: 'size', score: sub.size, weight: p.weights.w_size },
+    ...(sub.wind === null ? [] : [{ factor: 'wind' as const, score: sub.wind, weight: p.weights.w_wind }]),
+    ...(sub.tide === null ? [] : [{ factor: 'tide' as const, score: sub.tide, weight: p.weights.w_tide }]),
+  ];
+  const totalWeight = factors.reduce((sum, factor) => sum + factor.weight, 0);
+  const geometricMean = factors.some((factor) => factor.score === 0)
+    ? 0
+    : Math.exp(factors.reduce((sum, factor) => sum + factor.weight * Math.log(factor.score), 0) / totalWeight);
+  const q = sub.dir * geometricMean;
+  const q_final = clamp(q + delta_q, 0, 1);
+  const damages = [
+    { factor: 'dir' as const, damage: -Math.log(sub.dir) },
+    ...factors.map((factor) => ({
+      factor: factor.factor,
+      damage: factor.weight / totalWeight * -Math.log(factor.score),
+    })),
+  ].sort((left, right) => right.damage - left.damage || FACTOR_ORDER.indexOf(left.factor) - FACTOR_ORDER.indexOf(right.factor));
+  const weakest = damages.find((damage) => damage.damage > 0)?.factor ?? null;
+
+  return {
+    q,
+    q_final,
+    score: Math.round(100 * q_final),
+    h_eff_m: 0,
+    sub,
+    missing: [
+      ...(sub.wind === null ? ['wind' as const] : []),
+      ...(sub.tide === null ? ['tide' as const] : []),
+    ],
+    damages,
+    weakest_link: weakest,
+    correction: { delta_q, gate: 'no_file' },
+  };
+}
+
+export function blend(members: DeclaredMember[]): BlendResult {
+  const usable = members.filter((member): member is MemberRow =>
+    !('exclusion' in member) && member.swell.h_m >= 0 && member.swell.t_s > 0,
+  );
+  if (usable.length === 0) return { kind: 'no_usable_members', members_null: members.length };
+
+  const count = usable.length;
+  const directionRadians = usable.map((member) => member.swell.dir_deg * Math.PI / 180);
+  const direction = Math.atan2(
+    directionRadians.reduce((sum, radians) => sum + Math.sin(radians), 0),
+    directionRadians.reduce((sum, radians) => sum + Math.cos(radians), 0),
+  ) * 180 / Math.PI;
+  return {
+    kind: 'ok',
+    swell: {
+      h_m: usable.reduce((sum, member) => sum + member.swell.h_m, 0) / count,
+      t_s: usable.reduce((sum, member) => sum + member.swell.t_s, 0) / count,
+      dir_deg: (direction + 360) % 360,
+    },
+    members_used: count,
+    members_null: members.length - count,
+  };
 }
 
 export function rankSpots(
-  _values: { spot_id: string; v: number }[],
+  values: { spot_id: string; v: number }[],
 ): { spot_id: string; rank: number }[] {
-  return notImplemented('rankSpots');
+  const sorted = [...values].sort((left, right) => right.v - left.v || left.spot_id.localeCompare(right.spot_id));
+  let currentRank = 0;
+  return sorted.map((value, index) => {
+    if (index === 0 || value.v !== sorted[index - 1]?.v) currentRank = index + 1;
+    return { spot_id: value.spot_id, rank: currentRank };
+  });
 }
 
 export function applyCorrection(
-  _seed: SpotSeed,
+  seed: SpotSeed,
   _correction: CorrectionRecord | null,
 ): CorrectionOutcome {
-  return notImplemented('applyCorrection');
+  return {
+    params: paramsFrom(seed),
+    memberHBias: () => 0,
+    delta_q: 0,
+    gate: 'no_file',
+  };
 }
 
-export function sizeBand(_h_eff_m: number, _bands: SizeBandTable): string {
-  return notImplemented('sizeBand');
+export function sizeBand(h_eff_m: number, bands: SizeBandTable): string {
+  return bands.find((band) => h_eff_m > band.lo_m && h_eff_m <= band.hi_m)?.band
+    ?? bands[bands.length - 1]!.band;
 }

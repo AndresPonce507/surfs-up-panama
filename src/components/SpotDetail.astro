@@ -34,7 +34,6 @@ const tomorrow = summaryFor(1);
   locale={locale}
   title={spot.name}
   currentPath={paths.spot(locale, spotId)}
-  altPath={paths.spot(locale === 'es' ? 'en' : 'es', spotId)}
 >
   <h1>{spot.name}</h1>
   <p>{t.home.updatedPrefix} {forecast.published_at}</p>

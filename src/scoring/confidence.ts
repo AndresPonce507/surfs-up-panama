@@ -4,8 +4,6 @@
 // Structural separation (law L9): nothing this function returns is readable by
 // combine(); the score signature accepts no spread, track or freshness input.
 
-export const __SCAFFOLD__ = true;
-
 import type { MemberRow } from './engine';
 
 export type SpreadInput =
@@ -32,14 +30,91 @@ export type ConfidenceResult = {
 };
 
 export function confidence(
-  _members: MemberRow[],
-  _spread: SpreadInput,
-  _track: { mae: number; mae_ref: number } | null,
-  _last_report_age_h: number | null,
-  _missing: ('wind' | 'tide')[],
+  members: MemberRow[],
+  spread: SpreadInput,
+  track: { mae: number; mae_ref: number } | null,
+  last_report_age_h: number | null,
+  missing: ('wind' | 'tide')[],
 ): ConfidenceResult {
-  throw new Error(
-    '__SCAFFOLD__ assertion: confidence is not implemented yet. ' +
-      'This seam is authored by DISTILL; DELIVER slice-01 makes it real.',
+  const c_spread = spread.kind === 'climatology'
+    ? spread.pct <= 20 ? 1 : spread.pct < 80 ? 0.7 : 0.35
+    : absoluteSpread(members);
+  const c_track = track === null ? 1 : clamp(1 - track.mae / track.mae_ref);
+  const c_fresh = last_report_age_h === null ? null : Math.max(Math.exp(-last_report_age_h / 36), 0.3);
+  const product = c_spread * c_track * (c_fresh ?? 1);
+  const cap = Math.min(
+    missing.includes('wind') ? 0.4 : 1,
+    missing.includes('tide') ? 0.7 : 1,
   );
+  const c_total = Math.min(product, cap);
+  const level = c_total <= 0.4 ? 'low' : c_total <= 0.7 ? 'medium' : 'high';
+  const spread_terms = spread.kind === 'climatology'
+    ? { height: 0, period: 0, direction: 0 }
+    : absoluteSpreadTerms(members);
+  const dominant = missing.length > 0
+    ? 'missing_data'
+    : dominantSpreadTerm(spread_terms, c_track, c_fresh);
+
+  return {
+    c_spread,
+    c_track,
+    c_fresh,
+    c_total,
+    level,
+    track_state: track === null ? 'unverified' : 'measured',
+    spread_terms,
+    dominant,
+  };
+}
+
+function clamp(value: number): number {
+  return Math.min(Math.max(value, 0), 1);
+}
+
+function standardDeviation(values: number[]): number {
+  const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+  return Math.sqrt(values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length);
+}
+
+function angleDistance(first: number, second: number): number {
+  return Math.abs(((first - second + 540) % 360) - 180);
+}
+
+function absoluteSpreadTerms(members: MemberRow[]): { height: number; period: number; direction: number } {
+  if (members.length < 2) return { height: 0, period: 0, direction: 0 };
+  const heights = members.map((member) => member.swell.h_m);
+  const periods = members.map((member) => member.swell.t_s);
+  const directions = members.map((member) => member.swell.dir_deg);
+  const maxDirectionDistance = directions.flatMap((direction, index) =>
+    directions.slice(index + 1).map((other) => angleDistance(direction, other)),
+  ).reduce((maximum, distance) => Math.max(maximum, distance), 0);
+  const heightMean = heights.reduce((sum, value) => sum + value, 0) / heights.length;
+  const periodMean = periods.reduce((sum, value) => sum + value, 0) / periods.length;
+  return {
+    height: (standardDeviation(heights) / heightMean / 0.25) ** 2,
+    period: (standardDeviation(periods) / periodMean / 0.2) ** 2,
+    direction: (maxDirectionDistance / 30) ** 2,
+  };
+}
+
+function absoluteSpread(members: MemberRow[]): number {
+  const terms = absoluteSpreadTerms(members);
+  const value = Math.exp(-(terms.height + terms.period + terms.direction));
+  return members.length < 2 ? Math.min(value, 0.4) : value;
+}
+
+function dominantSpreadTerm(
+  terms: { height: number; period: number; direction: number },
+  c_track: number,
+  c_fresh: number | null,
+): ConfidenceResult['dominant'] {
+  const candidates: [ConfidenceResult['dominant'], number][] = [
+    ['spread_height', terms.height],
+    ['spread_period', terms.period],
+    ['spread_direction', terms.direction],
+    ['track', -Math.log(c_track)],
+  ];
+  if (c_fresh !== null) candidates.push(['freshness', -Math.log(c_fresh)]);
+  const dominant = candidates.reduce((current, candidate) => candidate[1] > current[1] ? candidate : current);
+  return dominant[1] > 0 ? dominant[0] : null;
 }

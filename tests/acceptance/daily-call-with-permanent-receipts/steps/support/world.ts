@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 
 import { runIngestOnce } from '../../../../../src/pipeline/ingest';
 import { runBuildOnce } from '../../../../../src/pipeline/build';
-import type { BuildOutcome, IngestOutcome, ObjectStore } from '../../../../../src/pipeline/ports';
+import type { BuildOutcome, BuildStore, IngestOutcome } from '../../../../../src/pipeline/ports';
 import type { SpotSeed } from '../../../../../src/scoring/engine';
 import { FixedClock, FixtureSource, InMemoryStore } from './fakes';
 import type { UniverseSnapshot } from './state-delta';
@@ -43,6 +43,7 @@ export type CallRow = {
   bias_gate: string;
   members_used: number;
   members_null: number;
+  missing: ('wind' | 'tide')[];
 };
 
 export type PublishedRecord = { key: string; body: string };
@@ -85,7 +86,7 @@ export class PipelineWorld extends World {
     }
   }
 
-  async runBuild(label = 'build run', store: ObjectStore = this.store): Promise<BuildOutcome | null> {
+  async runBuild(label = 'build run', store: BuildStore = this.store): Promise<BuildOutcome | null> {
     try {
       this.buildOutcome = await runBuildOnce({
         store,
@@ -178,7 +179,14 @@ export class PipelineWorld extends World {
   }
 
   async bundle(): Promise<{
-    days: { date: string; spots: { spot_id: string; weakest_link: string | null }[] }[];
+    days: {
+      date: string;
+      spots: {
+        spot_id: string;
+        weakest_link: string | null;
+        call: { es: string; en?: string };
+      }[];
+    }[];
   }> {
     const body = await this.store.get('pub/v1/regions/pa-pacific/bundle.json');
     assert.ok(
@@ -186,7 +194,14 @@ export class PipelineWorld extends World {
       `no region bundle was published at pub/v1/regions/pa-pacific/bundle.json.${this.failureContext()}`,
     );
     return JSON.parse(body) as {
-      days: { date: string; spots: { spot_id: string; weakest_link: string | null }[] }[];
+      days: {
+        date: string;
+        spots: {
+          spot_id: string;
+          weakest_link: string | null;
+          call: { es: string; en?: string };
+        }[];
+      }[];
     };
   }
 
