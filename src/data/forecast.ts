@@ -13,7 +13,15 @@
 import surface from '../../data/published-surface.json';
 
 import type { Locale } from '../i18n/strings';
-import { assertStrictTwoDayUpdate } from '../publish/static-surface';
+import type { SizeBandToken } from './size-bands';
+import {
+  assertStrictTwoDayUpdate,
+  type BestWindow,
+  type ConfLevel,
+  type SizeRangeM,
+  type SurfaceCall,
+  type WindState,
+} from '../publish/static-surface';
 
 export interface DaySummary {
   /** Joins to spot_detail and to SpotIdentity on spot_id. */
@@ -23,11 +31,18 @@ export interface DaySummary {
   /** The Spanish call text rendered into the static reading surface. */
   readonly call: Partial<Record<Locale, string>>;
   /** Structured publish fields let the reading surface repeat the call without
-   * trusting a free-form narrative. */
-  readonly size_band?: string;
-  readonly size_range_m?: readonly [number, number];
-  readonly wind_state?: string;
-  readonly best_window?: { readonly start: string; readonly end: string };
+   * trusting a free-form narrative. Render them through
+   * `src/publish/display-format.ts`; never format a size or a window inline. */
+  readonly size_band?: SizeBandToken;
+  readonly size_range_m?: SizeRangeM;
+  readonly wind_state?: WindState;
+  readonly best_window?: BestWindow;
+  /**
+   * That day's own confidence level. It is a DAY field: confidence drops with
+   * lead time, so tomorrow's is genuinely lower than today's. The continuous
+   * value behind it stays in the PublishedCall log (domain-model section 13).
+   */
+  readonly conf_level?: ConfLevel;
 }
 
 export interface ForecastPlaceholder {
@@ -40,19 +55,9 @@ export interface ForecastPlaceholder {
   readonly days: readonly [readonly DaySummary[], readonly DaySummary[]];
 }
 
-type PublishedCall = {
-  readonly spot_id: string;
-  readonly score_q: number;
-  readonly call_es: string;
-  readonly size_band?: string;
-  readonly size_range_m?: readonly [number, number];
-  readonly wind_state?: string;
-  readonly best_window?: { readonly start: string; readonly end: string };
-};
-
 const current = assertStrictTwoDayUpdate(surface.current);
 
-function summaries(calls: readonly PublishedCall[]): readonly DaySummary[] {
+function summaries(calls: readonly SurfaceCall[]): readonly DaySummary[] {
   return calls.map((call) => ({
   spot_id: call.spot_id,
   score_q: call.score_q,
@@ -61,6 +66,7 @@ function summaries(calls: readonly PublishedCall[]): readonly DaySummary[] {
   ...(call.size_range_m === undefined ? {} : { size_range_m: call.size_range_m }),
   ...(call.wind_state === undefined ? {} : { wind_state: call.wind_state }),
   ...(call.best_window === undefined ? {} : { best_window: call.best_window }),
+  ...(call.conf_level === undefined ? {} : { conf_level: call.conf_level }),
   }));
 }
 

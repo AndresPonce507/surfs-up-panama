@@ -1,0 +1,6 @@
+{
+  "schema": "slice-07-confidence-fixtures/v1",
+  "today_level_cycle": ["high", "medium", "low"],
+  "tomorrow_level_cycle": ["medium", "low", "high"],
+  "long_name_spot_id": "santa-catalina-la-punta"
+}

@@ -1,7 +1,35 @@
+import type { SizeBandToken } from '../data/size-bands';
+
+/** Spot-local `HH:MM` strings, precomputed at publish time; pages never compute them. */
+export type BestWindow = {
+  readonly start: string;
+  readonly end: string;
+};
+
+/** `[lo, hi]` metres of the breaking face. Always rendered as a range, never a point. */
+export type SizeRangeM = readonly [number, number];
+
+export type WindState = 'clean' | 'choppy' | 'blown_out';
+
+/**
+ * The published projection of the continuous `C_total`. The level is what a
+ * page prints; the continuous `conf_value` stays in the PublishedCall log so
+ * thresholds can be retuned without rewriting what was shown
+ * (domain-model.md section 13, canonical-names table).
+ */
+export type ConfLevel = 'low' | 'medium' | 'high';
+
 export type SurfaceCall = {
   readonly spot_id: string;
   readonly score_q: number;
   readonly call_es: string;
+  // Structured publish fields. Optional on this wire type because the surface
+  // committed for slice-01 predates them; the region bundle requires them.
+  readonly conf_level?: ConfLevel;
+  readonly size_band?: SizeBandToken;
+  readonly size_range_m?: SizeRangeM;
+  readonly wind_state?: WindState;
+  readonly best_window?: BestWindow;
 };
 
 export type PublishedSurfaceDay = {

@@ -10,13 +10,18 @@ export type SpreadInput =
   | { kind: 'absolute' }
   | { kind: 'climatology'; pct: number };
 
+/** The published three-bucket projection of C_total. Same values as
+ * `publish/static-surface.ts`'s `ConfLevel`; declared once here because this
+ * module is where `level` is computed. */
+export type ConfidenceLevel = 'high' | 'medium' | 'low';
+
 export type ConfidenceResult = {
   c_spread: number;
   c_track: number;
   /** null = no report ever: excluded from the product, not floored (05 section 6.3). */
   c_fresh: number | null;
   c_total: number;
-  level: 'high' | 'medium' | 'low';
+  level: ConfidenceLevel;
   track_state: 'unverified' | 'measured';
   spread_terms: { height: number; period: number; direction: number };
   dominant:
@@ -65,6 +70,42 @@ export function confidence(
     spread_terms,
     dominant,
   };
+}
+
+// ---- day-one confidence display: the word beside the score, and the honest
+// reason one tap away (slice-07). Day-one confidence IS model agreement —
+// nothing here reads track record or freshness, because `level` already
+// folds that in, and this module never invents a beach report that does not
+// exist (HANDOFF.md section 5, settled, not to be relitigated).
+
+/** "confianza {word}" — the word that must sit beside every published score. */
+export const CONFIDENCE_LEVEL_WORD_ES: Readonly<Record<ConfidenceLevel, string>> = {
+  high: 'alta',
+  medium: 'media',
+  low: 'baja',
+};
+
+const MODEL_AGREEMENT_ES: Readonly<Record<ConfidenceLevel, string>> = {
+  high: 'Los modelos coinciden bastante entre sí',
+  medium: 'Los modelos coinciden solo en parte',
+  low: 'Los modelos no se ponen de acuerdo',
+};
+
+/** Zero beach reports exist in this system today. This sentence stays fixed
+ * and honest regardless of level: the level is agreement between forecast
+ * models, never a claim that anyone checked the actual waves. */
+const NO_BEACH_REPORT_ES =
+  'Todavía nadie ha mandado un reporte desde la playa en este spot: esto es solo qué tanto se parecen los modelos entre ellos, no una confirmación real de las condiciones.';
+
+/**
+ * The reason text one tap away from every row's confidence word. Pure
+ * function of `level` alone: the published bundle carries no continuous
+ * `conf_value` and no per-spot spread breakdown (domain-model.md section 13,
+ * `conf_value` stays PublishedCall-log-only), so a level-keyed, honestly
+ * worded explanation is the only truthful thing this can say.
+ */
+export function confidenceReasonEs(level: ConfidenceLevel): string {
+  return `${MODEL_AGREEMENT_ES[level]}. ${NO_BEACH_REPORT_ES}`;
 }
 
 function clamp(value: number): number {

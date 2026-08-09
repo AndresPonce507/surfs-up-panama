@@ -161,6 +161,58 @@ ol.ranked li:first-child > p {
   line-height: var(--leading-body);
 }
 
+/* ---- confidence: the level word always visible, the honest reason one tap
+   away via native <details>/<summary> (zero JS, adr-publish-time-html-
+   rendering.md). No transition or animation anywhere in this block: the
+   disclosure is instant, so prefers-reduced-motion has nothing to opt out
+   of, and the hero row (U4) stays exempt from motion by construction. */
+ol.ranked li > details.confidence {
+  grid-column: 1 / -1;
+  margin-top: var(--sp-1);
+}
+
+ol.ranked li > details.confidence > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-s);
+  color: var(--ink-2);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: var(--track-meta);
+  list-style: none;
+  cursor: pointer;
+}
+
+ol.ranked li > details.confidence > summary::-webkit-details-marker {
+  display: none;
+}
+
+ol.ranked li > details.confidence > summary::after {
+  content: '›';
+}
+
+ol.ranked li > details.confidence[open] > summary::after {
+  content: '⌄';
+}
+
+ol.ranked li > details.confidence > div {
+  padding: 0 var(--sp-2) var(--sp-2);
+  color: var(--ink-2);
+  font-size: var(--text-caption);
+  line-height: var(--leading-snug);
+}
+
+/* hero card: darker ink, same as its own reason paragraph, both already
+   proven readable against --hero-grad's worst stop (09-design-system.md). */
+ol.ranked li:first-child > details.confidence > summary,
+ol.ranked li:first-child > details.confidence > div {
+  color: var(--ink);
+}
+
 /* ---- spot page day cards */
 section {
   margin-bottom: var(--sp-3);
