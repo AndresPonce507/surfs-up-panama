@@ -1,0 +1,19 @@
+---
+// Real Spanish 404. A misspelled or dead spot address must never surface a
+// raw error (locally that was Astro's own generic English default page; on
+// the hosted origin it is a raw S3 AccessDenied XML body, mapped to this
+// document at the CDN by the publish lane, not here). This page only owns
+// that it exists, is real Spanish, says in words what happened, and offers
+// a way back to the list -- charter negative: no spot page may show a raw
+// error or come up blank, not even the weakest spot.
+import Base from '../layouts/Base.astro';
+import { paths } from '../i18n/routes';
+---
+
+<Base locale="es" title="Esa playa no existe" currentPath="/404/">
+  <h1>No encontramos esa playa</h1>
+  <p>Esa dirección no existe o está mal escrita. Revisa el nombre e intenta de nuevo.</p>
+  <nav>
+    <a data-field="back-to-list" href={paths.home('es')}>Volver a la lista</a>
+  </nav>
+</Base>
