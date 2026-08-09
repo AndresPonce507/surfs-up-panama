@@ -8,7 +8,7 @@ import { defineConfig } from 'vitest/config';
 // to prevent.
 export default defineConfig({
   test: {
-    include: ['tests/**/*.{test,spec}.ts'],
+    include: ['tests/**/*.{test,spec}.ts', 'infra/test/**/*.{test,spec}.ts'],
     exclude: ['node_modules', 'dist', '.astro', 'tests/**/e2e/**'],
     environment: 'node',
     passWithNoTests: true,

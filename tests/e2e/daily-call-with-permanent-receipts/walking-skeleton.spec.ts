@@ -3,11 +3,44 @@
 // The sole browser E2E for this feature. It exercises the published reading
 // surface, not a mock component or a forecast JSON request.
 
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
 
-const selectedDawnPublishedAt = '2026-08-07T11:22:00Z';
+type DawnReceipt = {
+  surf_date: string;
+  published_at: string;
+  build_kind: string;
+};
+
+type PublishedSurface = {
+  current: { surf_date: string };
+  dawn_receipts: DawnReceipt[];
+};
+
+function priorCivilDate(surfDate: string): string {
+  const date = new Date(`${surfDate}T00:00:00Z`);
+  if (Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== surfDate) {
+    throw new Error(`published surface current.surf_date must be an ISO civil date; received ${surfDate}`);
+  }
+  date.setUTCDate(date.getUTCDate() - 1);
+  return date.toISOString().slice(0, 10);
+}
+
+function priorDawnReceiptFromPublishedSurface(): DawnReceipt {
+  const fixturePath = join(process.cwd(), 'data', 'published-surface.json');
+  const surface = JSON.parse(readFileSync(fixturePath, 'utf8')) as PublishedSurface;
+  const expectedSurfDate = priorCivilDate(surface.current.surf_date);
+  const matchingReceipts = surface.dawn_receipts.filter(
+    (receipt) => receipt.surf_date === expectedSurfDate && receipt.build_kind === 'dawn',
+  );
+  if (matchingReceipts.length !== 1) {
+    throw new Error(
+      `published surface must contain exactly one dawn receipt for prior civil date ${expectedSurfDate}; found ${matchingReceipts.length}`,
+    );
+  }
+  return matchingReceipts[0]!;
+}
 
 async function auditReadingSurface(page: Page, requiresPrimaryAction: boolean): Promise<void> {
   const ui = await page.evaluate(() => {
@@ -92,6 +125,7 @@ async function auditReadingSurface(page: Page, requiresPrimaryAction: boolean): 
 }
 
 test('a surfer can read a real Spanish call and yesterday remains a separate public receipt', async ({ page }) => {
+  const expectedPriorDawnReceipt = priorDawnReceiptFromPublishedSurface();
   const requestedUrls: string[] = [];
   page.on('request', (request) => requestedUrls.push(request.url()));
   await page.setViewportSize({ width: 390, height: 844 });
@@ -131,7 +165,10 @@ test('a surfer can read a real Spanish call and yesterday remains a separate pub
     page.locator('time[datetime]').filter({ hasText: /\d/ }),
     'the yesterday receipt must expose its own exact publish time in HTML, even with JavaScript off',
   ).toHaveCount(1, { timeout: 1_000 });
-  await expect.soft(page.locator('time[datetime]')).toHaveAttribute('datetime', selectedDawnPublishedAt, { timeout: 1_000 });
+  await expect.soft(
+    page.locator('time[datetime]'),
+    'the yesterday route must show the dawn receipt for the prior Panama civil date, not an older receipt',
+  ).toHaveAttribute('datetime', expectedPriorDawnReceipt.published_at, { timeout: 1_000 });
   await expect.soft(page.locator('time[datetime]')).toContainText('6:22 a.m.', { timeout: 1_000 });
   await auditReadingSurface(page, false);
 

@@ -1,7 +1,7 @@
-# Active RED classification
+# RED classification history
 
 Feature: `daily-call-with-permanent-receipts`  
-Slice: `slice-01`  
+Slices: `slice-01`, `slice-02`
 Observed: 2026-08-08
 
 ## Commands observed
@@ -100,7 +100,7 @@ assertion.
 
 ## Gate result
 
-The 17 Cucumber scenarios, 22 Vitest scenarios, and the one browser walking
+Slice-01's 17 Cucumber scenarios, 22 Vitest scenarios, and the one browser walking
 skeleton are genuine RED where their required behaviour is absent. None failed during module loading, fixture
 construction, step matching, or test-runner setup. There are no skipped or
 pending scenarios.
@@ -117,10 +117,121 @@ reading route.
 The slice is ready for the DISTILL review gate, not yet for DELIVER until the
 independent human AT-review verdict is recorded.
 
+## Slice-02 RED scaffold classification history
+
+Status: `scaffold-present, RED observed before delivery`
+
+The prior 17-scenario run is invalid evidence. It used a test-owned
+`spawnSync` wrapper, stopped every mutation before its individual oracle, and
+did not drive an importable production composition entry. It must not be used
+for Slice-02 handoff or human review.
+
+### Required minimal production RED scaffold, owned by orchestration
+
+The declaration source scaffolds are present and the production-owned entry
+already exists at `scripts/ci-local.mjs`. Do not add a second entry module.
+Orchestration must wire one shared declaration evaluator through that entry for
+both the real `infra/` source and the generic contained declaration input. The
+fixture must not need a package, CDK app, synth, deploy, or fixture-specific
+branch.
+
+```ts
+export const __SCAFFOLD__ = true;
+
+export async function evaluateInfrastructureDeclarations({ root, environment, output }) {
+  throw new Error('__SCAFFOLD__: infrastructure declaration evaluation is not implemented');
+}
+
+export async function runLocalCi({
+  argv = [],
+  repoRoot,
+  output,
+  commandRunner,
+  environment,
+  declarationInput,
+} = {}) {
+  // Existing default infra handling evaluates repoRoot/infra, then owns the
+  // production guardrail-test plus credential-free synth and reports both
+  // phases with the named inspected population. A declarationInput uses the
+  // same evaluator with { root, mode: 'declaration-only' }, no synth/deploy,
+  // and no repoRoot/infra or repoRoot/.ci-local-logs side effect.
+}
+```
+
+The required public signature is
+`runLocalCi({ argv?, repoRoot?, output?, commandRunner?, environment?, declarationInput? }): Promise<number>`.
+`environment` is a read-only map. `declarationInput` is
+`{ root: string, mode: 'declaration-only' }`. The evaluator takes
+`{ root, environment, output }`. The AT invokes only `runLocalCi`, never a
+direct evaluator import, and passes no `commandRunner`. The scaffold failure
+is a runtime error captured by the production output port, not test setup or a
+module-level direct-domain import.
+
+### Observed execution contract
+
+Orchestration ran:
+
+```sh
+npm run test:at -- --tags @slice-02
+```
+
+Observed collection: eight Slice-02 scenarios. All eight failed at their individual
+behavior assertions after `runLocalCi` emitted its runtime `__SCAFFOLD__`
+message. No scenario failed during import, fixture construction, or step
+matching. Later assertions were skipped only because Cucumber stops a
+scenario after its first failed assertion.
+
+Each scenario reaches `runLocalCi` in process. The default-registration
+scenario captures the public inventory result before invoking the default
+`infra` job. Its output oracle requires the two real production phases,
+credential-free offline disclosure, the real `infra` root, the three named
+lifecycle rules, and all eleven Lambda capacity/timeout values. The real-root provenance scenario
+passes its copied checkout as `repoRoot`; every declaration-only mutation scenario rejects all
+source symlinks, copies and mutates a regular file inside
+`fixtures/controlled-infrastructure-declarations/`, then calls `runLocalCi`
+with `argv: ['--job=infra']`, the real project as `repoRoot`, a test-local
+credential-free `environment`, and `declarationInput: { root, mode:
+'declaration-only' }`. The supplied environment is a fixed minimal allowlist
+with fresh empty `HOME` and XDG paths, no credential or configuration override,
+and `AWS_EC2_METADATA_DISABLED=true`, so an offline statement cannot inherit a
+host profile or metadata credential. The copied declaration source and child
+command traps must remain untouched, proving parse-not-execute and the
+no-command/no-network declaration-only boundary. It never mutates global
+`process.env`.
+
+| Scenario / proof | Expected RED classification at the time observed | Individual oracle after the scaffold runtime output |
+|---|---|---|
+| Default `infra` registration | `MISSING_FUNCTIONALITY` | public inventory row `● infra`, then the production `--job=infra` result names `infra/test/guardrails.test.ts: passed`, `credential-free synth: passed`, an honest credential-free offline statement, the actual `repoRoot/infra` path, all three lifecycle rules, and all eleven Lambda capacity/timeout values before returning success; the current runtime scaffold reaches the first phase oracle and lacks that behavior |
+| Contained public-root provenance | `MISSING_FUNCTIONALITY` | a changed copied checkout fails before protected phases and names that contained `infra` root plus its unique missing concurrency value, proving the public job reports the root it actually inspected |
+| Clean zero-rule inspection | `MISSING_FUNCTIONALITY` | copied-fixture identity, declaration-only mode, three named unrelated lifecycle rules inspected, zero prediction-reaching rules |
+| Exact 90-day Glacier Instant Retrieval exception | `MISSING_FUNCTIONALITY` | named sole allowlisted rule, exact prefix, class, and age |
+| Coupled lifecycle population | `MISSING_FUNCTIONALITY` | each bucket-wide, exact, descendant, 89-day, 91-day, wrong-class, and parent/child row has its own offending rule, reason, and removal guidance |
+| Coupled safeguard population | `MISSING_FUNCTIONALITY` | every concrete value within Lambda capacity, Lambda timeouts, log retention, and non-prediction lifecycle has its own safeguard, changed value, and restoration guidance; rows do not add product scope |
+| Unavailable site declaration | `MISSING_FUNCTIONALITY` | named source, cannot-inspect reason, and restoration guidance |
+| Malformed guardrail declaration | `MISSING_FUNCTIONALITY` | named source, cannot-inspect reason, and restoration guidance |
+
+### Controlled fixture and external-audit boundary
+
+The fixture is a copied test input with no `node_modules` and no symlink. It
+is not a shipped `infra/` source. Every source symlink is rejected before a
+non-dereferencing copy. The output must identify the copied fixture path and
+the three unrelated lifecycle rules it inspected, so zero prediction-reaching
+rules prove traversal without borrowing from the working tree. Each
+declaration-only call snapshots the real `repoRoot/infra` tree and
+`repoRoot/.ci-local-logs` immediately before and after the call; every failure
+must leave that universe byte-identical. Finally-safe cleanup restores every
+changed regular file and removes the copy.
+
+Anthropic's `$5/month` hard limit and CloudFront's pay-as-you-go posture are
+terminal-report external-audit statements, not local mutation or live-console
+claims. The report must say `external audit` and `not a live-console
+assertion`. Actual console compliance remains a release and monthly checklist
+responsibility.
+
 ## Advisory coverage-gate limitation
 
 `des verify-spec-coverage --repo . --feature-id daily-call-with-permanent-receipts`
-reported 38 uncovered rows. Its static discovery recognized the Gherkin
+reported 36 uncovered rows. Its static discovery recognized the Gherkin
 coverage tags for R1 through R11, but it did not recognize TypeScript
 `// covers: Rn` markers in the fast-check, Playwright, or static UI suites.
 The 18 scoring-law rows R12 through R29 and the executable browser/static
@@ -129,16 +240,42 @@ in their test files, but absent from that tool's count. Future-slice rows are
 also correctly absent under JIT. This is a TypeScript-discovery limitation in
 the installed nWave tool, not a reason to add dummy Gherkin scenarios.
 
+Slice-02's Gherkin scenarios all carry `@covers-R35`; its lifecycle scenarios
+also carry `@covers-R49`, so both the CI guardrail and no-lifecycle-expiration
+prefix obligation are mechanically covered. The remaining refusal combines the
+known TypeScript-discovery limitation with JIT-absent slices and is not a
+missing Slice-02 marker.
+
 `des check-contract-shape` is likewise Python-only in this installation and
 reported `malformed_input` when given the TypeScript project's `.feature`
-files. The Gherkin contract-shape tags were therefore checked directly: every
-state-mutating scenario is `@contract-shape:bounded-change`, and every
-scenario carries `@slice-01`.
+files. The Gherkin contract-shape tags were therefore checked directly:
+Slice-01 mutating scenarios are `@contract-shape:bounded-change`; every
+Slice-02 scenario is likewise `@contract-shape:bounded-change` and carries its
+own `@slice-02` tag.
 
-Rows R30 through R37 remain visibly uncovered by design. They belong to slices
-02 through 08 and must stay absent until their slice enters DISTILL under the
-JIT rule. R38 through R47 are feature-wide visual and reading-surface
+Rows R30 through R34 and R36 through R37 remain visibly uncovered by design.
+They belong to future slices and must stay absent until their slice enters
+DISTILL under the JIT rule. R38 through R47 are feature-wide visual and reading-surface
 obligations, so their applicable checks entered this slice. R43 is covered by
-the static-reading contract and the browser route assertion. It remains RED
-because the builder-state selector and static receipt route are explicit
-scaffolds, not because a route, day selector, or language decision is unresolved.
+the static-reading contract and the browser route assertion. It was RED in this
+pre-delivery observation because the builder-state selector and static receipt
+route were explicit scaffolds, not because a route, day selector, or language
+decision was unresolved.
+
+## Slice-02 green completion record
+
+The preceding Slice-02 RED record is historical evidence. The production-owned
+`runLocalCi` implementation replaced that scaffold without changing the eight
+acceptance scenarios.
+
+On 2026-08-09, `npm run test:at -- --tags @slice-02` passed all 8 scenarios and
+56 steps. The default `npm run ci:local` gate passed all 9 jobs. Its real
+infrastructure path runs `infra/test/guardrails.test.ts` and credential-free CDK
+synth; it also preserves the full OSV lockfile scan. The only OSV exception is
+the documented, expiring `GHSA-rgw5-rvv9-x895` allowance for
+`aws-cdk-lib@2.263.0`'s bundled `brace-expansion@5.0.8`.
+
+The fresh delegated APPROVED review verdict is recorded and
+`des carpaccio-slice-gate --repo-root . --feature-id daily-call-with-permanent-receipts --entering-slice slice-02`
+returns `SliceCleared`. Slice-02 is green, but no Slice-02 commit exists yet;
+the slice is not shipped until its DES commit and verification gate complete.

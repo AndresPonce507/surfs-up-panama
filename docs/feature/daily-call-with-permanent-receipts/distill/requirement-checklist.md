@@ -63,3 +63,9 @@ are visible here from day one so no requirement is silently dropped.
 | R47 | Reading routes ship zero render-blocking subresources and the browser never fetches forecast JSON (publish-time HTML rendering) | nfr |
 | R48 | The keystone journey is walkable end to end on the built site: real model data snapshotted, scored, rendered; next morning yesterday's page shows the dawn build's numbers unchanged (the feature's single walking-skeleton e2e) | e2e |
 | R49 | The raw prediction log stays private: no public route or built page serves predictions/v1 content; only log/calls/v1 backs the public yesterday surface (slice-01); no lifecycle expiration rule may ever reach the predictions/ prefix (slice-02, guardrail 4) | security |
+
+## Current DISTILL coverage
+
+| Current requirement | Active acceptance evidence | Status |
+|---|---|---|
+| CI guardrail and prediction-prefix lifecycle safety | `tests/acceptance/daily-call-with-permanent-receipts/infrastructure-guardrails.feature`: all eight scenarios carry `@covers-R35`; lifecycle scenarios also carry `@covers-R49`. They drive production-owned `runLocalCi({ argv, repoRoot, output, commandRunner, environment, declarationInput })` from `scripts/ci-local.mjs`, without supplying `commandRunner`. The default job runs the real `infra/test/guardrails.test.ts` and credential-free CDK synth phases over the named real `infra/` population; bounded declaration-only failures use a fresh empty `HOME`, no `AWS_*` overrides, and preserve `repoRoot/infra` plus `.ci-local-logs`. | Green 2026-08-09: 8 scenarios, 56 steps; fresh delegated approval recorded; carpaccio `SliceCleared`; slice uncommitted |

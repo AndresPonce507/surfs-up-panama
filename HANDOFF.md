@@ -19,14 +19,43 @@ recollection, this file wins. Update it before you stop working.
 | DISCUSS | ✅ 31 product decisions + an 11-feature epic plan |
 | DESIGN | ✅ 8 documents, ~30 ADRs, **two full review rounds and two fix rounds** |
 | DEVOPS | ✅ `08-devops.md` |
-| DISTILL | ✅ Slice-01 active-RED suite authored, exercised, and approved by the mandatory four-reviewer gate. |
-| DELIVER | 🟡 Slice-01 is green and Vera has recorded a PASS after the `/ayer` repair. Commit through DES next; slice-02 remains JIT until that commit clears. |
+| DISTILL | ✅ Slice-01 is complete. Slice-02's eight CI-guardrail ATs are green, and its fresh delegated approval is recorded. |
+| DELIVER | 🟡 Slice-01 is committed through DES (`0f04f07`). Slice-02 is green and its carpaccio gate clears, but it is not shipped until its own DES commit exists; later slice tests remain absent. |
 
-**There is a site that builds** (16 pages, zero JS) and **a real spot data file** (23 spots).
-There is no implemented feature behaviour yet. DISTILL has authored 17 Cucumber scenarios,
-18 fast-check scoring-law tests, and one built mobile walking skeleton for slice-01. They run
-and fail only on explicit missing-behaviour scaffolds, not imports or runner setup. DISTILL
-writes every acceptance test before DELIVER writes the code that satisfies it.
+**There is a working Slice-01 site** (16 pages, zero JS) and **a real spot data file** (23 spots).
+Its pipeline, scoring, Spanish reading surface, permanent receipt and mobile journey are committed
+in `0f04f07`. Slice-02 adds the pre-deploy CI guardrail. Its eight scenarios now drive the
+production-owned local-CI entry green against real CDK guardrails and credential-free synth. The
+default local gate passes all nine jobs, including the documented narrow OSV exception. Slice-02
+remains uncommitted and therefore unshipped. DISTILL writes each slice's acceptance test before
+DELIVER writes that slice's production behavior.
+
+---
+
+## Restart checkpoint for Codex
+
+**Slice-02 is green and uncommitted. Do not call it shipped or start Slice-03 before the Slice-02 DES commit is verified.**
+
+1. Start in this repository and read this file before touching the worktree:
+   `cd /Users/andres/panama-surf`.
+2. Slice-02 has eight green CI-guardrail scenarios. `npm run test:at -- --tags @slice-02` passes
+   all 8 scenarios and 56 steps. It still has five verified negative ATs. The real `infra` job
+   runs the guardrail suite and credential-free CDK synth; the default `npm run ci:local` gate
+   passes 9 of 9 jobs. The narrow, expiring OSV exception is documented in `osv-scanner.toml` and
+   `docs/security/osv-exceptions.md`.
+3. A fresh delegated APPROVED Slice-02 review verdict is recorded. The carpaccio command
+   `des carpaccio-slice-gate --repo-root . --feature-id daily-call-with-permanent-receipts --entering-slice slice-02`
+   returns `SliceCleared`, exit 0.
+4. Run `des commit-slice` and the slice commit verification/contract gate. Do not write a Slice-02
+   commit SHA here until that commit exists. Only after it verifies may the Slice Plan mark
+   Slice-02 shipped and Slice-03 JIT DISTILL begin. Slice-03 through Slice-08 tests remain absent.
+6. Codex nWave assets were reinstalled. `~/.agents/skills/nw-ui-quality-mandates/SKILL.md` now
+   exists. Restart Codex to load the changed skill and agent specifications. In
+   `/Users/andres/nWave-experimental`, the uncommitted installer fix is limited to
+   `scripts/shared/agent_catalog.py` and
+   `tests/installer/unit/plugins/test_codex_skills_plugin.py`; it retains the composed UI mandate
+   during a normal Codex install. `uv.lock` is an unrelated untracked user file. The focused
+   installer test still needs a fresh run before committing or pushing anything.
 
 ---
 
@@ -61,13 +90,13 @@ Two things about it were nearly lost and are now fixed:
 
 ## 4. Exact next step
 
-**Finish tonight's one-session browser examination of the retained receipt, record its verdict, and commit slice-01 through DES.** Current facts:
+**Commit the verified green Slice-02 through DES, then run its commit verification/contract gate.** Current facts:
 
 1. The eight charters are filled and pass their charter checks. The requirement checklist and
    red-classification record live under `docs/feature/daily-call-with-permanent-receipts/distill/`.
-2. Slice-01 scenarios are on disk. Future-slice scenarios remain absent. The active RED suite
-   covers durable prediction writes, scoring laws, the real built reading surface, source-failure
-   modes, and the visual mandates.
+2. Slice-01 scenarios are on disk and green. Future-slice scenarios remain absent. The delivered
+   acceptance suite covers durable prediction writes, scoring laws, the real built reading surface,
+   source-failure modes, and the visual mandates.
 3. The mandatory four-reviewer DISTILL re-review has approved the corrected suite: the R43
    reading-state contract, port capabilities, prediction write-once documentation,
    source-failure coverage, UI checks, and CI wiring have zero remaining blocker or high findings.
@@ -98,11 +127,18 @@ Two things about it were nearly lost and are now fixed:
    canonical at the stated precision after a deterministic floating-point counterexample. All
    declared checks are green. A fresh Vera walk has now recorded `PASS` against the current charter
    seal: today and the distinct retained `/ayer` receipt were stable through reload and navigation,
-   readable, Spanish, and free of raw errors. `des commit-slice` is the next action.
+   readable, Spanish, and free of raw errors. `des commit-slice` passed and produced
+   `0f04f07da9fd88ecfbd046862f07e0f44c549943` with `SliceCommitVerified` for slice-01.
    The genuine two-real-morning comparison is a post-deploy launch verification only, when the
    unattended deployed ingest has actually run overnight. It is not local slice evidence and no
-   local midnight wait is required. After the commit, author slice-02's CI-guardrail tests just in
-   time; later slice tests remain absent.
+   local midnight wait is required.
+8. Slice-02's eight CI-guardrail ATs are green: `npm run test:at -- --tags @slice-02` passes 8
+   scenarios and 56 steps. `des verify-negative-at` still finds five critical negative ATs. A fresh
+   delegated `APPROVED` reviewer verdict is recorded and its carpaccio gate returns `SliceCleared`.
+   `npm run ci:local` passes all 9 jobs, including real `infra/test/guardrails.test.ts`,
+   credential-free CDK synth, and the full lockfile OSV scan. The one narrow, expiring OSV
+   exception for AWS CDK's bundled `brace-expansion@5.0.8` is documented with its removal
+   condition. Slice-02 is green but uncommitted, so it is not yet shipped.
 
 **Two tags are mechanically load-bearing** and the carpaccio gate reads both. Get either wrong and
 the gate reports no scenarios for the slice:
@@ -134,8 +170,8 @@ Beyond the 31 in the decisions log:
 
 ## 6. Open items
 
-**DECISIONS RECORDED 2026-08-08 19:30. Items 1 to 3 below are CLOSED, treat them as settled and
-proceed. Only item 4 still needs Andres.**
+**DECISIONS RECORDED 2026-08-08 19:30. Items 1 to 4 below are CLOSED, treat them as settled and
+proceed.**
 
 1. **CLOSED, downgraded to a launch-checklist item, not a blocker.** The seven Spanish size-band
    strings already exist and are canonical in `domain-model.md` §7.2. The cousin's review is a
@@ -160,11 +196,9 @@ proceed. Only item 4 still needs Andres.**
    Remove the `/en/` routes from the build. They are placeholder files with bracketed English
    copy in them, and a half-English site is worse than an honestly Spanish one. Feature 11
    recreates them properly with real translation.
-4. **STILL NEEDS ANDRES. Independent AT approval.** After the corrected tests are re-reviewed, he
-   records the slice-01 verdict. The carpaccio gate fails closed with exit 45 until then. This one
-   genuinely cannot be delegated: nWave classifies the orchestrator recording its own commissioned
-   verdict as self-approval and denies it, and it denies proxying through another agent too. Do not
-   attempt a workaround. Hold the slice and say so.
+4. **CLOSED.** Slice-01's independent approval and commit are recorded. Slice-02 now has its own
+   fresh delegated APPROVED verdict and a cleared carpaccio gate. Its remaining local action is the
+   DES commit and verification gate, not another approval decision.
 
 **Needs Andres for launch, but not for the remaining local build:**
 
