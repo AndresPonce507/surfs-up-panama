@@ -56,34 +56,20 @@ function fieldFindings(call: SurfaceCall, where: string): string[] {
   return findings;
 }
 
-// SKIPPED — falsifiability already proven, not disabled because it fails to
-// fail. Run unskipped against the committed file as of 2026-08-09: all 60
-// spot-day-entries (20 calls + 20 days[0].spots + 20 days[1].spots) report
-// at least one finding (conf_level missing on all 60; size_band,
-// size_range_m, wind_state, best_window missing on 59 of 60, present only
-// on calls[0]/playa-venao). That is a real AssertionError on business data,
-// not an import error — the gate this guard exists to be.
-//
-// It stays skipped because regenerating data/published-surface.json from
-// real pipeline output (now possible offline via `npm run pipeline:build`
-// + `npm run publish:surface`, see src/pipeline/run-build-cli.ts) would
-// immediately break a shipped, unrelated acceptance scenario:
-// tests/acceptance/daily-call-with-permanent-receipts/steps/tomorrows-ranking.steps.ts
-// lines ~132-133 and ~139-140 hardcode "VE A Santa Catalina - La Punta"/91
-// and "VE A Playa Venao"/88 as literal expected values. Those values appear
-// nowhere in tomorrows-ranking.feature, domain-model.md, or the roadmap —
-// they were reverse-fitted to the current hand-authored surface, not
-// derived from a rule. Real pipeline output ranks differently, so
-// regenerating the file is currently incompatible with keeping that
-// scenario green, and Gate 6 (100% green bar) forbids committing either way
-// broken. Fix owned by the slice-05 lane: derive both expectations
-// dynamically from days[0].spots[0] / days[1].spots[0] at test time, the
-// same pattern top-call-card.steps.ts already uses at lines 137-156, instead
-// of literals. Once that lands:
+// History: this guard was written and proven falsifiable against the
+// then-committed, incomplete surface (all 60 spot-day-entries had at least
+// one missing field), then temporarily SKIPPED because regenerating the
+// surface from real pipeline output would have broken a shipped, unrelated
+// scenario in tomorrows-ranking.steps.ts that hardcoded two literal
+// expected values reverse-fitted to that old fixture. Andres authorized
+// fixing the actual coupling instead of leaving the guard disabled: that
+// scenario now derives its expectations dynamically
+// (tomorrows-ranking.steps.ts, commit b0970b3), data/published-surface.json
+// is regenerated from real pipeline output via
 //   npm run pipeline:build -- --at 2026-08-09T11:22:00Z
 //   npm run publish:surface -- --input .pipeline-out/pub/v1/regions/pa-pacific/bundle.json
-// then remove `.skip` below — it will go green against the regenerated file.
-describe.skip('published surface: every spot, both days, carries the five structured fields', () => {
+// and this guard is unskipped and green against it.
+describe('published surface: every spot, both days, carries the five structured fields', () => {
   it('has no gaps in current.days[0], current.days[1], or current.calls', () => {
     const surface = loadSurface();
 
