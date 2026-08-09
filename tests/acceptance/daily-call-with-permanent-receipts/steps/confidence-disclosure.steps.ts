@@ -105,16 +105,26 @@ function injectConfidenceLevels(root: string, promoteLongName: boolean): void {
 
   // Today's page reads current.calls (forecast.ts's documented legacy alias
   // for days[0]), tomorrow's reads current.days[1].spots. Cycling through
-  // all three levels on both, with different phase, proves conf_level is a
-  // DAY field: the same spot can carry a different level on each day.
+  // all three levels on both, with a different phase, gives conf_level a
+  // real chance to differ per spot across days -- confirmed below, not just
+  // asserted in this comment, since conf_level is documented as a DAY field
+  // (the same spot's level can legitimately differ tomorrow).
   surface.current.calls.forEach((call, index) => {
     call.conf_level = cycleAt(fixture.today_level_cycle, index);
   });
   surface.current.days[1].spots.forEach((spot, index) => {
     spot.conf_level = cycleAt(fixture.tomorrow_level_cycle, index);
   });
+  const todayLevelBySpot = new Map(surface.current.calls.map((call) => [call.spot_id, call.conf_level]));
+  const differsTomorrow = surface.current.days[1].spots.some(
+    (spot) => todayLevelBySpot.get(spot.spot_id) !== undefined && todayLevelBySpot.get(spot.spot_id) !== spot.conf_level,
+  );
+  assert.ok(differsTomorrow, 'test fixture error: the level cycles never produce a spot with a different level tomorrow than today');
 
   if (promoteLongName) {
+    // Reorders current.calls only. forecast.ts's days[0] (today's page)
+    // reads current.calls, never current.days[0].spots -- reordering that
+    // second array too would be dead work with nothing left to read it.
     promoteToTop(surface.current.calls, fixture.long_name_spot_id);
   }
 
@@ -285,10 +295,18 @@ When('el surfista toca la razón de confianza de cada fila', async function (thi
     const row = rows.nth(index);
     const summary = row.locator('details.confidence summary');
     const summaryText = (await summary.count()) === 0 ? '' : ((await summary.textContent()) ?? '').trim();
-    if ((await summary.count()) > 0) await summary.click();
     const reasonDiv = row.locator('details.confidence > div');
-    const reasonText = (await reasonDiv.count()) === 0 ? '' : ((await reasonDiv.textContent()) ?? '').trim();
-    observed.push({ summaryTextBeforeOpen: summaryText, reasonTextAfterOpen: reasonText });
+    let reasonText = '';
+    if ((await summary.count()) > 0) {
+      await summary.click();
+      reasonText = (await reasonDiv.textContent()) ?? '';
+      // Every disclosure on the page shares name="confidence" (an exclusive
+      // HTML5 group), so it auto-closes when the NEXT row opens. Closing it
+      // here too keeps this row's own dropdown from covering the next
+      // row's tap target while this loop is still reading it.
+      await summary.click();
+    }
+    observed.push({ summaryTextBeforeOpen: summaryText, reasonTextAfterOpen: reasonText.trim() });
   }
   world.slice07Observed = observed;
 });
@@ -450,6 +468,130 @@ Then('el toque de confianza mide al menos 44 por 44 px y no tiene movimiento', a
   }
   assertBehavior(findings, 'darle a <summary> min-width y min-height de var(--tap) (44px) y no declarar transition ni animation en el bloque de confianza.');
 });
+
+Then(
+  'la confianza comparte la segunda línea de la fila en vez de agregar una tercera',
+  async function (this: PipelineWorld) {
+    const world = slice07World(this);
+    const page = requiredPage(world);
+    const rows = page.locator('ol.ranked > li');
+    const count = await rows.count();
+    const findings: string[] = [];
+    for (let index = 0; index < count; index += 1) {
+      const geometry = await rows.nth(index).evaluate((row) => {
+        const reason = row.querySelector('p');
+        const summary = row.querySelector('details.confidence summary');
+        if (reason === null || summary === null) return null;
+        return {
+          reasonBottom: reason.getBoundingClientRect().bottom,
+          summaryTop: summary.getBoundingClientRect().top,
+        };
+      });
+      if (geometry === null) {
+        findings.push(`la fila ${index + 1} no tiene razón o confianza para comparar`);
+        continue;
+      }
+      // The confidence badge's top must land above the reason paragraph's
+      // bottom edge: they occupy the SAME visual band (the row's existing
+      // second line), never a badge stacked below it as a new line.
+      if (geometry.summaryTop >= geometry.reasonBottom) {
+        findings.push(`la fila ${index + 1} agrega una tercera línea: la confianza empieza en ${geometry.summaryTop}, el llamado termina en ${geometry.reasonBottom}`);
+      }
+    }
+    assertBehavior(
+      findings,
+      'colocar <details class="confidence"> en la misma grid-row que <p> (columna 3 en filas normales, columna 2 en el héroe), nunca en una fila propia de ancho completo.',
+    );
+  },
+);
+
+// Passed to locator.evaluate() as a STRING, not a function reference: this
+// project's loader (tsx/esbuild) wraps NAMED function/const bindings with a
+// __name(...) helper call for Function.prototype.name preservation, and
+// that helper does not exist inside Playwright's isolated evaluate()
+// realm — a serialized function reference carries the call across, a raw
+// source string does not. Same technique slice-04's steps already use for
+// its own contrast audit (page.evaluate(`(() => {...})()`)).
+//
+// Walks up from the element to the first ancestor that actually paints
+// something (a solid backgroundColor, or gradient stops in
+// backgroundImage — the hero card never has a plain color) and returns the
+// worst-case (lowest) contrast ratio against the element's own text color.
+// Same WCAG luminance formula as slice-04's audit, generalized to walk
+// ancestors instead of assuming the hero card is the direct parent.
+const CONTRAST_AGAINST_REAL_BACKGROUND_SCRIPT = `(el) => {
+  const parseColor = (value) => {
+    const match = value.match(/rgba?\\(([^)]+)\\)/i);
+    if (!match || match[1] === undefined) return null;
+    const parts = match[1].split(',').map((part) => Number(part.trim()));
+    const r = parts[0], g = parts[1], b = parts[2], a = parts[3];
+    if (r === undefined || g === undefined || b === undefined || !Number.isFinite(r) || !Number.isFinite(g) || !Number.isFinite(b)) return null;
+    return { r, g, b, a: Number.isFinite(a) ? a : 1 };
+  };
+  const luminance = (c) => {
+    const channel = (value) => {
+      const normalized = value / 255;
+      return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * channel(c.r) + 0.7152 * channel(c.g) + 0.0722 * channel(c.b);
+  };
+  const contrast = (fg, bg) => {
+    const first = luminance(fg);
+    const second = luminance(bg);
+    return (Math.max(first, second) + 0.05) / (Math.min(first, second) + 0.05);
+  };
+  const foreground = parseColor(getComputedStyle(el).color);
+  if (foreground === null) return null;
+  let node = el;
+  while (node !== null) {
+    const computed = getComputedStyle(node);
+    const backgrounds = [];
+    const solid = parseColor(computed.backgroundColor);
+    if (solid !== null && solid.a > 0.99) backgrounds.push(solid);
+    for (const match of computed.backgroundImage.matchAll(/rgba?\\([^)]+\\)/gi)) {
+      const stop = parseColor(match[0]);
+      if (stop !== null) backgrounds.push(stop);
+    }
+    if (backgrounds.length > 0) return Math.min(...backgrounds.map((background) => contrast(foreground, background)));
+    node = node.parentElement;
+  }
+  return null;
+}`;
+
+function contrastFindingFor(measured: number | null, threshold: number): boolean {
+  return measured !== null && measured < threshold;
+}
+
+Then(
+  'el texto de la confianza tiene suficiente contraste contra el fondo real de la tarjeta',
+  async function (this: PipelineWorld) {
+    const world = slice07World(this);
+    const page = requiredPage(world);
+    const rows = page.locator('ol.ranked > li');
+    const count = await rows.count();
+    const findings: string[] = [];
+    for (let index = 0; index < count; index += 1) {
+      const row = rows.nth(index);
+      const summaryContrast: number | null = await row.locator('details.confidence summary').evaluate(CONTRAST_AGAINST_REAL_BACKGROUND_SCRIPT);
+      if (contrastFindingFor(summaryContrast, 4.5)) {
+        findings.push(`fila ${index + 1}: la palabra de confianza queda en ${(summaryContrast as number).toFixed(2)}:1`);
+      }
+      const summary = row.locator('details.confidence summary');
+      if ((await summary.count()) > 0) {
+        await summary.click();
+        const reasonContrast: number | null = await row.locator('details.confidence > div').evaluate(CONTRAST_AGAINST_REAL_BACKGROUND_SCRIPT);
+        await summary.click();
+        if (contrastFindingFor(reasonContrast, 4.5)) {
+          findings.push(`fila ${index + 1}: la razón abierta queda en ${(reasonContrast as number).toFixed(2)}:1`);
+        }
+      }
+    }
+    assertBehavior(
+      findings,
+      'usar --ink en el héroe (contraste ya probado contra --hero-grad) y --ink-2 en el resto (contraste ya probado contra --bg), nunca un color inventado.',
+    );
+  },
+);
 
 After({ tags: '@slice-07', timeout: 15_000 }, async function (this: PipelineWorld) {
   const world = slice07World(this);

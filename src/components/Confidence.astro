@@ -19,6 +19,11 @@
 // Day-one confidence is model agreement only (HANDOFF.md section 5, settled,
 // not to be relitigated): the reason is derived from `level` alone so no
 // caller can accidentally pass in a reason that overstates certainty.
+//
+// `name="confidence"` makes every disclosure on the page an exclusive HTML5
+// details group: opening one auto-closes any other already open, natively,
+// no JS. Without it, two open reasons could overlap on a phone screen since
+// each reason renders as a positioned dropdown the width of its row.
 import { CONFIDENCE_LEVEL_WORD_ES, confidenceReasonEs, type ConfidenceLevel } from '../scoring/confidence';
 
 interface Props {
@@ -30,7 +35,7 @@ const word = CONFIDENCE_LEVEL_WORD_ES[level];
 const reason = confidenceReasonEs(level);
 ---
 
-<details class="confidence" data-level={level}>
+<details class="confidence" name="confidence" data-level={level}>
   <summary>Confianza {word}</summary>
   <div>{reason}</div>
 </details>
