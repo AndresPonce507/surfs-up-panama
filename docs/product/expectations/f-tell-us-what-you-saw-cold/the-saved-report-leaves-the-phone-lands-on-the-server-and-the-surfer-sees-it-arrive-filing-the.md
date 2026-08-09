@@ -1,0 +1,60 @@
+# El reporte guardado sale del teléfono, llega al servidor, y mandarlo dos veces guarda uno solo
+ID: EXP-f-tell-us-what-you-saw-cold-3 · Spec rows: slice-03 · Persona: Surfista saliendo del agua en Playa Venao con quince segundos de paciencia
+
+## Intent
+The saved report leaves the phone, lands on the server, and the surfer sees it arrive. Filing the
+same report twice stores it once. The screen the surfer sees here is an arrival state that makes
+no claim at all about forecast availability, which is why it cannot be false. The comparison is
+the next slice's job.
+
+## Preconditions
+Stated honestly: this charter examines a write path that does not exist yet, and its deploy is
+gated on two open items in the feature delta: the account Lambda concurrency quota check
+(Pre-requisite 2, HANDOFF §6 item 6) and write-stack ownership (Pre-requisite 5). The examiner
+needs a reachable report endpoint: the deployed Function URL, or a local run of the REAL handler
+wired to a local store, whichever DELIVER produces for this slice. The exact commands and URL get
+pinned into this section when the slice enters its JIT DISTILL; observations against a mock that
+is not the real handler are not valid evidence. If no such surface presents itself, the verdict is
+INDETERMINATE, never a PASS by absence.
+
+1. Build and serve the site as in the slice-01 charter.
+2. Confirm the report endpoint the site is pointed at, from the recipe pinned at JIT DISTILL.
+3. Walk the flow online: three answers, Mandar, and watch screen two.
+4. For the twice-filed check: repeat the submission of the same saved report (re-send, or reload
+   and let the page-open flush re-send it). The recipe will name the concrete way to force it.
+
+## Charter
+Explore the arrival of a report as the surfer who just filed it. The heart of the walk is two
+promises: the report actually arrives (the screen tells you so), and filing the same report twice
+never becomes two reports. Probe the seams: submit, then force a second send of the identical
+report and watch nothing double. Watch the quiet parts too: at no point does any credential or
+sign-up step appear, and at no point does the wait read as an error.
+
+## Expected observations (oracle)
+- Con señal, tras Mandar, la pantalla dos muestra un estado de llegada: el reporte salió del
+  teléfono y el servidor lo tiene. El estado no afirma nada sobre el pronóstico: ni comparación,
+  ni puntaje, ni promesa de que exista una.
+- Mandar el mismo reporte dos veces guarda uno: la segunda entrega se reconoce sin duplicar, la
+  pantalla no muestra dos reportes ni cuenta dos veces, y nada se lee como error.
+- En ningún momento aparece un paso visible de credencial, registro o espera de identidad: tres
+  taps y ya, como promete la decisión 11.
+- El estado de llegada se ve a 390 px sin desplazamiento horizontal, legible contra el fondo real
+  en los dos temas, objetivos táctiles de al menos 44 px, y sin animaciones con movimiento
+  reducido activado.
+- U8: el estado de llegada se ve terminado, una frase tranquila que se lee de un vistazo, sin
+  relleno, sin espacios reservados vacíos, sin nada que se mueva solo.
+- Negative, la fuga de anclaje: nada del pronóstico aparece antes de que la etiqueta esté guardada
+  y enviada. La pantalla uno sigue fría de punta a punta. Si un puntaje o una comparación se asoma
+  en este slice, es FALLA: la revelación pertenece al slice siguiente y solo puede nacer de la
+  respuesta del servidor.
+- Negative: el reporte nunca desaparece en silencio. Toda espera se lee como pendiente, jamás como
+  error rojo, y la etiqueta sigue en el teléfono hasta que el servidor la reconoce.
+- Negative: nada de errores crudos: ni stack trace, ni "undefined", ni JSON pelado en pantalla.
+
+Deferred, not this slice: the comparison and the counter line (slice-04), the clock refusal
+(slice-05), the flush on the `online` event and the backoff ladder (F-WORKS-WITH-NO-SIGNAL
+slice-03), the byte-equivalent duplicate reveal on re-sync (F-WORKS-WITH-NO-SIGNAL slice-04).
+
+## Session log (append-only)
+| date | examiner | verdict | observations |
+|------|----------|---------|--------------|
