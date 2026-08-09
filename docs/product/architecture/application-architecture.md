@@ -112,6 +112,7 @@ No JS locale sniffing and no redirects: both break caching and surprise people o
 | `/spots/{slug}/ayer` | `/en/spots/{slug}/yesterday` | Prior Panama civil day's **dawn-build** receipt. It renders that receipt's exact `published_at`, never a later hourly revision. No receipt yet is a Spanish empty state; a refused current build leaves the prior dated receipt in place, visibly stale rather than freshly scored. | 14 KB | ~0.3 KB inline stamp |
 | `/spots/{slug}/reportar` | `/en/spots/{slug}/report` | Report screen 1, cold capture. Forecast-free by construction | 6 KB | 5 KB island |
 | `/spots/{slug}/reportado` | `/en/spots/{slug}/reported` | Report screen 2 shell. Reveal rendered from POST response only | 4 KB | (island already loaded) |
+| `/404` | `/en/404` | Not-found page. A mistyped spot address must land on words, never a raw origin error (slice-06 charter negative). Reading route: no render-blocking subresource | 4 KB | 0 |
 | `/sin-senal` | `/en/offline` | Offline fallback, precached | 3 KB | 0 |
 | `/acerca` | `/en/about` | What this is, the honesty statement, MIT license | 8 KB | 0 |
 

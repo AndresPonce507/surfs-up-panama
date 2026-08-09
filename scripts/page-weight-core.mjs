@@ -53,6 +53,12 @@ const DECLARED_ROUTES = [
   { shape: '/spots/{slug}/ayer', pattern: /^spots\/([^/]+)\/ayer\.html$/, route: (m) => `/spots/${m[1]}/ayer`, label: '14 KB', bytes: 14 * KB, reading: true },
   { shape: '/spots/{slug}/reportar', pattern: /^spots\/([^/]+)\/reportar\.html$/, route: (m) => `/spots/${m[1]}/reportar`, label: '6 KB', bytes: 6 * KB, reading: false },
   { shape: '/spots/{slug}/reportado', pattern: /^spots\/([^/]+)\/reportado\.html$/, route: (m) => `/spots/${m[1]}/reportado`, label: '4 KB', bytes: 4 * KB, reading: false },
+  // Slice-06 emits this. A mistyped spot address has to land on words rather
+  // than a raw origin error, so it is a reading route and carries the same
+  // no-render-blocking-subresource rule as the other reading routes. 4 KB
+  // matches the smallest ceiling already in the section 4 route map; the built
+  // page measures well inside it.
+  { shape: '/404', pattern: /^404\.html$/, route: () => '/404', label: '4 KB', bytes: 4 * KB, reading: true },
 ];
 
 /**
