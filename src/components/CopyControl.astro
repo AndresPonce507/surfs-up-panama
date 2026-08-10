@@ -12,8 +12,27 @@ const { call } = Astro.props;
   <p data-copy-notice aria-live="polite" hidden></p>
 </div>
 
+<!-- Clipboard access needs the deferred browser enhancement.  When scripts are
+     disabled, hide this control so the always-ready WhatsApp anchor remains
+     the only offered action. -->
+<noscript><style>.copy-control { display: none; }</style></noscript>
+
 <script>
   import { copyCall } from '../share/copy-call';
+
+  function copySelectedText(text: string): void {
+    const source = document.createElement('textarea');
+    source.value = text;
+    source.setAttribute('readonly', '');
+    source.style.position = 'fixed';
+    source.style.opacity = '0';
+    document.body.append(source);
+    source.select();
+    source.setSelectionRange(0, text.length);
+    const copied = document.execCommand('copy');
+    source.remove();
+    if (!copied) throw new Error('clipboard write failed');
+  }
 
   for (const control of document.querySelectorAll<HTMLElement>('[data-copy-control]')) {
     const button = control.querySelector<HTMLButtonElement>('[data-copy-call]');
@@ -22,9 +41,17 @@ const { call } = Astro.props;
 
     button.addEventListener('click', async () => {
       const call = button.dataset.copyCall;
-      if (call === undefined || navigator.clipboard === undefined) return;
+      if (call === undefined) return;
 
-      const outcome = await copyCall(call, (text) => navigator.clipboard.writeText(text));
+      const writeClipboard = async (text: string) => {
+        try {
+          await navigator.clipboard?.writeText(text);
+        } catch {
+          // The direct browser-copy fallback below owns the outcome.
+        }
+        copySelectedText(text);
+      };
+      const outcome = await copyCall(call, writeClipboard);
       notice.textContent = outcome.notice;
       notice.dataset.copyOutcome = outcome.kind;
       notice.hidden = false;
