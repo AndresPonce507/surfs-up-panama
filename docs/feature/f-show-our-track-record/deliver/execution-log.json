@@ -190,6 +190,34 @@
       "s": "EXECUTED",
       "d": "PASS",
       "t": "2026-08-10T19:45:19Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: inspected the active distilled static-artifact scenario, its byte-level source steps, TrackRecordBox.astro and SpotDetail.astro; this is non-visual because the oracles are emitted HTML and loopback HTTP bytes, so no Vera examination applies.",
+      "t": "2026-08-10T19:48:31Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "RED_ACCEPTANCE",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: the pre-authored scenario was already active and green from committed 01-04/01-05 production work, so no truthful fail-for-right-reason RED state exists; it was executed unchanged as the regression guard.",
+      "t": "2026-08-10T19:48:35Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: the scenario is an emitted-static-artifact guard, explicitly exempt from the property paradigm; no new pure domain behavior or production code was required, and authoring a unit test would duplicate the real artifact and HTTP oracles.",
+      "t": "2026-08-10T19:48:38Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: exact emitted-artifact scenario 1/12, separate no-execution HTTP scenario 1/11, full slice-01 8/95, vitest 98/98, typecheck and production build/page-weight gate passed. Independent loopback HTTP probe served byte-identical HTML with the settled sentence and zero scripts, astro islands or client directives.",
+      "t": "2026-08-10T19:48:43Z"
     }
   ]
 }
