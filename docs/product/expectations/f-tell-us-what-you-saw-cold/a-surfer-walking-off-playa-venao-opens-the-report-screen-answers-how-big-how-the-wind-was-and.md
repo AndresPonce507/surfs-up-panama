@@ -37,6 +37,10 @@ ever return you to an editable form for a report already saved.
 
 En la pantalla del reporte de Playa Venao respondo las tres preguntas con una mano, toco Mandar y la pantalla cambia a la confirmación guardada: sin puntaje, sin pronóstico, sin camino de vuelta al formulario. Se ve terminada a 390 px en tema claro y oscuro, y con movimiento reducido activado nada se anima.
 
+## U8 restraint observation (verbatim from the roadmap quality contract, step 01-04)
+
+Desde la confirmación, el botón atrás me deja en la página del spot, nunca en un formulario editable; al abrir el reporte otra vez todo empieza en blanco, y contestar de nuevo guarda un segundo reporte aparte del primero.
+
 ## Expected observations (oracle)
 - La pantalla uno muestra exactamente tres preguntas en español de a pie: ¿Qué tan grande? con
   siete opciones de Plano a Doble o más, ¿El viento? con Limpio, Picado y Destrozado, y ¿Cómo
