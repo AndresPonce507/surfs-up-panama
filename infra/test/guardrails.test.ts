@@ -37,6 +37,7 @@ import {
 import {
   BUILD_SUCCESS_EVENT,
   INGEST_SUCCESS_EVENT,
+  PUBLISH_MISMATCH_EVENT,
   PROVIDER_ERROR_EVENT,
 } from '../../src/pipeline/lambda/log-events.js';
 import type { BuildStore, ForecastSource, IngestStore } from '../../src/pipeline/ports.js';
@@ -642,7 +643,7 @@ describe('real stack guardrails: ingest scheduling and the dead-man signal chain
   it('derives every dead-man filter pattern from the one shared event-name module, never a re-typed literal', () => {
     const filters = synthesizedResources('AWS::Logs::MetricFilter', realTemplates.ingest);
     const patterns = filters.map(({ properties }) => stringProperty(properties, 'FilterPattern'));
-    for (const eventName of [INGEST_SUCCESS_EVENT, PROVIDER_ERROR_EVENT, BUILD_SUCCESS_EVENT]) {
+    for (const eventName of [INGEST_SUCCESS_EVENT, PROVIDER_ERROR_EVENT, BUILD_SUCCESS_EVENT, PUBLISH_MISMATCH_EVENT]) {
       expect(patterns.some((pattern) => pattern.includes(`"${eventName}"`)), eventName).toBe(true);
     }
   });
@@ -681,6 +682,13 @@ describe('real stack guardrails: ingest scheduling and the dead-man signal chain
       expect(existsSync(resolve(asset, 'data/spots/pa-pacific.yaml')), asset).toBe(true);
       expect(existsSync(resolve(asset, 'data/spots/pa-pacific-launch-v1.json')), asset).toBe(true);
     }
+    // Build's deployment package is its real static-rendering runtime, not
+    // merely a JSON writer. These three paths are the minimum package smoke
+    // for the code path that copies a writable project into /tmp, invokes
+    // Astro, then uploads the rendered route set.
+    expect(existsSync(resolve(buildAsset, 'node_modules/astro/bin/astro.mjs')), buildAsset).toBe(true);
+    expect(existsSync(resolve(buildAsset, 'src/pages/index.astro')), buildAsset).toBe(true);
+    expect(existsSync(resolve(buildAsset, 'astro.config.mjs')), buildAsset).toBe(true);
 
     const fetchPackage = await import(pathToFileURL(resolve(fetchAsset, 'index.mjs')).href) as typeof import('../../src/pipeline/lambda/fetch-handler.js');
     const buildPackage = await import(pathToFileURL(resolve(buildAsset, 'index.mjs')).href) as typeof import('../../src/pipeline/lambda/build-handler.js');

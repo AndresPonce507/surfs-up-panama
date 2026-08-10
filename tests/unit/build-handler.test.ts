@@ -10,7 +10,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { runBuild } from '../../src/pipeline/lambda/build-handler';
-import { BUILD_REFUSED_EVENT, BUILD_SUCCESS_EVENT } from '../../src/pipeline/lambda/log-events';
+import { BUILD_REFUSED_EVENT, BUILD_SUCCESS_EVENT, PUBLISH_MISMATCH_EVENT } from '../../src/pipeline/lambda/log-events';
 import type { BuildStore } from '../../src/pipeline/ports';
 import type { SpotSeed } from '../../src/scoring/engine';
 
@@ -38,7 +38,10 @@ function predictionLine(spot_id: string, date: string, height_m: number, source:
   return JSON.stringify({
     spot_id,
     source,
-    run_ts: `${date}T06:00Z`,
+    // Tomorrow's valid observation is still a snapshot available at this
+    // build instant; a run timestamp tomorrow would be future leakage and
+    // must now be excluded by the production selection rule.
+    run_ts: `${TODAY}T06:00Z`,
     valid_ts: `${date}T18:00Z`,
     lead_h: 12,
     swell_h_m: height_m,
@@ -61,6 +64,7 @@ class InMemoryBuildStore implements BuildStore {
   readonly predictions = new Map<string, string>();
   readonly putBundleKeys: string[] = [];
   readonly putManifestKeys: string[] = [];
+  readonly events: string[] = [];
 
   /** Heights differ per day so tomorrow's ranking is genuinely its own list,
    * never a byte-clone of today's (build.ts's clone guard). */
@@ -88,12 +92,18 @@ class InMemoryBuildStore implements BuildStore {
   }
 
   async putBundle(key: string): Promise<void> {
+    this.events.push('bundle');
     this.putBundleKeys.push(key);
   }
 
+  async publishStaticSite(): Promise<void> { this.events.push('static'); }
+
   async putManifest(key: string): Promise<void> {
+    this.events.push('manifest');
     this.putManifestKeys.push(key);
   }
+
+  async probePublicPublication(): Promise<void> { this.events.push('probe'); }
 }
 
 describe('runBuild (Lambda Build composition root)', () => {
@@ -111,10 +121,24 @@ describe('runBuild (Lambda Build composition root)', () => {
     expect(outcome.published).toBe(true);
     expect(store.putBundleKeys).toEqual(['pub/v1/regions/pa-pacific/bundle.json']);
     expect(store.putManifestKeys).toEqual(['pub/v1/manifest.json']);
+    expect(store.events).toEqual(['bundle', 'static', 'manifest', 'probe']);
 
     const loggedLines = logSpy.mock.calls.map(([line]) => JSON.parse(String(line)) as { event: string; build_id?: string });
     expect(loggedLines).toEqual([{ event: BUILD_SUCCESS_EVENT, build_id: outcome.published ? outcome.build_id : undefined }]);
 
+    logSpy.mockRestore();
+  });
+
+  it('fails loudly and never logs build.success when the public publication probe fails', async () => {
+    const store = new InMemoryBuildStore();
+    store.seed('playa-venao');
+    store.probePublicPublication = async () => { throw new Error('health.publish.mismatch'); };
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    await expect(runBuild({ store, spots: [seed('playa-venao', 'Playa Venao')], clock: { now: () => new Date(AT) } }))
+      .rejects.toThrow('health.publish.mismatch');
+    expect(logSpy.mock.calls.map(([line]) => String(line)).some((line) => line.includes(BUILD_SUCCESS_EVENT))).toBe(false);
+    expect(logSpy.mock.calls.map(([line]) => String(line)).some((line) => line.includes(PUBLISH_MISMATCH_EVENT))).toBe(true);
     logSpy.mockRestore();
   });
 

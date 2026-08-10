@@ -26,6 +26,7 @@ export default defineConfig({
   output: 'static',
   build: {
     format: 'file',
+    assets: 'assets',
   },
   // The measurement is written straight to the streams rather than through
   // Astro's logger: the route-by-route list is the artefact a reader (and the

@@ -17,6 +17,7 @@
 //     clock (contract:declared-inputs-not-ambient-reads).
 
 import type { LaunchSeedData } from '../data/launch-spots';
+import type { StaticPublicationPlan } from './static-publication';
 import type { SpotSeed, SwellTrain, WindObs } from '../scoring/engine';
 
 export interface IngestStore {
@@ -43,7 +44,12 @@ export interface BuildStore {
   putCallIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'>;
   /** The public bundle and manifest are the build's only mutable artifacts. */
   putBundle(key: string, body: string): Promise<void>;
+  /** Optional for local scoring-only callers. Production supplies this port
+   * and Build calls it before advancing the manifest commit marker. */
+  publishStaticSite?(plan: StaticPublicationPlan): Promise<void>;
   putManifest(key: string, body: string): Promise<void>;
+  /** Public CloudFront read-after-write check, after manifest only. */
+  probePublicPublication?(build_id: string): Promise<void>;
 }
 
 export interface Clock {

@@ -1,6 +1,6 @@
 // Reviewed limits imported by the credential-free CDK synthesis app.
 
-import { Duration, RemovalPolicy, Stack } from 'aws-cdk-lib';
+import { Duration, Fn, RemovalPolicy, Stack } from 'aws-cdk-lib';
 import type { StackProps } from 'aws-cdk-lib';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -11,10 +11,11 @@ import * as scheduler from 'aws-cdk-lib/aws-scheduler';
 import type { Construct } from 'constructs';
 import { fileURLToPath } from 'node:url';
 
-import { functionNames, metricNamespace, siteBucketName } from './physical-names.js';
+import { functionNames, metricNamespace, siteBucketName, siteOriginExportName } from './physical-names.js';
 import {
   BUILD_SUCCESS_EVENT,
   INGEST_SUCCESS_EVENT,
+  PUBLISH_MISMATCH_EVENT,
   PROVIDER_ERROR_EVENT,
 } from '../../src/pipeline/lambda/log-events.js';
 
@@ -43,6 +44,15 @@ function copyLaunchSeedFiles(inputDir: string, outputDir: string): string[] {
   return [
     `mkdir -p ${outputDir}/data`,
     `cp -R ${inputDir}/data/spots ${outputDir}/data/spots`,
+    // The Build Lambda runs Astro against a writable /tmp copy. These are
+    // source inputs, not mutable captures: the generated surface is injected
+    // immediately before each build and never read from the deployment tree.
+    `cp -R ${inputDir}/src ${outputDir}/src`,
+    `cp -R ${inputDir}/public ${outputDir}/public`,
+    `cp -R ${inputDir}/scripts ${outputDir}/scripts`,
+    `cp ${inputDir}/astro.config.mjs ${outputDir}/astro.config.mjs`,
+    `cp ${inputDir}/tsconfig.json ${outputDir}/tsconfig.json`,
+    `cp ${inputDir}/data/published-surface.json ${outputDir}/data/published-surface.json`,
   ];
 }
 
@@ -52,6 +62,9 @@ const pipelineLambdaBundling: nodejs.BundlingOptions = {
   // would cost real deployed-bundle size for nothing (page-weight and cost
   // culture, see BRIEF.md).
   externalModules: ['@aws-sdk/*'],
+  // Astro is invoked at runtime by the Build Lambda to render the new surface;
+  // it cannot be tree-shaken into the handler bundle.
+  nodeModules: ['astro'],
   commandHooks: {
     beforeBundling: () => [],
     beforeInstall: () => [],
@@ -126,7 +139,11 @@ export class IngestStack extends Stack {
       timeout: Duration.seconds(lambdaTimeoutSeconds.build), // guardrail 2
       reservedConcurrentExecutions: lambdaReservedConcurrency, // guardrail 1
       logGroup: buildLogs,
-      environment: { BUCKET_NAME: bucket.bucketName },
+      environment: {
+        BUCKET_NAME: bucket.bucketName,
+        PUBLIC_SITE_ORIGIN: Fn.importValue(siteOriginExportName),
+        STATIC_SITE_SOURCE_ROOT: '/var/task',
+      },
     });
 
     // Duplicate EventBridge delivery must be a no-op and must not double-bill
@@ -172,6 +189,13 @@ export class IngestStack extends Stack {
       filterPattern: logs.FilterPattern.stringValue('$.event', '=', BUILD_SUCCESS_EVENT),
       metricNamespace,
       metricName: 'BuildSuccess',
+      metricValue: '1',
+    });
+    new logs.MetricFilter(this, 'PublishMismatchFilter', {
+      logGroup: buildLogs,
+      filterPattern: logs.FilterPattern.stringValue('$.event', '=', PUBLISH_MISMATCH_EVENT),
+      metricNamespace,
+      metricName: 'ProviderErrors',
       metricValue: '1',
     });
 

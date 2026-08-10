@@ -49,7 +49,13 @@ export class SiteStack extends Stack {
 
     // The assertion bridges aws-cdk-lib's optional-property typing to this
     // repo's exactOptionalPropertyTypes strictness; Bucket implements IBucket.
-    const origin = origins.S3BucketOrigin.withOriginAccessControl(bucket as s3.IBucket);
+    // Documents live under the canonical site/ prefix, while content-hashed
+    // assets and builder JSON stay at the bucket root. Separate origins make
+    // the public URL contract match that physical key contract without a
+    // CloudFront Function or a paid invalidation.
+    const siteOac = new cloudfront.S3OriginAccessControl(this, 'SiteOriginAccessControl');
+    const siteOrigin = origins.S3BucketOrigin.withOriginAccessControl(bucket as s3.IBucket, { originPath: '/site', originAccessControl: siteOac });
+    const rootOrigin = origins.S3BucketOrigin.withOriginAccessControl(bucket as s3.IBucket, { originAccessControl: siteOac });
 
     // Short-TTL policy for HTML routes and published JSON: freshness by TTL
     // expiry within 5 minutes, zero routine invalidations by construction
@@ -80,7 +86,7 @@ export class SiteStack extends Stack {
       priceClass: cloudfront.PriceClass.PRICE_CLASS_ALL,
       httpVersion: cloudfront.HttpVersion.HTTP2_AND_3,
       defaultBehavior: {
-        origin,
+        origin: siteOrigin,
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         cachePolicy: shortTtlPolicy,
         responseHeadersPolicy: securityHeaders,
@@ -88,27 +94,27 @@ export class SiteStack extends Stack {
       },
       additionalBehaviors: {
         'assets/*': {
-          origin,
+          origin: rootOrigin,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
           responseHeadersPolicy: securityHeaders,
           compress: true,
         },
         'v1/photos/*': {
-          origin,
+          origin: rootOrigin,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
           responseHeadersPolicy: securityHeaders,
         },
         'v1/*.json': {
-          origin,
+          origin: rootOrigin,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           cachePolicy: shortTtlPolicy,
           responseHeadersPolicy: securityHeaders,
           compress: true,
         },
         'manifest.json': {
-          origin,
+          origin: rootOrigin,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           cachePolicy: manifestPolicy,
           responseHeadersPolicy: securityHeaders,

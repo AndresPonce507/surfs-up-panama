@@ -20,6 +20,8 @@ import type { BuildOutcome, IngestOutcome } from '../ports';
 export const INGEST_SUCCESS_EVENT = 'ingest.success';
 export const PROVIDER_ERROR_EVENT = 'provider.error';
 export const BUILD_SUCCESS_EVENT = 'build.success';
+/** Public CloudFront manifest did not acknowledge the build just committed. */
+export const PUBLISH_MISMATCH_EVENT = 'health.publish.mismatch';
 /** Informational only: no metric filter watches this. Lets a human read why
  * an hourly build cycle produced no new page without paging anyone. */
 export const BUILD_REFUSED_EVENT = 'build.refused';

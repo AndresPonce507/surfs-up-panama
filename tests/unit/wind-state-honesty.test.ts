@@ -83,7 +83,7 @@ function predictionLine(
   return MEMBER_SOURCES.map((source) => JSON.stringify({
     spot_id: SPOT_ID,
     source,
-    run_ts: `${date}T06:00Z`,
+    run_ts: `${TODAY}T06:00Z`,
     valid_ts: `${date}T18:00Z`,
     lead_h: 12,
     swell_h_m: swell.h_m,
