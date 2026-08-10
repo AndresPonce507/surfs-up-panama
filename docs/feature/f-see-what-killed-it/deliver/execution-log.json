@@ -295,6 +295,48 @@
       "s": "SKIPPED",
       "d": "CHECKPOINT_PENDING: real permanent mount landed (src/components/SpotDetail.astro), RED-then-GREEN acceptance evidence recorded, des-verify-ui PASS on all U1-U7 (0 failures). Roadmap-level COMMIT cannot close: Vera's source-blind examine recorded FAIL (0 data-field=weakest-link anywhere on the real built surface) because today's committed data/published-surface.json carries weakest_link on zero rows -- confirmed via grep and via src/pipeline/build.ts surfaceCall(), which still omits the weakest_link line. This is the X1 cross-lane gap flagged since 01-02: build.ts is a forbidden write lane for this feature-delta lane and is owned by the keystone/producer lane, not this step. Component-level correctness is independently proven by the slice-01 acceptance suite (10/11 passing with synthetic culprit data; the sole failure is the same X1 gap on the in-memory scenario). Git-committing the real code progress (Step-ID: 01-05 trailer) as the previous session's precedent (b4f44e5) established; roadmap COMMIT stays open pending X1 landing elsewhere, which this session escalates rather than fixes.",
       "t": "2026-08-10T18:19:27Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T18:22:05Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified pre-authored AT scenario 'Un d\u00eda perfecto no tiene culpable, y la p\u00e1gina no parece rota por eso' is active (@slice-01, no @skip marker) in tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature.",
+      "t": "2026-08-10T18:22:14Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: target scenario already GREEN with existing production code (WeakestLink.astro's kind==='named' guard already emits nothing for 'clean'). Falsifiability proven instead of a literal fail-first: poisoned the guard to (kind==='named' || kind==='clean'), reran the slice-01 tag set -- exactly the target scenario failed for the right business reason (a fabricated 'Este d\u00eda no tuvo ning\u00fan punto d\u00e9bil...' sentence rendered for both day sections of the clean-day beach, where the charter requires nothing), 9/11 passed, sole other failure unchanged (X1 in-memory gap, unrelated). Sibling-beach and 'unknown'-kind scenarios stayed green under the same poison, proving the tagged union (named/clean/unknown) discriminates correctly. Poison reverted; git diff -- src/components/WeakestLink.astro confirmed empty.",
+      "t": "2026-08-10T18:22:17Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: no new production code -- the existing kind==='named' guard in WeakestLink.astro already satisfies 01-06's criteria, proven via the poison-and-revert falsifiability technique in RED_ACCEPTANCE. Same .astro frontmatter unit-testability exemption as 01-05 (implementation_notes); the three-state discriminator is covered by 01-03's property tests on resolveWeakestLink.",
+      "t": "2026-08-10T18:23:25Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: zero production code changes required -- verified via poison-and-revert (see RED_ACCEPTANCE). Full regression: npm run test 100/100 passed, npm run typecheck exit 0, slice-01 acceptance 10/11 passed (same X1 gap as 01-05, unrelated).",
+      "t": "2026-08-10T18:24:14Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T18:29:01Z"
     }
   ]
 }
