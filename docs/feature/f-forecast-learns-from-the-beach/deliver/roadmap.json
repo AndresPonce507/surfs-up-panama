@@ -1,0 +1,488 @@
+{
+  "roadmap": {
+    "project_id": "f-forecast-learns-from-the-beach",
+    "created_at": "2026-08-09T00:00:00Z",
+    "total_steps": 18,
+    "quality_contract_version": 1
+  },
+  "phases": [
+    {
+      "id": "01",
+      "name": "Slice-01: the fit refuses until the evidence earns it",
+      "description": "Zero surf reports exist, so nothing can be fitted. What ships is machinery plus the safety default: the nightly fit forms the two declared residuals, weighs the publication gates, writes an auditable refusal, and no correction applies. Every published number stays byte-identical.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "01-01",
+          "name": "Nightly fit port reports its own outcome",
+          "criteria": [
+            "runLearningFitOnce({ store, clock }) returns an outcome carrying completed, spots_examined, corrections_written and events, never a bare void.",
+            "With nothing reported the fit completes, reports zero corrections written, and stores no correction for the spot.",
+            "spots_examined reflects the spots actually present in the observation log read from the store, never a constant.",
+            "The published morning under pub/v1/ is byte-identical before and after the run.",
+            "Zero new npm dependencies; store and clock are passed in, nothing is read from the ambient environment."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/the-fit-refuses-until-the-evidence-earns-it.feature",
+          "scenario_name": "Nobody has reported a session yet, so the nightly fit writes nothing at all",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A nightly job with no rendered surface: its only observables are the outcome object it returns and the store it leaves behind, both read directly by the acceptance suite. Fabricating pixel checks for a job whose success criterion is that nothing visible changes would be dishonest.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/learning/fit.ts",
+            "src/learning/inputs.ts",
+            "tests/unit/learning-fit-outcome.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): unit tests are property-based with fast-check, house style tests/unit/scoring-laws.test.ts; example-based tests are fallback only with a documented reason; integration and E2E stay single-example. Adapted from the Hypothesis wording because this repo is TypeScript plus fast-check. DISPATCH: project CLAUDE.md selects @nw-functional-software-crafter for every DELIVER step; the agent field uses the schema-valid name and the orchestrator maps it. THIS STEP IS THE ANTI-VACUITY ANCHOR OF THE WHOLE SUITE. DISTILL solved a trap deliberately: absence oracles pass vacuously, because 'the store is empty' is green with zero production code. Its fix was to declare the fit's driving port to RETURN an outcome, house-style like IngestOutcome, so every absence claim becomes a positive report from a surface that must exist: 'the fit finished and reported zero corrections written', never 'nothing is there'. Every later step inherits that: any step that satisfies an absence oracle without the outcome object defeats the suite. spots_examined and corrections_written must be computed from what was actually read and written; a constant zero passes this scenario today and reds 01-05 tomorrow. INPUTS, the closed set of 06 section 2, read through the store port: log/observations/v1/dt=<date>/reports.jsonl (JSON lines, one ObservationRow per line), predictions/v1/dt=<runDate>/src=<source>/cyc=06Z/all.jsonl.gz, and data/config/trust-gate.json. The .gz in that key is part of the NAME only: the acceptance world writes plain text through store.put, so the reader must not attempt to gunzip. Dates are discovered by listing the prefix, never by walking a calendar off the clock. The store the suite passes is the keystone's InMemoryStore, so reuse the shipped BuildStore port shape (src/pipeline/ports.ts) rather than inventing a second one; the fit needs list, get and put. The clock is injected and is the only source of time, per the rule at the top of ports.ts. Zero AWS, zero network, zero real reports anywhere in this slice."
+        },
+        {
+          "id": "01-02",
+          "name": "Learning declarations examined over a source universe",
+          "criteria": [
+            "evaluateLearningDeclarations({ root }) returns residual_forms, noise_floors, applied_marking_sites and violations for any source root given.",
+            "Examining the shipped src reports no violation at all.",
+            "The only place able to mark a correction applied is a module whose name begins with gates.",
+            "The shipped CorrectionGate union member and the CorrectionRecord applied field are type declarations, not marking sites.",
+            "The examination reads the universe as text or syntax and imports nothing from it."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/no-correction-can-be-applied-without-the-gate.feature",
+          "scenario_name": "Nothing in the shipped source can mark a correction applied",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A whole-source examination whose only output is a report object; it renders nothing, changes no published value, and its verdict is read directly by the acceptance suite and later by a CI gate.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/learning/declarations.ts",
+            "tests/unit/learning-declarations.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM: EXEMPT. A source examination over four fixed prepared universes plus the shipped tree is example-shaped by construction; the universes ARE the cases. Compensate with the property-based laws at 01-12, 01-13, 01-14, 01-15 and 01-18. WHAT THE EXAMINATION MUST FIND, pinned by the prepared fixtures under tests/acceptance/f-forecast-learns-from-the-beach/fixtures/controlled-learning-declarations/ (read-only, never imported, never copied into src): an exported const array literal RESIDUAL_FORMS = ['r_height', 'r_score'] as const, whose string members become residual_forms; an exported const SIGMA_EFF typed Record<string, { value: number; derived_from: string }>, whose keys become noise_floors; and every applied-marking site. A marking site is a place that can PRODUCE the applied state from anything other than the gate's own verdict: the literal applied: true, or the gate token 'applied' constructed outside the gate module. Passing a verdict through, applied: verdict.applied, is not a marking site, because it cannot invent the state, only carry it (fixtures README). THE TRAP THAT DECIDES THIS SCENARIO: src/scoring/engine.ts line 54 declares CorrectionGate = 'no_file' | 'n_lt_10' | 'reporters_lt_5' | 'not_significant' | 'applied' and line 106 declares applied: boolean inside CorrectionRecord. Both are TYPE positions, not constructions, and this scenario requires zero violations over the shipped src. A naive regex for 'applied' reds this scenario permanently against a file this feature is forbidden to touch. Mechanism is the crafter's call: a TypeScript AST walk (typescript is already a devDependency, and this module is never imported by the site build) or a syntax-aware scan that ignores type positions. Do not add an npm dependency. ONLY THE TWO NAMED RULES MAY PRODUCE A VIOLATION, and the red-classification pins why: this scenario requires violations to be empty over today's src, which declares nothing at all, while 01-10 requires residual_forms to be exactly the two once they ship. A third rule of the shape 'the universe must declare exactly two residual forms' would red this scenario permanently. The count of residual forms is an INVENTORY the examination reports, never a rule it enforces."
+        },
+        {
+          "id": "01-03",
+          "name": "Only the gate may mark a correction applied",
+          "criteria": [
+            "The prepared universe applied-marked-outside-the-gate produces a violation naming the rule only-the-gate-may-mark-a-correction-applied.",
+            "The prepared universe applied-marked-only-inside-the-gate produces no violation of that rule.",
+            "A verdict passed through, applied taken from the gate's own result, is never reported as a marking site.",
+            "The rule is watched both firing and not firing; a rule seen only passing proves nothing."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/no-correction-can-be-applied-without-the-gate.feature",
+          "scenario_name": "Only the gate may mark a correction applied",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A source rule with no rendered surface; its whole evidence is the pair of verdicts it returns over two prepared universes, which the acceptance suite reads as report fields.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/learning/declarations.ts",
+            "tests/unit/learning-declarations.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM: EXEMPT, as 01-02; the two universes are the cases. THIS ONE SCENARIO OUTLINE IS TWO RUNTIME SCENARIOS, one Examples row each, both carrying this name; the outline name holds no placeholder, so one step covers both rows. The refusing universe's emitter.ts returns a literal applied: true and never consults a gate. The accepting universe's gates.ts returns { applied: true, reason: 'applied' } from the section 7 gates and is legal. THE MODULE NAME IS LOAD-BEARING: the acceptance step filters marking sites with path.basename(site).startsWith('gates'), so the shipped marking module MUST be src/learning/gates.ts. Any other name reds 01-02 the moment the gate ships. EXPECTED CROSS-TALK, not a defect: both wind universes also contain a literal applied: true inside learning-source.ts, so they too produce this rule's violation. That is fine and must not be suppressed, because the wind scenarios filter violations by rule name and assert only over their own rule. Conversely applied-marked-only-inside-the-gate declares no RESIDUAL_FORMS at all, so the wind rule cannot fire there. THIS STEP IS THE STANDING GUARD FOR 01-05 AND LATER: once gates.ts and the emitter ship, this rule is what keeps 01-02 green, so land it before any code that can construct the applied state."
+        },
+        {
+          "id": "01-04",
+          "name": "Wind residual refused without its own noise floor",
+          "criteria": [
+            "A universe declaring r_wind with no wind noise floor produces a violation naming the rule a-wind-residual-must-bring-its-own-noise-floor.",
+            "A universe declaring r_wind with a wind floor derived from the wind label's own confusion structure produces no such violation.",
+            "A floor whose stated derivation names height rather than the wind label does not satisfy the rule.",
+            "No step, fixture or module in this slice creates r_wind in shipped source."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/no-correction-can-be-applied-without-the-gate.feature",
+          "scenario_name": "A wind residual may not ship without its own noise floor",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A precondition rule over declarations only; nothing renders, no published value moves, and its two verdicts over prepared universes are the entire observable.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/learning/declarations.ts",
+            "tests/unit/learning-declarations.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM: EXEMPT, as 01-02; the two universes are the cases. Two runtime scenarios, one Examples row each, both under this outline name. THE RULE: if a universe's RESIDUAL_FORMS contains r_wind, its SIGMA_EFF must carry a wind entry whose derived_from names the confusion structure of the wind label itself. The accepting fixture declares wind: { value: 0.31, derived_from: 'wind-label-confusion-structure' }; the refusing one declares no wind entry at all while both declare r_wind. A floor borrowed from height metres does not satisfy the rule: metres are the wrong shape for a three-word categorical label. WHY THIS RULE EXISTS AT ALL, and why it is a precondition rather than a follow-up: round-1's scorecard grain included wind, and an unstated sigma_eff left G3 formally applicable to wind with no floor, which is exactly the coordinated-lying vulnerability the floor exists to close. The gap opened by SILENCE, so the rule is the thing that keeps silence from re-opening it (06 section 8, DoD row 4). Wind is claim-exempt structurally today: the observed carrier is a three-state word, the product renders wind only as a word, and 06 section 5.1 forms r_height and r_score only. If a stage-2 categorical-wind model ever ships, 06 section 14 item 5 additionally requires the score delta to be refitted from scratch rather than adjusted, because wind-driven quality errors currently land in the score delta with no wind term to claim them. Record that; do not build it."
+        },
+        {
+          "id": "01-05",
+          "name": "First refusing correction file, too few mornings",
+          "criteria": [
+            "Nine mornings from three people leave the correction refused, recording nine mornings and three people at the height key.",
+            "The fit reports one correction written, so a refusal is auditable rather than invisible.",
+            "The stored height key is keyed to one model and one lead bucket, carrying b, se, n, reporters and applied.",
+            "Only the shrunken estimate reaches the file; the raw weighted mean never does.",
+            "The published morning stays byte-identical to the one published before any report existed."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/the-fit-refuses-until-the-evidence-earns-it.feature",
+          "scenario_name": "Nine mornings from three people are too few to correct anything",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The output is a JSON record written to a store prefix plus an integer in the run outcome; no pixel exists anywhere in this path and the builder does not read the file in this slice.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/learning/constants.ts",
+            "src/learning/residuals.ts",
+            "src/learning/estimate.ts",
+            "src/learning/shrink.ts",
+            "src/learning/gates.ts",
+            "src/learning/correction-file.ts",
+            "src/learning/fit.ts",
+            "src/learning/inputs.ts",
+            "tests/unit/learning-residual-laws.test.ts",
+            "tests/unit/learning-correction-file.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): the residual form, the weighted mean, the standard error and the shrink are declared laws and land as fast-check properties; the emitted record shape is example-shaped and single-example is the documented fallback there. THIS IS THE EMISSION SPINE, deliberately the largest step: it is the first scenario in the suite that requires a stored correction to exist, and every later fit scenario is one increment on top of it. PAIRING: each report at (spot, hour = floor_utc_hour(observed_at)) joins the prediction-log row at (spot, source, valid_ts) with land_masked false; the fixture's observed_at 18:41 pairs valid_ts 18:00, and lead_h 36 lands in bucket lead_24_48 of 06 section 8's [0,12) [12,24) [24,48) [48,96) [96,inf). RESIDUAL, 06 section 5.1 verbatim: r_height[i,m,l] = H_eff_pred - (mid(band_i) - u_hat[r(i)]), with u_hat exactly 0 this slice because nobody has any reporting history (slice-04 replaces the constant through the same seam). H_eff comes from the shipped hEff(h, t) = h * sqrt(t / 10) in src/scoring/engine.ts, imported read-only and never re-derived: any change to H_eff changes the meaning of every stored bias (06 section 3 S2). mid(band) derives from src/data/size-bands.ts lo_m/hi_m, never a second copy of the table; the open top band double_overhead_plus stays IN the fit at nominal 3.0 m with variance 0.25, because censoring the way-bigger-than-forecast days would bias b downward (06 section 5.1, flagged section 14 item 3), even though no fixture reaches it. WEIGHTS: precision weight 1/(sigma_eff^2 + width^2/12) is uniform inside a single band, so the weighted mean is the plain mean on every fixture; keep that true so each oracle stays a declared law instead of a re-implementation. SIGN, one convention everywhere: forecast minus observed (06 section 4, overriding research 09 section 5.1's flip). SHRINK PARENT RULE, and read 01-08 before choosing it: the parent estimate is the group-weighted mean over the spots the run examined, so with one spot the parent equals that spot's own weighted mean and the two-level launch shrink is numerically the identity. Do NOT hardcode a parent of 0; 01-08 carries the arithmetic showing it refuses the one scenario that watches the gate pass. G4 stays structural either way: the emitter consumes b_shrunk only, b_raw cannot reach the file. THE EMITTER MAY NEVER WRITE A LITERAL applied: true. It writes the gate's verdict through, applied taken from the gate result, or 01-02 goes red over the shipped src the moment this step lands (01-03 is the guard that catches it). The gate module must be src/learning/gates.ts, the one name the examination privileges. WRITE CONTRACT, 06 section 7: replace learned/corrections/v1/current/<spot_id>.json for each recomputed spot and append one history/dt= copy each; the complement (seed files, predictions/, both log/ prefixes, the trust config, any other spot's file) must not change. computed_at comes from the injected clock only, and the history key derives from the same clock date, so a re-run overwrites deterministically: 01-15 asserts byte-identity over this whole prefix. G1 is the only gate this step owes: n < 10 refuses."
+        },
+        {
+          "id": "01-06",
+          "name": "Five different people required before anything publishes",
+          "criteria": [
+            "Twelve mornings from three people leave the correction refused, recording twelve mornings and three people.",
+            "The distinct count is over reporter_key, which is the device credential at launch.",
+            "A key below five distinct reporters can never be marked applied, whatever its difference or standard error.",
+            "The refusal records the counts it weighed, so its reason is auditable from the file alone."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/the-fit-refuses-until-the-evidence-earns-it.feature",
+          "scenario_name": "Twelve mornings still buy nothing, because five different people are required",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A gate decision recorded as two integers and a boolean inside a stored JSON record; nothing renders and no number a surfer reads moves in either direction.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/learning/gates.ts",
+            "src/learning/correction-file.ts",
+            "tests/unit/learning-gate-laws.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): the gate ladder is a declared law and lands as a fast-check property over generated (n, reporters, b, se) tuples, asserting that applied implies every clause held; the fixture counts are the example. G2 per 06 section 7: distinct trust-eligible reporter_key >= 5. reporter_key is the device credential at launch, because no claim-merge exists yet and C5 resolves to the identity mapping (feature-delta Pre-requisite 8, an accepted cost: lost browser storage restarts a reporter's calibration, and a future merge is retroactive because everything recomputes from logs plus the current mapping). WHY FIVE: 09 section 13.2 puts the halving of observer bias at four to nine distinct people, and five is the bottom of that band; the design rule is verbatim 'prefer 8 reports from 8 people over 20 from 2'. STATED HONESTLY, because it matters for what this gate is and is not: distinctness over freely mintable identities is NOT an anti-gaming control (research 15 section 11.2). Trust eligibility, landed at 01-16 and watched firing at 01-17, is the repair, and it ships inactive so launch behaviour is identical. Until trust.ts exists the distinct count is over all reporters; once it exists the count is over eligible ones and the two are equal at the shipped config. The gate is a pure function of (n, reporters, b, se) and is the single site that may construct the applied state."
+        },
+        {
+          "id": "01-07",
+          "name": "A difference smaller than twice its error refuses",
+          "criteria": [
+            "Twenty-two mornings from seven people differing by three centimetres stay refused, recording twenty-two mornings and seven people.",
+            "A refused-for-significance key's difference never clears twice the standard error stored beside it.",
+            "The stored standard error is the weighted sample deviation of the key's residuals over the square root of the count.",
+            "Sign is forecast minus observed everywhere in the fit, one convention, never flipped."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/the-fit-refuses-until-the-evidence-earns-it.feature",
+          "scenario_name": "Enough people, but the difference is too small to tell from noise",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Significance is a comparison between two numbers inside a stored record; no surface reads either number in this slice and no rendered value depends on the verdict.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/learning/estimate.ts",
+            "src/learning/gates.ts",
+            "tests/unit/learning-gate-laws.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): fast-check property over generated samples asserting that a key is applied only when |b| exceeds twice the stored error, alongside the fixture example. G3, first half only: se_sample here, the physical floor arrives at 01-11 and this step must not anticipate it. se_sample is the weighted sample standard deviation of the key's residual samples divided by sqrt(n), exactly the settled scorecard's bias_se (06 section 7, domain-model section 9). FIXTURE ARITHMETIC, so the crafter can check the numbers by hand: 22 mornings with spread 0.42 alternate at -0.03+0.42 = +0.39 and -0.03-0.42 = -0.45, giving b = -0.03 and a sample deviation of 0.42, so se = 0.42/sqrt(22) = 0.0895 m and twice that is 0.179 m, comfortably above 0.03, which is the refusal this scenario watches. The oracle asserts |b| <= 2*se within a metre tolerance, so a refusal recorded for the wrong reason (say a mis-parsed count tripping G1) fails here even though applied is false either way: the refusal reason must be the one the numbers give. 09 section 13.3 is the whole defence of the number: a claim smaller than twice its standard error is indistinguishable from noise."
+        },
+        {
+          "id": "01-08",
+          "name": "The gate watched passing, pulled toward its parent",
+          "criteria": [
+            "Twenty-two mornings from seven people differing by 0.22 m earn an applied correction, recording twenty-two mornings and seven people.",
+            "The applied difference clears twice its stored standard error.",
+            "The stored standard error is the mornings' own spread, sitting above the physical noise floor.",
+            "The stored difference never exceeds the raw difference in size and never flips its sign.",
+            "The published morning is still byte-identical, because the builder does not read corrections yet."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/the-fit-refuses-until-the-evidence-earns-it.feature",
+          "scenario_name": "Twenty-two mornings from seven people finally earn a correction",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The one scenario that watches the gate admit evidence; the admission is a boolean and two numbers inside a stored file, with no rendered consequence anywhere in this slice because nothing reads corrections yet.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/learning/shrink.ts",
+            "src/learning/gates.ts",
+            "src/learning/constants.ts",
+            "tests/unit/learning-gate-laws.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): the shrink corridor is a declared law and lands as a fast-check property (01-13 is its full form); the passing gate is the example. THE SINGLE MOST LIKELY WAY TO FAIL THIS SUITE, and it fails on the ONLY scenario that watches the gate pass. The 22 synthetic mornings alternate at -0.22+0.42 = +0.20 and -0.22-0.42 = -0.64, so b_raw = -0.22 m and se_sample = 0.42/sqrt(22) = 0.0895 m (0.0917 with the n-1 convention), which is the 0.090 of 06 section 11's worked example. Twice that is 0.1791 m (0.1833 m). A shrink that pulls toward a HARDCODED PARENT OF 0 with the section 8 prior tau = 6 stores 0.22 * 22/28 = 0.1729 m, which does NOT clear 0.1791, and this scenario goes red while every refusing scenario stays green, so the suite looks almost passing and the one gate that must be seen firing never fires. THE CORRECT PARENT: 06 section 5.3 computes parent levels as group-weighted means over the level's members, and at launch there is one spot in one region, so the parent equals that spot's own weighted mean and the two-level shrink is numerically the identity, storing -0.22, which clears. Both standard-deviation conventions clear, so population versus sample deviation is not load-bearing here; it IS load-bearing at 01-11, where the stored error must equal heightNoiseFloor(n) to six decimals. G4 stays honest: the emitter still consumes b_shrunk only, and the value merely equals b_raw when the region has one member. WHAT THIS SLICE DELIBERATELY DOES NOT PIN (red-classification): 06 section 11's exact b_shrunk = -0.183 depends on a region parent of -0.05 that comes from OTHER spots through the pooling hierarchy slice-03 owns. Slice-01 pins only what it can own honestly: the gate passing at n = 22 and 7 reporters, the recorded counts, significance clearing twice the stored error, and the corridor. Do not chase -0.183. FLOOR CHECK for this fixture: 0.5 * 0.48 / sqrt(22) = 0.0512 m, below the 0.0895 sample error, so se_gate is the sample error here and the oracle 'the mornings' own spread, above the physical noise floor' holds. Tau prior 6 with a permanent floor of 2 and a method-of-moments switchover at >= 8 gated spots is recorded in constants (06 section 8); it simply has nothing to bite on at one spot."
+        },
+        {
+          "id": "01-09",
+          "name": "Correction states its score move in display points",
+          "criteria": [
+            "The stored record names schema spot-correction/1 and states its score move in display_points, the only legal unit.",
+            "The record carries the height limit 0.40 and the score limit 12 that its reader must honour.",
+            "The score residual is the score a reporter was shown minus the observed quality anchor, per report.",
+            "Quality anchors are imported from the shipped report vocabulary, never retyped, and carried as unfit priors."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/the-fit-refuses-until-the-evidence-earns-it.feature",
+          "scenario_name": "The correction states its score move in the points a surfer sees",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Schema, units and clamp fields inside a stored JSON record; no surface renders any of them in this slice, and the builder that will one day honour the clamps does not read the file yet.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/learning/residuals.ts",
+            "src/learning/constants.ts",
+            "src/learning/correction-file.ts",
+            "tests/unit/learning-correction-file.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): the score residual form is a declared law and lands as a fast-check property; the emitted record shape is example-shaped, single-example fallback documented. THE SECOND AND LAST RESIDUAL FORM, 06 section 5.1: r_score[i] = score_q_shown[i] - q_obs(quality_i), taken from the predicted{} block captured on the report and SKIPPED when predicted is null (01-14 proves the skip). q_obs ANCHORS HAVE ONE HOME: import QUALITY_OBSERVED_SCORE from src/data/report-vocab.ts (Bad 20, OK 45, Good 70, Epic 90) and never retype the numbers; src/data/** is a forbidden write lane and a second home would let the anchors drift from the tokens (DoD row 5). Carry them as UNFIT PRIORS per 06 section 14 item 2: the G3 significance gate is what keeps an arbitrary anchor from printing a confident number, and the ordinal-logistic replacement at roughly 30 to 50 observations spanning both classes is RECORDED, not built. FIXTURE ARITHMETIC: every synthetic morning is quality 'good' (anchor 70) with shown scores alternating 82 and 76, so the r_score samples are 12 and 6 and b_score is 9 display points over 22 samples. UNITS PIN, domain-model section 11: score_delta.units is 'display_points' and no other value is legal; the pin exists so a hundredfold misread fails at read time instead of printing. score_q is the published 0-100 integer, score_q = Math.round(100 * q_final), one rounding, pinned in 05 section 3, and slice-02 converts at apply time with delta_q = b/100. CLAMPS ARE WRITTEN HERE, ENFORCED ELSEWHERE: clamp.max_abs_h_frac 0.40 (G5) and clamp.max_abs_score 12 (G6, an unfit prior, feature-delta Pre-requisite 7) travel with the number so the limit cannot be separated from it, but they bind at APPLY time in the builder, which is slice-02's work, not this slice's. sigma_eff for the score is 25 points, one home in constants beside the height's 0.48 m (06 section 8), giving the score's own floor 0.5 * 25 / sqrt(n). SEQUENCING, stated because it is a real constraint and not a preference: score residuals are fitted after the height fit on height-corrected builds, so the score delta captures what the height correction missed rather than the same error twice. After this step the shipped source declares exactly two residual forms, which is what 01-10 examines."
+        },
+        {
+          "id": "01-10",
+          "name": "Shipped source declares two residual forms only",
+          "criteria": [
+            "Examining the shipped src finds exactly the residual forms r_height and r_score, and no third.",
+            "No noise floor for wind is declared anywhere in the shipped source.",
+            "Noise floors for height and score are declared with the reasoning each was derived from.",
+            "The examination still reports no violation over the shipped source."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/no-correction-can-be-applied-without-the-gate.feature",
+          "scenario_name": "The shipped source forms no residual for wind at all",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "An inventory of what the source declares, returned as a report object; it has no rendered form, no runtime effect on any published value, and is read as report fields by the acceptance suite.",
+          "ui_checks": {},
+          "deps": ["01-02", "01-09"],
+          "files_to_modify": [
+            "src/learning/residuals.ts",
+            "src/learning/constants.ts",
+            "tests/unit/learning-declarations.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM: EXEMPT. An inventory over the shipped tree at one moment; there is no quantifier to range over. Compensated by the property laws at 01-12 to 01-15. This step is where the shipped source starts DECLARING what it forms, in the shape 01-02's examination reads: RESIDUAL_FORMS exactly ['r_height', 'r_score'] and SIGMA_EFF carrying height and score and nothing else. Location inside src/learning/ is the crafter's call because the examination scans the tree, but 06 section 8's rule is one home per variable, so the floors belong beside the other settled constants rather than duplicated at their use sites. WHAT EACH FLOOR IS DERIVED FROM, stated because the wind rule tests exactly this field: height 0.48 m from the 06 section 5.2 decomposition (band interval about 0.13, eyeball about 0.30, day-to-day model error about 0.35, in quadrature), an unfit prior replaced by the measured estimate when sigma_human arrives; score 25 points, one q_obs anchor step, an unfit prior flagged in section 14. WIND DECLARES NOTHING, and the absence is the point: wind renders only as a word, forms no residual, so it has no bias, no standard error and nothing for G3 to weigh. Declaring a wind floor would mean a wind claim had quietly shipped. THE COUNT IS AN INVENTORY, NEVER A RULE: 01-02 requires violations to be empty over a source that (before 01-09) declares nothing at all, so a rule of the shape 'must declare exactly two' would red it permanently. This step asserts the inventory through the report's residual_forms field, not through a new violation. Depends on 01-09 because both forms must exist before the inventory can read two, and on 01-02 for the examination itself."
+        },
+        {
+          "id": "01-11",
+          "name": "Agreement buys nothing: the physical noise floor",
+          "criteria": [
+            "Twenty-two mornings agreeing exactly on eight centimetres stay refused, recording twenty-two mornings and seven people.",
+            "The standard error stored for the height is the physical floor, not the agreement of the reports.",
+            "The stored se field carries the floored error everywhere, never the raw sample error.",
+            "No gate becomes easier to pass as the spread of its input drops."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/the-fit-refuses-until-the-evidence-earns-it.feature",
+          "scenario_name": "Twenty-two reports that agree perfectly buy nothing honest disagreement could not",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The anti-coordination property is a comparison between two numbers inside a stored record; no user surface reads it, and its evidence is the stored standard error itself.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/learning/estimate.ts",
+            "src/learning/gates.ts",
+            "src/learning/constants.ts",
+            "tests/unit/learning-gate-laws.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): the floor's reason ships as a fast-check property (01-12 is that property); this step's fixture is the example that pins the exact stored value. THE ANTI-COORDINATION FLOOR, the most safety-critical number in the slice. se_gate = max(se_sample, 0.5 * sigma_eff / sqrt(n)) per key and per claim-bearing variable, with sigma_eff = 0.48 m for height and 25 points for the score, one home each (06 sections 7 and 8). WHY, plainly: fabricated reports agree with each other, agreement shrinks se_sample, so the unfloored |b| > 2*se test gets EASIER to pass the more coordinated the lie. The gate would reward exactly the behaviour it exists to stop, and a gate that is easier to pass by lying is worse than no gate (research 15 section 15.1; 07 section 7.3's design rule that no gate gets easier to pass as input variance drops). WHY 0.5 and not 1.0: honest samples have expected deviation around sigma_eff, so a floor at the full sigma_eff would bind on roughly half of honest keys and erase real precision differences; at 0.5 it binds only when the sample deviation is under half the physical noise, under about 1.5% of honest keys at n = 10 and routine for fabrication. Honest keys pass untouched; zero-variance coordination is refused categorically. FIXTURE ARITHMETIC, and the tolerance is tight: spread 0 makes every sample exactly -0.08, so se_sample is 0 and the stored error must be the floor 0.5 * 0.48 / sqrt(22) = 0.051168 m. The oracle asserts the stored error is within 1e-6 of heightNoiseFloor(n), so compute it as 0.5 * sigma_eff / sqrt(n) from the constant, never as a rounded literal. Twice that is 0.1023, above 0.08, so the correction is refused: agreement bought nothing that honest disagreement could not. THE STORED FIELD CARRIES se_gate, NEVER se_sample (06 section 7, pinned), so neither slice-02's read-time re-check nor the scorecard headline can ever print a precision the physical noise floor says is impossible. n inside the floor is the TRUST-ELIGIBLE count, not the raw one (red-classification), which is why 01-17's oracle reads n back off the stored record rather than from the fixture that produced it."
+        },
+        {
+          "id": "01-12",
+          "name": "Nothing under the floor is ever applied",
+          "criteria": [
+            "Across generated sets of ten to forty mornings from five to nine people, nothing under the floor is ever applied.",
+            "The refusal holds however tightly the reports agree, at every generated count.",
+            "The fit records what it examined even when it refuses, in every generated case."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/the-fit-refuses-until-the-evidence-earns-it.feature",
+          "scenario_name": "No amount of agreement makes a small difference publishable",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A generated law over the fit's stored output; the observable is fast-check's shrunken counterexample in terminal output, and no rendered state exists at any point in the path.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/learning/gates.ts",
+            "tests/unit/learning-gate-laws.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): this scenario IS the property; the matching unit law belongs in tests/unit/learning-gate-laws.test.ts in the house style of tests/unit/scoring-laws.test.ts. THE FLOOR'S REASON, SHIPPED AS A LAW rather than as a comment. The generator builds every case with zero spread, so se_sample is 0 and se_gate is the floor exactly; the generated difference is a fraction (0.01 to 0.95) of sigma_eff/sqrt(count), and twice the floor is precisely sigma_eff/sqrt(count), so every generated case sits under the significance bar by construction and must be refused. If any case is applied, the floor is not being applied where the gate reads it. EVERY GENERATED CASE DRIVES THE SAME DRIVING PORT the example scenarios use, each in its own isolated store, so a fit that special-cases the example fixtures, memoises a previous run, or leaks state between runs fails here rather than in production. The suite budgets 20 runs per property because each run drives a whole fit; keep the fit cheap enough that this stays true (06 section 12 budgets a few thousand rows inside one 1024 MB Lambda in seconds, so there is no room for accidental quadratic work over samples). The oracle also asserts the correction exists in every case: refusing is not the same as writing nothing, and a fit that skips emission when it refuses would pass the applied check vacuously while failing this one."
+        },
+        {
+          "id": "01-13",
+          "name": "Stored difference stays inside the shrink corridor",
+          "criteria": [
+            "Across generated mornings from at least five people, the stored difference never exceeds the raw difference in size.",
+            "The stored difference never flips the sign of the raw difference.",
+            "The corridor holds at every generated count, spread and difference."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/the-fit-refuses-until-the-evidence-earns-it.feature",
+          "scenario_name": "The stored difference never leaves the corridor between the raw difference and its parent",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A generated law over two stored numbers; there is nothing to look at, and fast-check's counterexample is the whole observable.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/learning/shrink.ts",
+            "tests/unit/learning-gate-laws.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): this scenario IS the property; mirror it as a unit law over the shrink function alone in tests/unit/learning-gate-laws.test.ts. G4 stated as a corridor rather than as a formula, deliberately, because slice-01 cannot own the parent estimate (slice-03 does) but CAN own the two properties every pooling scheme must satisfy: shrinkage moves an estimate toward its parent, so the result can never be larger in size than the raw one, and at launch it can never cross zero. WHY THE CORRIDOR HOLDS WITH ROOM, so a near-miss is recognised as a real defect and not a tolerance problem: the raw difference is -biggerThanForecastM, and the fixture's alternating deviation leaves at most one half-spread divided by the count as residue on odd counts (0.3/11 = 0.027 at the worst generated count), always signed against the raw magnitude and always far below the generated minimum difference of 0.05. So the stored value sits strictly inside the corridor for every generated case, and a failure here means the shrink over-corrected past zero, amplified, or read the wrong parent. THE PROPERTY GENERATES 10 to 40 mornings, 5 to 9 people and differences from 0.05 to 1.2 m, which includes keys well above the clamp; the clamp is NOT this slice's enforcement point (it binds at apply time in slice-02), so a fit that pre-clamps the stored value would still satisfy this corridor but would move the number a reader is supposed to clamp itself. Store the shrunken value, not a clamped one."
+        },
+        {
+          "id": "01-14",
+          "name": "A morning without a forecast skips the score",
+          "criteria": [
+            "Mornings reported with no captured forecast change neither the score delta nor the count of mornings behind it.",
+            "Those same mornings still count toward the height difference, one for one.",
+            "Skipping is exact: the score delta is unchanged, not merely close."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/the-fit-refuses-until-the-evidence-earns-it.feature",
+          "scenario_name": "A morning nobody had a forecast for contributes nothing to the score delta",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A skip rule observed as two integers and a number inside the stored record; neither residual is shown on any surface in this slice.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/learning/residuals.ts",
+            "tests/unit/learning-residual-laws.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): this scenario IS the property; mirror it as a unit law over the residual former in tests/unit/learning-residual-laws.test.ts. 06 section 5.1: r_score comes from the predicted{} block captured on the report and is SKIPPED when predicted is null. SKIPPING IS OMISSION, NEVER A ZERO SAMPLE. The oracle asserts strict equality of the score delta's b before and after the forecast-less mornings are added, so a sample contributing 0 fails immediately: it would move a mean. Strict float equality also means the surviving score samples must be summed over the same multiset in the same order in both runs, so the score fit must filter the sample list rather than iterate everything and branch on null in a way that changes accumulation order. THE SAME MORNINGS ARE STILL HEIGHT SAMPLES: they carry a size band and pair to a prediction row, so the height count must rise by exactly the number of mornings added. That asymmetry is the whole scenario: a missing captured forecast kills the score difference only, because the size someone reported is still a difference against what the model said. The generator sets withoutCapturedForecastEvery to 1, which makes EVERY extra morning forecast-less, and offsets their calendar days so the two sets never collide; do not assume some extras carry a forecast."
+        },
+        {
+          "id": "01-15",
+          "name": "Wind changes no number the fit writes",
+          "criteria": [
+            "Rotating the wind word on every morning leaves everything stored under the corrections prefix byte-identical.",
+            "No wind residual, no wind bias and no wind standard error exists anywhere in the fit.",
+            "Stored timestamps come from the injected clock, so re-running the same inputs writes the same bytes."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/the-fit-refuses-until-the-evidence-earns-it.feature",
+          "scenario_name": "Which wind a reporter named changes no number the fit writes",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Byte-identity of a stored prefix, established by diffing JSON text between two runs; no rendered surface is involved at any point in the comparison.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/learning/fit.ts",
+            "src/learning/correction-file.ts",
+            "tests/unit/learning-correction-file.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): this scenario IS the property; mirror determinism as a unit law over the emitter in tests/unit/learning-correction-file.test.ts. 06 section 8, wind is claim-exempt: the observed carrier is a three-state word, the product renders wind only as a word, and no categorical-wind residual model exists, so wind forms no residual, carries no bias and no standard error, and gives G3 nothing to weigh. This scenario is that exemption stated as an executable law. DETERMINISM TRAPS, because the oracle is BYTE-identity over the whole learned/corrections/v1/ prefix and not a numeric comparison: computed_at must come from the injected clock and never from the ambient wall clock (the rule at the top of src/pipeline/ports.ts: nothing in the core reads the ambient clock); the history/dt= key must derive from that same clock date so a re-run overwrites rather than accumulating a second file; no field may carry a hash, a run counter, a random identifier, or an insertion-ordered map keyed by anything the wind rotation reorders; and JSON key order must be stable, which it is if the record is built from a literal rather than assembled by mutation in input order. THE SAME ORACLE GUARDS THE REPORTER-SHUFFLE LAW in 01-18, where the additional trap is grouping samples by reporter before averaging: at u_hat = 0 that grouping changes nothing mathematically but can change floating-point summation order and therefore the bytes. Do not group by reporter in this slice; count distinct reporters, and average over the sample list in its stored order."
+        },
+        {
+          "id": "01-16",
+          "name": "Shipped trust settings drop nobody",
+          "criteria": [
+            "At the shipped trust settings all twenty-two mornings and all seven people count, including a same-morning credential.",
+            "Eligibility is a pure function of the stored record and the config, reading no wall clock.",
+            "The shipped minimum of two prior spots is inactive, because it qualifies a vacuous prior-report clause.",
+            "Counts are bit-identical to the same computation with no trust settings at all."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/the-fit-refuses-until-the-evidence-earns-it.feature",
+          "scenario_name": "The shipped trust settings drop nobody",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "An eligibility predicate whose entire effect at the shipped config is that nothing changes; the evidence is the pair of counts inside the stored record, which no surface reads in this slice.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/learning/trust.ts",
+            "src/learning/fit.ts",
+            "tests/unit/learning-trust-eligibility.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): the no-op claim is a law and lands as a fast-check property asserting that at the shipped config the eligible set equals the full set for any generated record; the fixture is the example. THE TRAP THAT REDS BOTH THIS STEP AND 01-17. The config data/config/trust-gate.json ships {min_credential_age_days: 0, min_prior_reports: 0, min_prior_spots: 2}. A crafter who implements min_prior_spots as a standalone requirement drops EVERY sample, because every synthetic morning is at one spot, and reds this scenario and 01-17's 'only 6 people counted' together. 06 section 7 states the structure exactly: 'The spots clause qualifies the history clause: at min_prior_reports = 0 it is vacuous, which is why the shipped min_prior_spots: 2 is inactive at launch.' So there are TWO clauses, not three: an age clause, and a history clause reading 'at received_at, at least min_prior_reports earlier stored reports by the same reporter_key, spanning at least min_prior_spots distinct spots', which at a zero threshold is satisfied vacuously. AGE CLAUSE: received_at minus credential_issued_at >= min_credential_age_days, both fields server-set on the record and frozen at receipt (07 section 6), so eligibility is a pure function of log plus config, recompute-deterministic, and never reads a wall clock. The side taken is deliberate and stated: age-at-receipt rather than age-at-aggregation, which is strictly stronger because a forged batch already stored cannot ripen into eligibility by waiting. At the shipped zero the predicate reduces to age >= 0 and priors >= 0, both true by construction, so the eligible set equals the full set and every fitted value is bit-identical to the ungated computation. AN UNFIRED GATE IS NOT EVIDENCE (clause check:unfired-is-not-evidence), which is exactly why 01-17 follows immediately and must not be deferred: this step alone proves only that a predicate which always returns true was called."
+        },
+        {
+          "id": "01-17",
+          "name": "A month of standing drops this morning's credential",
+          "criteria": [
+            "With thirty days of standing required, the mornings reported on the same-morning credential are gone from the count.",
+            "Only six people count toward the five that publication requires.",
+            "Ineligible samples leave the fit and every gated count, including the count inside the stored error's floor.",
+            "The gate is watched firing and not firing; the shipped no-op alone would prove nothing."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/the-fit-refuses-until-the-evidence-earns-it.feature",
+          "scenario_name": "A trust setting that asks for a month of standing drops this morning's credential",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The gate firing is visible only as smaller integers inside a stored JSON record; there is no surface, and by design no user-visible consequence, because ineligible reports still appear on every display-instantly surface this slice does not touch.",
+          "ui_checks": {},
+          "deps": ["01-16"],
+          "files_to_modify": [
+            "src/learning/trust.ts",
+            "src/learning/estimate.ts",
+            "tests/unit/learning-trust-eligibility.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): the drop is a law and lands as a fast-check property asserting that raising the age threshold can only shrink the eligible set, never grow it; the fixture is the example. THE FIXTURE'S ARITHMETIC, so the expected numbers are checkable by hand: the first reporter's credential is minted at 05:00 on the morning they reported and the report is received at 18:44 the same day, so the age is about 0.57 days against the configured 30 and that reporter is ineligible; every other credential was issued 2026-01-04 against July mornings and clears easily. With 22 mornings cycling 7 devices, indices 0, 7, 14 and 21 belong to the first reporter, so exactly four mornings drop and the stored record must carry n = 18 and reporters = 6. INELIGIBLE SAMPLES LEAVE THE FIT AND EVERY GATED COUNT (06 section 7): G1's n, G2's distinctness, and the n inside se_gate's floor. The red-classification pins the last of those explicitly, which is why 01-11's floor oracle reads n back off the STORED record rather than from the fixture that produced it: if the floor were computed over the raw count while n was reported post-eligibility, the two would silently disagree. THE CORRECTION IS STILL WRITTEN. A refusal that leaves no trace is indistinguishable from a fit that never ran, so the file must record the counts it actually weighed. WHAT THIS GATE IS NOT: ineligible reports still appear on every display-instantly surface, the recent-reports feed and the counter, because a count is not a claim (07 section 7.3's separation, decisions 4 and 11 intact). This slice touches none of those surfaces; it only excludes samples from the fit."
+        },
+        {
+          "id": "01-18",
+          "name": "Every difference is forecast against what someone saw",
+          "criteria": [
+            "Raising every forecast raises the difference the fit stores, because the difference is forecast minus observed.",
+            "Shuffling which person reported which morning changes nothing stored, because nobody has any history yet.",
+            "Reporting a bigger size lowers the stored difference: blocked, because the fixture moves the forecast with the band."
+          ],
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/the-fit-refuses-until-the-evidence-earns-it.feature",
+          "scenario_name": "Every difference the fit measures is the forecast against what a person actually saw",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Three generated laws over stored numbers and a stored prefix; the observable is fast-check's counterexample in terminal output, with no rendered surface at any point.",
+          "ui_checks": {},
+          "deps": ["01-15"],
+          "files_to_modify": [
+            "src/learning/residuals.ts",
+            "tests/unit/learning-residual-laws.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): this scenario IS the property. BLOCKED, AND NOT PLANNABLE TO GREEN: DO NOT LET A CRAFTER FORCE IT. The second of the three Then steps, 'reporting a bigger size lowers the difference the fit stores', is unsatisfiable by ANY implementation of the declared law. The fixture builder computes forecastEffectiveHeightM = bandMid(band) - biggerThanForecastM + deviation, so when the property switches the reported band from chest_head to head_overhead it moves the FORECAST up by the same 0.65 m it moves the reported midpoint. The declared residual r_height = H_eff_pred - mid(band_i) therefore cancels the band exactly and equals -biggerThanForecastM + deviation in BOTH runs, so the oracle's strict comparison of the bigger-band difference against the smaller-band one compares a number to itself. H_eff is not an escape hatch: the shipped hEff(h, t) = h * sqrt(t / 10) and the fixture's period is exactly 10 s, so H_eff_pred equals swell_h_m. Nor is the naive alternative: subtracting a fixed reference midpoint instead of mid(band_i) makes the bigger-band difference LARGER, the wrong direction, and simultaneously breaks the raw-difference oracles in 01-08 and 01-13. CONSEQUENCE FOR THE OTHER TWO LAWS: cucumber runs the three Then steps in order, so this scenario fails at step two and the reporter-shuffle law in step three NEVER RUNS. Only the first law, forecast raised raises the stored difference, is provable today, and it is genuinely provable: the generator raises every forecast by 0.05 to 0.5 m leaving the reports untouched, and forecast-minus-observed must rise. THE FIX, OWNED BY THE DISTILL LANE because tests/acceptance/** is outside this lane's file ownership: syntheticMornings must decouple the forecast from the reported band, either by computing forecastEffectiveHeightM from a fixed reference midpoint (bandMid(REPORTED_BAND)) regardless of spec.band, or by adding an explicit option that moves the reported band alone. One line either way, and the law it is trying to state is correct and worth keeping. DELIVER MUST NOT weaken the assertion, edit the feature file or the fixture builder, or implement a band-sensitive residual to force green: the first two are another lane's files and the third contradicts 06 section 5.1 and reds 01-08 and 01-13. Steps 01-01 through 01-17 are unaffected; 19 of the 20 runtime scenarios remain plannable. Once the fixture is fixed, the shuffle law needs the determinism discipline recorded in 01-15: no grouping of samples by reporter, because u_hat is exactly 0 and grouping changes floating-point summation order and therefore the stored bytes."
+        }
+      ]
+    }
+  ],
+  "implementation_scope": {
+    "source_directories": [
+      "src/learning/"
+    ],
+    "test_directories": [
+      "tests/unit/"
+    ],
+    "excluded_patterns": [
+      "src/pipeline/**",
+      "src/data/**",
+      "src/scoring/**",
+      "src/publish/**",
+      "src/components/**",
+      "src/pages/**",
+      "src/layouts/**",
+      "src/share/**",
+      "src/report/**",
+      "src/i18n/**",
+      "infra/**",
+      "public/**",
+      "scripts/**",
+      "vitest.config.ts",
+      "package.json",
+      "package-lock.json",
+      "tests/acceptance/**"
+    ]
+  },
+  "validation": {
+    "status": "pending",
+    "reviewer": "orchestrator quality gate (des-verify-integrity --roadmap-only run below)",
+    "approved_at": ""
+  }
+}
