@@ -36,7 +36,48 @@
 // No aria-label: the visible text already says the full phrase, and
 // <summary>'s native disclosure-triangle semantics already announce the
 // expand/collapse state, so adding one would double-announce both.
+//
+// Context-agnostic by construction (step 01-09): this component carries no
+// <style> block and no assumption about an ancestor's layout, so it renders
+// identically correct inside a ranked row (ol.ranked li) and inside a
+// spot-page day section (section[data-day]). The ranked row's own
+// grid-column placement (Confidence.astro's third-line decision) lives
+// entirely in components.css, scoped to `ol.ranked li > details.confidence`
+// -- never here -- so a day section with no grid ancestor simply flows in
+// normal document order. Each mounted instance is driven only by its own
+// `level`/`reason` props, so two instances never share state: today's
+// section and tomorrow's section (or two ranked rows) each show their own
+// word and their own reason, never one copied into the other. Verified with
+// an isolated build harness mounting distinct level/reason instances inside
+// section[data-day="today"], section[data-day="tomorrow"] and ol.ranked li
+// in the same page: each block's compiled HTML carries only its own values.
+// Do not add row-specific CSS (grid-column, positioning) inside this file or
+// this guarantee breaks for the day-section case.
+//
+// Step 01-10: level reads by shape AND word, never by colour alone
+// (09-design-system.md section 9, "confidence indicator" recipe: glyph dots
+// beside the level word, no colour -- confidence is a certainty signal, not
+// a quality verdict, and a green/amber treatment would visually collide with
+// the go/stale vocabulary elsewhere on the page). CONFIDENCE_LEVEL_DOTS_ES
+// renders the level as filled-of-three dots (baja one, media two, alta
+// three -- section 5's own example confirms "media" is `●●○`),
+// using the two font glyphs the recipe names (U+25CF/U+25CB, universal
+// coverage, 0 bytes). The glyph span sits inside <summary>, after the word,
+// `aria-hidden="true"` so it is never announced as a stray character (the
+// full phrase already says the level; <summary>'s own disclosure semantics
+// already announce open/closed) -- and specifically NOT a `::before`/
+// `::after` CSS content string, because that would be invisible to
+// `innerText` and therefore to anyone reading the rendered page's own text.
+// No per-level colour is introduced anywhere in this file: the glyph
+// characters carry the distinction by shape and count, inheriting whatever
+// ink colour the summary already has, identically across levels.
 import { CONFIDENCE_LEVEL_WORD_ES, type ConfidenceLevel } from '../scoring/confidence';
+
+const CONFIDENCE_LEVEL_DOTS_ES: Readonly<Record<ConfidenceLevel, string>> = {
+  low: '●○○',
+  medium: '●●○',
+  high: '●●●',
+};
 
 interface Props {
   level: ConfidenceLevel;
@@ -47,6 +88,7 @@ interface Props {
 
 const { level, reason } = Astro.props;
 const word = CONFIDENCE_LEVEL_WORD_ES[level];
+const dots = CONFIDENCE_LEVEL_DOTS_ES[level];
 // An empty or whitespace-only reason degrades exactly like an absent one: a
 // stated absence, never a silent empty box a surfer taps and finds blank
 // (application-architecture.md section 7, P1's confidence_reason row).
@@ -54,6 +96,6 @@ const hasReason = reason !== undefined && reason.trim() !== '';
 ---
 
 <details class="confidence" name="confidence" data-level={level}>
-  <summary>Confianza {word}</summary>
+  <summary>Confianza {word} <span class="confidence-shape" aria-hidden="true">{dots}</span></summary>
   {hasReason && <div>{reason}</div>}
 </details>
