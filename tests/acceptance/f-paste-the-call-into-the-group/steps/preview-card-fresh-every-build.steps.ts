@@ -6,7 +6,7 @@
 // per-spot cards regenerated on EVERY build) is observed as behaviour: a new
 // morning changes the card; a spot with missing fields gets the generic face.
 
-import { Then, When } from '@cucumber/cucumber';
+import { Before, Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -41,6 +41,113 @@ import {
 
 const MISSING_CARD_ADDRESS =
   'el anuncio no declara ninguna tarjeta de imagen: la vista previa quedaría sin cara';
+
+type PreviewCardInput = Readonly<{
+  spot_id: string;
+  spot_name: string;
+  score_q: number;
+  size_band?: string;
+  size_range_m?: readonly [number, number];
+  wind_state?: string;
+  conf_level?: string;
+}>;
+
+type PreviewCardSelection = Readonly<{
+  kind: 'spot' | 'generic';
+  spot_id?: string;
+  missing_fields: readonly string[];
+}>;
+
+const previewInputs = new WeakMap<PasteWorld, PreviewCardInput>();
+const previewSelections = new WeakMap<PasteWorld, PreviewCardSelection>();
+
+async function selectPreviewCard(input: PreviewCardInput): Promise<PreviewCardSelection> {
+  let boundary: Record<string, unknown>;
+  try {
+    boundary = await import(new URL('../../../../src/share/preview-card.ts', import.meta.url).href) as Record<string, unknown>;
+  } catch {
+    assert.fail('falta la selección pública selectPreviewCard en src/share/preview-card.ts');
+  }
+  const select = boundary?.selectPreviewCard;
+  assert.equal(
+    typeof select,
+    'function',
+    'la selección de tarjeta debe ofrecer selectPreviewCard para que la publicación use la misma degradación honesta',
+  );
+  return await (select as (value: PreviewCardInput) => PreviewCardSelection | Promise<PreviewCardSelection>)(input);
+}
+
+function completePreviewInput(): PreviewCardInput {
+  return {
+    spot_id: 'playa-venao',
+    spot_name: 'Playa Venao',
+    score_q: 76,
+    size_band: 'waist_chest',
+    size_range_m: [0.7, 1.1],
+    wind_state: 'clean',
+    conf_level: 'high',
+  };
+}
+
+// Slice-04 is authored ahead of its implementation. Individual DELIVER steps
+// activate only their named scenario set with PASTE_JIT=1, keeping future
+// publication REDs out of the normal acceptance run.
+Before({ tags: '@jit' }, function () {
+  if (process.env.PASTE_JIT === '1') return;
+  return 'skipped';
+});
+
+// ---------- 04-01: pure preview-card selection boundary ----------
+
+Given(
+  'una tarjeta lista para el spot {string} con {int} puntos y todos sus campos',
+  function (this: PasteWorld, spotName: string, score: number) {
+    previewInputs.set(this, { ...completePreviewInput(), spot_name: spotName, score_q: score });
+  },
+);
+
+Given(
+  'una tarjeta lista para el spot {string} con {int} puntos pero sin {string}',
+  function (this: PasteWorld, spotName: string, score: number, missingField: string) {
+    const complete = completePreviewInput();
+    const input = { ...complete, spot_name: spotName, score_q: score } as Record<string, unknown>;
+    delete input[missingField];
+    previewInputs.set(this, input as PreviewCardInput);
+  },
+);
+
+When('se elige la tarjeta de vista previa para ese spot', async function (this: PasteWorld) {
+  const input = previewInputs.get(this);
+  assert.ok(input !== undefined, 'test fixture error: la tarjeta de vista previa requiere una entrada');
+  previewSelections.set(this, await selectPreviewCard(input));
+});
+
+Then(
+  'la selección conserva la tarjeta propia de {string} y no inventa huecos',
+  function (this: PasteWorld, spotName: string) {
+    const selection = previewSelections.get(this);
+    assert.ok(selection !== undefined, 'test fixture error: la selección de tarjeta es requerida');
+    const findings: string[] = [];
+    if (selection.kind !== 'spot') findings.push(`la selección eligió ${selection.kind}, no la tarjeta propia`);
+    if (selection.spot_id !== 'playa-venao') findings.push(`la selección perdió el spot de ${spotName}`);
+    if (selection.missing_fields.length !== 0) findings.push(`la selección inventó huecos: ${selection.missing_fields.join(', ')}`);
+    assertBehavior(findings, 'conservar la tarjeta propia cuando los cinco campos P7 están completos.');
+  },
+);
+
+Then(
+  'la selección usa la tarjeta genérica y anota que falta {string}',
+  function (this: PasteWorld, missingField: string) {
+    const selection = previewSelections.get(this);
+    assert.ok(selection !== undefined, 'test fixture error: la selección de tarjeta es requerida');
+    const findings: string[] = [];
+    if (selection.kind !== 'generic') findings.push(`la selección eligió ${selection.kind}, no la tarjeta genérica`);
+    if (!selection.missing_fields.includes(missingField)) {
+      findings.push(`la selección no anotó el campo faltante ${missingField}`);
+    }
+    assertBehavior(findings, 'degradar a la tarjeta genérica y exponer el hueco para que la publicación lo anote, nunca inventar datos.');
+  },
+);
 
 async function announcedCardAddress(state: Stash): Promise<string | null> {
   return requiredHome(state).page.evaluate(`(() => {
