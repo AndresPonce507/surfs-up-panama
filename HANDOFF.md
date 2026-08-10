@@ -257,7 +257,9 @@ proceed.**
 **Needs AWS console access, deliberately not attempted (owner asked to leave AWS alone):**
 
 6. Account Lambda concurrency quota. If ≤102, the rate-limit design does not exist and the attack
-   ceiling is ~$130/mo
+   ceiling is ~$130/mo. **ANSWERED 2026-08-10, read-only re-probe: the quota is 1000** (raised from
+   the 10 observed 2026-08-09; `aws-permission-inventory.md` §9). The rate-limit design is
+   deployable; all 13 declared reservations fit with 987 unreserved remaining
 7. Whether AWS meters egress for a 429 emitted before the function runs. Can move the whole abuse answer
 8. DynamoDB 25 WCU/RCU perpetuity. **Marked UNVERIFIED after a reviewer found the repo's own research
    contradicts the "always free" claim.** $0 if perpetual, ~$14.24/mo from month 13 if not

@@ -57,6 +57,28 @@ Feature: A deploy is rejected before it can freeze the forecast, drop the archiv
     And the produced result names the deny scope as exactly the four write Function URLs, the ingest role deliberately excluded, and that those URLs do not exist yet
     And the produced result names the project cost-allocation tag
 
+  @slice-05 @driving_port @covers-R20 @covers-R21 @covers-R23 @covers-R24
+  Scenario: The month-close command proves a zero month from recorded account reads
+    When the site owner runs the month-close command against the recorded account reads "zero-month"
+    Then the month-close command finishes successfully
+    And the month report names the month-to-date account spend as zero with its period
+    And the month report lists every free-tier line in use with that line's type
+    And the month report presents unattributed spend as account-wide because the tag is not yet activated
+    And the month report names the Anthropic limit as an external audit obligation, never as checked
+
+  @slice-05 @driving_port @negative @error @covers-R22 @covers-R24
+  Scenario: A recorded month above zero is rejected naming the service that billed
+    When the site owner runs the month-close command against the recorded account reads "s3-billed-month"
+    Then the month-close command does not succeed
+    And the month report names "Amazon Simple Storage Service" and its amount as above zero
+    And the month report says the spend cannot be attributed to one project until the tag is activated
+
+  @slice-05 @driving_port @covers-R20 @covers-R22 @covers-R24
+  Scenario: A tag-activated month proves this project at zero while another project bills the account
+    When the site owner runs the month-close command against the recorded account reads "tag-active-shared-month"
+    Then the month-close command finishes successfully
+    And the month report names the project-scoped month as provably zero while naming the account total honestly
+
   @slice-03 @driving_port @real-io @negative @error @coupled @covers-R12 @covers-R13 @covers-R14 @covers-R15 @covers-R17
   Scenario: Every money-line or deny-scope regression is rejected naming exactly what broke
     When the site owner checks each contained money-line or deny-scope regression

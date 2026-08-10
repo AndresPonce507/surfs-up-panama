@@ -333,6 +333,84 @@ Then('the ingest-role regression names the prediction archive as the reason', fu
   assertIncludes(result.output, 'predictions/', 'must name the archive as the reason a billing flood must never stop it');
 });
 
+// --- Slice-05: the month-close command against recorded account reads ---
+
+const RECORDED_READS_ROOT = fileURLToPath(new URL('../fixtures/recorded-account-reads', import.meta.url));
+const monthCloseResults = new WeakMap<BillWorld, ObservedResult>();
+
+function monthCloseObserved(world: BillWorld): ObservedResult {
+  const result = monthCloseResults.get(world);
+  assert.ok(result, 'WHAT: no month-close result was captured. HOW: run the month-close command before observing it.');
+  return result;
+}
+
+When('the site owner runs the month-close command against the recorded account reads {string}', async function (this: BillWorld, fixtureName: string) {
+  const fixture = resolve(RECORDED_READS_ROOT, `${fixtureName}.json`);
+  assert.ok(existsSync(fixture), `WHAT: recorded account reads are absent. HOW: restore ${fixture}.`);
+  const { runMonthClose } = await import('../../../../infra/month-close.mjs');
+  const lines: string[] = [];
+  const exitCode = runMonthClose({ argv: ['--input', fixture], output: { log: (line: string) => lines.push(line) } });
+  monthCloseResults.set(this, { exitCode, output: lines.join('\n') });
+});
+
+Then('the month-close command finishes successfully', function (this: BillWorld) {
+  const result = monthCloseObserved(this);
+  assert.equal(result.exitCode, 0, `WHAT: the month-close command exited ${result.exitCode} on a provably zero month.\n${result.output}`);
+});
+
+Then('the month-close command does not succeed', function (this: BillWorld) {
+  const result = monthCloseObserved(this);
+  assert.notEqual(result.exitCode, 0, `WHAT: a month above $0.00 was accepted as closed at zero.\n${result.output}`);
+});
+
+Then('the month report names the month-to-date account spend as zero with its period', function (this: BillWorld) {
+  const output = monthCloseObserved(this).output;
+  assertIncludes(output, 'month-to-date', 'the report must read the account, not a design estimate');
+  assertIncludes(output, '$0.00', 'the zero month must be stated as a dollar figure');
+  assertIncludes(output, '2026-08-01', 'the report must name the period the figure covers');
+});
+
+Then('the month report lists every free-tier line in use with that line\'s type', function (this: BillWorld) {
+  const output = monthCloseObserved(this).output;
+  assertIncludes(output, 'free tier', 'the free-tier lines are half the charter');
+  assertIncludes(output, 'Always Free', 'each line must carry its type');
+  assertIncludes(output, '12 Months Free', 'the 12-month type is what closes the DynamoDB perpetuity question at month 13');
+  assertIncludes(output, '25/25 WCU', 'the DynamoDB provisioned line must show its usage against its limit');
+});
+
+Then('the month report presents unattributed spend as account-wide because the tag is not yet activated', function (this: BillWorld) {
+  const output = monthCloseObserved(this).output;
+  assertIncludes(output, 'not yet activated', 'the report must say why per-project attribution is impossible');
+  assertIncludes(output, 'account', 'unattributed spend must be presented as account-wide, never as this project\'s number');
+});
+
+Then('the month report names the Anthropic limit as an external audit obligation, never as checked', function (this: BillWorld) {
+  const output = monthCloseObserved(this).output;
+  assertIncludes(output, 'Anthropic', 'the console-only guardrail must be reported');
+  assertIncludes(output, 'external audit obligation', 'no API exists for it; claiming it was checked would be a lie');
+  assert.ok(!/anthropic[^\n]*verified/i.test(output), 'WHAT: the report claimed the Anthropic limit was verified. WHY: no API exists to verify it.');
+});
+
+Then('the month report names {string} and its amount as above zero', function (this: BillWorld, service: string) {
+  const output = monthCloseObserved(this).output;
+  assertIncludes(output, service, 'the failing month must name the service that billed');
+  assertIncludes(output, 'ABOVE ZERO', 'the failure must be unmistakable in the report text');
+  assertIncludes(output, '3.42', 'the failure must name the amount');
+});
+
+Then('the month report says the spend cannot be attributed to one project until the tag is activated', function (this: BillWorld) {
+  const output = monthCloseObserved(this).output;
+  assertIncludes(output, 'cannot be attributed', 'an unattributable month must be stated as such, never guessed');
+  assertIncludes(output, 'not yet activated', 'the report must point at the missing activation, feature pre-requisite 8');
+});
+
+Then('the month report names the project-scoped month as provably zero while naming the account total honestly', function (this: BillWorld) {
+  const output = monthCloseObserved(this).output;
+  assertIncludes(output, 'surfs-up-panama', 'the project-scoped read must name the project tag value');
+  assertIncludes(output, 'provably $0.00', 'the tag-filtered zero is the claim this feature exists to make checkable');
+  assertIncludes(output, '7.10', 'the other project\'s account spend must stay visible, never hidden');
+});
+
 function restoreAndRemove(copy: FixtureCopy): void {
   for (const changed of [...copy.changed].reverse()) {
     writeFileSync(changed.path, changed.original, 'utf8');
