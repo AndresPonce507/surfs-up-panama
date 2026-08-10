@@ -18,6 +18,7 @@ const playaVenao = {
 };
 
 const fixtureServerThresholdScore = 55;
+const gonePushStatuses = new Set([403, 404, 410]);
 
 function subscriptionWithBar(bar: number, overrides: Partial<StoredSub> = {}): StoredSub {
   return {
@@ -292,17 +293,49 @@ describe('planNotifications', () => {
 
           assert.deepEqual(
             result.deletions,
-            [403, 404, 410].includes(firstStatus) ? [endpointHash] : [],
+            gonePushStatuses.has(firstStatus) ? [endpointHash] : [],
             'the gone-status set and planned endpoint deletion are equivalent across status codes',
           );
           assert.equal(
             result.events.length,
-            [403, 404, 410].includes(firstStatus) ? 1 : 0,
+            gonePushStatuses.has(firstStatus) ? 1 : 0,
             'the pure core declares a prune reaction but does not execute a delete or retry',
           );
         },
       ),
       { numRuns: 100 },
+    );
+  });
+
+  it('partitions every HTTP status into the three gone destinations and every non-gone response, including a transient 503', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 100, max: 599 }),
+        (status) => {
+          const endpointHash = `suscriptor-respuesta-${status}`;
+          const reaction = planSendReactions({
+            sends: [{
+              spot_id: playaVenao.spot_id,
+              endpoint_hash: endpointHash,
+              lang: 'es',
+              title: 'Aviso',
+              body: 'El aviso de prueba',
+              url: '/spots/playa-venao/',
+              tag: playaVenao.spot_id,
+              ttl_seconds: 60,
+            }],
+            responses: [{ endpoint_hash: endpointHash, status }],
+          });
+
+          assert.ok(reaction && typeof reaction === 'object', 'every completed push response produces a reaction decision');
+          assert.deepEqual(
+            reaction.deletions,
+            gonePushStatuses.has(status) ? [endpointHash] : [],
+            'only 403, 404, and 410 are gone destinations; every other status preserves the subscription',
+          );
+        },
+      ),
+      { numRuns: 500 },
     );
   });
 });
