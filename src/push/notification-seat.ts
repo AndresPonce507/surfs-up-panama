@@ -26,8 +26,24 @@ type NotificationOptions = {
   data: { url: string };
 };
 
-type NotificationClickEventPort = Record<string, never>;
-type NotificationClickScopePort = Record<string, never>;
+type NotificationClickEventPort = {
+  notification: {
+    data: { url: string };
+    close: () => void;
+  };
+  waitUntil: (promise: Promise<unknown>) => void;
+};
+
+type NotificationClient = {
+  url: string;
+  focus: () => Promise<unknown>;
+};
+
+type NotificationClickScopePort = {
+  clients: {
+    matchAll: () => Promise<readonly NotificationClient[]>;
+  };
+};
 
 function notificationOptions(payload: NotificationPayload): NotificationOptions {
   return {
@@ -51,10 +67,24 @@ export function handlePush(event: PushEventPort, scope: PushScopePort): void {
 }
 
 /**
- * The click entry point shares this module so the later serial service-worker
- * append has one explicit handler home. Its behaviour belongs to step 01-16.
+ * A tap first removes the notification, then brings forward an already-open
+ * page for the spot. The next serial step owns opening a new page when none
+ * matches, so this handler does not create browser state itself.
  */
 export function handleNotificationClick(
-  _event: NotificationClickEventPort,
-  _scope: NotificationClickScopePort,
-): void {}
+  event: NotificationClickEventPort,
+  scope: NotificationClickScopePort,
+): void {
+  const targetUrl = event.notification.data.url;
+  event.notification.close();
+  event.waitUntil(
+    scope.clients
+      .matchAll()
+      .then((clients) => clients.find((client) => relativeUrl(client.url) === targetUrl)?.focus()),
+  );
+}
+
+function relativeUrl(absoluteUrl: string): string {
+  const url = new URL(absoluteUrl);
+  return `${url.pathname}${url.search}${url.hash}`;
+}
