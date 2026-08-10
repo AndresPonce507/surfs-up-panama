@@ -1,9 +1,15 @@
 // GUARD: every published call, on both days, must carry conf_level,
-// size_band, size_range_m, wind_state and best_window. These five fields
-// are declared OPTIONAL on SurfaceCall (src/publish/static-surface.ts), so
-// `npm run typecheck` passes and every existing CI job stays green even
-// when they are silently missing on 19 of 20 spots per day — that gap is
-// exactly what shipped. This is the gate that would have caught it.
+// size_band, size_range_m, wind_state, best_window, weakest_link and
+// confidence_reason, and the surface itself must carry spot_detail. All
+// seven per-call fields plus spot_detail are declared OPTIONAL on SurfaceCall
+// / PublishedSurfaceUpdate (src/publish/static-surface.ts), so `npm run
+// typecheck` passes and every existing CI job stays green even when they are
+// silently missing -- that gap is exactly what shipped once already
+// (conf_level, size_band, size_range_m, wind_state, best_window). This is
+// the gate that would have caught it, extended per
+// adr-enriched-fields-reach-the-reading-surface.md to cover weakest_link,
+// confidence_reason and spot_detail: "whoever ships these fields owes the
+// guard in the same slice."
 //
 // Reads the COMMITTED file directly, never a freshly-built in-memory
 // bundle: a guard that only inspects runBuildOnce's own fixture output
@@ -53,6 +59,24 @@ function fieldFindings(call: SurfaceCall, where: string): string[] {
   if (!/^\d{2}:\d{2}$/.test(call.best_window?.start ?? '') || !/^\d{2}:\d{2}$/.test(call.best_window?.end ?? '')) {
     findings.push(`${where} ${call.spot_id}: best_window missing or malformed`);
   }
+  // weakest_link and confidence_reason (adr-enriched-fields-reach-the-
+  // reading-surface.md): key PRESENCE is the check, never a value check --
+  // weakest_link legitimately carries `null` (a genuine perfect day) and
+  // that must stay distinguishable from the key being absent (an older
+  // surface published before the field existed). Checking for a truthy
+  // value here would make this guard reject exactly the honest case it
+  // exists to protect.
+  if (!('weakest_link' in call)) {
+    findings.push(`${where} ${call.spot_id}: weakest_link key missing`);
+  }
+  if (!('confidence_reason' in call) || call.confidence_reason === undefined
+    || !('dominant' in call.confidence_reason)
+    || typeof call.confidence_reason.spread_terms?.height !== 'number'
+    || typeof call.confidence_reason.spread_terms?.period !== 'number'
+    || typeof call.confidence_reason.spread_terms?.direction !== 'number'
+    || !['unverified', 'measured'].includes(call.confidence_reason.track_state)) {
+    findings.push(`${where} ${call.spot_id}: confidence_reason missing or malformed`);
+  }
   return findings;
 }
 
@@ -66,10 +90,14 @@ function fieldFindings(call: SurfaceCall, where: string): string[] {
 // scenario now derives its expectations dynamically
 // (tomorrows-ranking.steps.ts, commit b0970b3), data/published-surface.json
 // is regenerated from real pipeline output via
-//   npm run pipeline:build -- --at 2026-08-09T11:22:00Z
-//   npm run publish:surface -- --input .pipeline-out/pub/v1/regions/pa-pacific/bundle.json
-// and this guard is unskipped and green against it.
-describe('published surface: every spot, both days, carries the five structured fields', () => {
+//   npm run pipeline:build -- --at <ISO-8601 instant, current civil day> --work-dir <tmp dir>
+//   npm run publish:surface -- --input <work-dir>/pub/v1/regions/pa-pacific/bundle.json
+// and this guard is unskipped and green against it. `--at` is NOT a fixed
+// literal: `npm run build` runs `publish:surface --verify` first, which
+// refuses unless `current.days[0].date` is Panama's real current civil day,
+// so the instant must be regenerated fresh each time this file is
+// regenerated, never copy-pasted from a past run's command.
+describe('published surface: every spot, both days, carries the seven structured fields plus spot_detail', () => {
   it('has no gaps in current.days[0], current.days[1], or current.calls', () => {
     const surface = loadSurface();
 
@@ -83,5 +111,20 @@ describe('published surface: every spot, both days, carries the five structured 
       ...surface.current.days.flatMap((day, index) => day.spots.flatMap((call) => fieldFindings(call, `days[${index}]`))),
     ];
     expect(findings, findings.join('\n')).toEqual([]);
+  });
+
+  // spot_detail (adr-enriched-fields-reach-the-reading-surface.md): f-show-
+  // our-track-record needs it on the surface, not the bundle, because the
+  // bundle is written to S3 and never committed. Same count discipline as
+  // the five structured fields above: a surface that carries the key but
+  // silently drops spots from it would still pass a shape-only check.
+  it('carries spot_detail for every launch spot, not a partial identity map', () => {
+    const surface = loadSurface();
+    const spotDetail = surface.current.spot_detail ?? {};
+
+    expect(Object.keys(spotDetail), 'spot_detail must resolve identity for every launch spot').toHaveLength(LAUNCH_SPOT_COUNT);
+    for (const call of surface.current.calls) {
+      expect(Object.hasOwn(spotDetail, call.spot_id), `spot_detail is missing an identity for ${call.spot_id}`).toBe(true);
+    }
   });
 });
