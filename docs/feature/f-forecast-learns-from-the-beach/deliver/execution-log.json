@@ -771,6 +771,41 @@
       "s": "EXECUTED",
       "d": "{\"commit\":\"d2c1770\",\"message\":\"feat(learning): estimate pooling tau from gated spots\",\"status\":\"green\"}",
       "t": "2026-08-10T21:31:42Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "04-01 activates slice-04 only. Non-visual device-day median collapse precedes every later weighting stage; blocked 02-03 builder wiring remains untouched.",
+      "t": "2026-08-10T21:58:58Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm run test:at -- --name Five reports from one session count exactly once\",\"exit\":1,\"classification\":\"expected behavioral RED\",\"failure\":\"repeat run stored n=38 rather than n=22 and bytes differed\"}",
+      "t": "2026-08-10T21:59:19Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm test -- --run tests/unit/learning-weight-laws.test.ts\",\"exit\":1,\"classification\":\"expected unit RED\",\"failure\":\"weights module did not exist\"}",
+      "t": "2026-08-10T21:59:53Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "{\"focused_acceptance\":\"1 scenario, 19 steps PASS\",\"learning_units\":\"10 files, 64 tests PASS\",\"typecheck\":\"PASS\",\"falsification\":\"returning uncollapsed height rows made the byte-identity acceptance scenario fail with n=38 versus n=22; restored collapse\",\"full_learning_acceptance\":\"57 scenarios: 30 passed, 14 skipped, 13 failures: 7 blocked 02-03 builder seam and 6 later slice-04 behaviors\",\"non_visual_rationale\":\"this changes stored correction bytes only; no rendered surface\"}",
+      "t": "2026-08-10T22:01:14Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "{\"commit\":\"a1b5277\",\"message\":\"feat(learning): collapse device-day reports\",\"status\":\"green\"}",
+      "t": "2026-08-10T22:01:18Z"
     }
   ]
 }
