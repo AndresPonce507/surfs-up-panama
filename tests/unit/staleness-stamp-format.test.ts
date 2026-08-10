@@ -44,6 +44,12 @@ function readBuiltPage(relativePath: string): string {
   return readFileSync(resolve(OUT_DIR, relativePath), 'utf8');
 }
 
+/** Text a surfer can read. Machine metadata in element attributes is the
+ * deliberate companion truth of the rendered plain-clock stamp. */
+function visibleText(html: string): string {
+  return html.replace(/<[^>]*>/g, ' ');
+}
+
 afterAll(() => {
   rmSync(OUT_DIR, { recursive: true, force: true });
 });
@@ -67,10 +73,14 @@ describe('the staleness stamp on a built page', () => {
     };
 
     for (const [name, html] of Object.entries(pages)) {
+      // Falsification guard: this oracle must still fail if an ISO reaches
+      // visible text. It must not confuse the required datetime metadata with
+      // text a surfer sees.
+      assert.match(visibleText(`<p>${forecastPublishedAt(html)}</p>`), ISO_TIMESTAMP);
       assert.doesNotMatch(
-        html,
+        visibleText(html),
         ISO_TIMESTAMP,
-        `${name} must never print a machine timestamp: technical text on the Spanish surface is forbidden outright. Found ${JSON.stringify(html.match(ISO_TIMESTAMP)?.[0])}.`,
+        `${name} must never print a machine timestamp: technical text on the Spanish surface is forbidden outright. Found ${JSON.stringify(visibleText(html).match(ISO_TIMESTAMP)?.[0])}.`,
       );
       assert.match(
         html,
@@ -80,3 +90,9 @@ describe('the staleness stamp on a built page', () => {
     }
   }, 60_000);
 });
+
+function forecastPublishedAt(html: string): string {
+  const publishedAt = /<time datetime="([^"]+)"/.exec(html)?.[1];
+  assert.ok(publishedAt, 'test bug: a reading document has no publish moment metadata to protect');
+  return publishedAt;
+}

@@ -60,7 +60,7 @@ const tomorrow = summaryFor(1);
   currentPath={paths.spot(locale, spotId)}
 >
   <h1>{spot.name}</h1>
-  <p>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</p>
+  <p><time datetime={forecast.published_at}>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</time></p>
   <nav>
     <a data-field="back-to-list" href={paths.home(locale)}>Volver a la lista</a>
   </nav>

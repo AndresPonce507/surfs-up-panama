@@ -65,7 +65,7 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
   currentPath={currentPath}
 >
   <h1>{t.home.header}</h1>
-  <p>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</p>
+  <p><time datetime={forecast.published_at}>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</time></p>
   <nav>
     <a href={paths.home(locale)} aria-current={day === 0 ? 'page' : undefined}>
       {t.home.tabToday}
