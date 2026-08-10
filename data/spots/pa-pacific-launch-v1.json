@@ -33,6 +33,12 @@
   "confidence_factors": {
     "spread": true
   },
+  "spread_climatology": {
+    "minimum_history_days": 30,
+    "history_unit": "distinct_completed_spot_local_days",
+    "on_history_unavailable": "absolute_spread",
+    "on_calibration_failure": "disable_spread_factor"
+  },
   "scoring_priors": {
     "h_ref_m": 1.3,
     "s_size": 0.5,
@@ -62,6 +68,6 @@
   "provenance": {
     "scoring": "docs/product/architecture/05-scoring-engine.md section 3.1 and 3.5, citing docs/research/raw/09-ai-forecast-methodology.md section 7",
     "membership": "docs/research/raw/14-panama-pacific-spot-seed-list.md and data/spots/pa-pacific.yaml",
-    "decision_record": "docs/research/slice-03-launch-seed-readiness.md"
+    "decision_record": "docs/research/slice-03-launch-seed-readiness.md; docs/product/architecture/adr-spread-climatology-activation.md"
   }
 }

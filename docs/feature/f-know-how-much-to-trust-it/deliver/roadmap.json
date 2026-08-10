@@ -657,7 +657,7 @@
     {
       "id": "05",
       "name": "Slice-05: the reason compares against this spot's own normal",
-      "description": "Once a spot's own spread history exists, the percentile form replaces absolute thresholds and the reason says the models split worse than usual for this spot. Data-gated: the log started 2026-08-08 and the activation threshold is unset (Pre-requisite 7, open).",
+      "description": "Once a spot has 30 qualifying days of its own spread history, the percentile form replaces absolute thresholds and the reason says the models split worse than usual for this spot. Data-gated: the log started 2026-08-08, so no spot is live-eligible yet (Pre-requisite 7 closed).",
       "default_agent": "nw-software-crafter",
       "default_deps_strategy": "sequential",
       "steps": [
@@ -665,7 +665,7 @@
           "id": "05-01",
           "name": "Percentile form activates from the spot's own history",
           "criteria": [
-            "The build reads THIS spot's spread history from its own log; above the threshold, the climatology percentile replaces the absolute CVs.",
+            "At the policy threshold, this spot's published confidence uses its own historical spread percentile; below it, the published confidence keeps the absolute form.",
             "A worse-than-usual day says so, comparing against the spot's own normal, still within 160 characters and every honesty clause."
           ],
           "test_file": "tests/acceptance/f-know-how-much-to-trust-it/lo-normal-de-este-spot.feature",
@@ -677,11 +677,12 @@
           "non_visual_rationale": "The form switch and its sentence, asserted over the published bundle; the rendered wording is judged at 05-05 and 05-06.",
           "ui_checks": {},
           "deps": ["01-01"],
+          "dispatch_dependencies": ["serialized producer-lane lease for src/pipeline/build.ts"],
           "files_to_modify": [
             "src/pipeline/build.ts",
             "src/publish/confidence-reason.ts"
           ],
-          "implementation_notes": "DATA-GATED AND THRESHOLD-BLOCKED, RECORDED, DO NOT PLAN AROUND IT: the PublishedCall log began accumulating 2026-08-08, zero real spots have meaningful history, and the activation threshold (how many days of a spot's own spread history before the percentile form activates) is a number NOBODY HAS SET: Pre-requisite 7, open, owned by the DESIGN/learning lane plus Andres. This slice may sit pending for weeks and that is correct; shipping it early would compare a day against a history that does not exist, the exact dishonesty this product refuses. The acceptance history is accumulated HONESTLY: the scenarios publish 60 real mornings through the same driving ports production uses, so the history under test is the log the pipeline itself wrote, never a planted table; 60 sits above any sane threshold and 2 below, and if the settled number falls outside that range the fixture constant moves, never the oracle. THE THRESHOLD IS POLICY DATA, not code (05 section 6.1: 'switching forms is a data availability change'), so it belongs beside slice-03's confidence_factors in the launch policy. ENGINE ALREADY CARRIES THE ARM: SpreadInput's climatology variant exists in confidence.ts; the missing production behaviour is the build computing the spot's own spread percentile from the log and passing it. The log may need a per-row spread value to make the history computable; that is an additive, insert-only, forward-only schema addition, NEVER a backfill. src/pipeline/build.ts is producer-lane contended (Pre-requisite 3), serialized. Qualitative tails only: pct <= 20 maps to 1.0, mid to 0.7, >= 80 to 0.35, as data."
+          "implementation_notes": "DATA-GATED, THRESHOLD SET: Pre-requisite 7 closed 2026-08-10. The launch policy sets `spread_climatology.minimum_history_days = 30`, counted as this spot's own distinct, completed spot-local forecast days with usable multi-source spread in the insert-only PublishedCall history. The current day never supplies its own reference. Below N, malformed history, or an unavailable history read keeps the absolute form and forbids normal-comparison wording. This is a reversible availability policy prior, not observational calibration evidence; the existing learning-lane calibration failure disables `confidence_factors.spread` completely and may be reversed only by a later recorded evaluation. Live activation is still weeks out because the log began accumulating 2026-08-08. The acceptance history is accumulated HONESTLY: scenarios publish 60 real mornings through production's driving ports, never a planted table; 60 is above N and 2 below. THE THRESHOLD IS POLICY DATA, not code (05 §6.1), beside `confidence_factors` in the launch policy. ENGINE ALREADY CARRIES THE ARM: SpreadInput's climatology variant exists in confidence.ts; this step adds only the build's spot-owned percentile selection and input. Any required per-row spread value is additive, insert-only and forward-only, NEVER a backfill. A serialized producer-lane lease for src/pipeline/build.ts is a hard dispatch dependency; do not dispatch this step while that lease is held elsewhere. Qualitative tails only: pct <= 20 maps to 1.0, mid to 0.7, >= 80 to 0.35, as data."
         },
         {
           "id": "05-02",
@@ -798,13 +799,13 @@
     "source_directories": [
       "src/scoring/",
       "src/publish/",
+      "src/pipeline/",
       "src/components/"
     ],
     "test_directories": [
       "tests/unit/"
     ],
     "excluded_patterns": [
-      "src/pipeline/**",
       "src/data/**",
       "src/i18n/**",
       "src/share/**",

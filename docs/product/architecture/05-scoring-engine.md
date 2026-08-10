@@ -386,13 +386,22 @@ function confidence(
   replaces the absolute CVs. Qualitative tails only: pct <= 20 maps to 1.0, 20 < pct < 80
   maps to 0.7, pct >= 80 maps to 0.35 (data, unfit priors). The climatology itself (per-spot
   historical spread distribution from the PublishedCall log) is accumulated data; switching
-  forms is a data availability change, same code shape as the correction hook.
+  forms is a data availability change, same code shape as the correction hook. **Activation
+  policy (accepted 2026-08-10):** the launch policy's `spread_climatology.minimum_history_days`
+  is `30`. A qualifying history row is one distinct, completed spot-local forecast day with
+  usable multi-source spread, from the insert-only PublishedCall log; the current day never
+  supplies its own reference. Fewer than 30 rows, malformed history, or an unavailable history
+  read keeps the absolute form and forbids the normal-comparison copy. This is an unfit,
+  reversible policy prior, not a claim that 30 days calibrates model skill. ADR:
+  `adr-spread-climatology-activation.md`.
 - **Removal clause (§3.6 binding consequence 3)**: `c_spread` participates only while the
   §10.2 Brier calibration check passes (high-confidence days measurably more often right).
   Participation is a per-factor enable flag in the constants file; disabling it is a data
   change. This reconciles decision 7 (confidence always shown) with §3.6 (remove the term if
   it lies): the LEVEL keeps rendering from the surviving factors; only the spread factor is
-  removable.
+  removable. A calibration failure changes `confidence_factors.spread` to `false`; it does not
+  fall back to either climatology or absolute spread. Re-enabling needs a later, recorded
+  learning-lane evaluation, never an automatic retry.
 - `spread_terms` feeds the reason copy ("72% of the penalty comes from the period
   disagreement", research 09 §7.5 worked example). Consumer: `confidence_reason` in the
   bundle (`domain-model.md` §13), keyed `(spot_id, valid_ts)`.

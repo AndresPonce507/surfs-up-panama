@@ -526,3 +526,20 @@ fails when any of the five fields goes missing. Without that guard this silently
   before being trusted, and it fails with a real exit code.
 - `scripts/preview/clean-urls.js` is the CloudFront function that should replace the publish-time
   workaround once the account permits `cloudfront:CreateFunction`.
+
+---
+
+## 11. Trust Slice 05 activation policy, 2026-08-10
+
+**Pre-requisite 7 is closed.** The percentile form of `C_spread` activates only after **30**
+distinct, completed spot-local forecast days with usable multi-source spread in that spot's
+insert-only PublishedCall history. The current day cannot be part of its own reference. Below the
+threshold, on a malformed history, or when the history source cannot be read, the build keeps the
+absolute form and cannot print a comparison against normal. `30` is a reversible availability
+policy prior, not evidence that the term is calibrated.
+
+The existing learning-lane calibration kill switch is separate and wins: if it fails,
+`confidence_factors.spread` becomes false and no spread form participates. Re-enable requires a
+later recorded evaluation, never an automatic retry. Authority is
+`docs/product/architecture/adr-spread-climatology-activation.md`; the machine-readable policy is
+`data/spots/pa-pacific-launch-v1.json` under `spread_climatology`.
