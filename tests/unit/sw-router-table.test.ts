@@ -154,17 +154,21 @@ type Helper = ReturnType<typeof loadHelper>;
 async function fireLifecycle(helper: Helper, type: 'install' | 'activate'): Promise<void> {
   const handlers = helper.listeners.get(type) ?? [];
   assert.equal(handlers.length, 1, `expected exactly one "${type}" listener`);
+  const handler = handlers[0];
+  assert.ok(handler, `expected a "${type}" listener function, found none`);
   const waits: Promise<unknown>[] = [];
-  handlers[0]({ waitUntil: (p: Promise<unknown>) => waits.push(p) });
+  handler({ waitUntil: (p: Promise<unknown>) => waits.push(p) });
   await Promise.all(waits);
 }
 
 async function fireFetch(helper: Helper, request: Request): Promise<{ responded: boolean; response: Response | null }> {
   const handlers = helper.listeners.get('fetch') ?? [];
   assert.equal(handlers.length, 1, 'expected exactly one "fetch" listener');
+  const handler = handlers[0];
+  assert.ok(handler, 'expected a "fetch" listener function, found none');
   let responded = false;
   let responsePromise: Promise<Response> | null = null;
-  handlers[0]({
+  handler({
     request,
     respondWith(value: Promise<Response> | Response) {
       responded = true;
@@ -262,12 +266,13 @@ describe('the offline helper (public/sw.js)', () => {
           return;
         }
         assert.equal(responded, true, `expected ${method} ${pathname} to be answered by the helper`);
-        assert.ok(activity.length > 0, `expected the helper to do something for ${method} ${pathname}`);
+        const firstActivity = activity[0];
+        assert.ok(firstActivity, `expected the helper to do something for ${method} ${pathname}`);
         // The row-for-row discriminator: a cache-first family always checks
         // the cache before ever touching the network; network-first always
         // tries the network before ever touching the cache.
         assert.equal(
-          activity[0].op,
+          firstActivity.op,
           family === 'cache-first' ? 'cache-match' : 'fetch',
           `expected ${method} ${pathname} (a ${family} row) to check `
             + `${family === 'cache-first' ? 'the cache' : 'the network'} first; saw ${JSON.stringify(activity)}`,
@@ -308,24 +313,62 @@ describe('the offline helper (public/sw.js)', () => {
     );
   });
 
-  it('never writes a foreign, redirected-elsewhere, opaque, or badly-statused answer into the cache -- only its own successful, same-origin, inspectable one -- and always still hands the page whatever the network gave back', async () => {
+  it('never writes a foreign, redirected-elsewhere, opaque, or badly-statused answer into the cache -- only its own successful, same-origin, inspectable one -- and a cache-first route with nothing better on the phone still hands the page whatever the network gave back', async () => {
+    // 01-04 note: before this step, an untrustworthy reply was never CACHED
+    // (01-03's invariant, unchanged below) but was still SERVED verbatim on
+    // every family, network-first included -- the captive-portal gap this
+    // step closes. A network-first route now prefers the forecast already
+    // on the phone (or, with nothing yet on the phone, the precached
+    // offline document) over an untrustworthy reply; a cache-first route,
+    // which has no such fallback to prefer on a cache miss, is unchanged
+    // and still serves whatever the network gave back. The write-refusal
+    // half of this property is asserted across every family, including
+    // network-first, so 01-03's invariant is proven to still hold under
+    // 01-04's code.
     await fc.assert(
       fc.asyncProperty(
-        cacheWritingRoute,
+        // Excludes the offline document's own path: this test's fetchImpl
+        // reserves that path to answer the install-time precache, so the
+        // tested route and the fallback target must stay distinct.
+        cacheWritingRoute.filter((route) => route.pathname !== OFFLINE_DOCUMENT),
         plantedResponseShape,
         fc.string({ minLength: 4, maxLength: 10 }),
-        async ({ method, pathname }, shape, body) => {
+        fc.string({ minLength: 4, maxLength: 10 }).map((s) => `offline-${s}`),
+        async ({ method, pathname, family }, shape, body, offlineStamp) => {
           const networkResponse = buildNetworkResponse(shape, body);
-          const helper = loadHelper({ fetchImpl: async () => networkResponse });
+          const helper = loadHelper({
+            fetchImpl: async (request) =>
+              new URL(request.url).pathname === OFFLINE_DOCUMENT
+                ? withResponseType(new Response(offlineStamp, { status: 200 }), 'basic')
+                : networkResponse,
+          });
+          // Precaches the offline document exactly the way the real helper
+          // does, through install -- what a network-first row falls back to
+          // with nothing better yet on the phone.
+          await fireLifecycle(helper, 'install');
+          helper.caches.activity.length = 0; // that setup is not part of the request under test
+
           const request = new Request(`${ORIGIN}${pathname}`, { method });
           const { responded, response } = await fireFetch(helper, request);
 
           assert.equal(responded, true, `expected ${method} ${pathname} to still be answered by the helper for a ${shape} network reply`);
-          assert.equal(
-            await response!.text(),
-            body,
-            `expected the page to receive whatever the network answered for ${method} ${pathname}, cacheable or not`,
-          );
+
+          const servedBody = await response!.text();
+          if (shape === 'legitimate') {
+            assert.equal(servedBody, body, `expected ${method} ${pathname} to receive the network's own answer for a legitimate reply`);
+          } else if (family === 'cache-first') {
+            assert.equal(
+              servedBody,
+              body,
+              `expected a cache-first miss with nothing better on the phone to still hand ${method} ${pathname} whatever the network answered`,
+            );
+          } else {
+            assert.equal(
+              servedBody,
+              offlineStamp,
+              `expected a network-first route to fall back to the precached offline document for a ${shape} reply, never hand back ${method} ${pathname}'s untrustworthy body`,
+            );
+          }
 
           const cachePutCalls = helper.caches.activity.filter((entry) => entry.op === 'cache-put');
           if (shape === 'legitimate') {
@@ -380,6 +423,95 @@ describe('the offline helper (public/sw.js)', () => {
         },
       ),
       { numRuns: 50 },
+    );
+  });
+
+  // ---------- 01-04: the origin going unreachable, every shape that covers ----------
+
+  /**
+   * Step 01-04's payoff property. "Unreachable" is not one example -- a
+   * stalled/DNS-dead connection that never resolves (network.fetch rejects),
+   * or a same-origin 5xx, or a captive portal / redirect-elsewhere handing
+   * back someone else's page dressed as 200 OK (never 'basic' per the Fetch
+   * API's own tainting rules, however good its status looks). Every one of
+   * those must be treated exactly like a dead network: the surfer keeps
+   * reading the last forecast that loaded, stamp intact, never the
+   * intruder's body.
+   */
+  type UnreachableOriginShape = { kind: 'connection-never-resolves' } | { kind: 'bad-reply'; shape: Exclude<PlantedResponseShape, 'legitimate'> };
+
+  const unreachableOriginShape = fc.oneof(
+    fc.constant<UnreachableOriginShape>({ kind: 'connection-never-resolves' }),
+    fc
+      .constantFrom<Exclude<PlantedResponseShape, 'legitimate'>>('foreign-origin', 'redirected-elsewhere', 'opaque', 'bad-status')
+      .map((shape) => ({ kind: 'bad-reply', shape }) as const),
+  );
+
+  it('serves the last cached forecast, stamp intact, whatever shape the origin going unreachable takes -- never the failing reply itself', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 4, maxLength: 10 }).map((s) => `offline-${s}`),
+        fc.string({ minLength: 4, maxLength: 10 }).map((s) => `first-${s}`),
+        fc.boolean(),
+        unreachableOriginShape,
+        fc.string({ minLength: 4, maxLength: 10 }).map((s) => `intruder-${s}`),
+        async (offlineStamp, firstNetworkStamp, hasPriorCachedCopy, outcome, intruderBody) => {
+          let signalIsUp = true;
+          const fetchImpl: FetchImpl = async (request) => {
+            const pathname = new URL(request.url).pathname;
+            if (pathname === OFFLINE_DOCUMENT) return withResponseType(new Response(offlineStamp, { status: 200 }), 'basic');
+            if (signalIsUp) return withResponseType(new Response(firstNetworkStamp, { status: 200 }), 'basic');
+            if (outcome.kind === 'connection-never-resolves') throw new Error('network unreachable');
+            return buildNetworkResponse(outcome.shape, intruderBody);
+          };
+          const helper = loadHelper({ fetchImpl });
+          // Primes the offline document into the current version's own
+          // cache exactly the way the real helper does -- through install.
+          await fireLifecycle(helper, 'install');
+
+          if (hasPriorCachedCopy) {
+            const first = await fireFetch(helper, new Request(`${ORIGIN}/`));
+            assert.equal(await first.response!.text(), firstNetworkStamp, 'test bug: first visit did not serve the network copy');
+          }
+
+          signalIsUp = false;
+          helper.caches.activity.length = 0; // everything from here on is the request under test
+          const second = await fireFetch(helper, new Request(`${ORIGIN}/`));
+          assert.ok(second.responded, 'expected the reading route to still be answered once the origin went unreachable');
+          const body = await second.response!.text();
+
+          assert.notEqual(
+            body,
+            intruderBody,
+            `expected an unreachable origin (${JSON.stringify(outcome)}) to never be served as the forecast`,
+          );
+          if (hasPriorCachedCopy) {
+            assert.equal(
+              body,
+              firstNetworkStamp,
+              `expected the forecast already on the phone, stamp intact, for an unreachable origin shaped ${JSON.stringify(outcome)}`,
+            );
+          } else {
+            assert.equal(
+              body,
+              offlineStamp,
+              `expected the precached offline document for an unreachable origin shaped ${JSON.stringify(outcome)} with nothing yet on the phone`,
+            );
+          }
+
+          const poisonedCachePuts = helper.caches.activity.filter(
+            (entry) => entry.op === 'cache-put' && entry.url === `${ORIGIN}/`,
+          );
+          if (outcome.kind === 'bad-reply') {
+            assert.equal(
+              poisonedCachePuts.length,
+              0,
+              `expected an unreachable origin shaped ${JSON.stringify(outcome)} to never overwrite the cached forecast`,
+            );
+          }
+        },
+      ),
+      { numRuns: 60 },
     );
   });
 
