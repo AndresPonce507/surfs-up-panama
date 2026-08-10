@@ -202,6 +202,15 @@ async function fireFetch(helper: Helper, request: Request): Promise<{ responded:
   return { responded, response: responded ? await responsePromise! : null };
 }
 
+/** Node cannot construct a navigation Request, but a browser gives the helper
+ * this observable request mode for a document visit. Keep it explicit so the
+ * fallback property cannot accidentally grant assets the offline document. */
+function navigationRequest(pathname: string): Request {
+  const request = new Request(`${ORIGIN}${pathname}`);
+  Object.defineProperty(request, 'mode', { value: 'navigate' });
+  return request;
+}
+
 // ---------- generators: one exemplar path per section 12 row ----------
 
 const reportScreenPath = fc
@@ -316,6 +325,57 @@ describe('the offline helper (public/sw.js)', () => {
         },
       ),
       { numRuns: 20 },
+    );
+  });
+
+  it('uses the precached sin señal document only for a failed report-screen navigation, never for an asset or report POST', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        reportScreenPath,
+        hashedAssetPath,
+        fc.string({ minLength: 4, maxLength: 20 }).map((body) => `offline-${body}`),
+        async (reportPath, assetPath, offlineBody) => {
+          const helper = loadHelper({
+            fetchImpl: async (request) => {
+              const pathname = new URL(request.url).pathname;
+              if (pathname === FAVICON) {
+                return withResponseType(new Response('favicon', { status: 200 }), 'basic');
+              }
+              if (pathname === OFFLINE_DOCUMENT) {
+                return withResponseType(new Response(offlineBody, { status: 200 }), 'basic');
+              }
+              throw new Error('network unreachable');
+            },
+          });
+          await fireLifecycle(helper, 'install');
+
+          helper.caches.activity.length = 0;
+          const reportNavigation = await fireFetch(helper, navigationRequest(reportPath));
+          assert.equal(await reportNavigation.response!.text(), offlineBody);
+          assert.ok(
+            helper.caches.activity.some((entry) => entry.op === 'cache-match' && new URL(entry.url).pathname === OFFLINE_DOCUMENT),
+            'expected a failed report-screen navigation to use the precached sin señal document',
+          );
+
+          helper.caches.activity.length = 0;
+          await assert.rejects(
+            fireFetch(helper, new Request(`${ORIGIN}${assetPath}`)),
+            /network unreachable/,
+            'expected a missing immutable asset to preserve its own network failure, never become a document',
+          );
+          assert.equal(
+            helper.caches.activity.some((entry) => entry.op === 'cache-match' && new URL(entry.url).pathname === OFFLINE_DOCUMENT),
+            false,
+            'expected an asset request never to look up the navigation-only document fallback',
+          );
+
+          helper.caches.activity.length = 0;
+          const reportPost = await fireFetch(helper, new Request(`${ORIGIN}${WRITE_PATH}`, { method: 'POST', body: 'report' }));
+          assert.equal(reportPost.responded, false, 'expected report POST to remain network-only, never be given the offline document');
+          assert.deepEqual(helper.caches.activity, [], 'expected report POST never to touch Cache Storage');
+        },
+      ),
+      { numRuns: 30 },
     );
   });
 
