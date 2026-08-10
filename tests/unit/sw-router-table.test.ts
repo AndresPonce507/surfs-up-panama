@@ -95,14 +95,27 @@ function createFakeCaches(activity: Activity[] = []) {
 type FakeCaches = ReturnType<typeof createFakeCaches>;
 type FetchImpl = (request: Request) => Promise<Response>;
 
-/** A fetch stub scripted by pathname: a body string answers 200, `'FAIL'` rejects (an unreachable origin). */
+/**
+ * Node's `new Response(...)` always reports `type: 'default'` -- that flag
+ * only comes from the browser's own fetch/redirect handling, never from a
+ * constructor. This stamps it onto a real Response so a fixture can stand in
+ * for what an actual same-origin fetch ('basic'), a foreign one ('cors'), or
+ * a not-inspectable one ('opaque') hands back, without reimplementing
+ * Response itself.
+ */
+function withResponseType(response: Response, type: 'basic' | 'cors' | 'opaque'): Response {
+  Object.defineProperty(response, 'type', { value: type, configurable: true });
+  return response;
+}
+
+/** A fetch stub scripted by pathname: a body string answers 200 from our own origin, `'FAIL'` rejects (an unreachable origin). */
 function scriptedFetch(responses: Record<string, string | 'FAIL'>): FetchImpl {
   return async (request) => {
     const pathname = new URL(request.url).pathname;
     const outcome = responses[pathname];
     if (outcome === undefined) throw new Error(`test bug: unscripted fetch to ${pathname}`);
     if (outcome === 'FAIL') throw new Error(`network unreachable: ${pathname}`);
-    return new Response(outcome, { status: 200 });
+    return withResponseType(new Response(outcome, { status: 200 }), 'basic');
   };
 }
 
@@ -186,6 +199,45 @@ const exemplarRoute = fc.oneof(
   fc.constant({ method: 'POST', pathname: WRITE_PATH, family: 'network-only' as const }),
 );
 
+/** Every route whose strategy ever writes a network answer into the cache -- everything except the write path, which is network-only by construction and covered on its own above. */
+const cacheWritingRoute = exemplarRoute.filter((route) => route.family !== 'network-only');
+
+// ---------- generator: every shape a planted network answer can take ----------
+
+/**
+ * The four shapes application-architecture.md section 9
+ * (clause check:unfired-is-not-evidence) asks this guard to refuse, plus the
+ * one it must still accept. A cross-origin hop -- whether the origin we
+ * asked answered directly from elsewhere, or a redirect carried us there --
+ * never comes back 'basic' per the Fetch API's own tainting rules, however
+ * 200 OK its status looks; that is what lets 'foreign-origin' and
+ * 'redirected-elsewhere' share one real shape below and still stand for two
+ * different attack stories.
+ */
+type PlantedResponseShape = 'legitimate' | 'foreign-origin' | 'redirected-elsewhere' | 'opaque' | 'bad-status';
+
+const plantedResponseShape = fc.constantFrom<PlantedResponseShape>(
+  'legitimate',
+  'foreign-origin',
+  'redirected-elsewhere',
+  'opaque',
+  'bad-status',
+);
+
+function buildNetworkResponse(shape: PlantedResponseShape, body: string): Response {
+  switch (shape) {
+    case 'legitimate':
+      return withResponseType(new Response(body, { status: 200 }), 'basic');
+    case 'foreign-origin':
+    case 'redirected-elsewhere':
+      return withResponseType(new Response(body, { status: 200 }), 'cors');
+    case 'opaque':
+      return withResponseType(new Response(body, { status: 200 }), 'opaque');
+    case 'bad-status':
+      return withResponseType(new Response(body, { status: 500 }), 'basic');
+  }
+}
+
 // ---------- tests ----------
 
 describe('the offline helper (public/sw.js)', () => {
@@ -253,6 +305,41 @@ describe('the offline helper (public/sw.js)', () => {
         assert.deepEqual(caches.activity, [], 'a sent report must never touch any cache, planted or its own');
       }),
       { numRuns: 40 },
+    );
+  });
+
+  it('never writes a foreign, redirected-elsewhere, opaque, or badly-statused answer into the cache -- only its own successful, same-origin, inspectable one -- and always still hands the page whatever the network gave back', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        cacheWritingRoute,
+        plantedResponseShape,
+        fc.string({ minLength: 4, maxLength: 10 }),
+        async ({ method, pathname }, shape, body) => {
+          const networkResponse = buildNetworkResponse(shape, body);
+          const helper = loadHelper({ fetchImpl: async () => networkResponse });
+          const request = new Request(`${ORIGIN}${pathname}`, { method });
+          const { responded, response } = await fireFetch(helper, request);
+
+          assert.equal(responded, true, `expected ${method} ${pathname} to still be answered by the helper for a ${shape} network reply`);
+          assert.equal(
+            await response!.text(),
+            body,
+            `expected the page to receive whatever the network answered for ${method} ${pathname}, cacheable or not`,
+          );
+
+          const cachePutCalls = helper.caches.activity.filter((entry) => entry.op === 'cache-put');
+          if (shape === 'legitimate') {
+            assert.ok(cachePutCalls.length > 0, `expected a legitimate same-origin answer for ${method} ${pathname} to be cached`);
+          } else {
+            assert.deepEqual(
+              cachePutCalls,
+              [],
+              `expected a ${shape} answer for ${method} ${pathname} to never be written to the cache; saw ${JSON.stringify(cachePutCalls)}`,
+            );
+          }
+        },
+      ),
+      { numRuns: 60 },
     );
   });
 
