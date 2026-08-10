@@ -19,7 +19,8 @@ This file is the SSOT of what must be covered. Coverage markers: a test covers `
 carries a Gherkin `@covers-Rn` tag or a `// covers: Rn` comment inside the test body. Rows whose
 slice has not entered DELIVER yet are expected-uncovered (per-slice JIT); they are visible here
 from day one so no requirement is silently dropped. slice-01 entered JIT DISTILL on 2026-08-09
-and its rows are marked below; slices 02 to 05 have not opened.
+and its rows are marked below; slices 02 to 05 entered on 2026-08-10 by dispatch instruction
+(JIT relaxation recorded in `red-classification.md`, header).
 
 Numbering is load-bearing where `feature-delta.md` already cites it: R14 and R30 are the two
 negative requirements the Slice Plan notes name ("no threshold or cap changes anywhere in this
@@ -75,8 +76,11 @@ R12. There is one module, not two copies, and DELIVER owes it once.
 slice-01 entered JIT DISTILL on 2026-08-09. Its thirteen scenarios live in
 `tests/acceptance/f-know-how-much-to-trust-it/la-razon-de-cada-playa.feature`, all RED as
 `MISSING_FUNCTIONALITY`; the commands, the real exit codes and the per-scenario oracles are in
-`distill/red-classification.md`. Slices 02 to 05 have not opened, so their rows stay
-expected-uncovered by design.
+`distill/red-classification.md`. Slices 02 to 05 opened on 2026-08-10 (dispatch instruction):
+their twenty-four executed scenarios live in `la-marea-de-cada-playa.feature`,
+`el-termino-que-se-puede-apagar.feature`, `la-segunda-fuente-independiente.feature` and
+`lo-normal-de-este-spot.feature`, RED as `MISSING_FUNCTIONALITY` except the standing guards
+recorded per scenario in the slices 02-05 entry of `red-classification.md`.
 
 | # | Active acceptance evidence | Status |
 |---|---|---|
@@ -94,8 +98,22 @@ expected-uncovered by design.
 | R12 | `@covers-R12`: producer-side and reading-side, every reason is checked for model names, field names, `null`/`undefined`/`json` tokens and em dashes. **Not covered: that the Spanish factor nouns come from one shared module.** That is a DELIVER structural constraint and the module does not exist yet (see Flagged below) | partially covered, RED |
 | R13 | no scenario. "One wiring line each into `RankedList.astro` and `SpotDetail.astro`" is not observable through the built surface; it stays a DELIVER code-review constraint. Its observable half (the reason reaches both surfaces) is R1 and R11 | expected-uncovered by design |
 | R14 | `@covers-R14`: "Sin el dato de la marea nadie ve confianza alta, y la razón dice por qué" asserts no published row is `high` on a morning of genuinely agreeing models with the tide dark, and then that every reason names the gap. The first half PASSES today and is the guard; the second half is the RED. A DELIVER that reached `alta` by moving `cap_missing_tide` or the 0.7 boundary would turn the first half red | covered, RED |
-| R15 to R29 | slices 02, 03, 04 and 05 | expected-uncovered by design |
-| R30 | no scenario of its own. R14 is its slice-01 instance; the feature-wide constant-identity check belongs with slice-02, where a threshold change would first be tempting | expected-uncovered by design |
+| R15 | `@covers-R15`: "La playa que puede citar su estación… y la vecina…" injects one seed with `tide_station` and one without, the fake station answering for any spot asked, and requires the stationless spot's archived hours to stay null. **Partially covered:** the mapping-policy criterion itself (which spots MAY cite Balboa, Pre-requisite 5) is a data decision no scenario can pin until it is made | partially covered, RED |
+| R16 | `@covers-R16`: the same scenario reads the prediction log per spot and hour: numbers for the mapped spot, nulls for the other. The once-daily-fetch-and-cache mechanics are the adapter's own DELIVER unit tests (roadmap 02-03) | covered, RED |
+| R17 | `@covers-R17`: "La confianza alta llega sola…" — with tide served per station, `alta` publishes at c_total 0.9922 under bit-identical constants | covered (mapped half holds in-memory; production reachability rides 02-01/02-03) |
+| R18 | `@covers-R18`: the same scenario plus the reading-half "El surfista ve confianza alta solo donde los datos la ganaron"; the iff-half is the vecina-stays-media oracle, red today on borrowed tide | covered, RED |
+| R19 | `@covers-R19`: "Una estación muda por más de siete días…" drives the post-window port state and stands guard against a cache serving stale harmonics | covered, guard+RED (vacuity-guarded until carriage lands) |
+| R20 | `@covers-R20`: "Una playa de mareas chicas…" pairs a mapped micro spot (real neutral, tide-silent reason) with an unmapped one (cap, tide-named reason) | covered, RED |
+| R21 | `@covers-R21`: the mixed morning of the first slice-02 scenario plus the reading half: mapped reasons drop the tide gap while unmapped keep it, in one build | covered, RED |
+| R22 | `@covers-R22`: "Apagar el término del desacuerdo es un cambio de datos…" plus the flags-on regression guard; the flag home is fixed as `confidence_factors` in the launch policy (contract 2, red-classification) | covered, RED |
+| R23 | `@covers-R23`: same scenario: every row still carries a level with the flag off | covered, RED |
+| R24 | `@covers-R24`: "ninguna razón nombra el término apagado" in both the split-period and missing-tide mornings | covered, RED |
+| R25 | `@covers-R25`: "Sin ningún factor que informe…" — forced low plus the no-usable-signal admission (noun `señal`, wording open per Pre-requisite 1) | covered, RED |
+| R26 | `@covers-R26`: "La fuente independiente queda archivada tal cual…" (registry walk, per-provider raw prefix) plus the adapter-integration scenario against a captured real grib_filter response. **Partially covered:** "no core change" is a DELIVER code-review constraint, not page-observable (same class as R13) | partially covered, RED |
+| R27 | `@covers-R27`: per-provider raw archive from the first morning, natural-key dedupe, and the repeat-morning insert-only guard | covered, RED (dedupe and insert-only halves pass today as standing guards) |
+| R28 | `@covers-R28`: vendor-dark, independent-dark and single-model mornings: honest `members_used`, no fabricated trace, one-model wording, f(M) low ceiling | covered, RED |
+| R29 | `@covers-R29`: 60 honestly-published mornings then a worse-than-usual day (comparison against the spot's own normal, noun `normal`), the two-morning below-threshold guard, the cause-hierarchy guard, and the reading-half fidelity scenario. **Partially covered:** the activation threshold itself is Pre-requisite 7's unset number; scenarios bound it (60 above / 2 below), never pin it | partially covered, RED |
+| R30 | `@covers-R30`: slice-02's alta scenario (the vecina-stays-media oracle goes red on any lowered bar) and the seven-day-staleness scenario; the bit-identity half is roadmap 02-02's extension of `tests/unit/confidence-constants-guard.test.ts`. R14 remains its slice-01 instance | covered, RED |
 | R31 | no scenario. Law L9 is already property-tested at the engine (`tests/unit/scoring-laws.test.ts`) and this slice adds nothing `combine()` could read; a page-level oracle would be theatre | expected-uncovered by design |
 | R32 | no scenario of its own. The isolated build runs the repository page-weight gate as part of `npm run build`, so a slice-01 regression past 14 KB gz fails every reading-half scenario at setup, but the budget is not asserted as its own oracle here | expected-uncovered by design |
 | R33 to R38 | `@covers-R33` to `@covers-R38`: the two-row visual outline (tema claro / movimiento normal, tema oscuro / movimiento reducido) measures contrast against the real rendered backdrop by walking to the nearest painting ancestor, 390 px overflow, 44 px targets, motion under the reduced preference, the designed open state, the declared type scale and line rhythm, and raw hex in inline styles. It counts the measurable blocks FIRST and fails at zero, so "nothing to measure" can never read as "AA is fine". **Scoped to the spot page**, whose confidence block does not exist yet; the ranked-row half of U1-U7 is already proven green by the keystone's slice-07 scenarios and re-asserting it here would pass vacuously | covered for the spot page, RED |

@@ -1,0 +1,18 @@
+{
+  "comment": "Reading-half planted profiles for slice-05. Producer-shaped values only, planted on the ISOLATED temp copy of data/published-surface.json. Wording is placeholder pending Pre-requisites 1 and 7; the oracles pin the noun 'normal' and the exact-fidelity contract, never sentences. playa-venao is the history-rich beach whose reason compares today against its own normal.",
+  "default_profile": "media-sin-marea",
+  "by_spot": {
+    "playa-venao": { "today": "peor-que-lo-normal", "tomorrow": "peor-que-lo-normal" }
+  },
+  "profiles": {
+    "peor-que-lo-normal": {
+      "conf_level": "low",
+      "reason_es": "Hoy los modelos se parten más de lo normal en este spot, sobre todo en el período. Nadie ha reportado desde la playa todavía."
+    },
+    "media-sin-marea": {
+      "conf_level": "medium",
+      "reason_es": "Nos falta la marea de esta playa y eso deja la confianza en media. Nadie ha reportado desde la playa todavía."
+    }
+  },
+  "required_spot_ids": ["playa-venao"]
+}

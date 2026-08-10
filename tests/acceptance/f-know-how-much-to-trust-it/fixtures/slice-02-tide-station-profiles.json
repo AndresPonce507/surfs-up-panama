@@ -1,0 +1,19 @@
+{
+  "comment": "Reading-half planted profiles for slice-02. Producer-shaped values only, planted on the ISOLATED temp copy of data/published-surface.json, never on the committed one. Wording is placeholder pending Pre-requisite 1; the oracles pin domain nouns, never sentences. punta-brava is the beach whose honest station earned alta; playa-venao is the stationless neighbour that keeps naming the tide gap.",
+  "default_profile": "media-sin-marea",
+  "by_spot": {
+    "punta-brava": { "today": "alta-con-marea", "tomorrow": "alta-con-marea" },
+    "playa-venao": { "today": "media-sin-marea", "tomorrow": "media-sin-marea" }
+  },
+  "profiles": {
+    "alta-con-marea": {
+      "conf_level": "high",
+      "reason_es": "Los modelos se parecen bastante entre ellos hoy. Nadie ha reportado desde la playa todavía y este spot no tiene historial verificado."
+    },
+    "media-sin-marea": {
+      "conf_level": "medium",
+      "reason_es": "Nos falta la marea de esta playa y eso deja la confianza en media. Nadie ha reportado desde la playa todavía."
+    }
+  },
+  "required_spot_ids": ["punta-brava", "playa-venao"]
+}

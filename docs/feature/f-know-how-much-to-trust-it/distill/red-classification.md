@@ -1,8 +1,11 @@
 # RED classification history
 
 Feature: `f-know-how-much-to-trust-it`
-Slices entered: slice-01 (2026-08-09)
-Status: slice-01 authored and RED; slices 02 to 05 have not entered JIT DISTILL
+Slices entered: slice-01 (2026-08-09); slices 02, 03, 04, 05 (2026-08-10, on dispatch)
+Status: slice-01 mid-DELIVER (steps 01-01 to 01-10 landed, 01-11 pending); slices 02 to 05
+authored and RED. The JIT default (contract point 6) was relaxed for slices 02 to 05 by an
+explicit dispatch instruction on 2026-08-10 ("every slice gets acceptance scenarios and a
+step-level roadmap"), the same shape as the keystone's recorded waiver; it carries no precedent.
 
 ## Contract for every future entry
 
@@ -278,3 +281,91 @@ scenario, which is cucumber's normal behaviour.
   globally exactly once; a second `setWorldConstructor` would replace it for every other feature in
   the run, so this file must never register one. If the keystone lane moves those files, this
   lane's imports move with them.
+
+### slices 02 to 05 — tide stations, the kill switch, the second source, the spot's own normal (2026-08-10)
+
+Author: JIT DISTILL on `build/f2-trust`, worktree `/Users/andres/psb-trust`, base `04357d6`
+(slice-01 mid-DELIVER: composer and ConfidenceDetail landed in-lane; the four cross-lane mounts
+of step 01-11 NOT landed, so no built page renders a per-row reason yet — several oracles below
+close through exactly that gap, which is genuine `MISSING_FUNCTIONALITY` upstream of them).
+
+Artefacts:
+`la-marea-de-cada-playa.feature` + `steps/tide-station.steps.ts` +
+`fixtures/slice-02-tide-station-profiles.json`,
+`el-termino-que-se-puede-apagar.feature` + `steps/factor-kill-switch.steps.ts`,
+`la-segunda-fuente-independiente.feature` + `steps/second-source.steps.ts`,
+`lo-normal-de-este-spot.feature` + `steps/spread-climatology.steps.ts` +
+`fixtures/slice-05-climatology-profiles.json`,
+shared `steps/support/trust-observables.ts` and `steps/support/built-site.ts` (slice-01's
+mid-DELIVER steps file was deliberately not touched; folding its private copies into the shared
+support is recorded cleanup for after slice-01 closes).
+
+Commands observed (each redirected to a file, exit captured on its own line, never a pipeline):
+
+| Command (tags on `@feature-f-know-how-much-to-trust-it`) | Real exit |
+|---|---|
+| `and @slice-02 and @in-memory` | 1 (4 scenarios, 4 failed) |
+| `and @slice-03 and @in-memory` | 1 (4 scenarios, 4 failed) |
+| `and @slice-04 and @in-memory` | 1 (5 scenarios, 3 failed, 2 passed guards) |
+| `and @slice-05 and @in-memory` | 1 (4 scenarios, 4 failed) |
+| `and @slice-02 and @real-io` | 1 (3 scenarios, 1 failed, 2 passed guards) |
+| `and @slice-05 and @real-io` | 1 (3 scenarios, 1 failed, 2 passed guards) |
+| full-suite `--dry-run` | 0 (115 scenarios, zero undefined, zero ambiguous) |
+| `npx tsc --noEmit` | 0 |
+
+Per-scenario classification (every failure is an `AssertionError` at a behaviour oracle):
+
+| Slice | Scenario | Classification | Oracle reached |
+|---|---|---|---|
+| 02 | La playa que puede citar su estación… y la vecina… | RED `MISSING_FUNCTIONALITY` | playa-venao (stationless) carries 24/24 borrowed tide hours: the seed-consult refusal does not exist |
+| 02 | La confianza alta llega sola… sin mover ningún tope | RED `MISSING_FUNCTIONALITY` | the stationless neighbour publishes `high` on borrowed tide; the media ceiling is the RED. Contract point 4 satisfied: the alta assertion cites real `tide_m` served per station through the port, never a constant change |
+| 02 | Una estación muda por más de siete días… | RED `MISSING_FUNCTIONALITY` | vacuity guard: no published row carries a reason yet (cross-lane diff A pending); deeper oracle arms when carriage lands |
+| 02 | Una playa de mareas chicas… | RED `MISSING_FUNCTIONALITY` | same vacuity guard; the unmapped-micro RED (borrowed tide) sits behind it |
+| 02 | El surfista ve confianza alta solo donde los datos la ganaron | RED `MISSING_FUNCTIONALITY` | built page: punta-brava's row shows "Confianza alta" without the level shape (ConfidenceDetail unmounted, the 01-11 gap) |
+| 02 | La fila de confianza alta se lee limpia… (x2 themes) | PASS, standing guard | seven measured checks pass against the currently-mounted component; must keep passing after the 01-11 mount swap |
+| 03 | Apagar el término del desacuerdo es un cambio de datos… | RED `MISSING_FUNCTIONALITY` | vacuity guard (carriage pending); the flag-consult RED sits behind it |
+| 03 | Sin ningún factor que informe… | RED `MISSING_FUNCTIONALITY` | with the flag planted off the morning still publishes `high`: nothing reads `confidence_factors`, the 6.4 guard does not exist |
+| 03 | Con el término apagado y la marea ausente… | RED `MISSING_FUNCTIONALITY` | vacuity guard (carriage pending) |
+| 03 | Con todos los factores prendidos… | RED `MISSING_FUNCTIONALITY` | vacuity guard (carriage pending); becomes the shipped-config regression guard at GREEN |
+| 04 | La fuente independiente queda archivada tal cual… | RED `MISSING_FUNCTIONALITY` | nothing under `raw/noaa-gfswave-grib2/`: the registry walk does not exist |
+| 04 | Repetir la mañana no reescribe la historia… | PASS, standing guard | conditional-PUT substrate already refuses overwrites; armed for the multi-writer registry |
+| 04 | El vendor de siempre amanece caído… | RED `MISSING_FUNCTIONALITY` | primary dark blanks the whole morning ("la mañana no publicó ninguna fila"): the premise this slice exists to fix |
+| 04 | La fuente independiente amanece caída… | PASS, standing guard | no fabricated trace today; armed for the registry |
+| 04 | El día en que entre todas las fuentes respondió un solo modelo… | RED `MISSING_FUNCTIONALITY` | vacuity guard (carriage pending); engine f(M) cap half already holds |
+| 04 | La respuesta real de la fuente independiente se entiende… | RED `MISSING_FUNCTIONALITY` | captured failure reported at the oracle: no captured fixture and no adapter module exist (both are step 04-05 deliverables); the failure is reported by the Then as behaviour, never as a setup crash |
+| 05 | Un día partido peor que lo normal… | RED `MISSING_FUNCTIONALITY` | 60 honestly-published mornings accumulated through the ports; today's reason does not compare against the spot's normal (build always passes `{kind:'absolute'}`) — surfaced via the vacuity guard while carriage is pending |
+| 05 | Un spot recién llegado al registro… | RED `MISSING_FUNCTIONALITY` | vacuity guard (carriage pending); becomes the below-threshold guard at GREEN |
+| 05 | La razón nunca muestra un porcentaje… | RED `MISSING_FUNCTIONALITY` | vacuity guard (carriage pending); becomes a permanent copy guard at GREEN |
+| 05 | La ausencia de la marea manda aunque el historial exista | RED `MISSING_FUNCTIONALITY` | vacuity guard (carriage pending); cause-hierarchy guard arms at GREEN of 05-01 |
+| 05 | El surfista lee la comparación contra lo normal tal cual se publicó | RED `MISSING_FUNCTIONALITY` | built page renders the old level-keyed generic reason instead of the planted published one: the exact live finding that ConfidenceDetail renders nowhere (01-11 gap) |
+| 05 | La razón que compara contra lo normal se lee limpia… (x2 themes) | PASS, standing guard | same seven-check regression net as slice-02's |
+
+Contracts these slices fix (the slice-01 field-name precedent, honoured by the steps and owed by
+DELIVER exactly as written or renegotiated with DISTILL, never silently moved):
+
+1. **slice-02**: the per-spot station reference is seed data named `tide_station`; the REFUSAL to
+   attach tide to a stationless spot lives in the core (ingest consults the seed and never asks),
+   so the port-level fake legitimately answers for any spot. When the consult lands, the keystone
+   fixture `venaoSeed` gains its own honest station in the same change (cross-lane, serialized).
+2. **slice-03**: factor enable flags live in the launch policy JSON under `confidence_factors`,
+   consulted through `launchData.policyPath` even when `spots` are injected.
+3. **slice-04**: the source registry rides ingest deps as `sources` (ordered
+   `{ provider_id, source }`); the independent raw prefix is `raw/noaa-gfswave-grib2/`; the
+   adapter is `src/pipeline/adapters/noaa-gfswave-grib2.ts` exporting `parseGfswaveGrib2`, proven
+   against a captured real grib_filter response committed at
+   `tests/acceptance/f-know-how-much-to-trust-it/fixtures/noaa-gfswave-grib2/` (capture is a
+   DELIVER task, step 04-05).
+4. **slice-05**: the climatology activation threshold is policy data (Pre-requisite 7 decides the
+   number); the acceptance history is accumulated by publishing real mornings through the ports
+   (60 above / 2 below any sane threshold; if the settled number falls outside that range the
+   fixture constant moves, never the oracle).
+
+Blockers restated, so GREEN is never faked around them: slice-02 cannot reach GREEN until the
+domain lane lands the seed field, Pre-requisite 5 settles the mapping policy and the tide ADR
+flips to Accepted (04 §11 DELIVER BLOCKER). slice-05 cannot reach GREEN until Pre-requisite 7
+settles the threshold, and its production surface stays pending until real history accumulates
+(log started 2026-08-08; zero real reports exist). Steps 02-05, 02-06, 05-05 and 05-06 cannot
+even be attempted before 01-11's four cross-lane mounts land (BROKEN, not RED, if scheduled
+early). And feature-wide: no oracle in any of these slices is satisfiable by moving
+`cap_missing_tide`, `cap_missing_wind` or the 0.4/0.7 boundaries; the constants guard plus the
+vecina-stays-media oracle both go red on that move, deliberately.

@@ -2,7 +2,7 @@
   "roadmap": {
     "project_id": "f-know-how-much-to-trust-it",
     "created_at": "2026-08-09T23:55:00Z",
-    "total_steps": 11,
+    "total_steps": 33,
     "quality_contract_version": 1
   },
   "phases": [
@@ -277,6 +277,519 @@
             "src/components/ConfidenceDetail.astro"
           ],
           "implementation_notes": "EXEMPT FROM PARADIGM: measured visual verification over a built artifact; E2E verifies wiring and appearance, not invariants. SCENARIO COVERAGE: this step owns the Scenario Outline 'La confianza de la página de la playa se lee limpia en el teléfono, tema <tema>, movimiento <movimiento>', which expands to TWO executed scenarios, '... tema claro, movimiento normal' and '... tema oscuro, movimiento reducido'. THIS IS THE ONLY USER-VISIBLE STEP IN THE SLICE, AND THAT IS DELIBERATE. Every earlier step either composes text or authors an unmounted component; marking any of them user-visible would fail all seven checks by construction, because no built page renders their output until the cross-lane mounts land. A sibling roadmap made exactly that mistake. This step is where pixels are measured, so this step carries the charter, the U8 observation and the seven checks. HARD BLOCKING PRECONDITION, NOT A NOTE: this step cannot even be attempted until all four recorded cross-lane diffs have landed on the integration branch: A src/pipeline/build.ts (01-01), B src/data/forecast.ts (01-06), C src/components/RankedList.astro line 8 and line 89 (01-06), D src/components/SpotDetail.astro after lines 18, 72 and 86 (01-09). Scenarios 12 and 13 are scoped to the SPOT PAGE, whose mount is diff D. If the orchestrator schedules this step before those diffs land, it fails as setup, which is BROKEN, not RED. Report it and stop. THE CHARTER DOES NOT EXIST AND THIS LANE DID NOT CREATE IT. docs/product/expectations/f-know-how-much-to-trust-it/ is empty; the path above is where COMMIT will look. DELIVER's COMMIT gate refuses a visible slice without a fresh source-blind Vera PASS against a charter carrying the exact U8 observation, and that text is already settled verbatim in feature-delta.md's Slice classification table (reproduced in u8_observation above, use it word for word). Whoever owns docs/product/expectations/ must write the charter before COMMIT; the exact filename may differ, the U8 text may not. THE SEVEN CHECKS run against the REAL backdrop, not against white: contrast at WCAG AA on the actual possibly-animated background, no horizontal overflow at 390 px, 44 px touch target on the summary, prefers-reduced-motion honoured (the native details disclosure must not gain a transition that ignores it), all interaction states present, text scaling, and design tokens rather than hardcoded values. The reason string can be up to 160 characters, so it MUST wrap rather than clip and must never be line-clamped: 01-07's fidelity oracle reads innerText and a clamped string reads short. DISTILL's counting guard means 'nothing to measure' can never read as 'AA is fine': the scenario counts the confidence blocks before any contrast arithmetic runs, and expects two on the spot page. GATE DISCIPLINE, this repository has committed over a red gate through a pipeline: run npm run test:at -- --tags \"@feature-f-know-how-much-to-trust-it and @slice-01\" with output redirected to a file, capture $? on its own line, then read the file; expect 13 scenarios, 0 failed, real exit 0. Then run the regression control npm run test:at -- --tags \"not @feature-f-know-how-much-to-trust-it\" and confirm the 78 previously passing scenarios still pass, because this slice's changes ride through shared publish types. HOW TO READ A RED CONTROL: the ranked-row half of U1-U7 is already proven green by the keystone's slice-07 scenarios, and those run against the CURRENT generic reason. Cross-lane diff C changes what those rows display, so a keystone scenario that asserts the old level-keyed sentence goes red on wording, which is a cross-lane copy conflict owned by the keystone lane, not a defect in this lane. Do not 'fix' it by weakening this slice's composer or by restoring the generic reason. Report it to the integrator with the failing scenario name and the two strings. Then npm run build and INSPECT the rendered dist spot page and home page: green tests do not mean it works, and this project's worst shipped bug passed all ten CI jobs. AFTER GREEN: the orchestrator runs des-verify-ui, then dispatches the source-blind examiner with only the charter and its start recipe; COMMIT is refused until both records pass."
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "name": "Slice-02: the tide that really belongs to that beach",
+      "description": "Per-spot tide station references make tide_m real where a station can honestly be cited, alta becomes reachable exactly where the models genuinely agree, and stationless spots keep saying the tide is missing. No cap, boundary or threshold moves, ever.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "02-01",
+          "name": "Station reference is seed data, stationless stays absent",
+          "criteria": [
+            "Each spot seed may carry tide_station; a spot without one keeps tide_m null on every archived hour even while the tide source answers.",
+            "Mapped spots' archived hours carry the tide computed from their own referenced station; no spot ever borrows another station's curve.",
+            "Mapping policy applied per Pre-requisite 5; adr-tide-source-chain.md flipped Proposed to Accepted before this step lands."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/la-marea-de-cada-playa.feature",
+          "scenario_name": "La playa que puede citar su estación amanece con la marea puesta y la vecina sin estación sigue diciendo la verdad",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Seed schema plus ingest refusal, observed through the prediction log and the published levels; no rendered state changes in this step. The visible gate is 02-06.",
+          "ui_checks": {},
+          "deps": ["01-01"],
+          "files_to_modify": [
+            "data/spots/pa-pacific.yaml",
+            "src/data/launch-spots.ts",
+            "src/pipeline/ingest.ts",
+            "docs/product/architecture/adr-tide-source-chain.md",
+            "tests/acceptance/daily-call-with-permanent-receipts/steps/support/fixtures.ts"
+          ],
+          "implementation_notes": "HARD BLOCKER, RECORDED, DO NOT PLAN AROUND IT: the spot seed schema has NO tide station reference today. 04-ingest-pipeline.md section 11 records it verbatim as a DELIVER BLOCKER owned by the domain lane ('it must land before the first ingest slice in DELIVER'), domain-model.md line 336 names the field, Pre-requisite 5 (which spots may honestly cite Balboa 9812501, under what stated phase-error criterion) is OPEN and owned by Andres plus the ingest/domain lanes, and adr-tide-source-chain.md is still Proposed. Until the field, the policy and the ADR acceptance exist, this step cannot enter GREEN; the scenarios are authored and RED so the contract is executable the day it unblocks. WHAT THE RED PROVES TODAY, from the recorded run: the pipeline attaches the served tide curve to EVERY spot, so playa-venao (stationless) carries 24/24 borrowed tide hours and publishes alta it never earned; the refusal discipline is the missing production behaviour. THE REFUSAL LIVES IN THE CORE, not in the fake: the acceptance fake answers tide for any spot asked because CO-OPS itself is up; ingest consults the seed and never asks for a stationless spot. CONTENTION: src/pipeline/ingest.ts is producer-lane contended (Pre-requisite 3); this step is serial with that lane. CROSS-LANE FIXTURE EDIT, REQUIRED IN THE SAME CHANGE: tests/acceptance/daily-call-with-permanent-receipts/steps/support/fixtures.ts venaoSeed must gain its own honest tide_station when the seed consult lands, or the keystone's and slice-01's tide-present mornings (which rely on venao receiving the served curve) silently lose their tide and go red for the wrong reason. That file is keystone-lane-owned; serialize the edit with that lane. NEVER touch cap_missing_tide, cap_missing_wind or the 0.4/0.7 level boundaries anywhere in this slice: the fix is the ingest seed schema, never the confidence threshold (R30, DoD 5)."
+        },
+        {
+          "id": "02-02",
+          "name": "Alta arrives from real tide, constants bit-identical",
+          "criteria": [
+            "The mapped beach on a genuinely tight morning publishes alta because c_total = 0.9922 exceeds 0.7 under unchanged constants.",
+            "The stationless neighbour stays exactly medium in the same morning; anything above it can only mean a borrowed tide or a lowered bar.",
+            "The feature-wide constants guard (R30) pins both caps and both level boundaries bit-identical to 82be859's confidence.ts."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/la-marea-de-cada-playa.feature",
+          "scenario_name": "La confianza alta llega sola el día que los modelos de verdad se parecen, sin mover ningún tope",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Level projection over the published bundle, asserted producer-side; the rendered alta row is judged at 02-05 and 02-06.",
+          "ui_checks": {},
+          "deps": ["02-01"],
+          "files_to_modify": [
+            "tests/unit/confidence-constants-guard.test.ts"
+          ],
+          "implementation_notes": "THE ONE FORBIDDEN MOVE, restated because it is the exact temptation of this step: alta is unreachable today because cap_missing_tide = 0.7 lands exactly on the high boundary (high needs c_total > 0.7). Any diff that reaches alta by touching a cap, a boundary or a spread constant is WRONG and must be refused in review regardless of how green it makes the suite: 05 section 6.3 already rejected raise-the-bar moves for freshness and the same refusal binds here (R14, R30, the one rule the product rests on). The 01-03 unit guard plus this scenario's vecina-stays-media oracle both go red on such a move, on purpose. RED TODAY, from the recorded run: the stationless neighbour publishes high on borrowed tide, so the media oracle fails; the mapped half (alta from real tide) already holds in-memory because the fake serves the curve, and becomes real in production only through 02-01's seed field plus 02-03's adapter. Extend tests/unit/confidence-constants-guard.test.ts from its slice-01 form to assert the R30 feature-wide identity. PROVE IT FALSIFIABLE (project CLAUDE.md): change cap_missing_tide to 0.8, watch the guard and this scenario move, revert, verify the revert with git diff, record both observations in the step evidence."
+        },
+        {
+          "id": "02-03",
+          "name": "CO-OPS adapter, daily cache, seven-day honesty window",
+          "criteria": [
+            "Harmonic predictions are fetched once daily per referenced station with an 8-day hourly window, cached, and tide_m computed per spot and hour.",
+            "A station dark beyond 7 days returns the series to null: the cap returns and the reason names the tide again.",
+            "No cache ever serves harmonics past the window as if they were fresh."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/la-marea-de-cada-playa.feature",
+          "scenario_name": "Una estación muda por más de siete días devuelve la marea a ausencia declarada",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A driven adapter and its degrade window, observed through the published reason and level; nothing new renders in this step.",
+          "ui_checks": {},
+          "deps": ["02-01"],
+          "files_to_modify": [
+            "src/pipeline/adapters/coops-tide.ts",
+            "src/pipeline/ingest.ts"
+          ],
+          "implementation_notes": "adr-tide-source-chain.md decisions 1 and 2 are the contract: NOAA CO-OPS predictions product, one fetch per referenced station per day, 8-day hourly window cached to S3, tide_m computed per (spot, valid_ts) from the cached curve, stations are per-spot DATA. The acceptance scenario drives the post-window port state (no series derivable) and stands guard against a DELIVER whose cache keeps serving day-1 harmonics past 7 days; the adapter's own wire-format behaviour is unit-tested in DELIVER and MUST include one test against a captured real CO-OPS response committed as a fixture, because synthetic data hides format mismatches (this repository has been bitten exactly there). No live CO-OPS call ever runs inside a test. The WorldTides fallback adapter stays out (ADR decision 3, later coasts): the SSM key stays empty. src/pipeline/ingest.ts is producer-lane contended (Pre-requisite 3), serialized. This step is also blocked by 02-01's seed field: the adapter joins on the station reference that does not exist yet."
+        },
+        {
+          "id": "02-04",
+          "name": "Microtidal neutrality stays distinguishable from absence",
+          "criteria": [
+            "A micro spot with a station and tide present scores a real S_tide of 1.0: no cap, and its reason never names the tide.",
+            "A micro spot without a station keeps the declared absence: the cap binds, the level stays capped and the reason names the tide."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/la-marea-de-cada-playa.feature",
+          "scenario_name": "Una playa de mareas chicas con su estación puesta no confunde neutralidad con ausencia",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A scoring-and-reason distinction asserted over the published bundle; no rendered state of its own.",
+          "ui_checks": {},
+          "deps": ["02-01"],
+          "files_to_modify": [
+            "src/pipeline/ingest.ts"
+          ],
+          "implementation_notes": "05 section 3.5: range_class micro maps to neutral, a REAL S_tide = 1.0 with tide data present, and section 3.6 keeps neutrality and absence distinguishable in output and copy. The engine already implements the neutral branch (engine.ts sTide); what this step owes is that the distinction SURVIVES the per-spot station discipline: mareas chicas never becomes marea opcional. A tempting wrong implementation skips the tide fetch for micro spots because 'the score ignores it'; that would collapse neutrality into absence, cap the level, and make the reason lie. The scenario's two-beach morning catches exactly that: the mapped micro beach must publish uncapped with a tide-silent reason while the unmapped one keeps the cap and names the gap."
+        },
+        {
+          "id": "02-05",
+          "name": "The built page shows alta only where earned",
+          "criteria": [
+            "The ranked list renders the earning beach's alta by shape and word, from the published level, never derived on the page.",
+            "The stationless neighbour's opened reason on the same list names the missing tide."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/la-marea-de-cada-playa.feature",
+          "scenario_name": "El surfista ve confianza alta solo donde los datos la ganaron",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Word, shape and text fidelity read over the built page; the measured-pixel judgement and the human charter belong to 02-06.",
+          "ui_checks": {},
+          "deps": ["02-02", "01-11"],
+          "files_to_modify": [],
+          "implementation_notes": "HARD SCHEDULING PRECONDITION, same shape as 01-11's: this step reads per-row reasons and the shape glyphs on the BUILT page, which exist only after slice-01's four recorded cross-lane diffs (A build.ts, B forecast.ts, C RankedList.astro, D SpotDetail.astro) have landed on the integration branch: ConfidenceDetail.astro currently renders NOWHERE, the page ships the older level-keyed component, and scheduling this step before 01-11 completes fails as setup, which is BROKEN, not RED. Report and stop. RED TODAY, from the recorded run: punta-brava's row shows 'Confianza alta' without the level shape (the glyphs live in the unmounted ConfidenceDetail), which is precisely the recorded gap. Expected to go green with no new production code once 01-11's mounts land and the planted per-row reasons flow; if anything remains red after that, the defect is in the mounts, not here."
+        },
+        {
+          "id": "02-06",
+          "name": "Alta row reads clean on the phone",
+          "criteria": [
+            "The seven visual checks pass on the alta row against the real backdrop at 390 px, light-normal and dark-reduced both.",
+            "Nothing animates under the reduced-motion preference.",
+            "Gate runs captured by redirect then reading the exit code on its own line, never through a pipeline."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/la-marea-de-cada-playa.feature",
+          "scenario_name": "La fila de confianza alta se lee limpia en el teléfono, tema <tema>, movimiento <movimiento>",
+          "slice_id": "slice-02",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-know-how-much-to-trust-it/ninguna-fila-reclama-mas-certeza-de-la-que-los-datos-ganaron-hoy.md",
+          "u8_observation": "Ninguna fila reclama más certeza de la que los datos ganaron hoy, y donde falta la marea la razón lo dice claro.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-know-how-much-to-trust-it and @slice-02 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-know-how-much-to-trust-it and @slice-02 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-know-how-much-to-trust-it and @slice-02 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-know-how-much-to-trust-it and @slice-02 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-know-how-much-to-trust-it and @slice-02 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-know-how-much-to-trust-it and @slice-02 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-know-how-much-to-trust-it and @slice-02 and @ui-u7"]
+          },
+          "deps": ["02-01", "02-02", "02-03", "02-04", "02-05", "01-11"],
+          "files_to_modify": [
+            "src/components/ConfidenceDetail.astro"
+          ],
+          "implementation_notes": "THE ONLY USER-VISIBLE STEP OF THE SLICE, and it carries the charter, the U8 observation (settled verbatim in feature-delta.md's Slice classification table, use it word for word) and the seven checks. The visual outline PASSES today against the currently-mounted component (recorded run, exit 1 only on the shape scenario): it is a standing regression net, and it must STILL pass after 01-11's mount swap puts ConfidenceDetail with per-row reasons and glyphs on these rows. The examiner half: whoever owns docs/product/expectations/ writes the charter before COMMIT; the filename may differ, the U8 text may not. The alta state is a genuinely NEW designed state on the live surface (0 alta in 60 published rows today), so the examiner sees it for the first time here: the level word plus shape must read as certainty earned, never as a verdict colour, and the examiner must NOT be asked to demand alta on a live day the data did not earn; the fixture morning is what earns it. Same scheduling precondition as 02-05: BROKEN, not RED, before 01-11 lands."
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "name": "Slice-03: the spread term can be switched off by data",
+      "description": "The removability seatbelt: C_spread participation becomes a per-factor enable flag in the data-owned launch policy, the level re-renders from surviving factors, and the reason never names a disabled term. The calibration check itself stays in the learning lane, unbuilt here.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "03-01",
+          "name": "Spread participation is a policy-data flag",
+          "criteria": [
+            "confidence_factors.spread in the launch policy JSON controls participation; disabling it is a data change with zero code edits.",
+            "With the flag off every published row still carries a level, projected from the surviving factors.",
+            "The reason never names a disabled factor: no spread noun, no disagreement claim."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/el-termino-que-se-puede-apagar.feature",
+          "scenario_name": "Apagar el término del desacuerdo es un cambio de datos y el nivel sigue saliendo de lo que queda",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "At the shipped config (all factors on) no rendered state changes at all; fabricating pixel checks would be dishonest (Slice classification, feature-delta.md). The charter examines property-test output and one flag-off fixture build.",
+          "ui_checks": {},
+          "deps": ["01-01"],
+          "files_to_modify": [
+            "data/spots/pa-pacific-launch-v1.json",
+            "src/scoring/confidence.ts",
+            "src/pipeline/build.ts",
+            "src/publish/confidence-reason.ts"
+          ],
+          "implementation_notes": "ACCEPTANCE CONTRACT FIXED BY DISTILL (steps file header, factor-kill-switch.steps.ts): the factor enable flags live in the data-owned launch policy JSON under `confidence_factors` (e.g. { \"confidence_factors\": { \"spread\": false } }), consulted through the launchData.policyPath seam that BuildDeps/IngestDeps already carry, EVEN when spots are injected (today loadLaunchSpotSeeds is bypassed when spots are passed; the flag read must not be). 05 section 9 names 'factor enable flags' as versioned-constants content and the launch policy is this repository's data-owned constants surface. If DELIVER wants a different home, that is a contract renegotiation with DISTILL, never a silent move. WHAT THIS SLICE NEVER BUILDS: the monthly Brier calibration check and the decision to disable belong to the learning lane (06-learning-layer.md section 10 owns the kill switch and names C_spread the first candidate to die); this slice ships removability only, sized small on purpose: it is the seatbelt that must exist before anyone is tempted to ship a lying term because removing it would be rework. CONTENTION: src/pipeline/build.ts is producer-lane contended (Pre-requisite 3), serialized; keep its diff to the flag read plus the confidence() call site. The engine change is additive: confidence() gains the participation input; law L9 untouched, combine() reads nothing new (R31)."
+        },
+        {
+          "id": "03-02",
+          "name": "Zero informative factors force low, reason admits it",
+          "criteria": [
+            "Spread off AND track unverified AND no report ever: level forced low with dominant null, never an empty product reading 1.0.",
+            "The reason says no usable confidence signal exists yet, from those inputs, never hardcoded."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/el-termino-que-se-puede-apagar.feature",
+          "scenario_name": "Sin ningún factor que informe, el nivel dice bajo y la razón admite que no hay señal todavía",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "An engine guard and its composed admission, asserted over the published bundle; nothing renders differently at the shipped config.",
+          "ui_checks": {},
+          "deps": ["03-01"],
+          "files_to_modify": [
+            "src/scoring/confidence.ts",
+            "src/publish/confidence-reason.ts"
+          ],
+          "implementation_notes": "05 section 6.4's zero-informative-factor guard, verbatim: if the spread factor is disabled by the 6.1 removal clause AND track_state is unverified AND c_fresh is null, no informative factor survives and an empty product would read 1.0, alta, a fabricated certainty; the level is forced low with dominant null and the reason names that no usable confidence signal exists yet. RED TODAY, from the recorded run: with the flag planted off the morning still publishes high, because nothing reads the flag. The composed admission is input-driven like every other clause (DoD 4): a composer that emits it whenever the flag is off, rather than when ALL THREE conditions hold, lies the day the scorecard or the first report arrives; the property test must exercise the measured and reported branches and watch the admission disappear. Wording is Pre-requisite 1's; the oracle pins only the noun 'señal'."
+        },
+        {
+          "id": "03-03",
+          "name": "Missing tide still speaks with the term off",
+          "criteria": [
+            "Cap clauses are independent of factor flags: with the term off and tide missing, the reason names the tide and no spread noun."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/el-termino-que-se-puede-apagar.feature",
+          "scenario_name": "Con el término apagado y la marea ausente, la razón sigue nombrando la marea y nada más",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Composer cause-hierarchy under a disabled factor, producer-side only.",
+          "ui_checks": {},
+          "deps": ["03-01"],
+          "files_to_modify": [
+            "src/publish/confidence-reason.ts"
+          ],
+          "implementation_notes": "The cause hierarchy from 01-04 survives the flags: a binding cap names its missing input first, always (05 section 3.6 cap-application row), and disabling spread removes only the spread clause from the space of nameable causes. The interplay this step pins: with spread off the confidence() dominant can no longer read a spread term, but 'missing_data' must still win when a cap binds, and the 6.4 forced-low guard must NOT fire while the cap case is the honest cause. Watch the boundary: tide missing plus spread off is NOT the zero-informative state (the cap itself is information about absence, and the reason names it), so the señal admission of 03-02 must not appear here."
+        },
+        {
+          "id": "03-04",
+          "name": "Shipped config changes nothing: regression guard",
+          "criteria": [
+            "With all factors on, the slice-01 morning publishes identical levels and reasons.",
+            "Falsifiability proven: flip the flag off, watch 03-01's scenario move and this one hold, revert, verify with git diff."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/el-termino-que-se-puede-apagar.feature",
+          "scenario_name": "Con todos los factores prendidos la mañana de siempre publica lo de siempre",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure regression guard over the producer surface; by definition it renders nothing new.",
+          "ui_checks": {},
+          "deps": ["03-01"],
+          "files_to_modify": [],
+          "implementation_notes": "The whole point of the flag is that at the shipped config NOTHING changes: this scenario re-runs slice-01's tide-dark morning through the policyPath seam with every factor on and expects slice-01's exact observable state (tide named, no alta). It goes green the moment the seam exists and stays green forever as the guard against the flag machinery itself perturbing the shipped behaviour. Two tests in this repository have already passed for accidental reasons (project CLAUDE.md): prove this one falsifiable by flipping the planted flag and watching the 03-01 and 03-02 scenarios move while this one holds, then revert and verify the revert with git diff. Record both observations in the step evidence."
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "name": "Slice-04: the confidence story survives its only vendor",
+      "description": "A second, independent wave source (raw NOAA gfswave GRIB2, US public domain) enters through the registry seam, writes per-provider rows from its first deployed hour, and a dark source shrinks the member count honestly: no blanked row, no fabricated member, no rewritten history.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "04-01",
+          "name": "Second source enters the registry, archived per provider",
+          "criteria": [
+            "Ingest walks an ordered source registry; each provider's verbatim answer lands under its own raw prefix from its first deployed hour.",
+            "Member rows dedupe on the natural key: a model arriving by two transports archives exactly once."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/la-segunda-fuente-independiente.feature",
+          "scenario_name": "La fuente independiente queda archivada tal cual desde su primera mañana",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Ingest registry and raw archive; no new rendered state exists in this slice: levels and reasons change only as member data changes, through states slice-01 already designed and proved (Slice classification, feature-delta.md).",
+          "ui_checks": {},
+          "deps": ["01-01"],
+          "files_to_modify": [
+            "src/pipeline/ports.ts",
+            "src/pipeline/ingest.ts"
+          ],
+          "implementation_notes": "ACCEPTANCE CONTRACTS FIXED BY DISTILL (steps file header, second-source.steps.ts): (1) the registry rides ingest deps as `sources`, ordered `{ provider_id, source }` entries beside the legacy `source`, which stays until the registry lands; (2) the independent provider's raw prefix is raw/noaa-gfswave-grib2/, the primary keeps raw/open-meteo-marine/ (today ingest hardcodes the primary's provider names in rawKey; the registry entry's provider_id replaces that); (3) adr-openmeteo-vs-raw-grib2.md governs: adding a provider is a registry change plus one adapter, no core change beyond the registry walk. RED TODAY, from the recorded run: the morning runs as if the second source did not exist. THE INDEPENDENT SOURCE CARRIES THE SAME NCEP MEMBERS through a vendor-independent transport: the point is surviving Open-Meteo, not adding a fifth model, so the natural key (spot, source, run_ts, valid_ts) dedupes across transports and first-write-wins. Pre-requisite 6 (Open-Meteo ToS email, unsent) blocks the LAUNCH CLAIM of the premise, not this build; NOAA GRIB2 being US public domain is the de-risk either way. CMEMS and DWD opendata stay out (licence terms an open research gap); the registry seam makes them additive later. src/pipeline/ingest.ts is producer-lane contended (Pre-requisite 3), serialized."
+        },
+        {
+          "id": "04-02",
+          "name": "Repeating a morning rewrites no source's history",
+          "criteria": [
+            "Insert-only proven across providers: re-running the same morning produces verified duplicates, never a rewrite, a delete or a backfill."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/la-segunda-fuente-independiente.feature",
+          "scenario_name": "Repetir la mañana no reescribe la historia de ninguna fuente",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A durability guard over the prediction log; nothing renders.",
+          "ui_checks": {},
+          "deps": ["04-01"],
+          "files_to_modify": [],
+          "implementation_notes": "PASSES TODAY as a standing guard (recorded run) because the conditional-PUT substrate already refuses overwrites for the single source; its job is to keep holding once the registry walk multiplies writers. The trap it guards: a registry implementation that batches rows per provider and rewrites the (run_date, source, cycle) file when the second provider contributes rows to an already-written key would silently rewrite history. The log cannot be backfilled and per-source skill comparison is its whole point (HANDOFF sections 3 and 5): the first write wins, the duplicate is verified, and a second provider's contribution to an existing natural key is a duplicate, never an amendment."
+        },
+        {
+          "id": "04-03",
+          "name": "Primary vendor dark, morning still publishes honestly",
+          "criteria": [
+            "With the primary vendor dark, the morning publishes from the independent source's members alone.",
+            "members_used counts exactly the members that answered across all sources, on every published call row."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/la-segunda-fuente-independiente.feature",
+          "scenario_name": "El vendor de siempre amanece caído y la mañana se publica igual con lo que sí llegó",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Partial-failure honesty at the ingest boundary, observed through the published bundle and the call log.",
+          "ui_checks": {},
+          "deps": ["04-01"],
+          "files_to_modify": [
+            "src/pipeline/ingest.ts"
+          ],
+          "implementation_notes": "THE PREMISE-SURVIVAL STEP: today a dark Open-Meteo blanks the entire morning (recorded run: 'la mañana no publicó ninguna fila que leer'), which is the whole reason this slice exists. With the registry, a dark provider is one failed fetch inside the walk, not a dead morning: the surviving provider's members flow, members_used shrinks to what actually answered, c_spread reflects the thinner ensemble honestly (two members here), and slice-01's composer keeps telling the truth about why. Research 09 section 14.4: say what we do not know, never go silent. Watch the wave_source_unavailable event semantics: per-provider failure events must name the provider so the learning lane can attribute gaps."
+        },
+        {
+          "id": "04-04",
+          "name": "Dark independent source leaves no fabricated trace",
+          "criteria": [
+            "With the independent source dark: no raw archive entry under its prefix, no fabricated member, no blanked row; the count stays honest."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/la-segunda-fuente-independiente.feature",
+          "scenario_name": "La fuente independiente amanece caída y nadie inventa un miembro",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The mirror-image failure path, observed through the raw archive and the published morning.",
+          "ui_checks": {},
+          "deps": ["04-01"],
+          "files_to_modify": [],
+          "implementation_notes": "Mostly a standing guard today (the source does not exist, so nothing fabricates), armed for the day the registry lands: a dark provider leaves NO trace, and the tempting failure modes are archiving an empty verbatim ('we asked') or carrying forward yesterday's members for continuity. Both are fabrication: without a response there is no archive entry, and the shrunken count plus the log without its rows IS that morning's honest state. Pairs with 04-03: together they pin that darkness is per-provider and symmetrical."
+        },
+        {
+          "id": "04-05",
+          "name": "GRIB2 adapter understands a captured real response",
+          "criteria": [
+            "One real grib_filter response captured into tests/acceptance/f-know-how-much-to-trust-it/fixtures/noaa-gfswave-grib2/ and committed.",
+            "parseGfswaveGrib2 emits post-ACL MemberSeries: attributed run_ts, normalized units, non-empty hours, land-mask already a flag."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/la-segunda-fuente-independiente.feature",
+          "scenario_name": "La respuesta real de la fuente independiente se entiende tal cual llega",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A driven adapter proven against real captured bytes; no pixels exist to judge.",
+          "ui_checks": {},
+          "deps": ["04-01"],
+          "files_to_modify": [
+            "src/pipeline/adapters/noaa-gfswave-grib2.ts",
+            "tests/acceptance/f-know-how-much-to-trust-it/fixtures/noaa-gfswave-grib2/"
+          ],
+          "implementation_notes": "CONTRACT FIXED BY DISTILL: the adapter lives at src/pipeline/adapters/noaa-gfswave-grib2.ts and exports parseGfswaveGrib2(bytes) returning MemberSeries[] in the port's post-ACL domain language. THE CAPTURE IS PART OF THE STEP: fetch one real grib_filter response (the URL is live-verified working, HANDOFF section 6 research-gaps note) ONCE, by hand or by a capture script, and commit the bytes as the fixture; the test then runs offline forever. NEVER synthesize GRIB2 bytes: synthetic data hides the format mismatches that real-response fixtures exist to catch, and this repository has already been bitten by exactly that class. Example-based at this layer by design: no property-based machinery on real-I/O tests. Wire-format parsing, the anti-corruption ladder and cycle attribution live inside the adapter with their own unit tests (04 section 3 step 5); run_ts here is OBSERVED from the GRIB metadata, not inferred, which is precisely the independence the keystone routed to this feature."
+        },
+        {
+          "id": "04-06",
+          "name": "One answering model across all sources reads low",
+          "criteria": [
+            "A cross-provider member count of one caps c_spread at 0.4: every row publishes low.",
+            "The reason says one model answered and claims no disagreement."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/la-segunda-fuente-independiente.feature",
+          "scenario_name": "El día en que entre todas las fuentes respondió un solo modelo se dice así",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Engine cap plus composer honesty on the thinnest morning, producer-side.",
+          "ui_checks": {},
+          "deps": ["04-01", "04-03"],
+          "files_to_modify": [],
+          "implementation_notes": "The f(M) cap and the one-model clause already exist (engine, and slice-01 step 01-05); what this step pins is that they stay honest when the counting crosses PROVIDERS: members_used counts distinct answering members across the whole registry, never per-provider, and a model that answered through two transports counts once (04-01's dedupe). The 6.4 consequence holds: with one member every other factor at most 1, c_total is at most 0.4, low everywhere. RED TODAY only through the missing reason carriage; goes fully green once 04-01 and slice-01's composer land. Watch for double-counting: a naive merge that concatenates member lists from both providers before dedupe would report members_used = 2 on this morning and read media, which is exactly the fabricated certainty this slice forbids."
+        }
+      ]
+    },
+    {
+      "id": "05",
+      "name": "Slice-05: the reason compares against this spot's own normal",
+      "description": "Once a spot's own spread history exists, the percentile form replaces absolute thresholds and the reason says the models split worse than usual for this spot. Data-gated: the log started 2026-08-08 and the activation threshold is unset (Pre-requisite 7, open).",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "05-01",
+          "name": "Percentile form activates from the spot's own history",
+          "criteria": [
+            "The build reads THIS spot's spread history from its own log; above the threshold, the climatology percentile replaces the absolute CVs.",
+            "A worse-than-usual day says so, comparing against the spot's own normal, still within 160 characters and every honesty clause."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/lo-normal-de-este-spot.feature",
+          "scenario_name": "Un día partido peor que lo normal de ese spot se dice con sus palabras",
+          "slice_id": "slice-05",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The form switch and its sentence, asserted over the published bundle; the rendered wording is judged at 05-05 and 05-06.",
+          "ui_checks": {},
+          "deps": ["01-01"],
+          "files_to_modify": [
+            "src/pipeline/build.ts",
+            "src/publish/confidence-reason.ts"
+          ],
+          "implementation_notes": "DATA-GATED AND THRESHOLD-BLOCKED, RECORDED, DO NOT PLAN AROUND IT: the PublishedCall log began accumulating 2026-08-08, zero real spots have meaningful history, and the activation threshold (how many days of a spot's own spread history before the percentile form activates) is a number NOBODY HAS SET: Pre-requisite 7, open, owned by the DESIGN/learning lane plus Andres. This slice may sit pending for weeks and that is correct; shipping it early would compare a day against a history that does not exist, the exact dishonesty this product refuses. The acceptance history is accumulated HONESTLY: the scenarios publish 60 real mornings through the same driving ports production uses, so the history under test is the log the pipeline itself wrote, never a planted table; 60 sits above any sane threshold and 2 below, and if the settled number falls outside that range the fixture constant moves, never the oracle. THE THRESHOLD IS POLICY DATA, not code (05 section 6.1: 'switching forms is a data availability change'), so it belongs beside slice-03's confidence_factors in the launch policy. ENGINE ALREADY CARRIES THE ARM: SpreadInput's climatology variant exists in confidence.ts; the missing production behaviour is the build computing the spot's own spread percentile from the log and passing it. The log may need a per-row spread value to make the history computable; that is an additive, insert-only, forward-only schema addition, NEVER a backfill. src/pipeline/build.ts is producer-lane contended (Pre-requisite 3), serialized. Qualitative tails only: pct <= 20 maps to 1.0, mid to 0.7, >= 80 to 0.35, as data."
+        },
+        {
+          "id": "05-02",
+          "name": "Thin history keeps the absolute form and wording",
+          "criteria": [
+            "Spots below the activation threshold keep the absolute CVs and never compare against a normal they do not have."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/lo-normal-de-este-spot.feature",
+          "scenario_name": "Un spot recién llegado al registro no se compara contra un historial que no tiene",
+          "slice_id": "slice-05",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The below-threshold branch of the same form switch, producer-side.",
+          "ui_checks": {},
+          "deps": ["05-01"],
+          "files_to_modify": [
+            "src/pipeline/build.ts"
+          ],
+          "implementation_notes": "The honesty gate against premature activation, and it PASSES today (recorded run reaches the deeper oracles only through the carriage gap): a two-morning spot keeps the absolute form and its dominant-term wording. It stands guard against the tempting shortcut of activating climatology whenever ANY history rows exist: a percentile computed over two mornings is noise wearing a costume. Also pins the per-spot grain: the threshold is evaluated per spot, so one history-rich spot activating never drags its thin-history neighbours with it. Copy-risk note, recorded: the below-threshold wording must avoid the word 'normal' (the oracle forbids it there), which constrains Pre-requisite 1's settled phrasings."
+        },
+        {
+          "id": "05-03",
+          "name": "Qualitative tails only, never a displayed percentile",
+          "criteria": [
+            "No percentage, percentile or probability wording in any published reason, in either form, ever."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/lo-normal-de-este-spot.feature",
+          "scenario_name": "La razón nunca muestra un porcentaje ni suena a probabilidad",
+          "slice_id": "slice-05",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A copy guard over the composed output, producer-side.",
+          "ui_checks": {},
+          "deps": ["05-01"],
+          "files_to_modify": [
+            "src/publish/confidence-reason.ts"
+          ],
+          "implementation_notes": "The out-of-scope table's 'Never' row made executable: calibrated error bars, displayed percentiles and probability wording of any kind are refused forever (research 09 section 3.6 qualitative-flag consequence; epic contradiction C4, closed). The percentile is an INPUT to the qualitative mapping, never a surface value: the moment the composer knows pct it will be tempting to write 'percentil 85' or 'un 85% peor', and this guard is what makes that a red build instead of a code review argument. Extend the unit-level copy guards (confidence-reason-copy.test.ts) with the same forbidden patterns across generated climatology states so it fails in seconds, not only at acceptance."
+        },
+        {
+          "id": "05-04",
+          "name": "Missing inputs outrank the climatology comparison",
+          "criteria": [
+            "The cause hierarchy holds in the new form: a binding cap names its missing input first, and no normal-comparison rides a capped row."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/lo-normal-de-este-spot.feature",
+          "scenario_name": "La ausencia de la marea manda aunque el historial exista",
+          "slice_id": "slice-05",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Composer cause-hierarchy under the climatology form, producer-side.",
+          "ui_checks": {},
+          "deps": ["05-01"],
+          "files_to_modify": [
+            "src/publish/confidence-reason.ts"
+          ],
+          "implementation_notes": "Same hierarchy slice-01 established (single-model first, then missing inputs, spread only when nothing is missing), now proven to survive the form switch: a history-rich spot whose tide went dark names the tide, and the normal-comparison stays out of that sentence entirely, because a day scored under a cap is not comparable against normals computed from uncapped mornings. Passes today for the accidental reason that no climatology exists; goes genuinely load-bearing at GREEN of 05-01, which is why it is its own step: enable 05-01, watch this stay green, and if it goes red the composer is letting the new clause jump the hierarchy."
+        },
+        {
+          "id": "05-05",
+          "name": "The page shows the comparison exactly as published",
+          "criteria": [
+            "The opened reason is byte-identical to the published one and compares against the spot's own normal; nothing derived on the page."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/lo-normal-de-este-spot.feature",
+          "scenario_name": "El surfista lee la comparación contra lo normal tal cual se publicó",
+          "slice_id": "slice-05",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Text fidelity over the built page; the measured-pixel judgement and the human charter belong to 05-06.",
+          "ui_checks": {},
+          "deps": ["05-01", "01-11"],
+          "files_to_modify": [],
+          "implementation_notes": "HARD SCHEDULING PRECONDITION, same as 02-05: per-row reasons render only after slice-01's four cross-lane diffs land (ConfidenceDetail.astro renders NOWHERE today; the wiring is step 01-11). Scheduled early it fails as setup: BROKEN, not RED; report and stop. RED TODAY through that same gap (recorded run). Expected green with no new production code once 01-11 lands, because the page renders whatever is published (slice-01's fidelity oracles); if it stays red after that, the defect is the mounts or the planted values, never a reason to weaken the byte-identity oracle. The planted wording is a placeholder pending Pre-requisites 1 and 7; the oracle pins only exact fidelity plus the noun 'normal'."
+        },
+        {
+          "id": "05-06",
+          "name": "The human sentence reads clean on the phone",
+          "criteria": [
+            "The seven visual checks pass on the history-rich row against the real backdrop at 390 px, light-normal and dark-reduced both.",
+            "The longest climatology sentence wraps without clipping; nothing animates under reduced motion.",
+            "Gate runs captured by redirect then the exit code on its own line, never through a pipeline."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/lo-normal-de-este-spot.feature",
+          "scenario_name": "La razón que compara contra lo normal se lee limpia en el teléfono, tema <tema>, movimiento <movimiento>",
+          "slice_id": "slice-05",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-know-how-much-to-trust-it/la-razon-compara-contra-lo-normal-y-sigue-sonando-a-una-persona.md",
+          "u8_observation": "La razón compara el día contra lo normal de ese spot y sigue sonando a una persona, no a un modelo.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-know-how-much-to-trust-it and @slice-05 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-know-how-much-to-trust-it and @slice-05 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-know-how-much-to-trust-it and @slice-05 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-know-how-much-to-trust-it and @slice-05 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-know-how-much-to-trust-it and @slice-05 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-know-how-much-to-trust-it and @slice-05 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-know-how-much-to-trust-it and @slice-05 and @ui-u7"]
+          },
+          "deps": ["05-01", "05-02", "05-03", "05-04", "05-05", "01-11"],
+          "files_to_modify": [
+            "src/components/ConfidenceDetail.astro"
+          ],
+          "implementation_notes": "THE ONLY USER-VISIBLE STEP OF THE SLICE. The U8 observation is settled verbatim in feature-delta.md's Slice classification table; use it word for word, and whoever owns docs/product/expectations/ writes the charter before COMMIT (filename may differ, U8 text may not). What the examiner is actually judging here is the one thing no assertion can: that the sentence sounds like a person who surfs this spot, not like a model talking about itself. The seven checks are the measured floor under that judgement, and they run as a standing regression net (they pass against the currently-mounted component; they must keep passing after the mount swap and after the new, potentially-longest wording lands). Same scheduling precondition as 05-05: BROKEN, not RED, before 01-11. Also honestly gated by Pre-requisites 1 and 7 through 05-01: there is no rendered climatology sentence to examine until the threshold is settled and the form switch ships."
         }
       ]
     }
