@@ -109,7 +109,7 @@ describe('runProductionBuild (the missing production caller for runBuildOnce)', 
         expect(typeof summary.size_band).toBe('string');
         expect(summary.size_range_m).toHaveLength(2);
         expect(typeof summary.wind_state).toBe('string');
-        expect(summary.best_window.start).toMatch(/^\d{2}:\d{2}$/);
+        expect(summary.best_window?.start).toMatch(/^\d{2}:\d{2}$/);
       }
     }
   });
