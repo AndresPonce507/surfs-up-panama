@@ -60,6 +60,7 @@ const inlineCss = minify(`${tokens}\n${base}\n${components}`);
     <link rel="alternate" hreflang="es" href={currentPath} />
     {announcement !== undefined && (
       <>
+        <link rel="canonical" href={announcement.url} />
         <meta property="og:title" content={announcement.title} />
         <meta property="og:description" content={announcement.description} />
         <meta property="og:url" content={announcement.url} />

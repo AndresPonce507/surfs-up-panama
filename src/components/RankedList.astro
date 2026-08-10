@@ -11,13 +11,15 @@ import { spotById } from '../data/region';
 import { strings, type Locale } from '../i18n/strings';
 import { paths } from '../i18n/routes';
 import { formatUpdatedAtEs } from '../publish/display-format';
+import type { LinkAnnouncement } from '../share/link-announcement';
 
 interface Props {
   locale: Locale;
   day: 0 | 1;
+  announcement?: LinkAnnouncement;
 }
 
-const { locale, day } = Astro.props;
+const { locale, day, announcement } = Astro.props;
 const t = strings[locale];
 const daySpots = forecast.days[day];
 const currentPath = day === 0 ? paths.home(locale) : paths.tomorrow(locale);
@@ -63,6 +65,7 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
   locale={locale}
   title={t.home.header}
   currentPath={currentPath}
+  announcement={announcement}
 >
   <h1>{t.home.header}</h1>
   <p><time datetime={forecast.published_at}>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</time></p>
