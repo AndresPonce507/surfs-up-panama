@@ -20,10 +20,16 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import fc from 'fast-check';
-import { describe, it } from 'vitest';
+import { describe, it, vi } from 'vitest';
 
 const REPO_ROOT = resolve(__dirname, '../..');
 const SW_SOURCE = readFileSync(resolve(REPO_ROOT, 'public/sw.js'), 'utf8');
+
+/**
+ * Read, never assumed: the tested guard cannot drift from the real shipped
+ * value (same no-copy philosophy as SW_SOURCE itself, top of file).
+ */
+const NETWORK_FIRST_TIMEOUT_MS = Number(/NETWORK_FIRST_TIMEOUT_MS\s*=\s*(\d+)/.exec(SW_SOURCE)?.[1]);
 const ORIGIN = 'https://d1j9u9fxnap4es.cloudfront.net';
 const WRITE_PATH = '/api/report';
 const OFFLINE_DOCUMENT = '/sin-senal';
@@ -93,7 +99,8 @@ function createFakeCaches(activity: Activity[] = []) {
 }
 
 type FakeCaches = ReturnType<typeof createFakeCaches>;
-type FetchImpl = (request: Request) => Promise<Response>;
+/** `init` is optional and unused by most stubs; 01-05's timeout-race test reads `init?.signal` to observe whether the losing fetch was aborted. */
+type FetchImpl = (request: Request, init?: { signal?: AbortSignal }) => Promise<Response>;
 
 /**
  * Node's `new Response(...)` always reports `type: 'default'` -- that flag
@@ -137,10 +144,10 @@ function loadHelper(options: { fetchImpl?: FetchImpl; caches?: FakeCaches } = {}
     location: { origin: ORIGIN },
     clients: { claim: async () => { claimCalls.push(1); } },
     skipWaiting: async () => { skipWaitingCalls.push(1); },
-    fetch: async (request: RequestInfo) => {
+    fetch: async (request: RequestInfo, init?: { signal?: AbortSignal }) => {
       const req = typeof request === 'string' ? new Request(new URL(request, ORIGIN).toString()) : (request as Request);
       caches.activity.push({ op: 'fetch', url: keyOf(req) });
-      return fetchImpl(req);
+      return fetchImpl(req, init);
     },
   };
   // eslint-disable-next-line no-new-func -- evaluating the real shipped script, deliberately, per DoD criterion 4.
@@ -161,7 +168,13 @@ async function fireLifecycle(helper: Helper, type: 'install' | 'activate'): Prom
   await Promise.all(waits);
 }
 
-async function fireFetch(helper: Helper, request: Request): Promise<{ responded: boolean; response: Response | null }> {
+/**
+ * Fires the "fetch" listener and returns the raw response promise, without
+ * awaiting it. 01-05's timeout-race test needs to observe the promise mid-
+ * flight (settled or not, at a precise fake-clock instant); every other
+ * caller wants the settled response and uses `fireFetch` below.
+ */
+function fireFetchRaw(helper: Helper, request: Request): { responded: boolean; responsePromise: Promise<Response> | null } {
   const handlers = helper.listeners.get('fetch') ?? [];
   assert.equal(handlers.length, 1, 'expected exactly one "fetch" listener');
   const handler = handlers[0];
@@ -176,6 +189,11 @@ async function fireFetch(helper: Helper, request: Request): Promise<{ responded:
     },
     waitUntil() {},
   });
+  return { responded, responsePromise };
+}
+
+async function fireFetch(helper: Helper, request: Request): Promise<{ responded: boolean; response: Response | null }> {
+  const { responded, responsePromise } = fireFetchRaw(helper, request);
   return { responded, response: responded ? await responsePromise! : null };
 }
 
@@ -512,6 +530,120 @@ describe('the offline helper (public/sw.js)', () => {
         },
       ),
       { numRuns: 60 },
+    );
+  });
+
+  // ---------- 01-05: the network-first timeout races the network, an injected clock proves it ----------
+
+  /**
+   * Step 01-05's payoff property. The network-first row is a RACE, not a
+   * wait: a network that never answers must never keep the surfer waiting
+   * past NETWORK_FIRST_TIMEOUT_MS, and a network that answers before that
+   * must never be held up by the guard. Both halves are proven on the same
+   * injected clock -- no real sleep, per the step's own DoD criterion 4 --
+   * by observing the response promise's settled state at precise instants,
+   * never by awaiting it blind.
+   *
+   * The 'hangs' arm also proves the losing fetch is actually abandoned: the
+   * step's own implementation_notes forbid leaving it "running unbounded",
+   * so the fetch stub captures the AbortSignal networkFirst hands it and the
+   * property asserts abort() fires exactly when the timer wins, never
+   * before and never for a fetch that answered in time.
+   */
+  it('gives up on a network that never answers exactly at the three-second guard, and never delays a network that answers first', async () => {
+    assert.ok(
+      Number.isFinite(NETWORK_FIRST_TIMEOUT_MS) && NETWORK_FIRST_TIMEOUT_MS > 0,
+      'test bug: could not read NETWORK_FIRST_TIMEOUT_MS out of the real shipped public/sw.js',
+    );
+
+    await fc.assert(
+      fc.asyncProperty(
+        fc.string({ minLength: 4, maxLength: 10 }).map((s) => `offline-${s}`),
+        fc.string({ minLength: 4, maxLength: 10 }).map((s) => `first-${s}`),
+        fc.string({ minLength: 4, maxLength: 10 }).map((s) => `fresh-${s}`),
+        fc.boolean(),
+        fc.boolean(),
+        async (offlineStamp, firstNetworkStamp, freshNetworkStamp, hasPriorCachedCopy, networkAnswersInTime) => {
+          vi.useFakeTimers();
+          try {
+            let abortedSignal: AbortSignal | undefined;
+            // Flips true once the priming read (if any) has been served, so the
+            // fetch stub can tell "prime the cache" apart from "the request
+            // under test" without depending on request order or timing.
+            let primingComplete = !hasPriorCachedCopy;
+            const fetchImpl: FetchImpl = async (request, init) => {
+              const pathname = new URL(request.url).pathname;
+              if (pathname === OFFLINE_DOCUMENT) {
+                return withResponseType(new Response(offlineStamp, { status: 200 }), 'basic');
+              }
+              if (!primingComplete) {
+                // the priming read: always answers, so a forecast is on the
+                // phone before the request under test ever fires.
+                return withResponseType(new Response(firstNetworkStamp, { status: 200 }), 'basic');
+              }
+              if (networkAnswersInTime) {
+                return withResponseType(new Response(freshNetworkStamp, { status: 200 }), 'basic');
+              }
+              // the stall: accepted, never answered -- a real hang, never resolving and never rejecting on its own
+              abortedSignal = init?.signal;
+              return new Promise<Response>(() => {});
+            };
+            const helper = loadHelper({ fetchImpl });
+            await fireLifecycle(helper, 'install');
+
+            if (hasPriorCachedCopy) {
+              const primed = await fireFetch(helper, new Request(`${ORIGIN}/`));
+              assert.equal(await primed.response!.text(), firstNetworkStamp, 'test bug: prime read did not serve the network copy');
+              primingComplete = true;
+            }
+            helper.caches.activity.length = 0; // everything from here on is the request under test
+
+            const { responded, responsePromise } = fireFetchRaw(helper, new Request(`${ORIGIN}/`));
+            assert.ok(responded, 'expected the reading route to be answered by the helper');
+            let settled = false;
+            let settledResponse: Response | null = null;
+            responsePromise!.then((response) => {
+              settled = true;
+              settledResponse = response;
+            });
+            // flushes the microtasks between caches.open() resolving and the
+            // timer actually being scheduled, so the boundary checks below
+            // measure against a timer that genuinely exists.
+            await vi.advanceTimersByTimeAsync(0);
+
+            if (networkAnswersInTime) {
+              assert.equal(settled, true, 'expected a network reply that answers immediately to never be delayed by the timeout guard');
+              assert.equal(await settledResponse!.text(), freshNetworkStamp, 'expected the network\'s own answer when it beats the guard');
+              assert.equal(abortedSignal, undefined, 'expected a network that answered first to never be aborted');
+              return;
+            }
+
+            assert.equal(settled, false, 'expected the response not to resolve before the three-second guard elapses');
+            await vi.advanceTimersByTimeAsync(NETWORK_FIRST_TIMEOUT_MS - 1);
+            assert.equal(settled, false, 'expected the guard not to fire one millisecond early');
+            assert.notEqual(abortedSignal, undefined, 'test bug: fetch stub never captured a signal to observe');
+            assert.equal(abortedSignal!.aborted, false, 'expected the abandoned fetch not to be aborted before the guard elapses');
+
+            await vi.advanceTimersByTimeAsync(1);
+            assert.equal(settled, true, 'expected the guard to fire exactly at the three-second mark and serve the cached copy');
+            assert.equal(
+              abortedSignal!.aborted,
+              true,
+              'expected the abandoned fetch to be aborted the instant the guard wins the race, per this step\'s own '
+                + 'implementation_notes: never leave it running unbounded',
+            );
+            const body = await settledResponse!.text();
+            assert.equal(
+              body,
+              hasPriorCachedCopy ? firstNetworkStamp : offlineStamp,
+              `expected the guard to fall back to ${hasPriorCachedCopy ? 'the forecast already on the phone' : 'the precached offline document'}`,
+            );
+          } finally {
+            vi.useRealTimers();
+          }
+        },
+      ),
+      { numRuns: 25 },
     );
   });
 
