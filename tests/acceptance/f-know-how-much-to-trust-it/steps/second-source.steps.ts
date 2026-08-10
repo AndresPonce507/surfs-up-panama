@@ -254,7 +254,7 @@ Then('ninguna playa pasa de confianza baja', function (this: PipelineWorld) {
 
 const ADAPTER_FIXTURE_DIR = fileURLToPath(new URL('../fixtures/noaa-gfswave-grib2/', import.meta.url));
 const ADAPTER_MODULE = '../../../../src/pipeline/adapters/noaa-gfswave-grib2';
-const ADAPTER_CAPTURE = 'gfswave.t00z.epacif.0p16.f000.20260808.grib2';
+const ADAPTER_CAPTURE = 'gfswave.t00z.global.0p16.f000.20260808.grib2';
 const ADAPTER_RECEIPT = 'capture-receipt.json';
 
 Given('una respuesta real de la fuente independiente capturada tal cual llegó', function (this: PipelineWorld) {
@@ -313,12 +313,16 @@ Then('salen miembros con su corrida atribuida y sus horas en el idioma de la cas
         }
       }
       const receipt = JSON.parse(readFileSync(join(ADAPTER_FIXTURE_DIR, ADAPTER_RECEIPT), 'utf8')) as {
-        request: { url: string };
-        response: { body_file: string; byte_count: number; sha256: string };
+        retrieved_at: string;
+        request: { url: string; parameters: Record<string, string> };
+        response: { status: number; headers: Record<string, string>; body_file: string; byte_count: number; sha256: string };
       };
       const captured = readFileSync(join(ADAPTER_FIXTURE_DIR, receipt.response.body_file));
-      if (!receipt.request.url.includes('filter_gfswave.pl') || receipt.response.body_file !== ADAPTER_CAPTURE) {
+      if (receipt.retrieved_at !== '2026-08-10T21:26:08Z' || receipt.request.url !== 'https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f000.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277&rightlon=281&toplat=10&bottomlat=6&dir=%2Fgfs.20260808%2F00%2Fwave%2Fgridded' || receipt.response.body_file !== ADAPTER_CAPTURE) {
         findings.push('el recibo de captura no identifica la petición NOAA ni el archivo GRIB2 que el adaptador leyó');
+      }
+      if (receipt.request.parameters.file !== 'gfswave.t00z.global.0p16.f000.grib2' || receipt.request.parameters.leftlon !== '277' || receipt.request.parameters.rightlon !== '281' || receipt.request.parameters.toplat !== '10' || receipt.request.parameters.bottomlat !== '6' || receipt.response.status !== 200 || receipt.response.headers['content-type'] !== 'application/octet-stream' || receipt.response.headers['content-description'] !== 'grib2 file' || receipt.response.headers['content-transfer-encoding'] !== 'binary' || receipt.response.headers['content-length'] !== '2652' || receipt.response.headers.date !== 'Mon, 10 Aug 2026 21:26:08 GMT') {
+        findings.push('el recibo NOAA no conserva todos los parámetros, hora de captura y metadatos de respuesta esperados');
       }
       if (captured.byteLength !== receipt.response.byte_count) {
         findings.push(`la captura tiene ${captured.byteLength} bytes, no los ${receipt.response.byte_count} asentados en el recibo`);
@@ -333,7 +337,7 @@ Then('salen miembros con su corrida atribuida y sus horas en el idioma de la cas
         findings.push('la captura NOAA no conserva el miembro ncep_gfswave016 ni su corrida 2026-08-08T00:00:00.000Z');
       }
       if (hour?.valid_ts !== '2026-08-08T00:00:00.000Z' || hour?.land_masked !== false
-        || swell?.h_m !== 3.31 || swell.t_s !== 8.5 || swell.dir_deg !== 146.63) {
+        || swell?.h_m !== 1.3 || swell.t_s !== 16.50999984741211 || swell.dir_deg !== 208.47) {
         findings.push('la captura NOAA no conserva la hora, unidades normalizadas o decisión de máscara asentadas independientemente');
       }
     }

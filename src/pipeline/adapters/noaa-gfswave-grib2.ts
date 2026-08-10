@@ -21,7 +21,10 @@ type DecodedField = {
   readonly run_ts: string;
   readonly valid_ts: string;
   readonly value: number;
+  readonly land_masked: boolean;
 };
+
+type GridPoint = { readonly lat: number; readonly lon: number };
 
 type DecodedHour = {
   readonly run_ts: string;
@@ -51,7 +54,7 @@ export class NoaaGfswaveForecastSource implements ForecastSource {
       const response = await this.fetchImpl(noaaFilterUrl(spot, this.clock.now()));
       if (!response.ok) return { ok: false, reason: 'error' };
       const verbatim = new Uint8Array(await response.arrayBuffer());
-      const data = parseGfswaveGrib2(verbatim);
+      const data = parseGfswaveGrib2(verbatim, spot);
       return { ok: true, verbatim, data };
     } catch {
       return { ok: false, reason: 'error' };
@@ -75,12 +78,13 @@ export class NoaaGfswaveForecastSource implements ForecastSource {
 
 function noaaFilterUrl(spot: SpotCoordinate, now: Date): string {
   const runDate = now.toISOString().slice(0, 10).replaceAll('-', '');
-  const leftlon = coordinateText(spot.lon - 2);
-  const rightlon = coordinateText(spot.lon + 2);
+  const longitude = spot.lon < 0 ? spot.lon + 360 : spot.lon;
+  const leftlon = coordinateText(longitude - 2);
+  const rightlon = coordinateText(longitude + 2);
   const toplat = coordinateText(spot.lat + 2);
   const bottomlat = coordinateText(spot.lat - 2);
   const directory = `/gfs.${runDate}/00/wave/gridded`;
-  return `${NOAA_FILTER_ENDPOINT}?file=gfswave.t00z.epacif.0p16.f000.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=${leftlon}&rightlon=${rightlon}&toplat=${toplat}&bottomlat=${bottomlat}&dir=${encodeURIComponent(directory)}`;
+  return `${NOAA_FILTER_ENDPOINT}?file=gfswave.t00z.global.0p16.f000.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=${leftlon}&rightlon=${rightlon}&toplat=${toplat}&bottomlat=${bottomlat}&dir=${encodeURIComponent(directory)}`;
 }
 
 function coordinateText(value: number): string {
@@ -94,9 +98,9 @@ function coordinateText(value: number): string {
  * normalized wave hour; the source request already limits its bbox to the
  * supported coast.
  */
-export function parseGfswaveGrib2(bytes: Uint8Array): MemberSeries[] {
+export function parseGfswaveGrib2(bytes: Uint8Array, target?: GridPoint): MemberSeries[] {
   const fields = readGribMessages(bytes)
-    .map(decodeWaveField)
+    .map((message) => decodeWaveField(message, target))
     .flatMap((field) => field === null ? [] : [field]);
   const decodedHours = combineWaveFields(fields);
   return decodedHours.length === 0
@@ -157,15 +161,15 @@ function indexSections(bytes: Uint8Array, start: number, end: number): SectionIn
   return sections;
 }
 
-function decodeWaveField(message: IndexedMessage): DecodedField | null {
+function decodeWaveField(message: IndexedMessage, target?: GridPoint): DecodedField | null {
   const { bytes, sections } = message;
   const section4 = requiredSection(sections, 4);
   const field = waveFieldAt(bytes, section4);
   if (field === null) return null;
   const run_ts = runTimestamp(bytes, requiredSection(sections, 1));
   const valid_ts = validTimestamp(bytes, run_ts, section4);
-  const value = firstPackedValue(bytes, requiredSection(sections, 5), requiredSection(sections, 6), requiredSection(sections, 7));
-  return { field, run_ts, valid_ts, value };
+  const decoded = packedValueAt(bytes, requiredSection(sections, 3), requiredSection(sections, 5), requiredSection(sections, 6), requiredSection(sections, 7), target);
+  return { field, run_ts, valid_ts, ...decoded };
 }
 
 function waveFieldAt(bytes: Uint8Array, section4: number): WaveField | null {
@@ -208,32 +212,55 @@ function forecastUnitMilliseconds(unit: number): number {
   throw new Error(`NOAA GRIB2 response uses unsupported forecast-time unit ${unit}`);
 }
 
-function firstPackedValue(bytes: Uint8Array, section5: number, section6: number, section7: number): number {
+function packedValueAt(bytes: Uint8Array, section3: number, section5: number, section6: number, section7: number, target?: GridPoint): Pick<DecodedField, 'value' | 'land_masked'> {
   const view = viewOf(bytes);
   if (view.getUint16(section5 + 9) !== 0) throw new Error('NOAA GRIB2 response uses unsupported data representation');
   const bitmapIndicator = bytes[section6 + 5]!;
   if (bitmapIndicator !== 0 && bitmapIndicator !== 255) throw new Error('NOAA GRIB2 response uses unsupported bitmap');
-  if (bitmapIndicator === 0 && !hasPresentPoint(bytes, section6)) throw new Error('NOAA GRIB2 response has no unmasked sea point');
+  const point = target === undefined ? 0 : requestedGridIndex(bytes, section3, target);
+  const packedIndex = bitmapIndicator === 0 ? packedIndexForGridPoint(bytes, section6, point) : point;
+  if (packedIndex === null) return { value: 0, land_masked: true };
   const reference = view.getFloat32(section5 + 11);
   const binaryScale = signed16(view.getUint16(section5 + 15));
   const decimalScale = signed16(view.getUint16(section5 + 17));
   const bitsPerValue = bytes[section5 + 19]!;
-  const packed = readBits(bytes, section7 + 5, bitsPerValue);
-  return (reference + packed * 2 ** binaryScale) / 10 ** decimalScale;
+  const packed = readBits(bytes, section7 + 5, bitsPerValue, packedIndex);
+  return { value: (reference + packed * 2 ** binaryScale) / 10 ** decimalScale, land_masked: false };
 }
 
-function hasPresentPoint(bytes: Uint8Array, section6: number): boolean {
-  const sectionLength = viewOf(bytes).getUint32(section6);
-  for (let offset = section6 + 6; offset < section6 + sectionLength; offset += 1) {
-    if (bytes[offset] !== 0) return true;
+function requestedGridIndex(bytes: Uint8Array, section3: number, target: GridPoint): number {
+  const view = viewOf(bytes);
+  if (view.getUint16(section3 + 12) !== 0 || bytes[section3 + 71] !== 64) {
+    throw new Error('NOAA GRIB2 response uses an unsupported grid geometry or scan order');
   }
-  return false;
+  const ni = view.getUint32(section3 + 30);
+  const nj = view.getUint32(section3 + 34);
+  const lat1 = signedMagnitude(view.getUint32(section3 + 46)) / 1_000_000;
+  const lon1 = signedMagnitude(view.getUint32(section3 + 50)) / 1_000_000;
+  const di = view.getUint32(section3 + 63) / 1_000_000;
+  const dj = view.getUint32(section3 + 67) / 1_000_000;
+  const lon = target.lon < 0 ? target.lon + 360 : target.lon;
+  const i = Math.round((lon - lon1) / di);
+  const j = Math.round((target.lat - lat1) / dj);
+  if (i < 0 || i >= ni || j < 0 || j >= nj) throw new Error('NOAA GRIB2 response does not cover the requested spot');
+  return j * ni + i;
 }
 
-function readBits(bytes: Uint8Array, start: number, width: number): number {
+function packedIndexForGridPoint(bytes: Uint8Array, section6: number, point: number): number | null {
+  let packed = 0;
+  for (let index = 0; index <= point; index += 1) {
+    const present = (bytes[section6 + 6 + Math.floor(index / 8)]! & (1 << (7 - (index % 8)))) !== 0;
+    if (!present && index === point) return null;
+    if (present && index === point) return packed;
+    if (present) packed += 1;
+  }
+  throw new Error('NOAA GRIB2 response bitmap does not cover the requested spot');
+}
+
+function readBits(bytes: Uint8Array, start: number, width: number, valueIndex = 0): number {
   let value = 0;
   for (let bit = 0; bit < width; bit += 1) {
-    const bitOffset = start * 8 + bit;
+    const bitOffset = start * 8 + valueIndex * width + bit;
     const byte = bytes[Math.floor(bitOffset / 8)]!;
     value = value * 2 + ((byte >> (7 - (bitOffset % 8))) & 1);
   }
@@ -254,7 +281,7 @@ function combineWaveFields(fields: readonly DecodedField[]): DecodedHour[] {
           valid_ts: entry.height.valid_ts,
           swell: { h_m: entry.height.value, t_s: entry.period.value, dir_deg: entry.direction.value },
           swell2: null,
-          land_masked: false,
+          land_masked: entry.height.land_masked || entry.period.land_masked || entry.direction.land_masked,
         },
       }]
       : [])
@@ -263,6 +290,10 @@ function combineWaveFields(fields: readonly DecodedField[]): DecodedHour[] {
 
 function signed16(value: number): number {
   return value & 0x8000 ? value - 0x1_0000 : value;
+}
+
+function signedMagnitude(value: number): number {
+  return value & 0x8000_0000 ? -(value & 0x7fff_ffff) : value;
 }
 
 function textAt(bytes: Uint8Array, offset: number, length: number): string {

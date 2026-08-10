@@ -37,9 +37,9 @@ describe('NoaaGfswaveForecastSource (real GRIB2 response at the production port)
       run_ts: '2026-08-08T00:00:00.000Z',
       hours: [{
         valid_ts: '2026-08-08T00:00:00.000Z',
-        swell: { h_m: 3.31, t_s: 8.5, dir_deg: 146.63 },
+        swell: { h_m: 0, t_s: 0, dir_deg: 0 },
         swell2: null,
-        land_masked: false,
+        land_masked: true,
       }],
     }]);
     expect(CAPTURED_RESPONSE.byteLength).toBe(RECEIPT.response.byte_count);
