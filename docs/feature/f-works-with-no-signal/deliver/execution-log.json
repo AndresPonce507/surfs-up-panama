@@ -281,6 +281,20 @@
       "s": "EXECUTED",
       "d": "PASS: verified staged 01-09 worker, formatter drift guard, and feature-local execution evidence after all requested gates passed; test budget 1 behavior x 2 = 2, 1 unit test.",
       "t": "2026-08-10T20:54:09Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: real server-counted Chromium morning journey 1 scenario/12 steps, including the helper-running assertion, stayed at ten requests or fewer. Existing router property tests 10/10; full units 93/93; typecheck; build; fast CI 8/8 passed, 0 skipped. Worker measured 4,750 B gzipped, unchanged from 01-09 and above the later 3 KB budget gate; no future 01-12 size work was pulled into this step. UI N/A: this is a measured request-cost property, not a visible surface.",
+      "t": "2026-08-10T20:55:56Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: verified only 01-10 feature-local execution evidence staged after the measured request-count acceptance and complete regression gates; no source or test change was required.",
+      "t": "2026-08-10T20:56:01Z"
     }
   ]
 }
