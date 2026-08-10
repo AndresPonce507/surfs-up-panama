@@ -97,6 +97,24 @@ did publish the baseline morning each scenario measures against.
 
 Verdict: **20/20 MISSING_FUNCTIONALITY, 0 BROKEN.** Handoff to DELIVER is not blocked by RED shape.
 
+### 01-18 fixture contract repair (2026-08-10)
+
+The generated larger-report comparison had used the changed report band as the
+forecast anchor too. Its forecast and observation therefore both rose by 0.65 m,
+leaving the height residual unchanged and making the strict-lower oracle
+impossible to satisfy. `syntheticMornings` now accepts an explicit
+`forecastReferenceBand`, defaulting to the report band so every earlier scenario
+retains its prior meaning. The R2 property pins that reference to `chest_head`
+while changing only the observed band to `head_overhead`.
+
+The property now proves each of its three input deltas before it drives the
+nightly fit: every forecast rises while reports stay fixed, forecasts stay fixed
+while observed bands rise, and the reporter rotation changes the device
+assignment. A deliberate poison that anchored the larger report to
+`head_overhead` failed the focused scenario with exit 1 because forecast inputs
+were no longer fixed. After restoring `chest_head`, the focused R2 scenario,
+the learning residual support tests, and all feature acceptance scenarios passed.
+
 ### Two honest qualifications on this RED
 
 **It is a two-stage RED, deliberately.** Neither `src/learning/fit.ts` nor `src/learning/declarations.ts`

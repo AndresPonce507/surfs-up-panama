@@ -384,8 +384,21 @@ Then('raising the forecast raises the difference the fit stores', async function
       fc.double({ min: 0.05, max: 0.5, noNaN: true, noDefaultInfinity: true }),
       async (count, raiseM) => {
         const base = { count, reporters: 6, biggerThanForecastM: 0.2, spreadM: 0.3 };
-        const before = await fitOver(syntheticMornings(base));
-        const after = await fitOver(syntheticMornings({ ...base, forecastShiftM: raiseM }));
+        const beforeMornings = syntheticMornings(base);
+        const raisedForecastMornings = syntheticMornings({ ...base, forecastShiftM: raiseM });
+        assert.ok(
+          raisedForecastMornings.every(
+            (morning, index) => morning.prediction.swell_h_m === beforeMornings[index]!.prediction.swell_h_m + raiseM,
+          ),
+          'the generated comparison must actually raise every forecast',
+        );
+        assert.deepEqual(
+          raisedForecastMornings.map((morning) => morning.observation.size_band),
+          beforeMornings.map((morning) => morning.observation.size_band),
+          'raising the forecast property must leave every observed band untouched',
+        );
+        const before = await fitOver(beforeMornings);
+        const after = await fitOver(raisedForecastMornings);
         assert.ok(before.correction && after.correction, 'both runs must record what they examined');
         assert.ok(
           heightKeyOf(after.correction).b > heightKeyOf(before.correction).b,
@@ -403,8 +416,28 @@ Then('reporting a bigger size lowers the difference the fit stores', async funct
       fc.integer({ min: 12, max: 30 }),
       async (count) => {
         const base = { count, reporters: 6, biggerThanForecastM: 0.2, spreadM: 0.3 };
-        const smaller = await fitOver(syntheticMornings({ ...base, band: REPORTED_BAND }));
-        const bigger = await fitOver(syntheticMornings({ ...base, band: BIGGER_REPORTED_BAND }));
+        const smallerMornings = syntheticMornings({
+          ...base,
+          band: REPORTED_BAND,
+          forecastReferenceBand: REPORTED_BAND,
+        });
+        const biggerMornings = syntheticMornings({
+          ...base,
+          band: BIGGER_REPORTED_BAND,
+          forecastReferenceBand: REPORTED_BAND,
+        });
+        assert.ok(
+          biggerMornings.every(
+            (morning, index) => morning.prediction.swell_h_m === smallerMornings[index]!.prediction.swell_h_m,
+          ),
+          'the bigger-report comparison must keep every forecast input fixed',
+        );
+        assert.ok(
+          biggerMornings.every((morning) => morning.observation.size_band === BIGGER_REPORTED_BAND),
+          'the bigger-report comparison must actually change every observed band',
+        );
+        const smaller = await fitOver(smallerMornings);
+        const bigger = await fitOver(biggerMornings);
         assert.ok(smaller.correction && bigger.correction, 'both runs must record what they examined');
         assert.ok(
           heightKeyOf(bigger.correction).b < heightKeyOf(smaller.correction).b,
@@ -423,8 +456,15 @@ Then('shuffling which person reported which morning changes nothing, because nob
       fc.integer({ min: 1, max: 5 }),
       async (count, rotation) => {
         const base = { count, reporters: 6, biggerThanForecastM: 0.2, spreadM: 0.3 };
-        const before = await fitOver(syntheticMornings(base));
-        const after = await fitOver(syntheticMornings({ ...base, reporterRotation: rotation }));
+        const beforeMornings = syntheticMornings(base);
+        const reassignedMornings = syntheticMornings({ ...base, reporterRotation: rotation });
+        assert.notDeepEqual(
+          reassignedMornings.map((morning) => morning.observation.device_id),
+          beforeMornings.map((morning) => morning.observation.device_id),
+          'the reporter-reassignment comparison must actually assign the mornings to different people',
+        );
+        const before = await fitOver(beforeMornings);
+        const after = await fitOver(reassignedMornings);
         assertStateDelta({
           before: before.storedUniverse,
           after: after.storedUniverse,

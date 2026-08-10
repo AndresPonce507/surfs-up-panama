@@ -112,6 +112,13 @@ export type MorningsSpec = {
   spreadM: number;
   /** The band every morning was reported at. */
   band?: SizeBandToken;
+  /**
+   * The fixed band whose midpoint anchors the generated forecast. Omit it to
+   * retain the normal fixture relation, where a report's own band is the
+   * reference. Properties that change only what the person reported set this
+   * explicitly so their forecast inputs stay unchanged.
+   */
+  forecastReferenceBand?: SizeBandToken;
   /** Raise every morning's forecast by this much, leaving the reports untouched. */
   forecastShiftM?: number;
   /** Rotate which person reported which morning; nobody has history, so it may change nothing. */
@@ -132,7 +139,7 @@ const SHOWN_SCORES = [82, 76];
 
 export function syntheticMornings(spec: MorningsSpec): Morning[] {
   const band = spec.band ?? REPORTED_BAND;
-  const observedMidM = bandMidM(band);
+  const forecastReferenceMidM = bandMidM(spec.forecastReferenceBand ?? band);
   const dayOffset = spec.dayOffset ?? 0;
   const withoutForecastEvery = spec.withoutCapturedForecastEvery ?? 0;
   const windRotation = spec.windRotation ?? 0;
@@ -142,7 +149,7 @@ export function syntheticMornings(spec: MorningsSpec): Morning[] {
   return Array.from({ length: spec.count }, (_unused, index) => {
     const deviation = spec.spreadM === 0 ? 0 : (index % 2 === 0 ? spec.spreadM : -spec.spreadM);
     // forecast - observed = -biggerThanForecastM + deviation + forecastShiftM
-    const forecastEffectiveHeightM = observedMidM - spec.biggerThanForecastM + deviation + forecastShiftM;
+    const forecastEffectiveHeightM = forecastReferenceMidM - spec.biggerThanForecastM + deviation + forecastShiftM;
     const observedDate = addDays(FIRST_REPORTED_DATE, index + dayOffset);
     const runDate = addDays(observedDate, -1);
     const reporterIndex = (index + reporterRotation) % spec.reporters;
