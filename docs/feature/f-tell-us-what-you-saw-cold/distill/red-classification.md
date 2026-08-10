@@ -165,40 +165,42 @@ note is the correction.
 ## Slice-02 observed RED classification (2026-08-10, JIT DISTILL verification run)
 
 Slice-02 is non-visual. Its source-blind driving port is the production-owned local infrastructure
-job (`npm run ci:local -- --job=infra`), not AWS and not a mock. The expectation charter is
+job (`npm run ci:local -- --job=infra`), never AWS and never a mock. The acceptance contract copies
+the checkout to a temporary root, rejects source-tree symlinks and non-regular entries, verifies
+every controlled path remains inside that root, snapshots `infra/`, and removes the copy after the
+run. The source checkout is byte-for-byte unchanged. The expectation charter is
 `docs/product/expectations/f-tell-us-what-you-saw-cold/nobody-can-deploy-a-write-path-that-can-run-up-a-bill-before-deploy-ci-rejects-a-write-function.md`.
 
-Binding check:
+Binding command:
 
 ```
 npm run test:at -- --dry-run --tags "@feature-f-tell-us-what-you-saw-cold and @slice-02"
 ```
 
-selected exactly 3 Slice-02 scenarios and 46 bound steps, with no undefined or ambiguous step.
+It selects 26 scenario instances and 369 bound steps, with no undefined or ambiguous step.
 
-Gate run:
+The current production infra job accepts every controlled one-value drift. Each failure reaches the
+terminal-output oracle after the real local-CI composition completes. It is therefore
+`MISSING_FUNCTIONALITY`, not a fixture, import, credential or deployment failure. The one existing
+generic unreadable-declaration guard is a truthful `ALREADY_SATISFIED` regression guard.
 
-```
-npm run test:at -- --tags "@feature-f-tell-us-what-you-saw-cold and @slice-02"
-```
-
-Real exit code: **1**. Two scenarios failed and one passed. The real-repository `infra` job was
-green, including its current production guardrail test and credential-free synth; the failures are
-only the missing write-path behavior asserted at the terminal output.
-
-| Scenario | Observed result | Classification |
+| Requirement / independent bite | Observed current result | Classification |
 |---|---|---|
-| The local gate names every protection that keeps a write flood bounded | `npm run ci:local -- --job=infra` exited 0 but its output omitted `exact site origin`, then had no report 2 / mint 1 / push 1 / photo-presign 1 limits, fixed provisioned 25/25 store, four write breakers, device-only 20/10/20 limits, or corrected sizing-source statement. The assertion failed at the output oracle after the real production driving command completed. | MISSING_FUNCTIONALITY |
-| A gate that cannot inspect declarations says so instead of claiming the write path is safe | A temporary copied `infra/` tree with `guardrail-declarations.ts` removed exited non-zero and named `cannot inspect`, the missing file and restoration. The test leaves the checkout unchanged. This proves the existing generic unreadable-declaration guard, not the missing write-path policy. | ALREADY_SATISFIED (regression guard) |
-| Every one-value write safeguard regression is rejected with a useful repair | Eight controlled declaration copies each changed one value. They reached the local-CI composition, which inspected the old declarations, then stopped at the intentionally absent fixture `node_modules` before the expected write-path guard could name the altered value. The acceptance oracle failed because none of the outputs named its changed safeguard, a required value and restoration. This is the same contained-root pattern already used by F-BILL: the production write guard must reject the drift before tests or synth are needed. | MISSING_FUNCTIONALITY |
+| R12 report, mint, push and photo-presign `AuthType` (`NONE` to `AWS_IAM`) | All four changed values are accepted. The output supplies neither the named address nor `observed AWS_IAM`, `required NONE`, why, or restore command. | MISSING_FUNCTIONALITY (4 safeguards) |
+| R12 report, mint, push and photo-presign exact origins (site origin to `https://other.example`) | All four changed origins are accepted. The output omits the address, observed and required origins, why and repair. | MISSING_FUNCTIONALITY (4 safeguards) |
+| R13 report concurrency (`2` to `3`); mint, push and photo-presign (`1` to `2`) | Each changed ceiling is accepted without its required value or repair. | MISSING_FUNCTIONALITY (4 safeguards) |
+| R14 billing (`PROVISIONED` to `PAY_PER_REQUEST`), read capacity (`25` to `26`), write capacity (`25` to `26`) | Each changed store setting is accepted without the required fixed setting or repair. | MISSING_FUNCTIONALITY (3 safeguards) |
+| R15 report, mint, push and photo-presign breaker alarm (`declared` to missing) | Every separately removed named alarm is accepted without a named diagnostic or repair. | MISSING_FUNCTIONALITY (4 safeguards) |
+| R16 report device limit (`20` to `21`), presign device limit (`10` to `11`), subscription device limit (`20` to `21`), device-only identity (to `per-IP`) | Every changed allowance or identity is accepted without the required device-only declaration or repair. | MISSING_FUNCTIONALITY (4 safeguards) |
+| R18 corrected sizing source (§6.1 to 07 §12) | The falsified source is accepted and the output never identifies §6.1 as required. | MISSING_FUNCTIONALITY (1 safeguard) |
+| R17 unavailable declaration | Removing the declaration in the temporary copy returns non-zero and names `cannot inspect`, `guardrail-declarations.ts` and `restore`. | ALREADY_SATISFIED (regression guard) |
+| R17 baseline green narration | The real gate exits 0 but does not name the required protections or corrected sizing source, so its success cannot demonstrate the write policy. | MISSING_FUNCTIONALITY |
 
-No scenario is BROKEN. Cucumber loaded the new TypeScript steps through the normal test runner;
-the RED assertions ran after the production local-CI composition and did not depend on AWS,
-credentials, deployment state or an absent import. The controlled fixture deliberately omits
-node_modules so a correct preflight guard must reject the altered declaration before Vitest or CDK
-synth is reached. The next DELIVER agent must preserve all eight one-value bites and record each
-observed failure and restoration here. The already-green unreadable-declaration case must remain
-green.
+The 24 controlled predicates are deliberately independent. For every one, the contract requires
+the exact label, `observed <changed>`, `required <declared>`, the supplied why substring and repair
+command, then restores the original declaration in the same temporary copy and reruns it green.
+Those restore assertions are executable but will remain unobserved until the missing guard exists;
+the checkout safety assertion runs even on RED. No scenario is BROKEN.
 
 ### Slice-02 boundary and later-slice readiness
 
