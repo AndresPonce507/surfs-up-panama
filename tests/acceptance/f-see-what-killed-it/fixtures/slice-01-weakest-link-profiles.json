@@ -1,0 +1,40 @@
+{
+  "_why": "Slice-01 preconditions only. Every value here is an INPUT the pipeline is allowed to publish, never an expected rendering. The oracle lives in the assertions, not in this file. Factor tokens are the engine's own (05-scoring-engine.md line 291, adr-scoring-weakest-link-damage.md); the Spanish words are the settled wireframe vocabulary recommended in Pre-requisite 3 and MUST come from one shared vocabulary module in production (R28) - that module does not exist yet, so DELIVER owes it.",
+  "factor_words": {
+    "dir": "direcci[oó]n",
+    "size": "tama[nñ]o",
+    "wind": "viento",
+    "tide": "marea"
+  },
+  "default_cycle": {
+    "today": ["size", "wind", "tide", "dir"],
+    "tomorrow": ["tide", "dir", "size", "wind"]
+  },
+  "profiles": {
+    "dos-dias-distintos": {
+      "spot_id": "playa-venao",
+      "today": { "link": "wind" },
+      "tomorrow": { "link": "tide" }
+    },
+    "dia-perfecto": {
+      "spot_id": "playa-guanico",
+      "today": { "link": null },
+      "tomorrow": { "link": null }
+    },
+    "campo-ausente": {
+      "spot_id": "playa-reina",
+      "today": { "omit": true },
+      "tomorrow": { "omit": true }
+    },
+    "sin-dato-de-viento": {
+      "spot_id": "playa-torio",
+      "today": { "link": "tide", "drop_wind_state": true },
+      "tomorrow": { "link": "tide" }
+    },
+    "nombre-mas-largo": {
+      "spot_id": "santa-catalina-la-punta",
+      "today": { "link": "size" },
+      "tomorrow": { "link": "wind" }
+    }
+  }
+}

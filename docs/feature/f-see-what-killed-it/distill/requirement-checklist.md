@@ -12,8 +12,8 @@ mandates (`nw-ui-quality-mandates`). One row per requirement. Category from the 
 This file is the SSOT of what must be covered. Coverage markers: a test covers `Rn` iff it
 carries a Gherkin `@covers-Rn` tag or a `// covers: Rn` comment inside the test body.
 Rows whose slice has not entered DELIVER yet are expected-uncovered (per-slice JIT); they are
-visible here from day one so no requirement is silently dropped. No acceptance test exists yet:
-this feature has not entered JIT DISTILL.
+visible here from day one so no requirement is silently dropped. slice-01 entered JIT DISTILL on
+2026-08-09 and its rows are marked covered below; slices 02 to 05 have not opened.
 
 | # | Requirement | Category |
 |---|---|---|
@@ -50,6 +50,30 @@ this feature has not entered JIT DISTILL.
 
 ## Current DISTILL coverage
 
-| Current requirement | Active acceptance evidence | Status |
+slice-01 entered JIT DISTILL on 2026-08-09. Its eleven scenarios live in
+`tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature`, all RED as
+`MISSING_FUNCTIONALITY`; the run, the commands and the per-scenario oracles are in
+`distill/red-classification.md`. Slices 02 to 05 have not opened, so their rows stay
+expected-uncovered by design.
+
+| # | Active acceptance evidence | Status |
 |---|---|---|
-| none | No slice of this feature has entered JIT DISTILL. Acceptance tests are written per slice, one slice at a time, when the slice legally opens (`HANDOFF.md` §1 workflow). | expected-uncovered by design |
+| R1 | `@covers-R1`: "El surfista abre su playa y lee qué la tumbó hoy y qué la tumba mañana" (walking skeleton) and "La página nombra el culpable publicado, nunca uno que deduzca ella sola" | covered, RED |
+| R2 | `@covers-R2`: "Un día perfecto no tiene culpable, y la página no parece rota por eso" (explicit `null`) and "Una playa cuya mañana se publicó sin ese dato calla en vez de inventar" (field absent). Both close on a sibling beach that must name its culprit, so neither can pass vacuously | covered, RED |
+| R3 | `@covers-R3`: "El punto débil llega a la superficie que leen las páginas, no solo al recibo" proves `surfaceCall()` drops the field (one beach, pipeline ports, in-process) and "Ninguna playa se queda callada mientras las demás sí lo dicen" proves the render reaches all 20 emitted spot pages on both days. **Not covered: that a real pipeline run populates every committed row.** The 40 spot-days in the sweep are planted by this lane's fixture, so a builder that populated 1 row of 20 would still leave this suite green. R3's "impossible to repeat silently" half needs a populated-per-build check over a real pipeline run, owed alongside the slice-03 schema work (Pre-requisite 4) | partially covered, RED |
+| R4 | `@covers-R4`: "El culpable aparece en la página de la playa y no cambia la lista de hoy" covers the observable half. **The "exactly one mount line into `SpotDetail.astro`" half is not observable through the built surface and stays a DELIVER code-review constraint** | partially covered, RED |
+| R5 | `@covers-R5`: "La página nombra el culpable publicado, nunca uno que deduzca ella sola" — the beach published with tide as culprit and no wind observation must name marea and must not name viento | covered, RED |
+| R6 | `@covers-R6`: the walking skeleton asserts today's culprit and tomorrow's differ on the same page and that neither section borrows the other day's | covered, RED |
+| R7 to R16 | slice-02, slice-03 and slice-04 | expected-uncovered by design |
+| R17 | slice-04 (bars). The "colour never carries the callout alone" half is already proven for the sentence by "Quien no distingue colores recibe la misma información" | expected-uncovered by design (bars) |
+| R18 to R20 | slice-05 (map) | expected-uncovered by design |
+| R21 | `@covers-R21`: the seven visual checks scenario measures the sentence against the **real rendered backdrop** (nearest non-transparent ancestor), in tema claro and tema oscuro; plus the flattened-colour scenario | covered for the callout, RED |
+| R22 | `@covers-R22`: no horizontal overflow at 390 px on the longest Spanish spot name, "Santa Catalina - La Punta" | covered for the callout, RED |
+| R23 | `@covers-R23`: any control the callout adds must measure 44 px, and the existing thumb-zone report CTA must still measure 44 px and not be displaced | covered for the callout, RED |
+| R24 | `@covers-R24`: under `prefers-reduced-motion` the callout carries no transition and no animation | covered for the callout, RED |
+| R25 | `@covers-R25`: the perfect-day no-callout state is a designed state (no empty box, no stray word), and no artificial loading appears inside the callout | covered for the callout, RED |
+| R26 | `@covers-R26`: the callout's computed type size and line height come from the declared scale and survive the longest Spanish name at 390 px | covered for the callout, RED |
+| R27 | `@covers-R27`: no raw colour in the callout's own style attribute, plus the repository UI gate (`scripts/check-ui-quality.mjs`, which owns the no-raw-hex-outside-`src/styles` rule) must exit 0 for the built surface | covered for the callout, RED |
+| R28 | `@covers-R28`: every callout sentence across the 20 pages must be Spanish, free of engine tokens (`dir`/`size`/`wind`/`tide`), free of data punctuation and free of em dashes. **The shared Spanish factor-name vocabulary module this row requires does not exist yet** — `src/data/report-vocab.ts` carries wind states and quality tokens only. DELIVER owes one module, shared with F-KNOW-HOW-MUCH-TO-TRUST-IT | covered for the callout, RED |
+| R29 | no scenario yet. Slice-01 adds no server surface by construction (publish-time render only); the guard belongs with the later slices' byte and route work | expected-uncovered by design |
+| R30 | no scenario yet. The isolated build runs the repository page-weight gate as part of `npm run build`, so a slice-01 regression past 14 KB gz would fail every browser scenario at setup, but the budget is not asserted as its own oracle here | expected-uncovered by design |
