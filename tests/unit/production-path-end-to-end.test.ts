@@ -25,7 +25,15 @@ const PROJECT_ROOT = process.cwd();
 const CAPTURE_ROOT = resolve(PROJECT_ROOT, 'data/predictions-capture');
 const AT = '2026-08-09T11:22:00Z';
 
-describe('offline production path against the real committed capture', () => {
+// Both cases below spawn the real production build, and the second also shells
+// out to `npx tsx`. That is seconds of genuine subprocess work, not the
+// milliseconds vitest's 5s default assumes. Run alone on an idle machine it
+// finishes well inside the default and looks fine; run inside the CI gate,
+// where jobs go out in parallel waves and compete for cores, the same test
+// takes ~12s and times out. It failed that way on seven lanes at once while
+// the code under test was correct. 60s is headroom for a contended machine
+// and still short enough that a real hang fails rather than hanging the gate.
+describe('offline production path against the real committed capture', { timeout: 60_000 }, () => {
   let workDir: string;
   let scratchSurfacePath: string;
 
