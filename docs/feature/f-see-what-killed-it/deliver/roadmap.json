@@ -2,7 +2,7 @@
   "roadmap": {
     "project_id": "f-see-what-killed-it",
     "created_at": "2026-08-09T23:50:00Z",
-    "total_steps": 15,
+    "total_steps": 21,
     "quality_contract_version": 1
   },
   "phases": [
@@ -444,6 +444,180 @@
           "implementation_notes": "JIT DISTILL ONLY: do not author these test files while mapping. On legal entry, add five example-based real-I/O scenarios from slice-02-contract.md, run the explicit RED classification, and leave every Slice-01 test and evidence unchanged. The two browser negative cases make the missing field and false-minimum failures falsifiable."
         }
       ]
+    },
+    {
+      "id": "03",
+      "name": "Slice-03: the callout states the honest score without its named weakness",
+      "description": "The producer computes one correction-aware counterfactual score from the already-owned damage record, carries it as an optional integer, and the existing callout renders it only when it is strictly higher. No browser arithmetic and no full breakdown enter this slice.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "03-01",
+          "name": "Counterfactual integer is an authorized optional surface field",
+          "criteria": [
+            "After X8 approval, SurfaceCall accepts optional counterfactual_score_q only with a named weakest_link and only as an integer from 0 through 100 greater than score_q.",
+            "An absent field remains valid for retained dawn receipts and older named rows; a clean day or an equal, lower, fractional or out-of-range field is rejected when present.",
+            "Property: valid named rows retain every existing observable field and counterfactual_score_q unchanged through strict two-day validation.",
+            "The field is documented as a producer-decided score without the named weakness, never as frontend arithmetic or the Slice-04 damage disclosure."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "La playa solo recibe un puntaje sin su punto débil cuando es más alto",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "This is the backward-compatible reading-surface contract. Pixels first change in 03-05, which owns the expectation charter and U1 through U7 checks.",
+          "ui_checks": {},
+          "deps": ["02-05"],
+          "files_to_modify": [
+            "src/publish/static-surface.ts",
+            "tests/unit/weakest-link-surface-contract.test.ts"
+          ],
+          "implementation_notes": "SERIALIZED SCHEMA STEP: wait for X8's schema-authority approval. Use fast-check at the strict-validator boundary with a state-delta universe covering call fields, days and validation outcome. Do not use a truthy check: zero is within the field's raw range even though this particular field requires a strictly higher integer than score_q."
+        },
+        {
+          "id": "03-02",
+          "name": "Pure correction-aware counterfactual preserves scoring laws",
+          "criteria": [
+            "A pure helper derives the integer from total log damage, the named factor damage and the build correction delta using the settled formula.",
+            "Property: whenever a named factor exists, the unrounded counterfactual is never below the displayed model score before publication suppression.",
+            "Property: with delta_q zero, the helper is bit-exact to round(100 times exp(-(D minus d_w))); the settled size example yields 93.",
+            "A missing named factor yields no candidate, and malformed damage input fails at the producer boundary rather than fabricating a number."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "El número sin el punto débil sigue la misma cuenta que publicó la mañana",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Pure scoring behavior with no markup. The visible sentence is deferred to 03-05.",
+          "ui_checks": {},
+          "deps": ["03-01"],
+          "files_to_modify": [
+            "src/scoring/engine.ts",
+            "tests/unit/scoring-laws.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM: fast-check over the existing L10 generator domain with state-delta assertions over returned candidate, damage inputs and correction value. The pipeline remains the only caller that publishes it; extracting a pure helper keeps arithmetic testable without moving publication decisions into the page."
+        },
+        {
+          "id": "03-03",
+          "name": "Producer carries only a meaningful counterfactual score",
+          "criteria": [
+            "The build computes the candidate while ScoreResult damages and the applied correction are in scope, then carries counterfactual_score_q only when it is strictly greater than score_q.",
+            "Fresh named rows carry the integer or deliberately omit it for a rounding collision; fresh clean rows omit it. A candidate below score_q refuses publication before artifacts advance.",
+            "Property: changing the named factor's damage or correction changes only the counterfactual projection, while unrelated published fields retain their values.",
+            "A newly built committed surface proves every present field is integral, greater than its row score and paired with a named weakest link."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "La mañana publica solo un puntaje sin culpable que de verdad mejora",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Producer projection and data-integrity behavior. The value becomes visible only in 03-05.",
+          "ui_checks": {},
+          "deps": ["03-02"],
+          "files_to_modify": [
+            "src/pipeline/build.ts",
+            "src/publish/region-bundle.ts",
+            "tests/unit/run-build-cli.test.ts",
+            "tests/unit/published-surface-fields.test.ts"
+          ],
+          "implementation_notes": "SERIALIZED CROSS-LANE STEP: the producer and committed surface belong to the schema/producer owner. Compute before CallRow drops damages. Do not recover the value from the page, from hourly data, or by re-running scoring after publication. This step also closes X5's populated-per-build requirement for weakest_link where that producer change is available."
+        },
+        {
+          "id": "03-04",
+          "name": "Reader keeps the counterfactual paired to its spot-day",
+          "criteria": [
+            "The publish-side reader exposes a counterfactual only from the same selected row as the named weakest link and its score_q.",
+            "Today reads current.calls and tomorrow reads current.days[1].spots, preserving the forecast.ts compatibility rule.",
+            "Property: another day's number, a clean day and a collision omission never create a reading; named legacy absence stays distinct.",
+            "The reader performs no exponential arithmetic, damage selection, score correction or full-subscore lookup."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "El número sin el punto débil pertenece a ese día y a esa playa",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure read contract. Text becomes visible in 03-05.",
+          "ui_checks": {},
+          "deps": ["03-01", "03-03"],
+          "files_to_modify": [
+            "src/publish/weakest-link.ts",
+            "tests/unit/weakest-link-surface-contract.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM: fast-check independently varies both day rows and verifies the tagged reader state. Preserve clean and unknown outcomes, and make named legacy absence distinct so the publish-time caller logs it once. No new selector, factor resolver or browser lookup belongs here."
+        },
+        {
+          "id": "03-05",
+          "name": "Existing callout renders the day-aware honest clause",
+          "criteria": [
+            "The display formatter appends one day-aware Spanish counterfactual clause using the published integer verbatim; it does not calculate a score.",
+            "The existing weakest-link element changes text only, with no new mount, control, route, client fetch, island or JavaScript.",
+            "Absent, clean and collision states retain a complete named sentence or no callout as appropriate, with no empty gap, dangling punctuation, raw token, English, null or undefined.",
+            "A named legacy row without counterfactual_score_q omits only the clause and records one health.publish.counterfactual_field_missing event with spot, day and publish stamp; it adds no client telemetry.",
+            "At 390 px in both themes, the longer sentence remains readable against its real backdrop and leaves the report call to action reachable."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "El surfista lee cuánto marcaría la playa sin ese punto débil",
+          "slice_id": "slice-03",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-see-what-killed-it/a-surfer-lee-cuanto-marcaria-la-playa-sin-el-punto-que-la-tumbo.md",
+          "u8_observation": "La segunda frase se siente como una explicación tranquila de la misma llamada. Hoy y mañana usan sus propias palabras y números, sin parecer una promesa técnica ni una nota de programador.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-03 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-03 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-03 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-03 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-03 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-03 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-03 and @ui-u7"]
+          },
+          "deps": ["03-04"],
+          "files_to_modify": [
+            "src/publish/display-format.ts",
+            "src/components/WeakestLink.astro",
+            "tests/unit/published-display-format.test.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM for the static markup edit. Compensate with properties in 03-02 and 03-04 plus future built-surface checks. The build-side compatibility event follows the health.publish structured-log convention, has no metric or browser transport, and is asserted from build output. Do not settle copy or edit SpotDetail.astro."
+        },
+        {
+          "id": "03-06",
+          "name": "Built surface proves the counterfactual and every suppression",
+          "criteria": [
+            "The future acceptance run proves both day sections show their own published higher counterfactual integers through the built production surface at 390 px.",
+            "A correction-aware fixture proves the producer carries the formula with delta_q, and a lower-than-score mutation refuses publication instead of rendering a lie.",
+            "Rounding collision and perfect day suppress only the clause; named legacy absence also emits one health.publish.counterfactual_field_missing event without client telemetry.",
+            "The two-theme, reduced-motion, overflow, type, target and token checks pass with the longer sentence and the route adds zero JavaScript."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "La playa explica la mejora sin inventar una cifra",
+          "slice_id": "slice-03",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-see-what-killed-it/a-surfer-lee-cuanto-marcaria-la-playa-sin-el-punto-que-la-tumbo.md",
+          "u8_observation": "En un teléfono puedo leer la mejora de hoy y la de mañana como parte natural de cada llamada. Cuando no hay una mejora honesta que mostrar, no queda una frase vacía ni una cifra repetida.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-03 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-03 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-03 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-03 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-03 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-03 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-03 and @ui-u7"]
+          },
+          "deps": ["03-05"],
+          "files_to_modify": [
+            "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+            "tests/acceptance/f-see-what-killed-it/steps/weakest-link-callout.steps.ts",
+            "tests/acceptance/f-see-what-killed-it/fixtures/slice-03-counterfactual-profiles.json"
+          ],
+          "implementation_notes": "JIT DISTILL ONLY: do not author these test files while mapping. On legal entry, add the six example-based real-I/O behaviors in slice-03-contract.md, record the RED classification and preserve all Slice-01 and Slice-02 evidence. The lower-score mutation must fail the producer before the page oracle, proving no impossible value can ship."
+        }
+      ]
     }
   ],
   "implementation_scope": {
@@ -547,6 +721,17 @@
       "owner": "schema authority and keystone / producer lane",
       "serialized": true,
       "decision_record": "docs/feature/f-see-what-killed-it/deliver/slice-02-contract.md"
+    },
+    {
+      "id": "X8",
+      "what": "Schema-authorized counterfactual score field for the named weakest link",
+      "exact_change": "The domain/schema owner accepts the canonical optional day-summary and SurfaceCall field, proposed as counterfactual_score_q: an integer 0..100 present only for a named weakest_link and strictly greater than score_q. The producer computes it from ScoreResult damages plus the applied correction before CallRow drops damage data.",
+      "why_not_here": "The domain-model P1 list is exhaustive and deliberately has no counterfactual field. This feature may not alter the contract by inference, and build.ts plus region-bundle.ts are serialized producer/schema paths. The full damages record remains Slice-04 scope.",
+      "blocks": ["03-01", "03-02", "03-03", "03-04", "03-05", "03-06"],
+      "blocks_scenario": "every Slice-03 counterfactual behavior; JIT test authoring also waits for Slice-02 to be sealed",
+      "owner": "domain schema authority and keystone / producer lane",
+      "serialized": true,
+      "decision_record": "docs/feature/f-see-what-killed-it/deliver/slice-03-contract.md"
     }
   ],
   "validation": {
