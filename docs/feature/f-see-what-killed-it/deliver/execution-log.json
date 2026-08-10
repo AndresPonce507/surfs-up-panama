@@ -64,6 +64,181 @@
       "s": "EXECUTED",
       "d": "PASS",
       "t": "2026-08-10T12:06:59Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:43:35Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:43:43Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:43:51Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:43:57Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:44:43Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "DIAGNOSTIC_PROBE",
+      "t": "2026-08-10T12:48:22Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: supersedes the 12:48:22Z DIAGNOSTIC_PROBE entry, which was a cwd-resolution probe for the SubagentStop hook investigation and not a re-execution of PREPARE",
+      "t": "2026-08-10T12:52:53Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: b4b697c8da5885efa98e20a5b0165259bf35dc81 on build/f2-deltas",
+      "t": "2026-08-10T12:52:59Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:11:23Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:11:29Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:18:02Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:19:37Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:31:03Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:53:21Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:53:26Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:53:34Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:53:39Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:55:02Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T16:19:17Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T16:19:17Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "FAIL",
+      "t": "2026-08-10T16:19:17Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: .astro frontmatter is not unit-testable without a component-container harness this lane will not introduce (implementation_notes exemption); three-state discriminator and today/manana day-selection verified via pre-existing 01-03/01-04 property tests plus a scratchpad tsx proof against the real resolveWeakestLink/formatWeakestLinkEs",
+      "t": "2026-08-10T16:21:33Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "COMMIT",
+      "s": "SKIPPED",
+      "d": "CHECKPOINT_PENDING: GREEN checkpoint complete (component built, RED_ACCEPTANCE fail-for-right-reason confirmed); COMMIT withheld per step instructions for this user-visible step pending U1-U7 executable UI checks and Vera source-blind examination, and pending the cross-lane SpotDetail.astro mount owned by build/f2-bugfix which this lane's files_to_modify forbids writing",
+      "t": "2026-08-10T16:21:33Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: temporary-mount probe (X2's exact 3-line delta -- import plus WeakestLink mounts in the today/tomorrow fragments) applied to src/components/SpotDetail.astro to prove the component in isolation, the same falsifiability technique 01-08 orders. npm run test:at --tags @feature-f-see-what-killed-it-and-@slice-01 (output to file, exit captured): 10 scenarios passed, 1 failed -- sole failure is the in-memory scenario blocked on X1/build.ts (unrelated to this component, same gap since 01-02). npm run build: exit 0, 83 pages, page-weight gate under every ceiling. dist/ inspected: 0 files contain data-field=weakest-link, matching the real committed surface which carries the field on zero rows today (X1 unlanded) -- honest absent-field silence holds at full scale, no undefined/NaN leaked. Probe reverted: git diff -- src/components/SpotDetail.astro empty, git status clean.",
+      "t": "2026-08-10T17:39:48Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "COMMIT",
+      "s": "SKIPPED",
+      "d": "CHECKPOINT_PENDING: this session re-verified GREEN via a reverted temporary-mount probe (10/11 slice-01 scenarios, only X1-blocked scenario 5 red) and npm run build/dist inspection; the roadmap COMMIT gate for this visible step (des-verify-ui U1-U7 + des-record-examine Vera verdict) cannot be satisfied because both instruments render through src/components/SpotDetail.astro, X2, a forbidden write lane owned by build/f2-bugfix, not yet landed. Git-committing the GREEN checkpoint (WeakestLink.astro) as allowed by the CHECKPOINT_PENDING prefix; roadmap COMMIT stays pending the BUGFIX lane's three-line mount.",
+      "t": "2026-08-10T17:40:02Z"
     }
   ]
 }
