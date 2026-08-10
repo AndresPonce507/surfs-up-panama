@@ -456,6 +456,41 @@
       "s": "EXECUTED",
       "d": "PASS",
       "t": "2026-08-10T20:13:50Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: inherited truth, step contract, evidence, and non-visual rationale inspected; current emitter and active property located.",
+      "t": "2026-08-10T20:20:14Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: named pre-authored wind-rotation property was already active and green (1 scenario, 13 steps); no activation marker was present.",
+      "t": "2026-08-10T20:20:14Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: added the mandatory 100-run fast-check emitter law; before GREEN it failed because the deterministic correction serializer did not exist.",
+      "t": "2026-08-10T20:20:14Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS_SCOPE: focused emitter test 7/7, learning regression 41/41, named acceptance 1/1 (13 steps), and typecheck pass. Non-visual stored-prefix byte law; no rendered surface.",
+      "t": "2026-08-10T20:20:14Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: deterministic correction emission committed as 5c421fe with Step-ID 01-15. Test budget: 1 behavior x 2 = 2 unit tests; one 100-run property added. Scoped checks pass. Full unit baseline remains 2 unrelated tsx IPC EPERM failures before application behavior (production-path end-to-end and staleness stamp build).",
+      "t": "2026-08-10T20:20:27Z"
     }
   ]
 }
