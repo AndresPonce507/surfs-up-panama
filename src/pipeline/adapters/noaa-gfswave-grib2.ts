@@ -1,0 +1,216 @@
+// NOAA GFS-Wave GRIB2 anti-corruption adapter. It consumes the public
+// grib_filter response as received and emits the post-ACL ForecastSource port
+// language: UTC run/valid timestamps, metres, seconds, degrees, and a
+// land-mask decision already made. The supported templates are intentionally
+// narrow: this adapter proves the captured NOAA P2 shape, rather than
+// pretending every GRIB2 product has the same packing.
+
+import type { MemberHour, MemberSeries } from '../ports';
+
+const GRIB_MAGIC = 'GRIB';
+const GRIB_END = '7777';
+const GRIB2_EDITION = 2;
+const NOAA_GFSWAVE_MEMBER = 'ncep_gfswave016';
+
+type WaveField = 'height' | 'period' | 'direction';
+
+type DecodedField = {
+  readonly field: WaveField;
+  readonly run_ts: string;
+  readonly valid_ts: string;
+  readonly value: number;
+};
+
+type DecodedHour = {
+  readonly run_ts: string;
+  readonly hour: MemberHour;
+};
+
+type SectionIndex = ReadonlyMap<number, number>;
+type IndexedMessage = { readonly bytes: Uint8Array; readonly sections: SectionIndex };
+
+/**
+ * Decodes the real NOAA gfswave grib_filter response used by the independent
+ * source. One response carries HTSGW, PERPW and DIRPW as separate GRIB2
+ * messages. A first unmasked value from each matching message becomes one
+ * normalized wave hour; the source request already limits its bbox to the
+ * supported coast.
+ */
+export function parseGfswaveGrib2(bytes: Uint8Array): MemberSeries[] {
+  const fields = readGribMessages(bytes)
+    .map(decodeWaveField)
+    .flatMap((field) => field === null ? [] : [field]);
+  const decodedHours = combineWaveFields(fields);
+  return decodedHours.length === 0
+    ? []
+    : [{
+      source: NOAA_GFSWAVE_MEMBER,
+      run_ts: decodedHours[0]!.run_ts,
+      hours: decodedHours.map(({ hour }) => hour),
+    }];
+}
+
+function readGribMessages(bytes: Uint8Array): IndexedMessage[] {
+  const messages: IndexedMessage[] = [];
+  let offset = 0;
+  while (offset < bytes.length) {
+    assertMagic(bytes, offset);
+    assertEdition(bytes, offset);
+    const messageLength = readLength(bytes, offset);
+    const messageEnd = offset + messageLength;
+    if (messageEnd > bytes.length || textAt(bytes, messageEnd - 4, 4) !== GRIB_END) {
+      throw new Error('NOAA GRIB2 response has an invalid declared message length');
+    }
+    messages.push({ bytes, sections: indexSections(bytes, offset + 16, messageEnd - 4) });
+    offset = messageEnd;
+  }
+  return messages;
+}
+
+function assertMagic(bytes: Uint8Array, offset: number): void {
+  if (textAt(bytes, offset, 4) !== GRIB_MAGIC) throw new Error('NOAA response is not a GRIB2 message');
+}
+
+function assertEdition(bytes: Uint8Array, offset: number): void {
+  if (bytes[offset + 7] !== GRIB2_EDITION) {
+    throw new Error(`NOAA response has unsupported GRIB edition ${String(bytes[offset + 7])}`);
+  }
+}
+
+function readLength(bytes: Uint8Array, offset: number): number {
+  const length = Number(viewOf(bytes).getBigUint64(offset + 8));
+  if (!Number.isSafeInteger(length) || length < 20) throw new Error('NOAA GRIB2 response has an invalid message length');
+  return length;
+}
+
+function indexSections(bytes: Uint8Array, start: number, end: number): SectionIndex {
+  const view = viewOf(bytes);
+  const sections = new Map<number, number>();
+  let offset = start;
+  while (offset < end) {
+    const length = view.getUint32(offset);
+    if (length < 5 || offset + length > end) throw new Error('NOAA GRIB2 response has an invalid section length');
+    sections.set(bytes[offset + 4]!, offset);
+    offset += length;
+  }
+  for (const required of [1, 4, 5, 6, 7]) {
+    if (!sections.has(required)) throw new Error(`NOAA GRIB2 response is missing section ${required}`);
+  }
+  return sections;
+}
+
+function decodeWaveField(message: IndexedMessage): DecodedField | null {
+  const { bytes, sections } = message;
+  const section4 = requiredSection(sections, 4);
+  const field = waveFieldAt(bytes, section4);
+  if (field === null) return null;
+  const run_ts = runTimestamp(bytes, requiredSection(sections, 1));
+  const valid_ts = validTimestamp(bytes, run_ts, section4);
+  const value = firstPackedValue(bytes, requiredSection(sections, 5), requiredSection(sections, 6), requiredSection(sections, 7));
+  return { field, run_ts, valid_ts, value };
+}
+
+function waveFieldAt(bytes: Uint8Array, section4: number): WaveField | null {
+  const category = bytes[section4 + 9];
+  const parameter = bytes[section4 + 10];
+  if (category !== 0) return null;
+  if (parameter === 3) return 'height';
+  if (parameter === 11) return 'period';
+  if (parameter === 10) return 'direction';
+  return null;
+}
+
+function requiredSection(sections: SectionIndex, number: number): number {
+  const section = sections.get(number);
+  if (section === undefined) throw new Error(`NOAA GRIB2 response is missing section ${number}`);
+  return section;
+}
+
+function runTimestamp(bytes: Uint8Array, section1: number): string {
+  const view = viewOf(bytes);
+  const year = view.getUint16(section1 + 12);
+  const month = bytes[section1 + 14]! - 1;
+  const day = bytes[section1 + 15]!;
+  const hour = bytes[section1 + 16]!;
+  const minute = bytes[section1 + 17]!;
+  const second = bytes[section1 + 18]!;
+  return new Date(Date.UTC(year, month, day, hour, minute, second)).toISOString();
+}
+
+function validTimestamp(bytes: Uint8Array, run_ts: string, section4: number): string {
+  const unit = bytes[section4 + 17]!;
+  const amount = viewOf(bytes).getUint32(section4 + 18);
+  return new Date(Date.parse(run_ts) + amount * forecastUnitMilliseconds(unit)).toISOString();
+}
+
+function forecastUnitMilliseconds(unit: number): number {
+  if (unit === 0) return 60_000;
+  if (unit === 1) return 3_600_000;
+  if (unit === 2) return 86_400_000;
+  throw new Error(`NOAA GRIB2 response uses unsupported forecast-time unit ${unit}`);
+}
+
+function firstPackedValue(bytes: Uint8Array, section5: number, section6: number, section7: number): number {
+  const view = viewOf(bytes);
+  if (view.getUint16(section5 + 9) !== 0) throw new Error('NOAA GRIB2 response uses unsupported data representation');
+  const bitmapIndicator = bytes[section6 + 5]!;
+  if (bitmapIndicator !== 0 && bitmapIndicator !== 255) throw new Error('NOAA GRIB2 response uses unsupported bitmap');
+  if (bitmapIndicator === 0 && !hasPresentPoint(bytes, section6)) throw new Error('NOAA GRIB2 response has no unmasked sea point');
+  const reference = view.getFloat32(section5 + 11);
+  const binaryScale = signed16(view.getUint16(section5 + 15));
+  const decimalScale = signed16(view.getUint16(section5 + 17));
+  const bitsPerValue = bytes[section5 + 19]!;
+  const packed = readBits(bytes, section7 + 5, bitsPerValue);
+  return (reference + packed * 2 ** binaryScale) / 10 ** decimalScale;
+}
+
+function hasPresentPoint(bytes: Uint8Array, section6: number): boolean {
+  const sectionLength = viewOf(bytes).getUint32(section6);
+  for (let offset = section6 + 6; offset < section6 + sectionLength; offset += 1) {
+    if (bytes[offset] !== 0) return true;
+  }
+  return false;
+}
+
+function readBits(bytes: Uint8Array, start: number, width: number): number {
+  let value = 0;
+  for (let bit = 0; bit < width; bit += 1) {
+    const bitOffset = start * 8 + bit;
+    const byte = bytes[Math.floor(bitOffset / 8)]!;
+    value = value * 2 + ((byte >> (7 - (bitOffset % 8))) & 1);
+  }
+  return value;
+}
+
+function combineWaveFields(fields: readonly DecodedField[]): DecodedHour[] {
+  const grouped = new Map<string, Partial<Record<WaveField, DecodedField>>>();
+  for (const field of fields) {
+    const key = `${field.run_ts}|${field.valid_ts}`;
+    grouped.set(key, { ...grouped.get(key), [field.field]: field });
+  }
+  return [...grouped.values()]
+    .flatMap((entry) => entry.height !== undefined && entry.period !== undefined && entry.direction !== undefined
+      ? [{
+        run_ts: entry.height.run_ts,
+        hour: {
+          valid_ts: entry.height.valid_ts,
+          swell: { h_m: entry.height.value, t_s: entry.period.value, dir_deg: entry.direction.value },
+          swell2: null,
+          land_masked: false,
+        },
+      }]
+      : [])
+    .sort((left, right) => left.hour.valid_ts.localeCompare(right.hour.valid_ts));
+}
+
+function signed16(value: number): number {
+  return value & 0x8000 ? value - 0x1_0000 : value;
+}
+
+function textAt(bytes: Uint8Array, offset: number, length: number): string {
+  return new TextDecoder().decode(bytes.slice(offset, offset + length));
+}
+
+function viewOf(bytes: Uint8Array): DataView {
+  return new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+}
