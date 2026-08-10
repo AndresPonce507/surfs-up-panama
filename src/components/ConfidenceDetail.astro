@@ -36,6 +36,23 @@
 // No aria-label: the visible text already says the full phrase, and
 // <summary>'s native disclosure-triangle semantics already announce the
 // expand/collapse state, so adding one would double-announce both.
+//
+// Context-agnostic by construction (step 01-09): this component carries no
+// <style> block and no assumption about an ancestor's layout, so it renders
+// identically correct inside a ranked row (ol.ranked li) and inside a
+// spot-page day section (section[data-day]). The ranked row's own
+// grid-column placement (Confidence.astro's third-line decision) lives
+// entirely in components.css, scoped to `ol.ranked li > details.confidence`
+// -- never here -- so a day section with no grid ancestor simply flows in
+// normal document order. Each mounted instance is driven only by its own
+// `level`/`reason` props, so two instances never share state: today's
+// section and tomorrow's section (or two ranked rows) each show their own
+// word and their own reason, never one copied into the other. Verified with
+// an isolated build harness mounting distinct level/reason instances inside
+// section[data-day="today"], section[data-day="tomorrow"] and ol.ranked li
+// in the same page: each block's compiled HTML carries only its own values.
+// Do not add row-specific CSS (grid-column, positioning) inside this file or
+// this guarantee breaks for the day-section case.
 import { CONFIDENCE_LEVEL_WORD_ES, type ConfidenceLevel } from '../scoring/confidence';
 
 interface Props {
