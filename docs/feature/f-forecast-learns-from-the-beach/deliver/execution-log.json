@@ -806,6 +806,41 @@
       "s": "EXECUTED",
       "d": "{\"commit\":\"a1b5277\",\"message\":\"feat(learning): collapse device-day reports\",\"status\":\"green\"}",
       "t": "2026-08-10T22:01:18Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "04-02 begins after 04-01. Same-day winsorization is non-visual and must follow device-day collapse but precede every later weighting stage.",
+      "t": "2026-08-10T22:02:17Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm run test:at -- --name A wild claim on a well-observed morning is pulled to the days fence, not believed\",\"exit\":1,\"classification\":\"expected behavioral RED\",\"failure\":\"wild movement 0.04427m exceeded 1.25x fenced movement 0.02237m\"}",
+      "t": "2026-08-10T22:02:21Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm test -- --run tests/unit/learning-weight-laws.test.ts\",\"exit\":1,\"classification\":\"expected unit RED\",\"failure\":\"winsorizeSpotDayResiduals was not implemented\"}",
+      "t": "2026-08-10T22:02:45Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "{\"focused_acceptance\":\"1 scenario, 21 steps PASS\",\"learning_units\":\"10 files, 66 tests PASS\",\"typecheck\":\"PASS\",\"falsification\":\"bypassing winsorizeSpotDayResiduals restored wild movement 0.04427m over the 0.02237m fence bound; restored fencing\",\"full_learning_acceptance\":\"57 scenarios: 31 passed, 14 skipped, 12 failures: 7 blocked 02-03 builder seam and 5 later slice-04 behaviors\",\"non_visual_rationale\":\"the fence bounds stored residuals only; no rendered surface\"}",
+      "t": "2026-08-10T22:04:01Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "{\"commit\":\"4ef8df6\",\"message\":\"feat(learning): fence wild same-day residuals\",\"status\":\"green\"}",
+      "t": "2026-08-10T22:04:05Z"
     }
   ]
 }
