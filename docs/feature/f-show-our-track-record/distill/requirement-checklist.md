@@ -10,9 +10,12 @@ requirement. Category from the closed set {ui, e2e, nfr, security, validation, b
 This file is the SSOT of what must be covered. Coverage markers: a test covers `Rn` iff it
 carries a Gherkin `@covers-Rn` tag or a `// covers: Rn` comment inside the test body. Rows whose
 slice has not entered DISTILL yet are expected-uncovered (per-slice JIT); they are visible here
-from day one so no requirement is silently dropped. NO test exists for this feature yet; that is
-the correct JIT state, not a gap. Rows for slices 03-05 sit behind hard data/infra blocks named
-in the feature-delta; no test may satisfy them by fabricating report data into a public surface.
+from day one so no requirement is silently dropped. slice-01 entered DISTILL 2026-08-09 and its
+rows are covered below; every other row is still expected-uncovered. Rows for slices 03-05 sit
+behind hard data/infra blocks named in the feature-delta; no test may satisfy them by fabricating
+report data into a public surface. Three rows were deliberately REFUSED rather than covered
+weakly (R3, R5, R33), each with its reason recorded in the coverage table and in
+`red-classification.md`.
 
 | # | Requirement | Category |
 |---|---|---|
@@ -56,6 +59,27 @@ in the feature-delta; no test may satisfy them by fabricating report data into a
 
 ## Current DISTILL coverage
 
-| Current requirement | Active acceptance evidence | Status |
+Updated 2026-08-09 at slice-01 JIT DISTILL. The acceptance file is
+`tests/acceptance/f-show-our-track-record/honest-track-record-box.feature` (8 scenarios, all
+`@slice-01`, all RED as `MISSING_FUNCTIONALITY`); the run is recorded in `red-classification.md`.
+
+| Requirement | Active acceptance evidence | Status |
 |---|---|---|
-| All rows R1 to R37 | none: no `.feature` file, step definition, scaffold or test module exists for this feature | Expected-uncovered under the JIT rule (HANDOFF §1). slice-01 rows R1-R9 and the applicable U-rows become coverable at slice-01 JIT DISTILL, gated on the keystone seam (feature-delta Pre-requisite 2) and the header-copy answer (Pre-requisite 1a, fallback declared). slice-02 rows R10-R20 are coverable immediately after, zero AWS, fixture-fed. Rows R21-R30 sit behind the HARD blocks: deployed write path with real reports (Pre-requisite 5), the loud-failure amendment (7), the semantics pins (4), the export-fn ownership gap (8), the claim copy (1b), and months of organic data for R25-R26. No fixture may stand in for real data on a public surface: fixtures prove arithmetic, never the honesty state of a shipped page. |
+| R1 | Scenarios 1 and 2: the built page carries the section 10 sentence word for word with its own two integers, positioned after the tomorrow forecast and before the report call to action | COVERED (`@covers-R1`), RED |
+| R2 | Scenarios 2 and 4: every emitted spot route carries the box, and inside the box the only digits are `0` and `30` with no percentage, margin, metre figure or claim wording. `claim_ok false` and `headline null` are observed as their user-visible consequence: no claim renders anywhere in the box | COVERED (`@covers-R2`), RED. The payload-field half is not asserted; see R5 |
+| R3 | none | **REFUSED, expected-uncovered.** Separating computed from hardcoded needs input variation and the only input is a report store that does not exist. Any structural proxy is green with zero production code today and green-and-wrong the day the store lands. Falsifiability arrives with slice-03 |
+| R4 | Scenarios 3 and 7: the sentence is present in the bytes served over HTTP with no browser and no JS execution, and the emitted document ships no `<astro-island>` and no `client:` directive | COVERED (`@covers-R4`), RED |
+| R5 | none | **REFUSED, expected-uncovered.** R5 is entirely about the P5 payload field, and `spot_detail` reaches nothing today (`src/pipeline/build.ts:140` emits `{name}` only; the page reads `data/published-surface.json`). The settled section 14 wireframe renders only the sentence, so there is no rendered `"0 / 30"` element either. Both halves belong with the wire, in slice-03 |
+| R6 | Partially exercised by scenarios 1, 2 and 4 (the rendered threshold is pinned at exactly 30) | NOT CLAIMED. The "one exported code home consumed by the P5 producer" half is source structure with no observable at a production entry point, and its named consumer is the wire this lane refuses to invent |
+| R7 | Scenarios 4 and 5: verbatim section 10 string, no em dash, no unreplaced placeholder token, no English copy, no technical text, no percentage or margin | COVERED (`@covers-R7`), RED |
+| R8 | Scenario 1, `@walking_skeleton`: isolated copy of the repository, real `npm run build` with a credential-free environment, `astro preview` over local HTTP, Chromium at 390 px. Zero AWS, zero network | COVERED (`@covers-R8`), RED |
+| R9 | Scenario 7: no island and no hydration directive in the emitted spot document. The byte-ceiling half is enforced in production by the page-weight integration inside `npm run build`, which a build cannot finish past | COVERED (`@covers-R9`), RED (island half asserted, ceiling half enforced by the build) |
+| R10 to R20 | none | **WITHHELD, expected-uncovered.** Buildable today with zero AWS and zero data, but slice-02 is a separate Slice Plan row and this was a slice-01-only dispatch. Includes the k >= 5 refusal law, the n >= 10 law, the `se_gate` floor law, the nonzero trust-gate demonstration, aggregate additivity, the wind exclusion, the recompute test and the deliberate-break falsifiability proof |
+| R21 to R30 | none | Expected-uncovered behind the HARD blocks: a deployed write path with real reports (Pre-requisite 5), the loud-failure amendment (7), the semantics pins (4), the export-fn ownership gap (8), the claim copy (1b), and months of organic data for R25-R26. No fixture may stand in for real data on a public surface |
+| R31 (U1) | Scenario 6, both themes: box text contrast measured against the box's own resolved backdrop, threshold 4.5:1. The contrast function was checked against the canonical WCAG values first | COVERED (`@covers-R31`), RED |
+| R32 (U2) | Scenario 6: document and box overflow at 390 px | COVERED (`@covers-R32`), RED |
+| R33 (U3) | none | **N/A, recorded not fabricated.** The row itself says the slice-01 box is static and this should record the fact rather than invent a target check. Nothing in the day-one box is tappable |
+| R34 (U4) | Scenario 6, `movimiento "reducido"` example: no element in the box animates or transitions | COVERED (`@covers-R34`), RED |
+| R35 (U5) | Scenario 6: the box carries the shipped `.state-empty` dashed treatment so it reads as "not yet", and its text is not the danger colour so an honest counter never reads as an error | COVERED (`@covers-R35`), RED |
+| R36 (U6) | Scenario 6: every element carrying the counter digits resolves `tabular-nums`, and nothing in the box truncates with an ellipsis at 390 px | COVERED (`@covers-R36`), RED |
+| R37 (U7) | Scenario 6: the box is located by the shipped `.scorecard` / `.state-empty` recipes, and the shipped static gate `scripts/check-ui-quality.mjs` still exits 0 with the box on the page | COVERED (`@covers-R37`), RED |
