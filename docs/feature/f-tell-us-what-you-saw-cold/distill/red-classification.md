@@ -161,3 +161,53 @@ note is the correction.
    not invent product copy; it tightens to verbatim once the string is settled.
 2. The §14 screen-one note "Nota: aquí no te mostramos el pronóstico. Primero lo tuyo, después
    el nuestro." — whether it is shipping copy is unanswered; no scenario asserts it either way.
+
+## Slice-02 observed RED classification (2026-08-10, JIT DISTILL verification run)
+
+Slice-02 is non-visual. Its source-blind driving port is the production-owned local infrastructure
+job (`npm run ci:local -- --job=infra`), not AWS and not a mock. The expectation charter is
+`docs/product/expectations/f-tell-us-what-you-saw-cold/nobody-can-deploy-a-write-path-that-can-run-up-a-bill-before-deploy-ci-rejects-a-write-function.md`.
+
+Binding check:
+
+```
+npm run test:at -- --dry-run --tags "@feature-f-tell-us-what-you-saw-cold and @slice-02"
+```
+
+selected exactly 3 Slice-02 scenarios and 46 bound steps, with no undefined or ambiguous step.
+
+Gate run:
+
+```
+npm run test:at -- --tags "@feature-f-tell-us-what-you-saw-cold and @slice-02"
+```
+
+Real exit code: **1**. Two scenarios failed and one passed. The real-repository `infra` job was
+green, including its current production guardrail test and credential-free synth; the failures are
+only the missing write-path behavior asserted at the terminal output.
+
+| Scenario | Observed result | Classification |
+|---|---|---|
+| The local gate names every protection that keeps a write flood bounded | `npm run ci:local -- --job=infra` exited 0 but its output omitted `exact site origin`, then had no report 2 / mint 1 / push 1 / photo-presign 1 limits, fixed provisioned 25/25 store, four write breakers, device-only 20/10/20 limits, or corrected sizing-source statement. The assertion failed at the output oracle after the real production driving command completed. | MISSING_FUNCTIONALITY |
+| A gate that cannot inspect declarations says so instead of claiming the write path is safe | A temporary copied `infra/` tree with `guardrail-declarations.ts` removed exited non-zero and named `cannot inspect`, the missing file and restoration. The test leaves the checkout unchanged. This proves the existing generic unreadable-declaration guard, not the missing write-path policy. | ALREADY_SATISFIED (regression guard) |
+| Every one-value write safeguard regression is rejected with a useful repair | Eight controlled declaration copies each changed one value. They reached the local-CI composition, which inspected the old declarations, then stopped at the intentionally absent fixture `node_modules` before the expected write-path guard could name the altered value. The acceptance oracle failed because none of the outputs named its changed safeguard, a required value and restoration. This is the same contained-root pattern already used by F-BILL: the production write guard must reject the drift before tests or synth are needed. | MISSING_FUNCTIONALITY |
+
+No scenario is BROKEN. Cucumber loaded the new TypeScript steps through the normal test runner;
+the RED assertions ran after the production local-CI composition and did not depend on AWS,
+credentials, deployment state or an absent import. The controlled fixture deliberately omits
+node_modules so a correct preflight guard must reject the altered declaration before Vitest or CDK
+synth is reached. The next DELIVER agent must preserve all eight one-value bites and record each
+observed failure and restoration here. The already-green unreadable-declaration case must remain
+green.
+
+### Slice-02 boundary and later-slice readiness
+
+- Shared guardrail files are serialized with F-BILL: `infra/lib/guardrail-declarations.ts`,
+  `infra/guardrail-evaluator.mjs`, `infra/test/guardrails.test.ts` and the local-CI infra phase.
+  Integrate one branch at a time.
+- Slice-02 does not create, deploy or claim live evidence for a write stack. The account concurrency
+  quota, write-stack owner and spot-index producer remain blockers for Slice-03 deployment as
+  recorded in feature-delta Pre-requisites 2, 5 and 6.
+- Slice-04 and Slice-05 stay absent under the JIT rule. Slice-04 additionally needs the Slice-03
+  write response and logged-call lookup; Slice-05 needs that same submission path. No acceptance
+  contract for either later slice was authored or changed here.
