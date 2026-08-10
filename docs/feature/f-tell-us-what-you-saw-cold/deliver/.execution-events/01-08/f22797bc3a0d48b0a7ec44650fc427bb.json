@@ -1,0 +1,1 @@
+{"d": "PASS: fast-check marker-detector and transitive import-boundary tests were authored and observed RED with assertion-class failures because the gate module was missing.", "p": "RED_UNIT", "s": "EXECUTED", "sid": "01-08", "t": "2026-08-10T20:04:19Z"}

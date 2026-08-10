@@ -1,0 +1,1 @@
+{"d": "PASS: 6112a4d commits only the scoped anti-leak CLI, future dependency-cruiser rule, default local-CI leak job, fast-check unit coverage, and isolated DES evidence. Package follow-up: dependency-cruiser is intentionally not installed or wired yet; the native recursive walk enforces the rule now.", "p": "COMMIT", "s": "EXECUTED", "sid": "01-08", "t": "2026-08-10T20:04:47Z"}

@@ -33,6 +33,14 @@ Back from the confirmation, reopen the report screen, reload mid-flow, kill the 
 Mandar. Nothing you do should ever surface a forecast before a label is saved, and nothing should
 ever return you to an editable form for a report already saved.
 
+## U8 restraint observation (verbatim from the roadmap quality contract, step 01-03)
+
+En la pantalla del reporte de Playa Venao respondo las tres preguntas con una mano, toco Mandar y la pantalla cambia a la confirmación guardada: sin puntaje, sin pronóstico, sin camino de vuelta al formulario. Se ve terminada a 390 px en tema claro y oscuro, y con movimiento reducido activado nada se anima.
+
+## U8 restraint observation (verbatim from the roadmap quality contract, step 01-04)
+
+Desde la confirmación, el botón atrás me deja en la página del spot, nunca en un formulario editable; al abrir el reporte otra vez todo empieza en blanco, y contestar de nuevo guarda un segundo reporte aparte del primero.
+
 ## Expected observations (oracle)
 - La pantalla uno muestra exactamente tres preguntas en español de a pie: ¿Qué tan grande? con
   siete opciones de Plano a Doble o más, ¿El viento? con Limpio, Picado y Destrozado, y ¿Cómo
@@ -71,3 +79,5 @@ anywhere, that is a leak, not progress.
 ## Session log (append-only)
 | date | examiner | verdict | observations |
 |------|----------|---------|--------------|
+| 2026-08-10 | Vera (nw-user-examiner) | FAIL | At 390px, light/dark/reduced-motion all rendered clean: three questions, no forecast leak, storage-fail message before Mandar enables, offline flow identical, 48px targets, no horizontal scroll. Submit stores durably (IndexedDB `entries` row confirmed: waist_chest/clean/good) then navigates to `/spots/playa-venao/reportado/` showing "Guardado. Cuando vuelva la señal lo mandamos y te decimos cómo nos fue." verbatim. BUT: reloading that confirmation address (explicitly instructed check) renders a near-blank page - no heading, no "Guardado" text, no error, only a "Playa Venao" link - reproducible on reload and on a fresh direct navigation to the same URL. Root cause visible from the public surface: `curl` of `/spots/playa-venao/reportado/` shows zero `<script>` tags in the served document, so the confirmation only ever renders when arrived at via the in-app transition; any cold load of the URL the product itself navigated to is permanently blank. Breaks "la confirmación se lee tranquila" / "se ve terminada" for any user whose reload, tab restore, or share of that link lands cold. |
+| 2026-08-10 | Vera (nw-user-examiner) | PASS | At 390px viewport, light theme, dark theme (--bg: #10141a), reduced-motion: all render identical. Three questions visible (¿Qué tan grande?, ¿El viento?, ¿Cómo estuvo?) with 7, 3, and 4 options respectively. No forecast, no score, no size-band, no wind-reading visible before Mandar. Radio targets 44px minimum; no horizontal scroll. Form fills cleanly (waist-chest, choppy, good selected). Mandar navigates to /spots/playa-venao/reportado/ showing "Reporte guardado" heading and "Guardado. Cuando vuelva la señal lo mandamos y te decimos cómo nos fue." verbatim (matches charter requirement word-for-word). Back button from confirmation lands on /spots/playa-venao/ (spot page, not form). Reopening report via spot-page button shows blank form (zero checked radios) with all original options intact; form is reusable and independent. Confirmation page now renders on reload—/reportado/ URL shows script tag and content renders after reload, unlike previous session when blank. Spanish copy is natural, no technical text, no em-dashes, no raw JSON/timestamps. U8: screen appears finished, no placeholder blocks, no moving elements with reduced-motion enabled. The 01-04 scenario (back lands on spot page, new visits start blank) is fully satisfied. |

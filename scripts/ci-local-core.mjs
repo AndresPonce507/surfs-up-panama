@@ -78,6 +78,18 @@ const JOBS = [
     steps: [['browser acceptance', 'npm', ['run', 'test:e2e']]],
   },
   {
+    // It needs a real emitted site, so this is serial with the page-weight
+    // build and uses its own output directory.
+    name: 'leak',
+    default: true,
+    serial: true,
+    needs: ['npm'],
+    steps: [
+      ['build + report leak', 'npm', ['run', 'build', '--', '--outDir', '.ci-local-logs/leak-dist']],
+      ['report leak isolation', 'node', ['scripts/check-report-leak.mjs', '--dist', '.ci-local-logs/leak-dist']],
+    ],
+  },
+  {
     name: 'infra',
     default: true,
   },
