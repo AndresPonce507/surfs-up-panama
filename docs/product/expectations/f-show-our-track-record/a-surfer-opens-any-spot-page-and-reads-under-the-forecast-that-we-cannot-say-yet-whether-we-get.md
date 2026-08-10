@@ -57,10 +57,7 @@ this site can show right now.
 
 ## Expected observations (oracle)
 - U8 (lectura normal, 390 px): "Abro la página de mi playa a 390 px y, justo debajo del pronóstico de mañana y antes del botón para reportar, leo un recuadro tranquilo que dice que todavía no pueden decirme si aciertan aquí y que van 0 reportes de los 30 que hacen falta. No hay ningún porcentaje, ningún margen y ninguna cifra de acierto en ninguna parte de la página."
-- U8 (temas y movimiento reducido): "Con el teléfono en tema claro y en tema oscuro, el recuadro
-  se lee cómodo a 390 px: nada se sale de la pantalla, ningún texto queda cortado, los números se
-  alinean parejos y el recuadro se ve como un todavía no, no como un error. Con el movimiento
-  reducido activado, nada dentro del recuadro se mueve."
+- U8 (temas y movimiento reducido): "Con el teléfono en tema claro y en tema oscuro, el recuadro se lee cómodo a 390 px: nada se sale de la pantalla, ningún texto queda cortado, los números se alinean parejos y el recuadro se ve como un todavía no, no como un error. Con el movimiento reducido activado, nada dentro del recuadro se mueve."
 - U8 (recorrido por varias playas): "Recorro el sitio en el teléfono: en cualquier playa que abra,
   el recuadro dice siempre lo mismo, que todavía no pueden decirme si aciertan ahí y que van 0
   reportes de los 30 que hacen falta, y en ninguna parte aparece un porcentaje ni una cifra de
@@ -98,3 +95,4 @@ confirm the honest zero-state, not to anticipate what a future claim will look l
 ## Session log (append-only)
 | date | examiner | verdict | observations |
 |------|----------|---------|--------------|
+| 2026-08-10 | Vera | PASS | Local built surface at 390 × 844: Playa Guánico, Mariatos, and Playa Cambutal each placed the same sentence directly below Mañana and above ¿ESTUVISTE? CUÉNTANOS: “Todavía no podemos decirte si acertamos aquí. Van 0 reportes de los 30 que hacen falta.” In light and dark there was no horizontal overflow or clipping; the 0 and 30 were clear and aligned, and the subdued dashed panel read as a calm not-yet note, not an error. Page-wide visible text contained no hit rate, percentage, accuracy margin, or metres-off claim. With prefers-reduced-motion: reduce on all three pages, the panel had no animation or transition and its position remained unchanged over 750 ms. |
