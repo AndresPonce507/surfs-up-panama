@@ -1,9 +1,9 @@
 // Property laws for decideSubscribe (07-write-path.md §8.1, §10). Slice-01
-// step 01-01 covers only the upsert-by-identity walking skeleton (R10, R11):
-// the endpoint-allowlist reject (R12), the daily-quota reject (R13), and
-// unsubscribe (R14) are later slice-01 steps and are not exercised here.
-// House style: fast-check properties over the declared driving-port
-// signature, per tests/unit/scoring-laws.test.ts.
+// step 01-01 covers the upsert-by-identity walking skeleton (R10, R11).
+// Step 01-02 (below) adds the endpoint-allowlist reject (R12). The
+// daily-quota reject (R13) and unsubscribe (R14) are later slice-01 steps
+// and are not exercised here. House style: fast-check properties over the
+// declared driving-port signature, per tests/unit/scoring-laws.test.ts.
 
 import assert from 'node:assert/strict';
 
@@ -201,6 +201,121 @@ describe('decideSubscribe', () => {
           'Identical declared inputs must produce a bit-identical decision so the call never depends on a clock, environment, or filesystem read.',
         );
       }),
+      { numRuns: 100 },
+    );
+  });
+});
+
+// ------------------------------------------------ endpoint-allowlist (R12)
+//
+// The law is host membership (implementation notes, step 01-02): any
+// endpoint whose host is absent from the caller-declared `allowlist` is
+// refused, loudly, with nothing stored; any endpoint whose host is on it is
+// not refused for that reason. `request.allowlist` is a declared input, so
+// these properties generate their OWN synthetic allowlists rather than
+// importing the shipped production list (push-hosts.ts) -- the acceptance
+// suite already proves the production list is wired in; what these
+// properties prove is that the matching rule itself cannot be fooled.
+
+const dnsLabel = fc
+  .array(fc.constantFrom(...'abcdefghijklmnopqrstuvwxyz0123456789'.split('')), { minLength: 3, maxLength: 10 })
+  .map((chars) => chars.join(''));
+
+/** A syntactically valid two-label host under the IANA-reserved "test" TLD
+ *  (RFC 6761), so it can never collide with a real vendor host. */
+const knownHost = fc.tuple(dnsLabel, dnsLabel).map(([service, vendor]) => `${service}-${vendor}.test`);
+
+function requestWithEndpoint(endpoint: string, allowlist: string[]): SubscribeRequest {
+  return {
+    action: 'subscribe',
+    spot_id: 'playa-venao',
+    subscription: { endpoint, keys: { p256dh: 'clave-publica', auth: 'clave-auth' } },
+    lang: 'es',
+    device_id: 'dispositivo-de-prueba',
+    now: '2026-08-10T18:00:00-05:00',
+    existing: [],
+    writes_today: 0,
+    allowlist,
+  };
+}
+
+describe('decideSubscribe -- endpoint-allowlist reject (R12)', () => {
+  // covers: R12 (accept branch)
+  it('never refuses a host that matches its declared allowlist: an exact entry accepts that exact host and an uppercase rendering of it; a domain-suffix entry (leading ".") also accepts the bare suffix and a genuine subdomain of it', () => {
+    fc.assert(
+      fc.property(
+        knownHost,
+        dnsLabel,
+        fc.constantFrom('exact-lower', 'exact-upper', 'suffix-root', 'suffix-subdomain'),
+        dnsLabel,
+        (base, token, shape, subLabel) => {
+          const usesSuffixEntry = shape === 'suffix-root' || shape === 'suffix-subdomain';
+          const entry = usesSuffixEntry ? `.${base}` : base;
+          const host =
+            shape === 'exact-upper'
+              ? base.toUpperCase()
+              : shape === 'suffix-subdomain'
+                ? `${subLabel}.${base}`
+                : base;
+          const endpoint = `https://${host}/push/${token}`;
+          const decision = decideSubscribe(requestWithEndpoint(endpoint, [entry]));
+          assert.equal(
+            decision.outcome,
+            'subscribed',
+            `a "${shape}" rendering of an allowlisted host must be accepted (entry: ${entry}, host: ${host})`,
+          );
+          assert.equal(decision.rejection, null, `an accepted destination must carry no rejection (shape: ${shape})`);
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  // covers: R12 (reject branch) -- the point of this step
+  it('rejects loudly, storing nothing, any endpoint whose host is not on the allowlist -- including a suffix attack, a look-alike subdomain, a userinfo trick, an unrelated host, and a trailing-dot rendering of an allowlisted host', () => {
+    fc.assert(
+      fc.property(
+        knownHost,
+        dnsLabel,
+        fc.constantFrom('unrelated', 'suffix-attack', 'lookalike-subdomain', 'userinfo-trick', 'trailing-dot'),
+        (allowed, attackerLabel, shape) => {
+          const endpoint = ((): string => {
+            switch (shape) {
+              case 'suffix-attack':
+                // defeats a naive host.startsWith(allowed) / .includes(allowed) check
+                return `https://${allowed}.${attackerLabel}-atacante.test/push`;
+              case 'lookalike-subdomain':
+                // defeats a naive host.endsWith(allowed) check against an
+                // EXACT (non-suffix) allowlist entry
+                return `https://${attackerLabel}.${allowed}/push`;
+              case 'userinfo-trick':
+                // the real host is the attacker's; `allowed` sits only in userinfo
+                return `https://${allowed}@${attackerLabel}-atacante.test/push`;
+              case 'trailing-dot':
+                // a different string from the allowlisted host -- fail
+                // closed rather than deciding it is "probably the same"
+                return `https://${allowed}./push`;
+              default:
+                return `https://${attackerLabel}-nunca-listado.test/push`;
+            }
+          })();
+          const decision = decideSubscribe(requestWithEndpoint(endpoint, [allowed]));
+          assert.equal(
+            decision.outcome,
+            'rejected',
+            `a "${shape}" near-miss of an allowlisted host must be rejected, not accepted (endpoint: ${endpoint})`,
+          );
+          assert.deepEqual(decision.stored, [], `a rejected subscribe request must store nothing (shape: ${shape})`);
+          const rejection = decision.rejection;
+          assert.ok(rejection !== null, 'a rejection must carry a stated reason, never a silent drop');
+          assert.ok(
+            (rejection?.what ?? '').includes(endpoint),
+            'the rejection must name the destination the surfer actually supplied',
+          );
+          assert.ok((rejection?.why ?? '').trim().length > 0, 'the rejection must say why it was refused');
+          assert.ok((rejection?.how ?? '').trim().length > 0, 'the rejection must say how to subscribe for real');
+        },
+      ),
       { numRuns: 100 },
     );
   });
