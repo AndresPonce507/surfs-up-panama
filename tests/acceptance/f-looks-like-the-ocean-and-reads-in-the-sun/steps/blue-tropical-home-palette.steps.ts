@@ -544,6 +544,31 @@ Given('una copia aislada cuyo archivo de componentes introduce un color fuera de
   });
 });
 
+Given('una copia aislada cuyo texto de la tarjeta destacada vuelve a heredar la tinta pensada para fondos claros', function (this: PaletteWorld) {
+  const root = prepareIsolatedRoot((copyRoot) => {
+    const componentsCopyPath = join(copyRoot, 'src/styles/components.css');
+    const original = readFileSync(componentsCopyPath, 'utf8');
+    // Recreates the exact pre-d90f635 defect this scenario guards against:
+    // every hero text selector wired back to var(--ink), the dark-on-light
+    // ink meant for the page's light surfaces, which measures ~1.30:1
+    // against the day-theme deep-water gradient. The replacement order
+    // matters not: 'var(--hero-ink)' cannot match inside 'var(--hero-ink-2)'
+    // because the closing paren anchors the shorter name.
+    const mutated = original
+      .replaceAll('var(--hero-ink-2)', 'var(--ink)')
+      .replaceAll('var(--hero-ink)', 'var(--ink)');
+    assert.notEqual(mutated, original, 'test fixture error: no var(--hero-ink)/var(--hero-ink-2) usages found in components.css to rewire back to var(--ink)');
+    writeFileSync(componentsCopyPath, mutated);
+  });
+  openedSurfaces.set(this, {
+    root,
+    cleanupRoot: root,
+    preview: null as unknown as ChildProcess,
+    browser: null as unknown as Browser,
+    page: null as unknown as Page,
+  });
+});
+
 Given('el valor real de tokens.css en disco, capturado antes de tocarlo', function (this: PaletteWorld) {
   const original = readFileSync(TOKENS_PATH, 'utf8');
   tokensBackups.set(this, original);
