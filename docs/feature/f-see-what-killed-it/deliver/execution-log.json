@@ -239,6 +239,62 @@
       "s": "SKIPPED",
       "d": "CHECKPOINT_PENDING: this session re-verified GREEN via a reverted temporary-mount probe (10/11 slice-01 scenarios, only X1-blocked scenario 5 red) and npm run build/dist inspection; the roadmap COMMIT gate for this visible step (des-verify-ui U1-U7 + des-record-examine Vera verdict) cannot be satisfied because both instruments render through src/components/SpotDetail.astro, X2, a forbidden write lane owned by build/f2-bugfix, not yet landed. Git-committing the GREEN checkpoint (WeakestLink.astro) as allowed by the CHECKPOINT_PENDING prefix; roadmap COMMIT stays pending the BUGFIX lane's three-line mount.",
       "t": "2026-08-10T17:40:02Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "PREPARE",
+      "s": "SKIPPED",
+      "d": "BLOCKED_BY_DEPENDENCY: 01-06 deps on 01-05, whose roadmap COMMIT (mount + des-verify-ui U1-U7 + Vera source-blind examination) is still open. During this turn a second live session committed b4f44e5 into this exact worktree mid-task (author-date 2026-08-10T17:43:25Z, distinct Claude-Session trailer, wall clock verified via reflog) and its own probe-cleanup silently reverted this session's legitimate SpotDetail.astro X2 mount (git diff empty, no commit contains it). Per no-drift rules, halted rather than re-mount/commit/run UI-gates against a worktree with a second active writer. WeakestLink.astro itself (b4f44e5) verified correct and sufficient for 01-06's criteria (kind==='named' guard already renders nothing for 'clean'), but no 01-06 phase work was performed.",
+      "t": "2026-08-10T17:49:32Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "RED_ACCEPTANCE",
+      "s": "SKIPPED",
+      "d": "BLOCKED_BY_DEPENDENCY: same root cause as 01-06 PREPARE entry (see 2026-08-10T17:49:32Z) -- 01-05's roadmap COMMIT is not closed and a second live session is actively writing this worktree; halted before any RED_ACCEPTANCE work to avoid clobbering or being clobbered.",
+      "t": "2026-08-10T17:49:38Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "BLOCKED_BY_DEPENDENCY: same root cause as 01-06 PREPARE entry (see 2026-08-10T17:49:32Z) -- 01-05's roadmap COMMIT is not closed and a second live session is actively writing this worktree; halted before any RED_UNIT work to avoid clobbering or being clobbered.",
+      "t": "2026-08-10T17:49:39Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "GREEN",
+      "s": "SKIPPED",
+      "d": "BLOCKED_BY_DEPENDENCY: same root cause as 01-06 PREPARE entry (see 2026-08-10T17:49:32Z) -- 01-05's roadmap COMMIT is not closed and a second live session is actively writing this worktree; halted before any GREEN work to avoid clobbering or being clobbered.",
+      "t": "2026-08-10T17:49:39Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "COMMIT",
+      "s": "SKIPPED",
+      "d": "BLOCKED_BY_DEPENDENCY: same root cause as 01-06 PREPARE entry (see 2026-08-10T17:49:32Z) -- 01-05's roadmap COMMIT is not closed and a second live session is actively writing this worktree; halted before any COMMIT work to avoid clobbering or being clobbered.",
+      "t": "2026-08-10T17:49:39Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: real permanent mount landed in src/components/SpotDetail.astro (import WeakestLink plus the day=0/day=1 mounts inside the today/tomorrow fragments, per implementation_notes exact delta). RED confirmed pre-mount: npm run test:at --tags '@feature-f-see-what-killed-it and @slice-01' -- 11/11 scenarios failed, all AssertionError on missing culprit text (business logic), 0 collection/import errors. GREEN post-mount: same command -- 10/11 passed; sole failure is scenario 5 (@in-memory), blocked on X1/build.ts surfaceCall() not yet carrying weakest_link, a pre-existing cross-lane gap flagged since 01-02, unrelated to this component. npm run test (vitest): 100/100 passed, 21 files. npm run typecheck: exit 0. npm run ci:local:fast: 8/8 jobs PASS, 0 skipped, exit 0. npm run build: exit 0, 83 pages, page-weight gate under every ceiling. dist/ inspected: 0 files contain data-field=weakest-link, matching the real committed surface (carries the field on zero rows today, X1 unlanded) -- honest silence holds at full scale.",
+      "t": "2026-08-10T17:57:04Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:57:48Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "COMMIT",
+      "s": "SKIPPED",
+      "d": "CHECKPOINT_PENDING: real permanent mount landed (src/components/SpotDetail.astro), RED-then-GREEN acceptance evidence recorded, des-verify-ui PASS on all U1-U7 (0 failures). Roadmap-level COMMIT cannot close: Vera's source-blind examine recorded FAIL (0 data-field=weakest-link anywhere on the real built surface) because today's committed data/published-surface.json carries weakest_link on zero rows -- confirmed via grep and via src/pipeline/build.ts surfaceCall(), which still omits the weakest_link line. This is the X1 cross-lane gap flagged since 01-02: build.ts is a forbidden write lane for this feature-delta lane and is owned by the keystone/producer lane, not this step. Component-level correctness is independently proven by the slice-01 acceptance suite (10/11 passing with synthetic culprit data; the sole failure is the same X1 gap on the in-memory scenario). Git-committing the real code progress (Step-ID: 01-05 trailer) as the previous session's precedent (b4f44e5) established; roadmap COMMIT stays open pending X1 landing elsewhere, which this session escalates rather than fixes.",
+      "t": "2026-08-10T18:19:27Z"
     }
   ]
 }
