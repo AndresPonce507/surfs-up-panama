@@ -13,25 +13,30 @@
 // the subscription and lets anyone on the path forge or read notifications,
 // so transport is checked independently of host membership, never folded
 // into a single "bad endpoint" branch (that would destroy the loudness the
-// ADR's self-reporting mitigation depends on). 01-04 (this step) adds the
-// daily-quota reject (R13): a device that already used its day's 20
-// sub-writes (07-write-path.md §8.4, count ratified) is refused, loudly, in
-// the same {what, why, how} vocabulary. Checked FIRST, before the endpoint
-// is even parsed -- the write-path sequence diagram's own step order is
-// "cap -> schema -> HMAC -> endpoint host allowlist" (§8.6), and quota is
-// the cheapest possible gate: no reason to parse a URL for a device that is
+// ADR's self-reporting mitigation depends on). 01-04 added the daily-quota
+// reject (R13): a device that already used its day's 20 sub-writes
+// (07-write-path.md §8.4, count ratified) is refused, loudly, in the same
+// {what, why, how} vocabulary. Checked FIRST, before the endpoint is even
+// parsed -- the write-path sequence diagram's own step order is "cap ->
+// schema -> HMAC -> endpoint host allowlist" (§8.6), and quota is the
+// cheapest possible gate: no reason to parse a URL for a device that is
 // refused regardless of what it names.
 //
-// FLAGGED, NOT FIXED: this function still unconditionally reads
-// `request.subscription.endpoint`, which is only ever populated for a
-// `{action:"subscribe"}` request. An `{action:"unsubscribe"}` request
-// carries a top-level `endpoint` and no `subscription` at all (§8.1), so a
-// call with such a request still throws here rather than deciding
-// `unsubscribed`. 01-01 flagged this and recommended dispatching on
-// `request.action` to fix it; this step's own criteria are quota-only (no
-// scenario here exercises unsubscribe), so introducing that dispatch stays
-// out of scope rather than landing half of the R14 behaviour with no test
-// requiring it. Left flagged for whichever slice-01 step ships R14.
+// 01-05 (this step) closes R14, the unsubscribe half of the single wire
+// contract (§8.1's `{"action":"unsubscribe","spot_id":"…","endpoint":"…"}`
+// row): the function now dispatches on `request.action` before touching
+// `subscription.endpoint`, the fix 01-01 flagged and left for whichever
+// step shipped R14. Removal is a plain delete-by-identity, always reported
+// as the success outcome `unsubscribed` -- including when the identity was
+// never there, or is already gone, which is why this is a "normal ending"
+// and not a rejection or a thrown error. Quota and endpoint-allowlist
+// gating are declared inputs on the unsubscribe request shape too (the
+// caller always supplies them, same as subscribe), but neither gate is
+// wired to the removal path here: no criterion or scenario in this step
+// exercises a quota- or allowlist-gated unsubscribe, and 07-write-path.md
+// §8.1's unsubscribe row names no such gate, so wiring one in now would be
+// unrequired behaviour. Left flagged for whichever step, if any, decides
+// unsubscribe should also spend a write-quota slot.
 //
 // APPLY-AT-SEND, not stamp-at-subscribe (this step's implementation notes):
 // `threshold_score` is stored exactly as the surfer declared it, explicit
@@ -61,6 +66,26 @@ type SubIdentity = Pick<StoredSub, 'spot_id' | 'endpoint_hash'>;
 function sameIdentity(a: SubIdentity, b: SubIdentity): boolean {
   return a.spot_id === b.spot_id && a.endpoint_hash === b.endpoint_hash;
 }
+
+/**
+ * The R14 request shape (07-write-path.md §8.1): its own contract, not a
+ * subscribe request bent into shape. It names nothing an unsubscribe body
+ * never carries -- no `subscription`, no `lang`, no `threshold_score`.
+ * `writes_today` and `allowlist` are still declared inputs (the caller
+ * always supplies them, same as a subscribe request), kept here for shape
+ * parity even though this step wires neither gate into the removal path
+ * (see the file-header note above).
+ */
+export type UnsubscribeRequest = {
+  action: 'unsubscribe';
+  spot_id: string;
+  endpoint: string;
+  device_id: string;
+  now: string;
+  existing: StoredSub[];
+  writes_today: number;
+  allowlist: string[];
+};
 
 /**
  * Merge a subscribe request into the caller-declared `existing` rows.
@@ -180,7 +205,32 @@ function rejectDailyQuotaExceeded(): SubscribeDecision {
   };
 }
 
-export function decideSubscribe(request: SubscribeRequest): SubscribeDecision {
+/**
+ * The R14 decision (07-write-path.md §8.1): a plain delete-by-identity,
+ * always reported as the success outcome `unsubscribed` -- whether the
+ * identity was on file or was already gone. There is no rejection branch:
+ * removing something absent is a normal ending, not an error, which is the
+ * whole point of this step. `stored` carries the same shape `upsert`
+ * returns for a subscribe -- the caller-declared `existing` rows, minus
+ * the removed identity if it was there -- so a caller reading the plan
+ * never has to special-case unsubscribe's response shape.
+ */
+function decideUnsubscribe(request: UnsubscribeRequest): SubscribeDecision {
+  const identity: SubIdentity = {
+    spot_id: request.spot_id,
+    endpoint_hash: hashEndpoint(request.endpoint),
+  };
+  return {
+    outcome: 'unsubscribed',
+    stored: request.existing.filter((row) => !sameIdentity(row, identity)),
+    rejection: null,
+  };
+}
+
+export function decideSubscribe(request: SubscribeRequest | UnsubscribeRequest): SubscribeDecision {
+  if (request.action === 'unsubscribe') {
+    return decideUnsubscribe(request);
+  }
   if (request.writes_today >= DAILY_SUBSCRIPTION_WRITE_QUOTA) {
     return rejectDailyQuotaExceeded();
   }
