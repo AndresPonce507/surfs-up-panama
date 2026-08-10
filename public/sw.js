@@ -36,6 +36,7 @@
 
 const CACHE_VERSION = 'psb-offline-v1';
 const OFFLINE_DOCUMENT = '/sin-senal';
+const PRECACHE_PARTS = ['/favicon.svg', OFFLINE_DOCUMENT];
 const WRITE_PATH = '/api/report';
 const NETWORK_FIRST_TIMEOUT_MS = 3000;
 const MEDIA_CACHE_LIMIT_BYTES = 5 * 1024 * 1024;
@@ -59,9 +60,9 @@ const ROUTER_TABLE = [
     matches: (method, pathname) => method === 'GET' && /\/reportar\/?$/.test(pathname),
   },
   {
-    row: 'hashed CSS/JS/icons',
+    row: 'hashed CSS/JS/icons and the precached favicon',
     strategy: CACHE_FIRST_IMMUTABLE,
-    matches: (method, pathname) => method === 'GET' && pathname.startsWith('/_astro/'),
+    matches: (method, pathname) => method === 'GET' && (pathname === '/favicon.svg' || pathname.startsWith('/_astro/')),
   },
   {
     row: 'static map + photo thumbs',
@@ -215,12 +216,17 @@ function dispatch(entry, request) {
   }
 }
 
-function precacheOfflineDocument() {
+/** The only first-visit requests we keep before any page asks for them. */
+function precacheSmallSharedParts() {
   return self.caches.open(CACHE_VERSION).then((cache) =>
-    self.fetch(OFFLINE_DOCUMENT).then((response) => {
-      if (isTrustworthyResponse(response)) return cache.put(OFFLINE_DOCUMENT, response.clone());
-      return undefined;
-    }),
+    Promise.all(
+      PRECACHE_PARTS.map((part) =>
+        self.fetch(part).then((response) => {
+          if (!isTrustworthyResponse(response)) throw new Error(`precache failed: ${part}`);
+          return cache.put(part, response.clone());
+        }),
+      ),
+    ),
   );
 }
 
@@ -231,11 +237,7 @@ function deleteStaleCaches() {
 }
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    precacheOfflineDocument()
-      .catch(() => undefined)
-      .then(() => self.skipWaiting()),
-  );
+  event.waitUntil(precacheSmallSharedParts().then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {

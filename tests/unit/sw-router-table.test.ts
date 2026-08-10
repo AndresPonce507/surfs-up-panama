@@ -33,6 +33,8 @@ const NETWORK_FIRST_TIMEOUT_MS = Number(/NETWORK_FIRST_TIMEOUT_MS\s*=\s*(\d+)/.e
 const ORIGIN = 'https://d1j9u9fxnap4es.cloudfront.net';
 const WRITE_PATH = '/api/report';
 const OFFLINE_DOCUMENT = '/sin-senal';
+const FAVICON = '/favicon.svg';
+const SMALL_PRECACHE_PARTS = [FAVICON, OFFLINE_DOCUMENT] as const;
 
 // ---------- a fabricated Cache Storage, spec-shaped enough to catch a real bug ----------
 
@@ -119,6 +121,9 @@ function withResponseType(response: Response, type: 'basic' | 'cors' | 'opaque')
 function scriptedFetch(responses: Record<string, string | 'FAIL'>): FetchImpl {
   return async (request) => {
     const pathname = new URL(request.url).pathname;
+    if (pathname === FAVICON && responses[pathname] === undefined) {
+      return withResponseType(new Response('favicon', { status: 200 }), 'basic');
+    }
     const outcome = responses[pathname];
     if (outcome === undefined) throw new Error(`test bug: unscripted fetch to ${pathname}`);
     if (outcome === 'FAIL') throw new Error(`network unreachable: ${pathname}`);
@@ -270,6 +275,50 @@ describe('the offline helper (public/sw.js)', () => {
     assert.equal(helper.listeners.get('fetch')?.length, 1);
   });
 
+  it('installs only the two explicit small shared parts, then serves each from the phone when the origin is unreachable', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.constantFrom(...SMALL_PRECACHE_PARTS),
+        async (part) => {
+          const responses: Record<string, string | 'FAIL'> = {
+            [FAVICON]: 'favicon',
+            [OFFLINE_DOCUMENT]: 'offline-document',
+          };
+          const helper = loadHelper({ fetchImpl: scriptedFetch(responses) });
+
+          await fireLifecycle(helper, 'install');
+
+          const installFetches = helper.caches.activity
+            .filter((entry) => entry.op === 'fetch')
+            .map((entry) => new URL(entry.url).pathname)
+            .sort();
+          assert.deepEqual(
+            installFetches,
+            [...SMALL_PRECACHE_PARTS].sort(),
+            'expected install to make exactly the explicit small precache list, never a whole-site crawl',
+          );
+
+          responses[part] = 'FAIL';
+          helper.caches.activity.length = 0;
+          const { response } = await fireFetch(helper, new Request(`${ORIGIN}${part}`));
+          assert.equal(await response!.text(), part === FAVICON ? 'favicon' : 'offline-document');
+          assert.ok(
+            helper.caches.activity.some((entry) => entry.op === 'cache-match' && new URL(entry.url).pathname === part),
+            `expected ${part} to be served from the phone after install`,
+          );
+          if (part === FAVICON) {
+            assert.equal(
+              helper.caches.activity.some((entry) => entry.op === 'fetch' && new URL(entry.url).pathname === part),
+              false,
+              'expected the immutable favicon to come from the phone without an unnecessary revalidation',
+            );
+          }
+        },
+      ),
+      { numRuns: 20 },
+    );
+  });
+
   it('dispatches every route to the strategy family section 12 assigns it, row for row', async () => {
     await fc.assert(
       fc.asyncProperty(exemplarRoute, async ({ method, pathname, family }) => {
@@ -356,7 +405,9 @@ describe('the offline helper (public/sw.js)', () => {
           const networkResponse = buildNetworkResponse(shape, body);
           const helper = loadHelper({
             fetchImpl: async (request) =>
-              new URL(request.url).pathname === OFFLINE_DOCUMENT
+              new URL(request.url).pathname === FAVICON
+                ? withResponseType(new Response('favicon', { status: 200 }), 'basic')
+                : new URL(request.url).pathname === OFFLINE_DOCUMENT
                 ? withResponseType(new Response(offlineStamp, { status: 200 }), 'basic')
                 : networkResponse,
           });
@@ -477,6 +528,7 @@ describe('the offline helper (public/sw.js)', () => {
           let signalIsUp = true;
           const fetchImpl: FetchImpl = async (request) => {
             const pathname = new URL(request.url).pathname;
+            if (pathname === FAVICON) return withResponseType(new Response('favicon', { status: 200 }), 'basic');
             if (pathname === OFFLINE_DOCUMENT) return withResponseType(new Response(offlineStamp, { status: 200 }), 'basic');
             if (signalIsUp) return withResponseType(new Response(firstNetworkStamp, { status: 200 }), 'basic');
             if (outcome.kind === 'connection-never-resolves') throw new Error('network unreachable');
@@ -586,6 +638,9 @@ describe('the offline helper (public/sw.js)', () => {
             let primingComplete = !hasPriorCachedCopy;
             const fetchImpl: FetchImpl = async (request, init) => {
               const pathname = new URL(request.url).pathname;
+              if (pathname === FAVICON) {
+                return withResponseType(new Response('favicon', { status: 200 }), 'basic');
+              }
               if (pathname === OFFLINE_DOCUMENT) {
                 return withResponseType(new Response(offlineStamp, { status: 200 }), 'basic');
               }
