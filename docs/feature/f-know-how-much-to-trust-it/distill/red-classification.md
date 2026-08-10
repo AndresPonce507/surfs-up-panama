@@ -219,16 +219,34 @@ scenario, which is cucumber's normal behaviour.
 
 **Flagged, not fixed here.**
 
-- **Pre-requisite 1 is still open, and this run makes its real cost concrete.** The three binding
-  obligations — name the missing input (05 §3.6), name the unverified track record (§6.2), say
-  nobody has reported (§6.3) — plus a basis clause do not obviously fit inside P1's 160 characters.
-  No scenario forces all of them into one sentence: each obligation is asserted on its own shaped
-  morning, and the length bound is asserted separately. **DESIGN and Andres still owe the
-  composition rule**, and if it turns out the three cannot coexist under 160, that reconciliation
-  is a DESIGN call, not a DELIVER improvisation. No oracle pins any wording word for word; each
-  requires only the domain noun any settled phrasing must contain (`marea`, `período`, `historial`,
+- **Pre-requisite 1 is still open, and this run answers its feasibility half.** Scenarios 1, 2 and
+  3 share one Given (`una mañana sin dato de marea, con los modelos pareciéndose entre ellos`), so
+  they inspect **the same composed sentence**, and their oracles are therefore a union, not three
+  separate shapes: that one sentence must name the missing tide (05 §3.6), say nobody has reported
+  (§6.3), say there is no verified track record (§6.2), stay ≤ 160 characters (P1), claim no model
+  disagreement, leak no code text and carry no em dash. **That union is satisfiable**, verified
+  before this entry was written:
+
+  > `Falta el dato de la marea, así que el nivel no pasa de media. Nadie ha reportado desde la playa y este spot no tiene historial verificado.`
+
+  138 characters against the 160 bound, all six oracles green, 22 characters of headroom. So
+  Pre-requisite 1 does **not** block DELIVER on feasibility; what DESIGN and Andres still owe is
+  the wording, through the cousin's crew channel. Recorded here so nobody re-derives it, and so
+  nobody loosens an oracle believing the three rules cannot coexist.
+
+  No oracle pins any wording word for word; each requires only the domain noun that any settled
+  phrasing must contain, singular or plural (`marea(s)`, `período(s)`, `historial(es)`,
   `nadie`/`playa`). Whatever Andres settles passes unchanged, which is what keeps DELIVER from
   having to edit an acceptance test at GREEN.
+- **The slice-01 expectation charter is owed and was not created.**
+  `docs/product/expectations/f-know-how-much-to-trust-it/` is outside this workspace's file
+  ownership, so DISTILL could not write it, but DELIVER's COMMIT gate refuses a visible slice
+  without a fresh source-blind Vera PASS against a charter carrying the exact U8 observation. The
+  text is already settled in `feature-delta.md`'s Slice classification table and must be used
+  verbatim: **"Cada razón se lee como una frase de surfista sobre este spot y este día, cabe sin
+  cortarse a 390 px, y nunca reclama que alguien confirmó desde la playa."** Surface
+  classification: `user-visible`. U1-U7 run through this feature's own visual outline plus the
+  repository UI gate.
 - **The shared Spanish factor-name vocabulary module does not exist.** `src/data/report-vocab.ts`
   carries wind states and quality tokens only. `f-see-what-killed-it` found the same gap from its
   own side (its R28) and needs `dirección`, `tamaño`, `viento`, `marea`; this feature needs

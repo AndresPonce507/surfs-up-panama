@@ -123,12 +123,13 @@ const MORNING_DATE = '2026-08-08';
 // Pre-requisite 1 (the exact Spanish phrasings, and the reconciliation of the
 // 160-character bound with the three binding copy rules) is OPEN. No oracle
 // here pins a sentence word for word; each requires only the domain noun that
-// any settled wording must contain. Whatever Andres settles passes unchanged,
-// which is what keeps DELIVER from having to edit an acceptance test at GREEN.
+// any settled wording must contain, singular or plural. Whatever Andres
+// settles passes unchanged, which is what keeps DELIVER from having to edit an
+// acceptance test at GREEN.
 
-const NAMES_THE_TIDE = /\bmarea\b/iu;
-const NAMES_THE_PERIOD = /\bper[ií]odo\b/iu;
-const NAMES_A_TRACK_RECORD_GAP = /\bhistorial\b/iu;
+const NAMES_THE_TIDE = /\bmareas?\b/iu;
+const NAMES_THE_PERIOD = /\bper[ií]odos?\b/iu;
+const NAMES_A_TRACK_RECORD_GAP = /\bhistorial(?:es)?\b/iu;
 const SAYS_NOBODY_REPORTED = /nadie[\s\S]*playa|playa[\s\S]*nadie/iu;
 const SAYS_ONE_MODEL_ANSWERED = /\b(?:un\s+solo|solo\s+un|[uú]nico)\s+modelo\b|\bun\s+modelo\s+solo\b/iu;
 
