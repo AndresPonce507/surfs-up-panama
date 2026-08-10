@@ -733,3 +733,77 @@ was ignored. Run three or four lanes, not eleven.
   status. This was violated once here, caught, and the pattern corrected to redirect-then-read.
 - `git stash` is global across worktrees. With twelve worktrees live it will corrupt other lanes.
 - Cucumber tags do not inherit from `Feature:` down to scenarios.
+
+### Second wave, 2026-08-09 evening: what landed after the pause
+
+Five lanes dispatched, two delivered fully, three killed by the stream watchdog at 600s while the
+API was flapping (`claude-sonnet-5[1m] is temporarily unavailable` was returned to the orchestrator
+mid-run). Every stalled lane's work survived on disk; nothing was lost.
+
+**All three live defects are now fixed on `build/f2-bugfix`, gate fully green (`ci:local` real exit
+0, 10 passed / 0 failed / 0 skipped).**
+
+- `fix(reading-surface)` — the raw ISO publish timestamp no longer reaches the Spanish surface.
+- `c77e579` — `best_window` now derives from each spot's own hourly series. Verified by hand on real
+  data through `pipeline:build`: **20 spots now produce 8 distinct windows** (06:00-08:00 through
+  13:00-18:00) where every row previously read an identical `13:00 a 16:00`. The regression test was
+  proved against the pre-fix code by swapping in `git show 6b02fe0:src/pipeline/build.ts`.
+- `ee61840` — a null wind sub-score no longer renders as `clean`. The scoring layer already modelled
+  absence correctly (`05-scoring-engine.md` line 254); only the presentation mapping collapsed it
+  onto the most favourable word.
+
+**`alta` confidence: root cause found, and it is a boundary condition, not a tuning problem.**
+Verified directly in `src/scoring/confidence.ts`:
+
+    line 52:  missing.includes('tide') ? 0.7 : 1      caps c_total at 0.7
+    line 55:  c_total <= 0.7 ? 'medium' : 'high'      high requires strictly greater than 0.7
+
+The tide cap lands EXACTLY on the medium ceiling, so `high` is arithmetically excluded whenever tide
+is missing, regardless of model agreement. Tide is missing on every row because
+`src/pipeline/adapters/open-meteo-source.ts` returns `'dark'` for tide: no per-spot tide station
+reference exists in the spot seed schema, which `04-ingest-pipeline.md` section 11 already marks a
+DELIVER BLOCKER. **The fix belongs in the ingest seed schema, never in the confidence threshold.**
+Lowering that threshold would manufacture confidence the data has not earned.
+
+**f-paste slice-01 step 01-01 shipped** (`09a560a`, phase record `04eba46`): the pure Spanish
+message composer at `src/share/whatsapp-call-message.ts`, with two property tests. All five DES
+phases logged EXECUTED/PASS. Both properties proved falsifiable by poisoning: leaking the literal
+`size_band` token, and rendering `score_q + 1`.
+
+Note for whoever reads that gate: `ci:local` on `build/f2-paste` is REAL_EXIT=1 and that is CORRECT.
+The acceptance run is 86 scenarios, 78 passed, 8 failed, and **all 8 failures are
+`f-paste-the-call-into-the-group/whatsapp-call-from-home.feature`** — slice-01's own scenarios, which
+stay red by design until step 01-04 wires the anchor into the home card. Zero regressions elsewhere.
+
+**f-tell-us slice-01 is DELIVER-ready.** Its DISTILL was verified (`cdfd9d8`): 10 scenarios, 7 RED,
+3 already-satisfied guards, 0 BROKEN. The anti-leak negative was proved falsifiable by poisoning
+`ReportCapture.astro` with a fake `score_q 82`, confirming it reached the built route, and watching
+the test fail naming it. Its 10-step roadmap (`ee0857a`) passes `des-verify-integrity --roadmap-only`
+with real exit 0.
+
+### Flags raised in this wave, none fixed
+
+- **`src/publish/region-bundle.ts` was widened outside its lane's declared file list**, taking
+  `BundleDaySummary.wind_state` and `best_window` to `| null`. The lane flagged it rather than
+  hiding it. Justification on record: it follows the existing `weakest_link: Factor | null`
+  precedent in that same type, does not touch the shared `report-vocab.ts` wire enum the report form
+  consumes, and `bundle.days` has no reader today. Reviewed and accepted, but worth knowing.
+- **`ci:local` becomes ELEVEN jobs** once f-tell-us step 01-08 lands the anti-leak gate. The project
+  `CLAUDE.md` says "Ten jobs". Correct that when the gate lands.
+- **dependency-cruiser is not in `package.json`.** The f-tell-us roadmap plans around it: step 01-08
+  implements the import rule natively and ships `.dependency-cruiser.cjs` as the declared rule so the
+  real tool drops in unchanged later. Adding the devDependency is a one-line serialized follow-up.
+- **`DAYLIGHT_LOCAL_HOURS = [6,18]`** is a fixed regional approximation, not per-spot solar position.
+  `SpotSeed` carries no lat/lon, and plumbing it through touches `src/scoring/engine.ts` and
+  `src/pipeline/adapters/spot-coordinates.ts`. Documented as an honest approximation (about 20 min
+  sunrise/sunset drift near the equator), not fabrication.
+- **`tests/README.md` is stale**: it says "one e2e per feature, everything else in memory", which
+  contradicts the shipped slice-04 precedent and the built-surface scenarios DISTILL now authors.
+
+### Operational note, second data point
+
+The first wave's stalls at width 11 looked like pure over-fanning. This wave stalled 3 of 5 at width
+FIVE, and the orchestrator was told directly that the Sonnet model was temporarily unavailable. So
+the watchdog stall has two distinct causes and they need different responses: over-fanning (fix by
+narrowing width) and a degraded API (fix by waiting, not by relaunching). A lane idling on a
+70-second `ci:local` run is especially exposed, because the watchdog counts waiting as no progress.
