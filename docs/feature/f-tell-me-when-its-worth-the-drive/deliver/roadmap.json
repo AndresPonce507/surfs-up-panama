@@ -1,0 +1,759 @@
+{
+  "roadmap": {
+    "project_id": "f-tell-me-when-its-worth-the-drive",
+    "created_at": "2026-08-09T00:00:00Z",
+    "total_steps": 27,
+    "quality_contract_version": 1
+  },
+  "phases": [
+    {
+      "id": "01",
+      "name": "Slice-01: ask for avisos, get one honest morning push",
+      "description": "Two pure server decisions, two service worker seat handlers, and the avisos control on the built Venao page. The bar stays unratified (Pre-requisite 1). Four steps are deploy-blocked on Pre-requisites 2, 3, 5, 6 and cannot reach GREEN here.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "01-01",
+          "name": "Subscribe decision upserts one row, stores five attributes",
+          "criteria": [
+            "Asking twice from the same device for the same spot leaves exactly one stored subscription; identity is (spot_id, endpoint_hash) and the second ask updates that row.",
+            "The stored row carries all five keys: lang, threshold_score, last_notified_date, followup_date, device_id.",
+            "An omitted bar stores threshold_score as explicit null; decideSubscribe never substitutes a default value of any kind.",
+            "Pure function: now, existing, writes_today and allowlist all arrive as declared inputs, nothing ambient is read."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/la-suscripcion-guardada.feature",
+          "scenario_name": "Pedir avisos dos veces del mismo spot desde el mismo teléfono deja una sola suscripción",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure decision function with no rendered surface; its observable consequence reaches the surfer through the island in 01-20 onward, which carry the charter and the U1-U7 checks.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/push/types.ts",
+            "src/push/decide-subscribe.ts",
+            "tests/unit/push-decide-subscribe.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): property-based with fast-check, house style tests/unit/scoring-laws.test.ts, per project CLAUDE.md 'functional'. Idempotence is a law, not three examples: for any sequence of subscribe requests sharing (spot_id, endpoint_hash), stored length is 1. DISPATCH: the project selects @nw-functional-software-crafter for every DELIVER step; default_agent carries the schema-valid name and the orchestrator maps it. CONTRACT OF RECORD, verified in tests/acceptance/f-tell-me-when-its-worth-the-drive/steps/push-server.steps.ts lines 38-52: decideSubscribe(request) returns { outcome: 'subscribed'|'unsubscribed'|'rejected', stored: StoredSub[], rejection: {what,why,how}|null } and StoredSub is { spot_id, endpoint_hash, lang, threshold_score: number|null, last_notified_date: string|null, followup_date: string|null, device_id }. THE ORACLE AT LINE 213 CHECKS KEY PRESENCE (`field in stored`), NOT non-null, so an unchosen bar MUST be stored as the key threshold_score with value null. That is the empirical answer to the mechanic 07-write-path.md leaves unstated (Pre-requisite 1's tail question, stamp-at-subscribe versus apply-at-send): this slice implements APPLY-AT-SEND, because the fixture at line 384 constructs the no-bar subscriber as threshold_score: null and then requires 01-10's sweep to find a server bar governing it. 07-write-path.md section 14 item 4 ('changing the default never touches existing rows') is satisfied by apply-at-send too, strictly better in fact, since no row ever carries a stamped default to migrate. FLAG, do not resolve: if Andres ratifies stamp-at-subscribe instead, the change is confined to this module plus the composition root and needs no acceptance test edit. The allowlist arrives as an input (line 81 fixture: fcm.googleapis.com, web.push.apple.com, updates.push.services.mozilla.com); the SHIPPED list is 01-02's work."
+        },
+        {
+          "id": "01-02",
+          "name": "Off-allowlist destination rejected loudly with what, why, how",
+          "criteria": [
+            "A destination whose host is not on the allowlist is rejected; outcome is 'rejected' and stored is empty.",
+            "The rejection names the destination, says why it was refused, and says how to subscribe for real.",
+            "The shipped host list lives in one module, each hostname verified against current vendor documentation at authoring time, never written from memory.",
+            "Nothing is stored: the decision reports no write, and it reports a decision rather than staying silent."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/la-suscripcion-guardada.feature",
+          "scenario_name": "Un destino que no es de un servicio de avisos conocido se rechaza en voz alta",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure rejection decision returning a structured value; the surfer-facing wording of this refusal is 01-25, which carries the charter and the U1-U7 checks.",
+          "ui_checks": {},
+          "deps": ["01-01"],
+          "files_to_modify": [
+            "src/push/push-hosts.ts",
+            "src/push/decide-subscribe.ts",
+            "tests/unit/push-decide-subscribe.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): property-based. The law is host membership, so quantify it: any endpoint whose host is absent from the supplied allowlist is refused, any endpoint on it is not refused for that reason. PRE-REQUISITE 7 IS THIS STEP'S WORK and it is the one Pre-requisite slice-01 DELIVER owns: 07-write-path.md section 8.4 names the CLASSES (FCM, Apple web push, Mozilla autopush, WNS) but the research corpus contains no verified hostname list, a repo-wide grep for vendor push hosts returns zero hits, and a wrong list silently locks a real browser out of subscribing. Each hostname is verified against current vendor documentation AT AUTHORING TIME and the source recorded next to it. Do NOT copy the acceptance fixture's three hosts as if they were the product list: that fixture (steps/push-server.steps.ts line 81) is scenario data supplied as an input, and it names no WNS host at all. The list ships as data in src/push/push-hosts.ts and is passed INTO decideSubscribe, never read ambiently, so the acceptance suite keeps supplying its own. src/data/** is a forbidden write lane, which is why the list is sited under src/push/. The rejection shape is the declared { what, why, how } triple; the ADR accepts the incomplete-list gap as self-reporting PRECISELY BECAUSE the rejection is loud and names the host, so a vague refusal voids the design's own mitigation. Additive-by-PR per adr-push-vapid-direct.md."
+        },
+        {
+          "id": "01-03",
+          "name": "Insecure destination rejected the same way",
+          "criteria": [
+            "An http:// destination is rejected even when its host would otherwise be allowed; transport is checked independently of host membership.",
+            "Nothing is stored, and the decision is produced rather than withheld, so the negative oracle can distinguish refusal from inaction.",
+            "The rejection carries the same what/why/how shape as the allowlist refusal."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/la-suscripcion-guardada.feature",
+          "scenario_name": "Un destino sin conexión segura se rechaza igual",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure rejection decision with no rendered surface; the surfer sees refusals through 01-25, which carries the charter and the U1-U7 checks.",
+          "ui_checks": {},
+          "deps": ["01-02"],
+          "files_to_modify": [
+            "src/push/decide-subscribe.ts",
+            "tests/unit/push-decide-subscribe.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): property-based, and the property is exactly what makes this step non-redundant with 01-02: refusal on scheme must hold for hosts that ARE on the allowlist. An implementation that only ever checked the host would pass 01-02 and fail here, which is why this scenario exists as its own row. Keep the two checks separate in the code so the two refusal reasons stay distinguishable in the { what, why, how } payload; a single merged 'bad endpoint' branch technically passes both oracles and destroys the loudness the ADR's self-reporting mitigation depends on. FALSIFIABILITY (project CLAUDE.md: prove every negative falsifiable): after GREEN, delete the scheme check, watch THIS scenario fail while 01-02 stays green, revert, verify the revert with git diff."
+        },
+        {
+          "id": "01-04",
+          "name": "Daily write quota stops further subscription writes",
+          "criteria": [
+            "A device that has already used its day's subscription-write quota is refused; outcome is 'rejected' and the refusal names the quota as the reason.",
+            "Nothing is stored, and a decision is produced, so the negative oracle distinguishes a quota refusal from a run that never decided.",
+            "writes_today arrives as a declared input; the decision counts nothing itself and reads no ambient clock or store."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/la-suscripcion-guardada.feature",
+          "scenario_name": "Un teléfono que pasa su cupo del día deja de escribir suscripciones",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure quota decision over declared inputs; nothing renders, and the quota's user-visible consequence is out of slice-01's scenario set entirely.",
+          "ui_checks": {},
+          "deps": ["01-01"],
+          "files_to_modify": [
+            "src/push/decide-subscribe.ts",
+            "tests/unit/push-decide-subscribe.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): property-based over the quota boundary. The law is a single inclusive cut on writes_today, so quantify it rather than asserting the fixture's number: below the cap the request is not refused for quota, at or above it always is. The quota VALUE is settled design, unlike the threshold: 07-write-path.md section 8.4 and the feature-delta both fix it at 20 sub-writes per day per device, and the acceptance fixture sets the day's writes already at 20. So the number is ratified and may live in code as a named constant. This is the contrast worth naming for whoever reads this roadmap next: the quota is a DECIDED number and belongs in a constant, the threshold (01-10) is an UNDECIDED number and its treatment is deliberately different. Quota enforcement is one of the three abuse behaviours the feature owes as PROVEN BEHAVIOUR rather than declaration (feature-delta Definition of Done row 5); the other two are 01-02's allowlist and 01-12's run cap. The guardrail CI half of push protection is owned elsewhere (F-TELL-US slice-02 amends guardrail 7 with the 20-per-day row); infra/** and scripts/** are forbidden lanes here, so this step ships the runtime behaviour only."
+        },
+        {
+          "id": "01-05",
+          "name": "Unsubscribing something already gone is a normal ending",
+          "criteria": [
+            "Removing avisos that were already removed returns outcome 'unsubscribed' with no stored row, never a rejection and never an error.",
+            "The decision is produced rather than withheld, so the oracle can tell an idempotent ending from a run that decided nothing.",
+            "Repeated removal is a law: any number of removals after the first leaves the same reported end state."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/la-suscripcion-guardada.feature",
+          "scenario_name": "Cancelar avisos que ya no están sigue siendo un final normal",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure idempotence decision; the surfer-visible half of removal is 01-26, which carries the charter and the U1-U7 checks.",
+          "ui_checks": {},
+          "deps": ["01-01"],
+          "files_to_modify": [
+            "src/push/decide-subscribe.ts",
+            "tests/unit/push-decide-subscribe.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): property-based idempotence, the natural companion law to 01-01's upsert idempotence. Quantify over repetition count: removal applied n times for n >= 1 yields the same reported end state. Feature-delta Definition of Done row 6 ('unsubscribe is idempotent and off means off') is half closed here; its other half, that a removed subscription receives nothing from the next run onward, is 01-26 and is DEPLOY-BLOCKED. Do not let a crafter close row 6 on this step alone. The removal path shares decideSubscribe with the subscribe path per 07-write-path.md section 8.1's single wire contract, so keep the outcome union honest: 'unsubscribed' is a success outcome and must never be expressed as a rejection with an empty stored array, which would satisfy a careless oracle while telling the island the surfer's tap failed."
+        },
+        {
+          "id": "01-06",
+          "name": "Morning at the subscriber bar plans exactly one aviso",
+          "criteria": [
+            "A morning scoring at or above that subscriber's own bar produces exactly one planned send; the cut is inclusive at the bar.",
+            "The planned aviso names the spot and its score in that subscriber's stored lang.",
+            "It carries the spot page url, tag equal to spot_id for grouping, and a four hour TTL.",
+            "now, spots, scores, subscriptions and run_cap all arrive as declared inputs; the run reads no ambient clock."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-aviso-de-la-manana.feature",
+          "scenario_name": "Una mañana que llega a la barra del suscriptor produce exactamente un aviso",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure planning decision that returns a Plan value and executes nothing; the aviso only becomes visible on a real device, which is Pre-requisite 10's launch smoke, not a slice-01 observable.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/push/plan-notifications.ts",
+            "tests/unit/push-plan-notifications.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): property-based, and this is the step where the paradigm earns its keep. THE BAR IS NEVER PINNED. The four Examples rows (bars 30/55/88 at the bar, plus 55 well above it) are each THAT scenario's subscriber's bar supplied as fixture data, never a product default; the step file says so in its own header comment, lines 19-29. Write the unit property as: for any bar b in 0..100 and any score s >= b, exactly one send is planned. Never write 70, and never write any other number, into this module's send rule. CONTRACT OF RECORD, verified in steps/push-server.steps.ts lines 139-151: planNotifications({ now, spots, scores, subscriptions, run_cap }) returns { sends: PlannedSend[], deferred: number, events: [{kind, deferred?}] }. Declared effect universe (07-write-path.md section 10): none, returns a Plan value, NEVER EXECUTES. No store, no HTTP, no VAPID signing in this module; the sender is deploy-blocked and is not built in this slice. PAYLOAD SHAPE is the cross-feature seam contract in feature-delta: {v:1, title, body, url, tag} with url = /spots/{slug}/ for the morning push and tag = spot_id. THE COPY IS PRE-REQUISITE 8 AND IS OPEN: the morning push title and body are settled nowhere and inventing product copy is out of scope for a build lane. Hold both strings in ONE exported constant beside the rest of the push copy so sign-off is a one-line swap; the feature-delta records a PROPOSED fallback (title from the settled 'Mejor: {spot}, {score}' share-card line shape of section 10, body from that spot's call{es}), offered not decided, and both of its inputs are already-settled strings with named producers, which is why it is the safe placeholder. Route the real wording through the cousin's crew channel. Copy rules apply: no em dashes, no English, no technical text, no raw timestamps."
+        },
+        {
+          "id": "01-07",
+          "name": "Morning below the subscriber bar plans nothing",
+          "criteria": [
+            "A morning scoring one point below that subscriber's own bar produces no planned send, at every bar the scenario supplies.",
+            "The run still produces a plan, so a zero-send result is distinguishable from a run that decided nothing.",
+            "Exclusivity below the bar is proven as a law over the whole scale, not only at the three fixture bars."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-aviso-de-la-manana.feature",
+          "scenario_name": "Una mañana por debajo de la barra del suscriptor no produce ningún aviso",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure planning decision returning a Plan value; nothing renders, and the absence of an aviso has no surface of its own.",
+          "ui_checks": {},
+          "deps": ["01-06"],
+          "files_to_modify": [
+            "src/push/plan-notifications.ts",
+            "tests/unit/push-plan-notifications.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): property-based. Together with 01-06 this pins the cut as inclusive-at-bar and exclusive-below, which is the whole of the law the design fixes (07-write-path.md section 8.2, ADR send rule 4). Write it as one property over both directions: for any bar b and score s, a send is planned exactly when s >= b, all other inputs held sendable. THE NEGATIVE IS ONLY FALSIFIABLE IF THE MACHINERY RAN. The RED record is explicit: the first execution of this suite reported 9 passing scenarios, every one a negative satisfied by absence, and this oracle now first requires that the run produced a plan at all. So planNotifications must return a plan object even when sends is empty; returning null, undefined, or throwing on an empty morning turns this into a false green and the oracle will say so ('la corrida no llegó a decidir nada, así que un cero de avisos todavía no prueba la regla'). Bars 30, 55 and 88 at bar-minus-one are fixture data, not product defaults. Never write 70 or any other number into the send rule."
+        },
+        {
+          "id": "01-08",
+          "name": "Outside the morning window nothing is planned",
+          "criteria": [
+            "At 05:25, 09:25 and 13:25 spot-local no send is planned, however good the morning scores.",
+            "The window is evaluated in the spot's own timezone from the seed, taken from declared inputs.",
+            "The run still produces a plan, so a zero-send result is distinguishable from a run that decided nothing."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-aviso-de-la-manana.feature",
+          "scenario_name": "Fuera de la mañana no sale ningún aviso, por buena que esté",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure time-window decision over an injected clock; nothing renders, and the window has no surface of its own.",
+          "ui_checks": {},
+          "deps": ["01-06"],
+          "files_to_modify": [
+            "src/push/plan-notifications.ts",
+            "tests/unit/push-plan-notifications.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): property-based over the window boundary; quantify the closed interval rather than asserting the three fixture hours. The window is 06:00 to 09:00 spot-local and the job runs hourly at :25 (07-write-path.md section 8.2), which is why the fixtures are :25 times: 05:25 is the hour before, 09:25 the hour after, 13:25 the afternoon. The boundary reading that makes all three fixtures true and is the design's plain sense: 06:25, 07:25 and 08:25 are inside; 05:25 and 09:25 are outside. Do not silently widen the window to make an edge case pass. THE CLOCK IS AN INPUT, NEVER AN AMBIENT READ (src/pipeline/ports.ts house rule, quoted in the step file header lines 12-17). That single rule is what makes the morning testable without waiting for dawn, and a crafter who reaches for Date.now() inside this module breaks every scenario in this file at once. Same empty-plan discipline as 01-07: the plan object must exist even when sends is empty, or the negative oracle reports that nothing was decided."
+        },
+        {
+          "id": "01-09",
+          "name": "One aviso per spot per subscriber per day",
+          "criteria": [
+            "A subscriber who already received today's aviso for a spot gets none when the run passes again an hour later.",
+            "The guard reads last_notified_date from the stored subscription against the spot-local date of the injected now.",
+            "The run still produces a plan, so the zero-send result is distinguishable from a run that decided nothing."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-aviso-de-la-manana.feature",
+          "scenario_name": "Nadie recibe dos avisos del mismo spot el mismo día",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure suppression decision over declared inputs; nothing renders, and a suppressed aviso has no surface at all.",
+          "ui_checks": {},
+          "deps": ["01-06"],
+          "files_to_modify": [
+            "src/push/plan-notifications.ts",
+            "tests/unit/push-plan-notifications.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): property-based. The law (decision 23, 07-write-path.md section 8.2): at most one notification per spot per subscriber per day. Quantify it as an invariant over any number of runs within one spot-local day, which is stronger than the scenario's two runs and is the honest statement of the rule. THE DATE IS SPOT-LOCAL, not UTC and not Panama: last_notified_date must be compared against the date of `now` in that spot's own timezone, or a spot east of Panama double-notifies across the UTC midnight seam. This is the same timezone discipline 01-11 proves directly, and the two steps share one date-derivation helper, so build it here and reuse it there rather than deriving the date twice. planNotifications is pure and reports what the write would leave behind; it does NOT mutate last_notified_date itself. The stamp is the deploy-blocked notify job's write, and the RED record warns explicitly that the stored array is the plan's report of the writes to make, never an instruction to hold state inside the decision. Same empty-plan discipline as 01-07."
+        },
+        {
+          "id": "01-10",
+          "name": "A subscriber who chose no bar follows the server bar",
+          "criteria": [
+            "Sweeping the whole 0 to 100 scale for a subscriber whose threshold_score is null yields exactly one monotone cut point.",
+            "Below the cut no aviso is ever planned; from the cut upward one always is; the cut falls inside the scale.",
+            "Exactly one named exported constant supplies the server bar and planNotifications reads no other number for it.",
+            "No test asserts that constant's value, so ratifying Pre-requisite 1 is a one-line edit with zero acceptance test changes."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-aviso-de-la-manana.feature",
+          "scenario_name": "Un suscriptor que no eligió barra igual se rige por una barra, la del servidor",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure decision proven by a value-agnostic sweep; nothing renders, and the surfer-facing bar picker is slice-04, not this slice.",
+          "ui_checks": {},
+          "deps": ["01-06"],
+          "files_to_modify": [
+            "src/push/config.ts",
+            "src/push/plan-notifications.ts",
+            "tests/unit/push-plan-notifications.test.ts"
+          ],
+          "implementation_notes": "THIS IS THE STEP PRE-REQUISITE 1 TOUCHES, AND IT SHIPS THE LAW WITHOUT THE NUMBER. Read the oracle before writing anything: steps/push-server.steps.ts lines 506-540 assert only that the sweep has one monotone cut point and that the cut index is within 0..100. It deliberately never says where. Any in-range value passes, which is exactly how DISTILL kept the product decision open. AN ARCHITECTURAL TENSION YOU MUST NOT PAPER OVER: planNotifications' declared input is { now, spots, scores, subscriptions, run_cap } and carries NO default-threshold field (verified, steps/push-server.steps.ts lines 139-151), while the no-bar fixture supplies threshold_score: null (line 384). So the module itself must supply the server bar; injecting it is not available without editing the step file. The resolution that honours both constraints: ONE exported constant, named for what it is and marked UNRATIFIED with a pointer to Pre-requisite 1, read from exactly one place in the send rule. Do NOT scatter the number, do NOT inline it in a comparison, and do NOT invent a fresh number of your own: carry the value the accepted architecture already records in 07-write-path.md section 8.1 as an explicitly labelled placeholder, next to that document's own admission that it 'is an unfit prior; no research names the right default'. The roadmap fixes no product default and neither may the crafter's commit message. RECOMMENDED ALTERNATIVE, flagged for the orchestrator not decided here: adding default_threshold_score to the planNotifications input would remove the last number from the module entirely, at the cost of one step-file edit, which the RED record classes as a flag rather than a blocker. Ratification does not need it: with the constant, Andres's answer is a one-line change and no acceptance test moves. APPLY-AT-SEND is the mechanic this step implements, on the evidence recorded in 01-01."
+        },
+        {
+          "id": "01-11",
+          "name": "Each spot uses its own timezone morning",
+          "criteria": [
+            "A spot six hours ahead of Panama plans nothing at Panama's 07:25, because it is already past midday there.",
+            "The window is derived from that spot's own timezone field in the seed, with nothing Panama-shaped in the rule.",
+            "The run still produces a plan, so the zero-send result is distinguishable from a run that decided nothing."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-aviso-de-la-manana.feature",
+          "scenario_name": "Un spot en otro huso usa su propia mañana, no la de Panamá",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure timezone decision over injected inputs; nothing renders, and the rule has no surface of its own.",
+          "ui_checks": {},
+          "deps": ["01-08"],
+          "files_to_modify": [
+            "src/push/plan-notifications.ts",
+            "tests/unit/push-plan-notifications.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): property-based over offsets; quantify that for any spot offset, the planned/not-planned verdict depends only on the spot-local hour, never on the Panama hour. This is the step that makes 01-08's window rule honest at scale, and it is the reason 01-09's date comparison must also be spot-local: the two share one date/hour derivation helper. SEAM, IMPORT ONLY, NEVER MODIFY: the per-spot timezone lives in data/spots/pa-pacific.yaml (America/Panama per spot, schema row documented in data/spots/README.md) and reaches this module through the spots input, which the scenario supplies directly. src/data/** is a forbidden write lane. The scaffold audit confirms the timezone field is really present per spot, so nothing new is needed in the seed. The fixture spot is a fixed offset six hours ahead, so a correct implementation cannot pass by hardcoding America/Panama and cannot pass by ignoring the offset. FALSIFIABILITY: after GREEN, replace the spot's timezone with Panama's in the module, watch this scenario fail while 01-08 stays green, revert, verify with git diff."
+        },
+        {
+          "id": "01-12",
+          "name": "Run cap holds and the remainder is announced",
+          "criteria": [
+            "With more eligible subscribers than the run's declared cap, the plan carries at most the cap's worth of sends.",
+            "How many were left for later is announced loudly as a declared event on the plan, never dropped silently.",
+            "The cap arrives as the run_cap input; no configuration number is asserted, and the law holds at any cap."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-aviso-de-la-manana.feature",
+          "scenario_name": "Pasado el tope de envíos de una corrida, lo que queda se anuncia en voz alta",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure capping decision emitting a declared event; nothing renders, and the skip event's audience is the operator log, not the surfer.",
+          "ui_checks": {},
+          "deps": ["01-06"],
+          "files_to_modify": [
+            "src/push/plan-notifications.ts",
+            "tests/unit/push-plan-notifications.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): property-based over cap and population; for any cap c and any eligible population n, sends length is min(c, n) and deferred is max(0, n - c). THE CAP IS NOT 10,000 IN ANY ORACLE. The RED record is explicit on this and it is the second of its two 'do not read this into the above' warnings: the per-run cap is asserted as a LAW against a declared cap of three (the fixture sets run_cap 3 with seven subscribers), while 10,000 is D5's proposal in adr-push-vapid-direct.md and is a configuration value, not an acceptance oracle. The default lives at the composition root, not in this module's rule. LOUD IS PART OF THE CONTRACT, not a nicety: 07-write-path.md section 8.4 requires a LOUD skip event, and feature-delta Definition of Done row 5 lists the run cap among the three abuse controls that must be proven behaviours rather than declarations. A plan that silently truncates satisfies a careless count assertion and fails the announcement oracle, which is the point. The event goes on the returned events array as a declared value; this module executes nothing and logs nothing itself. $0 DISCIPLINE (07-write-path.md section 8.5): the per-run cap plus 01-13's pruning are the binding controls under abuse. No SNS, no queue, no third-party SDK; each is an explicitly rejected row in the ADR's alternatives table."
+        },
+        {
+          "id": "01-13",
+          "name": "A gone destination is pruned on first failure",
+          "criteria": [
+            "A send answered 404, 410 or 403 marks exactly that subscription for deletion, on the first failure, with no retry budget.",
+            "The deletion is reported as a value on the reactions result; the decision executes no delete itself.",
+            "The reaction decision is produced rather than withheld, so the paired negative in 01-14 can distinguish inaction."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-aviso-de-la-manana.feature",
+          "scenario_name": "Un destino que ya no existe se borra al primer fallo",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure reaction decision returning deletions as a value; nothing renders, and pruning is invisible to the surfer by design.",
+          "ui_checks": {},
+          "deps": ["01-06"],
+          "files_to_modify": [
+            "src/push/plan-notifications.ts",
+            "tests/unit/push-plan-notifications.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): property-based over status codes; for any status in the gone-set the endpoint is marked, for any status outside it none is. NAMING, FLAGGED HONESTLY AND CHEAP TO OVERRULE: planSendReactions({sends, responses}) -> { deletions: string[], events: [] } is NAMED BY NO DOCUMENT. The RED record says so plainly: it is DISTILL's own minimum invention, the smallest decomposition that expresses 07-write-path.md section 8.4's pruning rule as a pure decision, since pruning reacts to a send response while the architecture's pattern keeps the core pure. If DELIVER prefers a different name or a different module, say so in the step evidence: relocating costs one step-file edit, which the RED record classes as a flag, not a blocker. Verified call site: steps/push-server.steps.ts lines 603-615, invoked as callDeclared('planSendReactions', { sends, responses: [{ endpoint_hash, status }] }), with the Spanish response words mapped to 404 'no encontrado', 410 'ya no existe', 403 'prohibido'. deletions carries endpoint_hash values. The decision executes nothing: the actual delete belongs to the deploy-blocked notify job. First-failure pruning with no retry budget is deliberate (07-write-path.md section 8.4) and is one of the two binding cost controls under abuse."
+        },
+        {
+          "id": "01-14",
+          "name": "A transient failure prunes nobody",
+          "criteria": [
+            "A send answered 503 marks no subscription for deletion; a transient failure is never treated as a gone destination.",
+            "The reaction decision is produced, so a zero-deletion result is distinguishable from a run that never decided.",
+            "This row is what makes 01-13 falsifiable: an implementation pruning on every failure passes 01-13 and fails here."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-aviso-de-la-manana.feature",
+          "scenario_name": "Un fallo pasajero del servicio de avisos no borra a nadie",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure reaction decision; nothing renders, and the absence of a deletion has no surface at all.",
+          "ui_checks": {},
+          "deps": ["01-13"],
+          "files_to_modify": [
+            "src/push/plan-notifications.ts",
+            "tests/unit/push-plan-notifications.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): property-based, and state the law as a partition rather than a list: the status space splits into a gone-set that prunes and everything else that does not. THE RED RECORD NAMES THIS ROW'S PURPOSE EXPLICITLY: 'Row 27 exists so rows 24 to 26 are falsifiable: an implementation that pruned on every failure would satisfy the three pruning rows and fail this one.' So do not merge this into 01-13 and do not let a crafter treat it as a duplicate. Same absence discipline as every other negative in this suite: the oracle first requires that the reaction rule decided at all, so planSendReactions must return a result object with an empty deletions array on a 503, never null and never a throw. 'ahora no puedo' maps to 503 in the fixture table at steps/push-server.steps.ts lines 596-601. FALSIFIABILITY, and this one is not optional given the project's history of two tests passing for accidental reasons: after GREEN, widen the gone-set to every non-2xx status, watch THIS scenario fail while 01-13 stays green, revert, verify the revert with git diff."
+        },
+        {
+          "id": "01-15",
+          "name": "Every push received shows a notification",
+          "criteria": [
+            "The push handler shows a notification with the payload's title and body for every push received.",
+            "It holds the event open until the notification is actually shown, so the browser never sees a silent push.",
+            "The handler is called as (event, scope) and takes everything it needs from the payload."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-aviso-en-el-telefono.feature",
+          "scenario_name": "Cada aviso que llega se muestra, ninguno llega en silencio",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A service worker handler exercised against a trapped scope object, not a rendered page; the notification itself is an operating system surface, observable only on Pre-requisite 10's real-device smoke.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/push/notification-seat.ts",
+            "tests/unit/push-notification-seat.test.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: service worker event wiring, single-shot by nature; the invariants worth quantifying live in 01-06's payload composition. THIS FILE IS THIS LANE'S, THE SERVICE WORKER FILE IS NOT. src/sw/** is a forbidden write lane and F-WORKS-WITH-NO-SIGNAL owns the file; their committed plan (674c3ce, build/f2-signal) grants a NAMED ADDITIVE SEAT on their terms, quoted in feature-delta: this lane 'adds a push and a notificationclick listener as new registrations at the end of the file, touching zero existing router rows and zero existing listeners', 'coordinated as a serial append, never concurrently with a SIGNAL slice in flight'. So this step ships the handler MODULE only, exporting handlePush and handleNotificationClick; the two registration lines are handed to the SIGNAL lane as a contract, not written here. WHY THIS MATTERS TO THE SURFER, from the feature file's own prose: a push that arrives and shows nothing costs the surfer the whole subscription, because browsers punish silence by revoking it, and a revoked subscription is a broken promise nobody sees. Hence event.waitUntil around showNotification, never a bare call. Handler signature is (event, scope) per the RED record; scope is injected, so the module never touches a global self and stays unit-testable. PRE-REQUISITE 4(a) IS OPEN: the SIGNAL lane's written acknowledgement of this payload contract is owed BEFORE either lane dispatches DELIVER work on the seam (HANDOFF section 7 lesson). Flag it, do not append without it."
+        },
+        {
+          "id": "01-16",
+          "name": "Same-spot avisos replace rather than stack",
+          "criteria": [
+            "Both notifications for one spot are shown under the same tag, so the second replaces the first instead of stacking.",
+            "The tag is the spot_id carried in the payload, never a per-message identifier.",
+            "Two pushes for the same spot result in two show calls, both grouped, so replacement is proven rather than assumed."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-aviso-en-el-telefono.feature",
+          "scenario_name": "Dos avisos del mismo spot no se apilan, el nuevo reemplaza al anterior",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A service worker handler against a trapped scope; the tray grouping it produces is an operating system surface, examinable only on Pre-requisite 10's real-device smoke.",
+          "ui_checks": {},
+          "deps": ["01-15"],
+          "files_to_modify": [
+            "src/push/notification-seat.ts",
+            "tests/unit/push-notification-seat.test.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: handler wiring; the tag's provenance is 01-06's payload law. This is decision 23's no-nagging rule carried into the notification tray (feature-delta seam contract, push handler obligation 2): tag = spot_id, so a same-spot aviso replaces rather than stacks. The oracle counts two show calls and checks they share a tag, so a handler that suppressed the second push entirely would fail: replacement is the browser's job given a shared tag, not the handler's job to implement. Do not add de-duplication logic. The once-per-day rule that actually limits volume lives in 01-09, server-side; this step is only about how two legitimate notifications occupy the tray."
+        },
+        {
+          "id": "01-17",
+          "name": "Showing the aviso touches no network and no storage",
+          "criteria": [
+            "Showing the notification issues no fetch and no network request of any kind.",
+            "It reads and writes nothing in caches, IndexedDB or localStorage; everything needed comes from the payload.",
+            "The oracle first requires the notification to have actually been shown, so untouched traps prove statelessness rather than inaction."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-aviso-en-el-telefono.feature",
+          "scenario_name": "Mostrar el aviso no pide red ni guarda nada",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A statelessness obligation observed through trapped scope capabilities; there is no rendered surface, which is precisely what the trapped scope exists to prove.",
+          "ui_checks": {},
+          "deps": ["01-15"],
+          "files_to_modify": [
+            "src/push/notification-seat.ts",
+            "tests/unit/push-notification-seat.test.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: a designed absence over an injected scope. THE SCOPE'S fetch, caches, indexedDB AND localStorage ARE TRAPS: the RED record states the handlers are driven with a scope whose network and storage capabilities are traps, so the statelessness obligation is observable rather than assumed, and the oracle first requires that the notification was actually shown ('el aviso nunca se llegó a mostrar, así que no haber tocado nada todavía no prueba nada'). Touching any of the four fails loudly. WHY STATELESSNESS IS LOAD-BEARING AND NOT AN AESTHETIC: feature-delta seam obligation 3 records that this is exactly what makes the two UNVERIFIED iOS behaviours irrelevant to push correctness. application-architecture.md section 12 leaves Background Sync support and service worker storage eviction windows unverified on iOS; a stateless handler cannot be broken by either, because an evicted worker costs a re-registration on the next visit and never a wrong behaviour. A crafter who caches 'just the last payload' silently reintroduces both risks. Also forbidden by obligation 4 and by BRIEF constraint 3: no analytics, no open tracking, no click-through measurement, ever."
+        },
+        {
+          "id": "01-18",
+          "name": "Tapping focuses the window already on that spot",
+          "criteria": [
+            "Tapping the aviso closes the notification first, then focuses an already-open client at the payload's url.",
+            "No second window is opened when a matching client exists.",
+            "The url comes from the notification's own data, placed there when it was shown."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-aviso-en-el-telefono.feature",
+          "scenario_name": "Tocar el aviso lleva a la página del spot sin abrir una segunda ventana",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A service worker click handler against a fake client list; the window it focuses is a browser surface, examinable only on Pre-requisite 10's real-device smoke.",
+          "ui_checks": {},
+          "deps": ["01-15"],
+          "files_to_modify": [
+            "src/push/notification-seat.ts",
+            "tests/unit/push-notification-seat.test.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: click wiring, single-shot. Feature-delta seam contract, notificationclick obligations, in order: close the notification, THEN focus an existing client at event.notification.data.url if one exists, else openWindow. The order is observable, and the RED record's oracle for this row is 'el aviso siguió en la bandeja después de tocarlo', so a handler that focuses without closing fails on the close, not on the focus. data.url is set at show time in 01-15, which is why that step must pass { body, tag, data: { url } } and not just body and tag; if 01-15 drops data, this step has nothing to read and the failure surfaces here rather than there. The url is a site-relative path per the seam contract: /spots/{slug}/ for the morning push, and /spots/{slug}/reportar?t=ps for the afternoon follow-up which is slice-03's, not this slice's."
+        },
+        {
+          "id": "01-19",
+          "name": "Tapping opens the spot page when nothing is open",
+          "criteria": [
+            "With no client open, tapping the aviso opens a window at the payload's url.",
+            "The notification is closed in this path too, exactly as when a client already existed.",
+            "The choice between focusing and opening is made from the actual client list, never assumed."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-aviso-en-el-telefono.feature",
+          "scenario_name": "Tocar el aviso abre la página del spot cuando no hay ninguna ventana abierta",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A service worker click handler against an empty fake client list; the opened window is a browser surface, examinable only on Pre-requisite 10's real-device smoke.",
+          "ui_checks": {},
+          "deps": ["01-18"],
+          "files_to_modify": [
+            "src/push/notification-seat.ts",
+            "tests/unit/push-notification-seat.test.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: the else branch of 01-18's decision. This row is what makes 01-18 falsifiable: a handler that always called openWindow would satisfy this scenario and fail 01-18's 'sin abrir otra', and a handler that always focused would satisfy 01-18 and fail here. Keep both branches driven by the real client list from the injected scope. The two steps are one designed decision split across two oracles, which is why they share a file and why neither may be merged away. Await the client enumeration inside event.waitUntil so the worker is not torn down mid-decision; the fake scope in the acceptance harness observes the promise, so a fire-and-forget handler is visible as a failure rather than as flake."
+        },
+        {
+          "id": "01-20",
+          "name": "Avisos control mounts and never renders dead",
+          "criteria": [
+            "The built Playa Venao page offers an avisos action in a context that can request push notifications.",
+            "The same built page offers no avisos action at all where PushManager is genuinely absent; absence is proven by comparison, not by emptiness.",
+            "Neither context renders an avisos-active state, because no subscription exists.",
+            "The control mounts through SpotDetail.astro; the spot page under src/pages is not edited."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/avisos-de-este-spot.feature",
+          "scenario_name": "Donde el teléfono no puede pedir avisos, no aparece un botón muerto",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/a-surfer-opens-playa-venao-taps-avisos-de-este-spot-grants-permission-and-sees-listo-only-after.md",
+          "u8_observation": "En la página de Playa Venao a 390 px aparece la línea de avisos de este spot como una acción que puedo tocar; en un teléfono que no puede pedir avisos esa acción no aparece por ninguna parte, y en ninguno de los dos casos la página dice que ya tengo avisos activos.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u7"]
+          },
+          "files_to_modify": [
+            "src/components/PushSettings.astro",
+            "src/components/SpotDetail.astro",
+            "src/push/island.ts",
+            "src/push/copy.ts",
+            "tests/unit/push-island.test.ts"
+          ],
+          "implementation_notes": "THIS IS THE ONLY STEP THAT MOUNTS, AND EVERY LATER VISIBLE STEP DEPENDS ON IT. A sibling lane marked a component-creation step user-visible when nothing mounted it and des-verify-ui failed all seven checks by construction; that is the failure this step exists to avoid. MOUNT ANCHOR, verified on disk: src/pages/spots/[slug]/index.astro line 17 renders <SpotDetail locale=\"es\" spotId={slug} /> self-closing, and src/pages/** is a FORBIDDEN write lane. So the mount is a direct import inside src/components/SpotDetail.astro: add the import beside the existing ones at lines 13-18, and render <PushSettings spotId={spotId} locale={locale} /> inside the <Base> block after the </section data-day=\"tomorrow\"> element that ends at line 92 and before the report call-to-action paragraph at lines 93-95, which matches application-architecture.md section 14's wireframe placing the avisos line low on the spot page. THE ASTRO NAMED-SLOT TRAP, AVOIDED BY CONSTRUCTION AND RECORDED SO NOBODY REINTRODUCES IT: Astro silently drops named slot content when the receiving component defines no matching slot, with no error and vanished markup. Direct import needs no slot. If a crafter instead routes the control through a named slot from the page, they must add <slot name=\"avisos\"/> to SpotDetail.astro AND edit the page, which is forbidden here, so that route needs a boundary grant first. SERIAL SEAM, FLAG BEFORE TOUCHING: SpotDetail.astro is co-owned; a sibling roadmap lists it in its own excluded_patterns, so this edit is serial with the other live lanes and must not run concurrently with one. THE ORACLE IS A COMPARISON, NOT AN ABSENCE. The RED record is emphatic: 'no dead button' cannot be proven by absence because today the page offers nothing to anybody, so the scenario opens a SECOND context on the SAME served surface where push IS available, requires the action present there, then requires it absent in the incapable context, where PushManager and ServiceWorkerRegistration.prototype.pushManager are genuinely deleted before load. An implementation that renders nothing anywhere fails. Capability detection therefore runs at render or on load, and the affordance is not rendered as an action at all where push is impossible; absence is honest, and the iOS pathway words are slice-02's. NO ON-STATE MAY RENDER IN THIS SLICE WITHOUT A REAL SUBSCRIPTION (feature-delta Definition of Done row 2). Copy for the control is Pre-requisite 8 and open: hold every string in src/push/copy.ts as one swappable constant each, plain surfer Spanish, no em dashes, no English, no technical words. BYTE BUDGET: the island is booked at 2.0 KB gz loading only on tap (application-architecture.md sections 5 and 6). R37 has no executable oracle in slice-01 and is recorded in requirement-checklist.md rather than faked, so measure and record the number in the step evidence; do not invent a passing assertion for it."
+        },
+        {
+          "id": "01-21",
+          "name": "Refused permission is said in words, never re-asked",
+          "criteria": [
+            "When permission is not granted, the spot says in Spanish that without permission it cannot send avisos.",
+            "The page renders no avisos-active state, and the control does not ask for permission a second time.",
+            "The message is plain surfer Spanish: no addresses, no codes, no English, no technical vocabulary."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/avisos-de-este-spot.feature",
+          "scenario_name": "Si el teléfono no concede el permiso, el spot se queda sin avisos y lo dice en palabras",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/a-surfer-opens-playa-venao-taps-avisos-de-este-spot-grants-permission-and-sees-listo-only-after.md",
+          "u8_observation": "Toco la línea de avisos de Playa Venao y no doy el permiso: la pantalla me dice en español sencillo que sin permiso no puede avisarme, la página sigue sin decir que tengo avisos activos, y por más que toque no me vuelve a pedir el permiso.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-20"],
+          "files_to_modify": [
+            "src/push/island.ts",
+            "src/components/PushSettings.astro",
+            "src/push/copy.ts",
+            "tests/unit/push-island.test.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: one designed UI state. HARNESS FACT, PROVED WITH A REAL BROWSER, DO NOT RE-DERIVE IT: Playwright drives permissions per browser context, so a permission that was never granted surfaces as a DISMISSAL (prompt/default), not as a hard denied; neither Browser.setPermission over CDP nor --deny-permission-prompts changes that. The scenario therefore asserts 'no concedido', which is true of both a dismissal and a hard denial, and the surfer is owed the same honest state either way. So branch on 'not granted', never on the literal 'denied' string, or this passes headed and fails headless. A hard operating system denial is observable only on Pre-requisite 10's real-device smoke; that gap is flagged in the RED record, not fudged. NO RE-PROMPT is both a product rule (decision 23, feature-delta Out-of-scope: no re-prompting after a denial) and a browser reality; the oracle requires that a control was ACTUALLY TAPPED before it can judge, so the tap must reach the permission request for the negative to mean anything. COPY IS PRE-REQUISITE 8 AND OPEN: the island's failure-state strings are settled nowhere. Write one plain surfer-Spanish sentence, hold it in a single exported constant in src/push/copy.ts beside the others so sign-off is a one-line swap, and do not invent flowery product copy. Copy rules are hard: no em dashes, no English, no codes, no addresses, no model or technical words."
+        },
+        {
+          "id": "01-22",
+          "name": "Return visit reads the browser's real subscription",
+          "criteria": [
+            "With a remembered avisos flag planted in localStorage and no real browser subscription, the page shows no avisos-active state.",
+            "The rendered state derives from the browser's own subscription object, never from a stored flag.",
+            "The oracle requires the page to offer an avisos control at all, so the negative distinguishes honest state from a missing surface."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/avisos-de-este-spot.feature",
+          "scenario_name": "Al volver, el estado de avisos sale de la suscripción real del navegador",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/a-surfer-opens-playa-venao-taps-avisos-de-este-spot-grants-permission-and-sees-listo-only-after.md",
+          "u8_observation": "Vuelvo a abrir la página de Playa Venao después de una visita anterior: aunque el teléfono se acuerde de algo, la página no dice que tengo avisos activos, porque de verdad no los tengo.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-20"],
+          "files_to_modify": [
+            "src/push/island.ts",
+            "src/components/PushSettings.astro",
+            "tests/unit/push-island.test.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: on-load state derivation, single-shot. THIS MECHANISM IS THE FEATURE PLAN'S OWN REQUIREMENT, NOT A DESIGN CITATION, and the feature-delta says so twice: the accepted design is SILENT on on-load state derivation (application-architecture.md section 7's P6 covers only the ack path), and the project rule that no on-state renders without a real subscription object forces exactly this. So derive from PushManager.getSubscription() and from nothing else. Definition of Done row 2 is the standing rule: no notifications-on state anywhere is EVER rendered without a real browser PushSubscription and a stored item. THE FIXTURE PLANTS A REMEMBERED localStorage FLAG ON PURPOSE. An island that trusts a cached flag passes casual manual testing and fails here, which is the whole point of the row; it is also why a service worker eviction on iOS costs only a re-registration and never a false on-state (feature-delta slice-02 note). Do not add a client-side cache of subscription state as an optimisation. The oracle first requires the built page to offer an avisos control at all, so this step depends on 01-20's mount; before that mount the negative proves nothing, which is exactly what the RED record recorded for this row."
+        },
+        {
+          "id": "01-23",
+          "name": "Listo appears only after the server stored it",
+          "criteria": [
+            "With permission granted, tapping the control makes the browser deliver a real push subscription for that spot.",
+            "The spot says listo only after the server confirmed it stored the subscription; before that confirmation no avisos-active state renders.",
+            "DEPLOY-BLOCKED on Pre-requisites 2, 3, 5 and 6: no stand-in endpoint may be stood up to make this green."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/avisos-de-este-spot.feature",
+          "scenario_name": "El surfista pide avisos de Playa Venao y solo ve listo cuando el servidor ya los guardó",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/a-surfer-opens-playa-venao-taps-avisos-de-este-spot-grants-permission-and-sees-listo-only-after.md",
+          "u8_observation": "En la página de Playa Venao a 390 px doy el permiso y toco la línea de avisos: la palabra listo no aparece hasta que el servidor ya guardó la suscripción, y ni un instante antes.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-20", "01-01"],
+          "files_to_modify": [
+            "src/push/island.ts",
+            "src/push/subscribe-client.ts",
+            "src/components/PushSettings.astro",
+            "tests/unit/push-island.test.ts"
+          ],
+          "implementation_notes": "DEPLOY-BLOCKED. This is the @walking_skeleton scenario and it CANNOT REACH GREEN in this environment. Pre-requisites: 2 (no write stack, no CloudFormation, the push fn and notify schedule join the write-stack the INFRA lane is building), 3 (mint fn and X-Surf-Credential, shipping in F-TELL-US slice-03 and itself deploy-blocked), 5 (account Lambda concurrency quota, unreadable: andres-cli got AccessDeniedException on servicequotas:GetServiceQuota), 6 (VAPID keypair, human-generated, private key to SSM SecureString, never agent-held). DO NOT STAND UP AN ENDPOINT TO CLOSE IT. The RED record's instruction is explicit and this roadmap repeats it: nothing in this suite stands up a local endpoint, a scenario satisfied by a stand-in proves nothing about the real one, and per adr-push-vapid-direct.md's own consequences an acceptance test against a fake push service attests protocol framing only, never real FCM or APNs acceptance or aes128gcm interop. If a crafter finds themselves writing a test server to close this, THE CORRECT MOVE IS TO STOP AND ESCALATE THE PRE-REQUISITE. WHAT IS BUILDABLE NOW, per the feature-delta's client-only versus deploy-blocked split: the island, its wire call, and every designed state EXCEPT any rendered on-state, which is illegal until a real subscribe round-trip exists. Build the ack-gated ordering so it is right the day the stack lands: subscribe through PushManager, POST to the write path, and render listo ONLY on the server's ack, never optimistically. P6 no-false-green, application-architecture.md section 7. The 401 background-mint branch against /api/mint is testable against a fake and belongs here. HARNESS FACT: headless Chromium pins Notification.permission at denied whatever the context was granted; navigator.permissions.query reports the truth, so the granted path asserts on the query state."
+        },
+        {
+          "id": "01-24",
+          "name": "A server that cannot store offers retry",
+          "criteria": [
+            "When the server cannot store the subscription, the spot stays without avisos and offers to try again.",
+            "The subscription is not queued for later: subscribe is interactive by contract and there is no offline queue.",
+            "DEPLOY-BLOCKED on Pre-requisites 2, 3, 5 and 6: no stand-in endpoint may be stood up to make this green."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/avisos-de-este-spot.feature",
+          "scenario_name": "Si el servidor no puede guardar la suscripción, el spot sigue sin avisos y ofrece reintentar",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/a-surfer-opens-playa-venao-taps-avisos-de-este-spot-grants-permission-and-sees-listo-only-after.md",
+          "u8_observation": "Toco la línea de avisos y el servidor no puede guardarla: la página no me dice que tengo avisos, me ofrece intentar de nuevo, y no me promete mandarla más tarde por su cuenta.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-23"],
+          "files_to_modify": [
+            "src/push/island.ts",
+            "src/push/subscribe-client.ts",
+            "src/push/copy.ts",
+            "tests/unit/push-island.test.ts"
+          ],
+          "implementation_notes": "DEPLOY-BLOCKED on Pre-requisites 2, 3, 5 and 6, same set as 01-23, and the same prohibition: no stand-in endpoint, escalate rather than fake. NO OFFLINE QUEUE FOR SUBSCRIPTIONS, and this is a designed refusal rather than an omission: 07-write-path.md section 8.1 makes subscribe interactive by contract, and the oracle asserts the subscription is NOT held for later. That is the deliberate opposite of the report path, which queues durably on the phone; a crafter who reuses the report island's queue here breaks the contract. The oracle also first requires that a subscription was actually attempted, so the negative cannot pass by never trying. This is the 429/5xx branch of feature-delta Definition of Done row 5's designed states: stay 'not subscribed' and offer a retry. RETRY IS AN OFFER, NOT AN AUTOMATIC LOOP: no background retry, no exponential backoff machinery, nothing that could run up the bill against the $0 arithmetic of 07-write-path.md section 8.5. The surfer taps again if they want it. Copy for the retry offer is Pre-requisite 8 and open: one swappable constant in src/push/copy.ts, plain surfer Spanish, no em dashes, no English, no codes."
+        },
+        {
+          "id": "01-25",
+          "name": "An unrecognised destination is explained in plain Spanish",
+          "criteria": [
+            "When the server does not recognise this browser's destination, the spot explains in Spanish that this browser cannot receive avisos.",
+            "That text carries no addresses, no codes and no English words.",
+            "DEPLOY-BLOCKED on Pre-requisites 2, 3, 5 and 6: no stand-in endpoint may be stood up to make this green."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/avisos-de-este-spot.feature",
+          "scenario_name": "Un destino que el servicio no reconoce se explica en español llano, sin jerga",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/a-surfer-opens-playa-venao-taps-avisos-de-este-spot-grants-permission-and-sees-listo-only-after.md",
+          "u8_observation": "El servidor no reconoce el destino de mi navegador: la página me explica en español llano que este navegador no puede recibir avisos, sin una sola dirección, ni código, ni palabra en inglés.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-23", "01-02"],
+          "files_to_modify": [
+            "src/push/island.ts",
+            "src/push/copy.ts",
+            "src/components/PushSettings.astro",
+            "tests/unit/push-island.test.ts"
+          ],
+          "implementation_notes": "DEPLOY-BLOCKED on Pre-requisites 2, 3, 5 and 6, same prohibition as 01-23: no stand-in endpoint, escalate rather than fake. THIS IS THE SURFER-FACING HALF OF 01-02. The server's rejection is loud and technical by design, naming the host with WHAT/WHY/HOW so the incomplete-allowlist gap is self-reporting; the island must NOT pass that text through to the screen. It translates the endpoint_not_allowed outcome into one plain Spanish sentence and shows only that. The oracle checks the rendered text for addresses, codes and English words, so echoing the server's rejection payload fails on all three. This is the exact seam where Definition of Done row 5's 'says the browser is unsupported plainly' meets the copy rule that the Spanish surface carries zero technical text. Copy is Pre-requisite 8 and open: one swappable constant in src/push/copy.ts, no em dashes, no English, no codes, no addresses. Note the honest asymmetry worth preserving: the operator gets the loud host-naming rejection in the server log, the surfer gets the plain sentence; neither audience gets the other's text."
+        },
+        {
+          "id": "01-26",
+          "name": "One tap removes avisos and removed stays removed",
+          "criteria": [
+            "Tapping the removal control returns the page to showing no avisos, and the removal control was really tapped.",
+            "From the next run onward that surfer receives no further aviso for that spot: off means off.",
+            "DEPLOY-BLOCKED on Pre-requisites 2, 3, 5 and 6; the second criterion is the deploy-blocked step inside this scenario."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/avisos-de-este-spot.feature",
+          "scenario_name": "Un toque quita los avisos y quitados quedan",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/a-surfer-opens-playa-venao-taps-avisos-de-este-spot-grants-permission-and-sees-listo-only-after.md",
+          "u8_observation": "Con avisos activos en Playa Venao toco una sola vez para quitarlos: la página vuelve a mostrarse sin avisos, y a partir de ahí no me llega ningún aviso más de ese spot.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-23", "01-05"],
+          "files_to_modify": [
+            "src/push/island.ts",
+            "src/push/subscribe-client.ts",
+            "src/components/PushSettings.astro",
+            "tests/unit/push-island.test.ts"
+          ],
+          "implementation_notes": "DEPLOY-BLOCKED on Pre-requisites 2, 3, 5 and 6. THIS SCENARIO CARRIES TWO BLOCKED OBLIGATIONS AND THE RED RECORD COUNTS THEM SEPARATELY: the removal round-trip itself, and the step 'a ese surfista no le vuelve a llegar ningún aviso de ese spot', which is why the record says five deploy-blocked items while only FOUR SCENARIOS carry the @deploy-blocked tag (scenarios 1, 4, 5 and 7 of avisos-de-este-spot.feature). The second obligation is a claim about what a real deployed run does next, so it needs the write stack AND the notify schedule, not merely a stored row. No stand-in endpoint; escalate the Pre-requisite instead. It chains from 01-23's Given and When, so it inherits every blocker of the walking skeleton. WHAT IS BUILDABLE NOW: the removal tap, its call through the same idempotent decideSubscribe wire contract (07-write-path.md section 8.1, one wire for both directions), and the re-render to the no-avisos state derived from PushManager.getSubscription() per 01-22, never from a flag. The browser-side unsubscribe and the server-side removal are two obligations and both must happen: dropping the local subscription while leaving the server row alive is the exact failure that keeps sending avisos to a surfer who turned them off. Feature-delta Definition of Done row 6 closes only when this step and 01-05 are both green, which cannot happen this slice."
+        },
+        {
+          "id": "01-27",
+          "name": "The avisos control passes the seven visual checks",
+          "criteria": [
+            "At 390 px in light theme with normal motion, the avisos control meets all seven visual mandates in its designed states.",
+            "At 390 px in dark theme with reduced motion it meets them too, contrast measured against the real backdrop.",
+            "Touch targets, type scale, geometry and motion are measured on the built page, never on a component in isolation."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/avisos-de-este-spot.feature",
+          "scenario_name": "El control de avisos se ve terminado en el teléfono, en los dos temas",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/a-surfer-opens-playa-venao-taps-avisos-de-este-spot-grants-permission-and-sees-listo-only-after.md",
+          "u8_observation": "A 390 px, en tema claro y en tema oscuro, la línea de avisos de Playa Venao se ve terminada: se lee bien sobre el fondo real, se toca cómodo con el pulgar, no descuadra la página ni la hace desplazarse de lado, y con movimiento reducido activado nada se anima.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-20", "01-21", "01-22"],
+          "files_to_modify": [
+            "src/components/PushSettings.astro",
+            "src/push/island.ts",
+            "tests/unit/push-island.test.ts"
+          ],
+          "implementation_notes": "THE UI BAR IS A GATE INSIDE THIS SLICE, NOT A POLISH PASS. This is the only scenario carrying the @ui-u1 through @ui-u7 tags, which is what makes the seven ui_checks commands on every visible step in this phase resolve to a real run. RED reason, quoted so nobody mistakes it for a harness problem: 'U5: la página no tiene ningún control de avisos que examinar, así que ninguno de sus estados diseñados existe', and in dark theme additionally 'U1/U6: no hay ningún texto de avisos cuyo contraste ni cuya escala tipográfica se pueda medir contra el fondo real'. The checks were EXECUTED, not skipped, so they go green when the control exists in its designed states and is genuinely finished. CONTRAST IS MEASURED AGAINST THE REAL BACKDROP, both themes, not against white. Reduced motion means nothing animates, not that animation is merely shortened. 44 px touch targets, no horizontal scroll at 390 px, and the designed states include the idle affordance, the refused-permission state (01-21) and the no-avisos return state (01-22), which is why this step depends on all three. THE MANDATES APPLY TO STATES THAT EXIST: the deploy-blocked listo and retry states (01-23, 01-24) cannot be examined here, and no crafter may fabricate them to satisfy a check. AFTER GREEN the orchestrator runs des-verify-ui and then dispatches the source-blind examiner with only the charter and its start recipe; COMMIT is refused until both records pass. Run npm run build and inspect the rendered dist spot document afterwards: green tests do not mean it works, and this project has shipped a bug that passed all ten CI jobs."
+        }
+      ]
+    }
+  ],
+  "implementation_scope": {
+    "source_directories": [
+      "src/push/",
+      "src/components/"
+    ],
+    "test_directories": [
+      "tests/unit/"
+    ],
+    "excluded_patterns": [
+      "public/**",
+      "src/sw/**",
+      "src/pages/**",
+      "src/layouts/**",
+      "src/pipeline/**",
+      "src/data/**",
+      "src/i18n/**",
+      "src/share/**",
+      "src/report/**",
+      "src/scoring/**",
+      "src/components/RankedList.astro",
+      "src/components/ReportCapture.astro",
+      "src/components/ReportShell.astro",
+      "src/components/Confidence.astro",
+      "infra/**",
+      "scripts/**",
+      "vitest.config.ts",
+      "package.json",
+      "package-lock.json",
+      "tests/acceptance/**"
+    ]
+  },
+  "validation": {
+    "status": "pending",
+    "reviewer": "orchestrator quality gate (des-verify-integrity --roadmap-only run below)",
+    "approved_at": ""
+  }
+}
