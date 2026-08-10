@@ -20,4 +20,8 @@ export const paths = {
     locale === 'es'
       ? `/spots/${spotId}/reportado/`
       : `/en/spots/${spotId}/reported/`,
+  // Precached offline fallback (application-architecture.md section 4). Spanish
+  // only until the /en/ mirror ships (deferred to F-READ-IT-IN-YOUR-LANGUAGE);
+  // there is no locale branch to get wrong in the meantime.
+  offline: (): string => '/sin-senal/',
 } as const;
