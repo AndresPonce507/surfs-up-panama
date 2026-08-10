@@ -80,7 +80,7 @@ Feature: La aritmética del historial existe como leyes que se niegan a publicar
     When la proyección decide qué dice el recuadro
     Then la decisión es siempre el estado del contador, jamás una afirmación
 
-  @slice-02 @pending @driving_port @in-memory @property @covers-R5 @covers-R6
+  @slice-02 @driving_port @in-memory @property @covers-R5 @covers-R6
   Scenario: El contador sale de los dos enteros del bloque y con su forma exacta
     Given cualquier estado de la cuenta de una playa
     When la proyección arma el bloque del historial

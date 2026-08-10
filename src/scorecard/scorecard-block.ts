@@ -29,6 +29,7 @@ export type ScorecardBlock = {
   readonly n_obs: number;
   readonly n_reporters: number;
   readonly threshold: number;
+  readonly counter: string;
   readonly claim_ok: boolean;
 };
 
@@ -51,6 +52,7 @@ export const decideScorecardBlock = (inputs: BlockInputs): ScorecardBlock => {
     n_obs: inputs.pairedObservations,
     n_reporters: inputs.distinctTrustEligibleReporters,
     threshold: REPORTS_REQUIRED,
+    counter: `${inputs.pairedObservations} / ${REPORTS_REQUIRED}`,
     claim_ok: decision.claimOk,
   };
 };
