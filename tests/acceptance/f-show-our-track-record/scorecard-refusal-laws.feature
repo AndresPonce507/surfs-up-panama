@@ -52,7 +52,7 @@ Feature: La aritmética del historial existe como leyes que se niegan a publicar
     Then el sesgo de cada ventana es el promedio de sus errores, con su error absoluto medio al lado
     And las personas distintas se resuelven a través de la identidad al momento de leer
 
-  @slice-02 @pending @driving_port @in-memory @property @negative @covers-R12
+  @slice-02 @driving_port @in-memory @property @negative @covers-R12
   Scenario: Reportes coordinados que están demasiado de acuerdo nunca aflojan la reja
     Given dos conjuntos de prueba del mismo tamaño y el mismo sesgo, uno coordinado sin variación y uno honesto
     When la proyección deriva el margen de cada uno
