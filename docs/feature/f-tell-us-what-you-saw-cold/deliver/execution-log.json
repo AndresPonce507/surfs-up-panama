@@ -309,6 +309,41 @@
       "s": "EXECUTED",
       "d": "PASS",
       "t": "2026-08-10T18:11:33Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T18:26:45Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "RED_ACCEPTANCE",
+      "s": "SKIPPED",
+      "d": "BLOCKED_BY_DEPENDENCY: filtered run (npm run test:at -- --tags \"@feature-f-tell-us-what-you-saw-cold and @covers-R6\", verified exactly 1 scenario collected via JSON report, no filtering-trap) fails deterministically (4/4 runs) with AssertionError at report-capture.steps.ts:449 (notice.isVisible()=false). Root cause isolated with temporary DEBUG_TRACE instrumentation in island.ts (reverted, git diff empty): Object.getOwnPropertyDescriptor(window,'indexedDB').get resolves to the NATIVE getter under the cucumber-js run, never the DOMException-throwing override tests/acceptance/f-tell-us-what-you-saw-cold/steps/support/world.ts's phonePage() registers via context.addInitScript when flags.storageRefused is true -- so openReportQueue's probe genuinely succeeds (kind=ready) and the refusal path this scenario needs never engages. 8 standalone Playwright reproductions using the identical dist/ output, identical context options, identical addInitScript body (with and without a fresh npm run build, with and without a prior real-indexedDB context in the same browser) all show the override working 100%25 (11/11 passes). The fixture only fails to engage inside the real cucumber-js process. world.ts and report-capture.steps.ts are outside files_to_modify and inside implementation_scope.excluded_patterns (tests/acceptance/**), DISTILL-owned per ADR-025. No RED obtainable through production changes; the AT never reaches the state 01-05's criteria require.",
+      "t": "2026-08-10T18:27:00Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "GREEN",
+      "s": "SKIPPED",
+      "d": "BLOCKED_BY_DEPENDENCY: same fixture defect as RED_ACCEPTANCE -- tests/acceptance/f-tell-us-what-you-saw-cold/steps/support/world.ts's storage-refusal init script never engages under cucumber-js, so the scenario cannot reach GREEN through production code. All three criteria are independently verified already satisfied in shipped code: (1) notice renders visible on refusal, plain Spanish, no technical vocabulary -- decideProbeUi/applyProbeUi/showNotice in src/report/island.ts, unit-tested in tests/unit/report-island.test.ts, and confirmed live via standalone Playwright reproduction reading data-storage-notice hidden=false textContent='No podemos guardar tu reporte en este telefono ahora mismo.'; (2) refused state never claims Guardado and never navigates, Mandar stays inert -- decideCommitUi's refused branch, the static disabled button attribute, and Refused (queue.ts) carrying no commit function so commit is unreachable without a ready probe; (3) the notice string lives in one swappable constant STORAGE_REFUSED_MESSAGE. No production files changed this step (git diff --stat: 0 files under src/report or src/components). Escalating per contract: 3-attempts/cannot-satisfy-test-without-modifying-it protocol, except the blocker is a test-infra defect in an out-of-boundary file, not an implementation gap.",
+      "t": "2026-08-10T18:27:12Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "COMMIT",
+      "s": "SKIPPED",
+      "d": "BLOCKED_BY_DEPENDENCY: GREEN not reached (blocked by a test-fixture defect in tests/acceptance/f-tell-us-what-you-saw-cold/steps/support/world.ts, outside files_to_modify and inside excluded_patterns). No production or test code changed this step; nothing to commit. Escalating to the orchestrator per ESCALATION_NEEDED contract.",
+      "t": "2026-08-10T18:27:19Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "BLOCKED_BY_DEPENDENCY: RED_ACCEPTANCE never established a genuine RED (the AT fails on a precondition tests/acceptance/f-tell-us-what-you-saw-cold/steps/support/world.ts's storage-refusal fixture failed to establish under cucumber-js, not on missing production behaviour -- see RED_ACCEPTANCE log entry for the full diagnosis). No unit test can drive GREEN for a criterion the acceptance oracle itself cannot exercise. All three criteria are already covered by existing example-based unit tests in tests/unit/report-island.test.ts (decideProbeUi/decideCommitUi refused-branch assertions, outside this step's changes) per this step's paradigm note (EXEMPT FROM PARADIGM: single designed UI state). No new unit test was required or written.",
+      "t": "2026-08-10T18:30:40Z"
     }
   ]
 }
