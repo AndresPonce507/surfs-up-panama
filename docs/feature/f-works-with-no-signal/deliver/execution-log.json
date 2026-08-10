@@ -323,6 +323,20 @@
       "s": "EXECUTED",
       "d": "PASS: verified only minified public worker and feature-local execution evidence staged after the 3,072 B ceiling and all mapped behavior gates passed; no source-page change was needed.",
       "t": "2026-08-10T21:00:21Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: target fresh-forecast acceptance 1 scenario/12 steps; build-output stamp contract and visible-text ISO falsification 2/2; full units 94/94; typecheck; build; fast CI 8/8 with 0 skipped; emitted worker remains 2,276 B gz. UI/Vera N/A: this is semantic datetime metadata beside an unchanged settled plain-clock stamp, no visual surface change. Test budget: 2 behaviors x 2 = 4, 2 unit tests.",
+      "t": "2026-08-10T21:14:18Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: staged only 02-01 timestamp metadata components, build-output contract tests, authorized semantic-oracle correction, and feature-local execution evidence after all gates passed.",
+      "t": "2026-08-10T21:14:34Z"
     }
   ]
 }
