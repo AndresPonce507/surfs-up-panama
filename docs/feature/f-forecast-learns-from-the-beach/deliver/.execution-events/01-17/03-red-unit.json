@@ -1,0 +1,1 @@
+{"d":"PASS: added mandatory 100-run fast-check law. It proves an increased age-at-receipt threshold can only shrink the eligible record set and never reads an aggregation clock. Inherited pure eligibility already satisfies the law.","p":"RED_UNIT","s":"EXECUTED","sid":"01-17","t":"2026-08-10T20:27:43Z"}

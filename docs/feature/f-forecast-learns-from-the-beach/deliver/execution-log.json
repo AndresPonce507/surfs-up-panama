@@ -491,6 +491,41 @@
       "s": "EXECUTED",
       "d": "PASS: deterministic correction emission committed as 5c421fe with Step-ID 01-15. Test budget: 1 behavior x 2 = 2 unit tests; one 100-run property added. Scoped checks pass. Full unit baseline remains 2 unrelated tsx IPC EPERM failures before application behavior (production-path end-to-end and staleness stamp build).",
       "t": "2026-08-10T20:20:27Z"
+    },
+    {
+      "sid": "01-17",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: inherited truth, step contract, roadmap, prior 01-16 evidence, and non-visual rationale inspected; eligibility happens before correction-record construction, so every estimate and gate count consumes only eligible samples.",
+      "t": "2026-08-10T20:27:43Z"
+    },
+    {
+      "sid": "01-17",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: named pre-authored acceptance scenario was already active and green at inherited base: 1 scenario, 15 steps. It records n=18, reporters=6, and a persisted correction when a 30-day threshold removes the four same-day samples.",
+      "t": "2026-08-10T20:27:43Z"
+    },
+    {
+      "sid": "01-17",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: added mandatory 100-run fast-check law. It proves an increased age-at-receipt threshold can only shrink the eligible record set and never reads an aggregation clock. Inherited pure eligibility already satisfies the law.",
+      "t": "2026-08-10T20:27:43Z"
+    },
+    {
+      "sid": "01-17",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS_SCOPE: named target 1/1 (15 steps), trust property 2/2, focused learning regression 43/43, and typecheck pass. Non-visual: correction-record counts are the observable, with no rendered surface. Full unit suite has one unrelated date-sensitive staleness build failure; broad Slice-01 AT has the documented impossible 01-18 fixture law failure, both untouched.",
+      "t": "2026-08-10T20:27:43Z"
+    },
+    {
+      "sid": "01-17",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 01-17 committed as d6ec0a6 with Step-ID 01-17. Test budget: one new behavior x 2 = 2 unit tests; the scope holds two properties for two behaviors. Target acceptance, focused learning regression, and typecheck pass. Full unit suite retains one unrelated date-sensitive staleness build failure; the known 01-18 acceptance fixture failure remains untouched.",
+      "t": "2026-08-10T20:28:32Z"
     }
   ]
 }
