@@ -25,7 +25,7 @@ function requestFor(
   endpoint: string,
   overrides: {
     lang: string;
-    threshold_score?: number;
+    threshold_score?: number | undefined;
     device_id: string;
     now: string;
   },
