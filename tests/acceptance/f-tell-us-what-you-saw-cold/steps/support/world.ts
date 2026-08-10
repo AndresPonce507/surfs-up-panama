@@ -262,12 +262,24 @@ export async function phonePage(state: ReportFlowScenario): Promise<Page> {
     // island's write+read+delete sentinel probe must surface plainly
     // (application-architecture.md section 12). What this cannot model:
     // storage that fills up mid-write after a successful probe.
-    await context.addInitScript(() => {
-      const refuse = (): never => {
-        throw new DOMException('this phone refuses durable storage', 'InvalidStateError');
-      };
-      Object.defineProperty(window, 'indexedDB', { get: refuse, configurable: false });
-    });
+    //
+    // Passed as a STRING, not a function reference. tsx/esbuild compiles a
+    // named inner function (a const-bound arrow, or an object-literal
+    // property like `get:`) by wrapping it in a `__name(fn, "name")` helper
+    // call that preserves `.name`. `context.addInitScript(fn)` serialises a
+    // function argument via `fn.toString()` and injects only that snippet
+    // as a raw document-start script in the new page -- the `__name` helper
+    // itself lives elsewhere in this module's compiled output and is
+    // undefined in that fresh page global, so the injected script threw
+    // `ReferenceError: __name is not defined` at the `const refuse = ...`
+    // line and aborted silently before ever reaching Object.defineProperty.
+    // A plain string has no function for esbuild to transform, so it ships
+    // to the page exactly as written, with nothing to fail on.
+    await context.addInitScript(
+      "Object.defineProperty(window, 'indexedDB', { get: function () { "
+        + "throw new DOMException('this phone refuses durable storage', 'InvalidStateError'); "
+        + '}, configurable: false });',
+    );
   }
   if (state.offline) await context.setOffline(true);
   context.on('response', (response) => {

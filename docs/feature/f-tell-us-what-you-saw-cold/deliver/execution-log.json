@@ -344,6 +344,41 @@
       "s": "SKIPPED",
       "d": "BLOCKED_BY_DEPENDENCY: RED_ACCEPTANCE never established a genuine RED (the AT fails on a precondition tests/acceptance/f-tell-us-what-you-saw-cold/steps/support/world.ts's storage-refusal fixture failed to establish under cucumber-js, not on missing production behaviour -- see RED_ACCEPTANCE log entry for the full diagnosis). No unit test can drive GREEN for a criterion the acceptance oracle itself cannot exercise. All three criteria are already covered by existing example-based unit tests in tests/unit/report-island.test.ts (decideProbeUi/decideCommitUi refused-branch assertions, outside this step's changes) per this step's paradigm note (EXEMPT FROM PARADIGM: single designed UI state). No new unit test was required or written.",
       "t": "2026-08-10T18:30:40Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T19:17:52Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T19:18:04Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T19:18:04Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE:no logic to property-test, EXEMPT FROM PARADIGM per roadmap implementation_notes; falsifiability proven at RED_ACCEPTANCE via poison-and-revert on the JS-off scenario",
+      "t": "2026-08-10T19:18:04Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "COMMIT",
+      "s": "SKIPPED",
+      "d": "CHECKPOINT_PENDING: surface_classification is user-visible, charter shared with 01-03/01-04/01-05 (docs/product/expectations/f-tell-us-what-you-saw-cold/a-surfer-walking-off-playa-venao-...md); no fresh U1-U7 plus source-blind examine sealed to it yet, so the tool's own COMMIT gate refuses (des-log-phase verified this by refusing EXECUTED PASS: no PASS evidence for all U1-U7, no current Vera verdict). No production UI changed in this step regardless: ReportCapture.astro was poisoned then reverted, git diff empty, byte-identical. Committing the world.ts fixture fix and this step's log/proof as the durable record; nothing user-visible is at risk of shipping unexamined.",
+      "t": "2026-08-10T19:18:21Z"
     }
   ]
 }
