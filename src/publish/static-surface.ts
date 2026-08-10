@@ -1,5 +1,6 @@
 import type { WindStateToken } from '../data/report-vocab';
 import type { SizeBandToken } from '../data/size-bands';
+import type { FactorToken } from './factor-vocab';
 
 /** Spot-local `HH:MM` strings, precomputed at publish time; pages never compute them. */
 export type BestWindow = {
@@ -37,6 +38,20 @@ export type SurfaceCall = {
   readonly size_range_m?: SizeRangeM;
   readonly wind_state?: WindState;
   readonly best_window?: BestWindow;
+  /**
+   * The reading-surface half of the day summary's `weakest_link`
+   * (`BundleDaySummary`, src/publish/region-bundle.ts). Optional for the same
+   * reason as the five structured fields above: surfaces committed before
+   * this field existed carry no such key at all.
+   *
+   * A MISSING key and an explicit `null` are different facts and this type
+   * must not collapse them: missing means an older surface published before
+   * this field existed; `null` means the pipeline computed a perfect day, no
+   * factor cost it any score. Population happens once, in `surfaceCall()`
+   * (src/pipeline/build.ts) -- this step only widens the wire type so that
+   * one-line addition typechecks.
+   */
+  readonly weakest_link?: FactorToken | null;
 };
 
 export type PublishedSurfaceDay = {
