@@ -21,7 +21,12 @@
 // the ambient clock, per the rule at the top of src/pipeline/ports.ts.
 
 import type { Clock } from '../pipeline/ports';
-import { buildCorrectionRecords, currentCorrectionKey } from './correction-file';
+import {
+  buildCorrectionRecords,
+  currentCorrectionKey,
+  historyCorrectionKey,
+  serializeCorrection,
+} from './correction-file';
 import { readObservationLog, readPredictionLog, spotsReportedIn, type LearningInputStore } from './inputs';
 
 /** What the fit needs of the store: read its inputs, store what it earns. */
@@ -63,7 +68,9 @@ export async function runLearningFitOnce(deps: LearningFitDeps): Promise<Learnin
   );
 
   for (const [spotId, record] of records) {
-    await deps.store.put(currentCorrectionKey(spotId), JSON.stringify(record));
+    const body = serializeCorrection(record);
+    await deps.store.put(currentCorrectionKey(spotId), body);
+    await deps.store.put(historyCorrectionKey(spotId, record.computed_at), body);
   }
 
   const events = spots.map((spot_id) => ({ type: 'spot_examined', detail: spot_id }));

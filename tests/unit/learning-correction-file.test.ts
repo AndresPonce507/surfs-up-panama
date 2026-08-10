@@ -16,11 +16,16 @@ import assert from 'node:assert/strict';
 import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
-import { buildCorrectionRecords, type SpotInputs } from '../../src/learning/correction-file';
+import {
+  buildCorrectionRecords,
+  historyCorrectionKey,
+  serializeCorrection,
+  type SpotInputs,
+} from '../../src/learning/correction-file';
 import { G1_MIN_MORNINGS } from '../../src/learning/constants';
 import type { ObservationRow, PredictionRow } from '../../src/learning/inputs';
 import { formScoreResidualSamples } from '../../src/learning/residuals';
-import { QUALITY_OBSERVED_SCORE, type QualityToken } from '../../src/data/report-vocab';
+import { QUALITY_OBSERVED_SCORE, type QualityToken, type WindStateToken } from '../../src/data/report-vocab';
 
 const SPOT_ID = 'playa-venao';
 const SOURCE = 'ncep_gfswave016';
@@ -40,7 +45,13 @@ function addDays(date: string, days: number): string {
 }
 
 /** n paired mornings for one spot, one model, one lead bucket -- the same shape 06 section 5.1 pairs on. */
-function pairedMornings(spotId: string, count: number, reporters: number, biggerThanForecastM: number): SpotInputs {
+function pairedMornings(
+  spotId: string,
+  count: number,
+  reporters: number,
+  biggerThanForecastM: number,
+  windRotation = 0,
+): SpotInputs {
   const observedMidM = 1.35; // chest_head band midpoint
   const observations: ObservationRow[] = [];
   const predictions: PredictionRow[] = [];
@@ -60,12 +71,14 @@ function pairedMornings(spotId: string, count: number, reporters: number, bigger
       device_id: `d_key_${index % reporters}`,
       observed_at: `${observedDate}T18:41:00Z`,
       size_band: 'chest_head',
+      wind: WIND_TOKENS[(index + windRotation) % WIND_TOKENS.length]!,
     });
   }
   return { spotId, observations, predictions };
 }
 
 const clock = new FixedClock('2026-08-09T07:00:00Z');
+const WIND_TOKENS: readonly WindStateToken[] = ['clean', 'choppy', 'blown_out'];
 
 describe('buildCorrectionRecords: below G1, refusal is auditable rather than invisible', () => {
   it('writes a record with applied: false, recording the mornings and reporters it examined', () => {
@@ -176,6 +189,41 @@ describe('formScoreResidualSamples: displayed score residual law', () => {
               weight: 1 / 25 ** 2,
             },
           ]);
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+});
+
+describe('correction emitter determinism: wind is claim-exempt', () => {
+  it('writes byte-identical correction JSON for every rotation of the wind labels under the same injected clock', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 10, max: 40 }),
+        fc.integer({ min: 5, max: 9 }),
+        fc.double({ min: -1.5, max: 1.5, noNaN: true, noDefaultInfinity: true }),
+        fc.integer({ min: 0, max: WIND_TOKENS.length - 1 }),
+        (count, reportersRaw, biggerThanForecastM, windRotation) => {
+          const reporters = Math.min(reportersRaw, count);
+          const base = buildCorrectionRecords([pairedMornings(SPOT_ID, count, reporters, biggerThanForecastM)], clock).get(SPOT_ID);
+          const rotated = buildCorrectionRecords(
+            [pairedMornings(SPOT_ID, count, reporters, biggerThanForecastM, windRotation)],
+            clock,
+          ).get(SPOT_ID);
+
+          assert.ok(base && rotated, 'paired height samples must produce an auditable correction record');
+          assert.equal(
+            serializeCorrection(rotated),
+            serializeCorrection(base),
+            'wind carries no residual, bias or standard error, so rotating wind labels cannot change correction bytes',
+          );
+          assert.equal(rotated.computed_at, '2026-08-09T07:00:00.000Z');
+          assert.equal(
+            historyCorrectionKey(SPOT_ID, rotated.computed_at),
+            'learned/corrections/v1/history/dt=2026-08-09/playa-venao.json',
+            'the dated audit key must come from the same injected-clock value that the JSON records',
+          );
         },
       ),
       { numRuns: 100 },
