@@ -101,6 +101,26 @@ const FACTOR_VOCAB_ES: FactorVocabEs = {
 const CLAIMS_MODEL_DISAGREEMENT =
   /no\s+se\s+ponen\s+de\s+acuerdo|coinciden\s+solo\s+en\s+parte|se\s+contradicen|\bdifieren\b|\bdiscrepan\b|no\s+coinciden|se\s+parten/iu;
 
+/**
+ * "nadie ... playa" in either order. Kept byte-identical to the acceptance
+ * oracle for scenario 2 (05-scoring-engine.md section 6.3, c_fresh null).
+ */
+const SAYS_NOBODY_REPORTED = /nadie[\s\S]*playa|playa[\s\S]*nadie/iu;
+
+/**
+ * "historial" or "historiales". Kept byte-identical to the acceptance oracle
+ * for scenario 2 (05-scoring-engine.md section 6.2, track_state unverified).
+ */
+const NAMES_A_TRACK_RECORD_GAP = /\bhistorial(?:es)?\b/iu;
+
+/**
+ * Zero beach reports exist in this system today (HANDOFF.md section 5). Kept
+ * byte-identical to the acceptance oracle so the unit bound and the published
+ * bound cannot drift apart.
+ */
+const CLAIMS_BEACH_CONFIRMATION =
+  /(alguien|un\s+surfista|un\s+reporte)\s+(confirm\w*|vio|report[oó])|confirmad[oa]\s+desde\s+la\s+playa|reporte\w*\s+desde\s+la\s+playa\s+confirm\w*/iu;
+
 const LEAKS_RAW_DATA =
   /\b(?:ncep|gfs|gfswave|dwd|gwam|ecmwf|meteofrance)(?:[_-]?[a-z0-9]+)*\b|\b(?:c_spread|c_track|c_fresh|conf_value|conf_level|confidence_reason|spread_terms|dominant|track_state|score_q|size_band|json|undefined|nan|null|true|false)\b/iu;
 
@@ -113,6 +133,18 @@ const SPREAD_DOMINANTS: readonly ConfidenceResult['dominant'][] = [
 ];
 
 const LEVELS: readonly ConfidenceLevel[] = ['high', 'medium', 'low'];
+
+/**
+ * The tightest reachable shape today: both declared inputs missing, no track
+ * record and no beach report, so all three clauses in this slice (the cap
+ * that bound the level, nobody-reported, no-verified-record) compose at
+ * once. `numRuns` default sampling reaches this corner rarely (missing both
+ * plus track nil plus freshness nil is roughly a 1-in-100 draw), so it rides
+ * as an explicit fast-check example rather than hoping a random run finds it
+ * -- exactly the "green tests do not mean it works" trap this repo has
+ * already shipped twice.
+ */
+const WORST_CASE_RESULT: ConfidenceResult = confidence([], { kind: 'absolute' }, null, null, ['wind', 'tide']);
 
 describe('composeConfidenceReasonEs', () => {
   /**
@@ -164,7 +196,9 @@ describe('composeConfidenceReasonEs', () => {
    * 160 characters, and the project copy rules forbid technical text and long
    * dashes on the Spanish surface. Counted in code points, exactly as the
    * acceptance oracle counts them. An over-budget wording must fail here, in
-   * seconds, because truncating instead is forbidden outright.
+   * seconds, because truncating instead is forbidden outright. The explicit
+   * `WORST_CASE_RESULT` example guarantees the tightest shape is always
+   * measured, not merely likely to be sampled.
    */
   it('fits the published bound and leaks nothing from the code', () => {
     fc.assert(
@@ -178,7 +212,55 @@ describe('composeConfidenceReasonEs', () => {
         );
         assert.ok(!LEAKS_RAW_DATA.test(reason), `la razón filtra texto del código: "${reason}"`);
         assert.ok(!LONG_DASH.test(reason), `la razón trae una raya larga: "${reason}"`);
+        assert.ok(
+          !CLAIMS_BEACH_CONFIRMATION.test(reason),
+          `la razón reclama o sugiere una confirmación desde la playa que hoy no existe: "${reason}"`,
+        );
       }),
+      { examples: [[WORST_CASE_RESULT]] },
+    );
+  });
+
+  /**
+   * 05-scoring-engine.md section 6.3: `c_fresh === null` because no beach
+   * report has ever reached this spot, so the sentence must say so. The
+   * biconditional is the point of this slice (implementation_notes,
+   * DoD 4): a composer that names the absence unconditionally would pass the
+   * "emits" half and lie the day a real report lands with `c_fresh`
+   * non-null, which the "disappears" half catches.
+   */
+  it('says nobody has reported from the beach exactly when c_fresh is null', () => {
+    fc.assert(
+      fc.property(engineResult, (result) => {
+        const reason = composeConfidenceReasonEs(result, FACTOR_VOCAB_ES);
+        assert.equal(
+          SAYS_NOBODY_REPORTED.test(reason),
+          result.c_fresh === null,
+          `c_fresh=${result.c_fresh} pero la razón ${result.c_fresh === null ? 'no dice' : 'dice'} que nadie ha reportado: "${reason}"`,
+        );
+      }),
+      { examples: [[WORST_CASE_RESULT]] },
+    );
+  });
+
+  /**
+   * 05-scoring-engine.md section 6.2: `track_state === 'unverified'` because
+   * no gated scorecard exists yet, so the sentence must name that gap. Same
+   * biconditional shape as the report clause above, exercised over the same
+   * real engine so the 'measured' branch (a track record present) is what
+   * proves the clause actually disappears, not merely that it can appear.
+   */
+  it('names the missing verified track record exactly when track_state is unverified', () => {
+    fc.assert(
+      fc.property(engineResult, (result) => {
+        const reason = composeConfidenceReasonEs(result, FACTOR_VOCAB_ES);
+        assert.equal(
+          NAMES_A_TRACK_RECORD_GAP.test(reason),
+          result.track_state === 'unverified',
+          `track_state="${result.track_state}" pero la razón ${result.track_state === 'unverified' ? 'no nombra' : 'nombra'} el historial: "${reason}"`,
+        );
+      }),
+      { examples: [[WORST_CASE_RESULT]] },
     );
   });
 
