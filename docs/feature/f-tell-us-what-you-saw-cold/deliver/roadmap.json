@@ -2,7 +2,7 @@
   "roadmap": {
     "project_id": "f-tell-us-what-you-saw-cold",
     "created_at": "2026-08-09T23:20:00Z",
-    "total_steps": 10,
+    "total_steps": 14,
     "quality_contract_version": 1
   },
   "phases": [
@@ -559,6 +559,113 @@
           "implementation_notes": "EXEMPT FROM PARADIGM: end-to-end integration verification; E2E stays single-example by design (the paradigm directive: E2E verifies wiring, not invariants). This scenario's anti-leak and reload steps already pass against the clean scaffold; its RED oracle is the confirmation render, fixed by 01-03 - so this step is the whole-journey proof that the ISLAND kept the closure: the island imports no forecast module (01-08's rule watches it), fetches nothing, and the in-place confirmation introduces no digits and no forecast vocabulary (the assertNoForecastOnConfirmation oracle greps body text for /\\d/ and for Dijimos, puntos, confianza, Ventana). Reload mid flow serves the static form again and the island holds no persisted state (01-04), so blank restart is by construction. GATE DISCIPLINE (repo has committed over a red gate through a pipeline before): run npm run test:at -- --tags \"@feature-f-tell-us-what-you-saw-cold and @slice-01\" with output redirected to a file, capture $?, then read the file; expected 10 scenarios, 0 failed, real exit 0. Then npm run build and INSPECT the rendered dist report documents (project rule: green tests do not mean it works; the conf_level bug shipped green). AFTER GREEN: the orchestrator runs des-verify-ui, then dispatches the source-blind examiner with only the charter and its start recipe; COMMIT is refused until both records pass. The three recorded regression guards (English twin, JS off, byte ceilings) must all still pass inside the same run - a guard that went red mid-slice is a stop, not a note."
         }
       ]
+    },
+    {
+      "id": "02",
+      "name": "Slice-02: write-path cost guardrails before any deploy",
+      "description": "The credential-free local infrastructure gate tells the owner which write-path limits it checked and rejects an unsafe declaration before a write resource can be deployed. This slice changes no rendered page.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "02-01",
+          "name": "Bind the source-blind local-CI acceptance contract",
+          "criteria": [
+            "The documented local infrastructure command is the driving surface and runs without AWS credentials.",
+            "Its green result names each checked write-path protection rather than emitting a bare success.",
+            "A missing declaration is rejected with what could not be inspected and how to restore it."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/write-path-cost-guardrails.feature",
+          "scenario_name": "The local gate names every protection that keeps a write flood bounded",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/nobody-can-deploy-a-write-path-that-can-run-up-a-bill-before-deploy-ci-rejects-a-write-function.md",
+          "u8_observation": "Desde un checkout limpio corro el gate local y puedo leer qué límites de escritura revisó, sin que diga haber mirado la consola. Si falta una declaración, el resultado nombra lo que no pudo revisar y cómo recuperarlo.",
+          "non_visual_rationale": "The terminal output and its exit code are the slice's only user-facing surface. U1 to U7 do not apply because this slice emits no HTML.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "tests/acceptance/f-tell-us-what-you-saw-cold/write-path-cost-guardrails.feature",
+            "tests/acceptance/f-tell-us-what-you-saw-cold/steps/write-path-cost-guardrails.steps.ts",
+            "docs/feature/f-tell-us-what-you-saw-cold/distill/red-classification.md"
+          ],
+          "implementation_notes": "Acceptance drives only the production-owned local-CI command. The temporary missing-declaration case must not alter the checkout. This is an integration-shaped command surface, so it is example-based; property-based coverage belongs to the small declaration and policy units introduced in later steps."
+        },
+        {
+          "id": "02-02",
+          "name": "Declare and inspect the four write-address cost boundaries",
+          "criteria": [
+            "The gate rejects any of the four write Function URLs unless it has the public Function URL posture and exactly the configured site origin.",
+            "The gate rejects report concurrency other than 2 and mint, push or photo-presign concurrency other than 1.",
+            "Every rejection names the broken protection, the observed and required value, why the value bounds cost, and a restoration action."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/write-path-cost-guardrails.feature",
+          "scenario_name": "The local gate names every protection that keeps a write flood bounded",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/nobody-can-deploy-a-write-path-that-can-run-up-a-bill-before-deploy-ci-rejects-a-write-function.md",
+          "u8_observation": "",
+          "non_visual_rationale": "Terminal-only guardrail output; no rendered surface exists.",
+          "ui_checks": {},
+          "deps": ["02-01"],
+          "files_to_modify": [
+            "infra/lib/guardrail-declarations.ts",
+            "infra/guardrail-evaluator.mjs",
+            "infra/test/guardrails.test.ts"
+          ],
+          "implementation_notes": "Serialize this work with F-BILL because these guardrail declarations, evaluator and synthesized-template tests are shared. Keep the inspection local and credential-free. Do not introduce a deploy, a CloudFront write route, or the F-BILL budget-deny action."
+        },
+        {
+          "id": "02-03",
+          "name": "Guard fixed write-store capacity, breakers and device limits",
+          "criteria": [
+            "The gate rejects a write store that is not provisioned at exactly 25 reads and 25 writes.",
+            "The gate rejects a missing write breaker alarm and reports all four write breakers in the green result.",
+            "The gate rejects quota declarations that retain per-IP rows or omit the 20 reports, 10 presigns and 20 subscription writes per device per day limits."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/write-path-cost-guardrails.feature",
+          "scenario_name": "The local gate names every protection that keeps a write flood bounded",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/nobody-can-deploy-a-write-path-that-can-run-up-a-bill-before-deploy-ci-rejects-a-write-function.md",
+          "u8_observation": "",
+          "non_visual_rationale": "Terminal-only guardrail output; no rendered surface exists.",
+          "ui_checks": {},
+          "deps": ["02-02"],
+          "files_to_modify": [
+            "infra/lib/guardrail-declarations.ts",
+            "infra/guardrail-evaluator.mjs",
+            "infra/test/guardrails.test.ts",
+            "infra/bin/app.ts"
+          ],
+          "implementation_notes": "Serialize with F-BILL's shared infra lane and integrate one branch at a time. This slice guards declarations and synthesized output before the first write-stack deploy; it does not claim that the AWS console has been audited."
+        },
+        {
+          "id": "02-04",
+          "name": "Wire the guard into local CI and prove each bite",
+          "criteria": [
+            "The default local CI gate executes the production guardrail tests and credential-free CDK synth after the write-path checks.",
+            "Each required protection has a controlled one-value regression proof that fails before the gate can claim success, then restores cleanly.",
+            "The green result cites system-architecture.md section 6.1 as the corrected sizing source and never relies on 07-write-path.md section 12."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/write-path-cost-guardrails.feature",
+          "scenario_name": "A gate that cannot inspect declarations says so instead of claiming the write path is safe",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/nobody-can-deploy-a-write-path-that-can-run-up-a-bill-before-deploy-ci-rejects-a-write-function.md",
+          "u8_observation": "",
+          "non_visual_rationale": "Terminal-only guardrail output; no rendered surface exists.",
+          "ui_checks": {},
+          "deps": ["02-03"],
+          "files_to_modify": [
+            "scripts/ci-local-core.mjs",
+            "infra/guardrail-evaluator.mjs",
+            "infra/test/guardrails.test.ts",
+            "tests/acceptance/f-tell-us-what-you-saw-cold/write-path-cost-guardrails.feature",
+            "tests/acceptance/f-tell-us-what-you-saw-cold/steps/write-path-cost-guardrails.steps.ts"
+          ],
+          "implementation_notes": "Run the slice tag, the production guardrail test and the local CI gate with their real exit codes. Record each deliberate drift and restoration in the RED classification record. The $18 budget deny action and live dead-man proof remain F-BILL work."
+        }
+      ]
     }
   ],
   "implementation_scope": {
@@ -566,10 +673,13 @@
       "src/report/",
       "src/components/",
       "src/pages/spots/",
-      "scripts/"
+      "scripts/",
+      "infra/"
     ],
     "test_directories": [
-      "tests/unit/"
+      "tests/unit/",
+      "tests/acceptance/f-tell-us-what-you-saw-cold/",
+      "infra/test/"
     ],
     "excluded_patterns": [
       "src/pipeline/**",
@@ -582,7 +692,6 @@
       "src/components/RankedList.astro",
       "src/components/SpotDetail.astro",
       "src/pages/index.astro",
-      "infra/**",
       "public/**",
       "package.json",
       "package-lock.json",
