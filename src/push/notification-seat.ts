@@ -42,6 +42,7 @@ type NotificationClient = {
 type NotificationClickScopePort = {
   clients: {
     matchAll: () => Promise<readonly NotificationClient[]>;
+    openWindow: (url: string) => Promise<unknown>;
   };
 };
 
@@ -68,8 +69,8 @@ export function handlePush(event: PushEventPort, scope: PushScopePort): void {
 
 /**
  * A tap first removes the notification, then brings forward an already-open
- * page for the spot. The next serial step owns opening a new page when none
- * matches, so this handler does not create browser state itself.
+ * page for the spot. When no client already has that site-relative URL, it
+ * opens exactly the URL from the notification data.
  */
 export function handleNotificationClick(
   event: NotificationClickEventPort,
@@ -80,7 +81,10 @@ export function handleNotificationClick(
   event.waitUntil(
     scope.clients
       .matchAll()
-      .then((clients) => clients.find((client) => relativeUrl(client.url) === targetUrl)?.focus()),
+      .then((clients) => {
+        const matchingClient = clients.find((client) => relativeUrl(client.url) === targetUrl);
+        return matchingClient ? matchingClient.focus() : scope.clients.openWindow(targetUrl);
+      }),
   );
 }
 
