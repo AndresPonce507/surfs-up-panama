@@ -71,6 +71,17 @@ const tomorrow = summaryFor(1);
 >
   <h1>{spot.name}</h1>
   <p><time datetime={forecast.published_at}>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</time></p>
+  <p data-stale-notice hidden style="color:var(--warn);font-size:var(--text-meta);font-weight:600"></p>
+  <script is:inline>
+    const stamp = document.querySelector('time[datetime]');
+    const notice = document.querySelector('[data-stale-notice]');
+    if (stamp && notice && Date.now() - Date.parse(stamp.dateTime) > 10800000) {
+      const seen = new Date(stamp.dateTime);
+      const hour = (seen.getUTCHours() + 19) % 24;
+      notice.hidden = false;
+      notice.textContent = `Viejo. Lo último que vimos fue a las ${hour % 12 || 12}:${String(seen.getUTCMinutes()).padStart(2, '0')} ${hour < 12 ? 'a.m.' : 'p.m.'} No pudimos sacar datos nuevos esta mañana.`;
+    }
+  </script>
   <nav>
     <a data-field="back-to-list" href={paths.home(locale)}>Volver a la lista</a>
   </nav>
