@@ -1,4 +1,11 @@
-// The hard-block gate for slices 03, 04 and 05 of f-show-our-track-record.
+// Scenario gates for future slices of f-show-our-track-record.
+//
+// Slice-02 is buildable but has not entered DELIVER. Its scenarios therefore
+// carry @pending individually: they stay in the feature contract but do not
+// pollute the untagged regression suite. Its DELIVER entry removes @pending
+// scenario by scenario before it records the required RED run. The temporary
+// environment switch below exists only to prove that preserved contract in a
+// contained RED run; it is not activation and must not appear in CI.
 //
 // The block is real, not procedural: ZERO surf reports have ever been filed,
 // no write store is deployed, and none of that can be seeded or fabricated
@@ -16,6 +23,13 @@
 // this gate fail loudly naming the exact open pre-requisite.
 
 import { Before } from '@cucumber/cucumber';
+
+const PENDING_ACTIVATION_ENV = 'F_SHOW_OUR_TRACK_RECORD_ACTIVATE_PENDING';
+
+Before({ tags: '@pending' }, function () {
+  if (process.env[PENDING_ACTIVATION_ENV] === '1') return undefined;
+  return 'skipped';
+});
 
 Before({ tags: '@blocked-on-real-reports' }, function () {
   return 'skipped';
