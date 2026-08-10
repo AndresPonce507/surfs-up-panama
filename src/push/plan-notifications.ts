@@ -36,6 +36,21 @@ export type NotificationPlan = {
   events: { kind: string; deferred?: number }[];
 };
 
+export type PushResponse = {
+  endpoint_hash: string;
+  status: number;
+};
+
+export type SendReactionPlan = {
+  deletions: string[];
+  events: { kind: string; endpoint_hash: string; status: number }[];
+};
+
+export type PlanSendReactionsInput = {
+  sends: readonly PlannedSend[];
+  responses: readonly PushResponse[];
+};
+
 export type PlanNotificationsInput = {
   now: string;
   spots: readonly PushSpot[];
@@ -157,5 +172,35 @@ export function planNotifications(input: PlanNotificationsInput): NotificationPl
     writes: notifications.map((notification) => notification.write),
     deferred,
     events: deferred === 0 ? [] : [{ kind: 'notification_run_cap_reached', deferred }],
+  };
+}
+
+const GONE_PUSH_STATUSES = new Set([403, 404, 410]);
+
+function firstResponseForEndpoint(responses: readonly PushResponse[], endpointHash: string): PushResponse | undefined {
+  return responses.find((response) => response.endpoint_hash === endpointHash);
+}
+
+function goneEndpointHashes(input: PlanSendReactionsInput): string[] {
+  const plannedEndpoints = new Set(input.sends.map((send) => send.endpoint_hash));
+  return [...plannedEndpoints].filter((endpointHash) => {
+    const response = firstResponseForEndpoint(input.responses, endpointHash);
+    return response !== undefined && GONE_PUSH_STATUSES.has(response.status);
+  });
+}
+
+/**
+ * React to completed Web Push attempts without performing I/O. A gone endpoint
+ * is declared for deletion after its first response; retries and deletes stay
+ * exclusively at the adapter boundary.
+ */
+export function planSendReactions(input: PlanSendReactionsInput): SendReactionPlan {
+  const deletions = goneEndpointHashes(input);
+  return {
+    deletions,
+    events: deletions.map((endpointHash) => {
+      const response = firstResponseForEndpoint(input.responses, endpointHash)!;
+      return { kind: 'push_subscription_prune_planned', endpoint_hash: endpointHash, status: response.status };
+    }),
   };
 }

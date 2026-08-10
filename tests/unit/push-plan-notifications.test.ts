@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
-import { planNotifications } from '../../src/push/plan-notifications';
+import { planNotifications, planSendReactions } from '../../src/push/plan-notifications';
 import type { StoredSub } from '../../src/push/types';
 
 const playaVenao = {
@@ -260,6 +260,46 @@ describe('planNotifications', () => {
             'a non-empty remainder is declared loudly as data for an adapter, never silently lost',
           );
           assert.deepEqual(subscriptions, before, 'planning returns declarations and never executes or mutates subscriber work');
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  it('plans one endpoint-hash deletion if and only if the first push response says the destination is gone', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(403, 404, 410, 429, 500, 503),
+        fc.constantFrom(403, 404, 410, 429, 500, 503),
+        (firstStatus, laterStatus) => {
+          const endpointHash = `suscriptor-${firstStatus}-${laterStatus}`;
+          const result = planSendReactions({
+            sends: [{
+              spot_id: playaVenao.spot_id,
+              endpoint_hash: endpointHash,
+              lang: 'es',
+              title: 'Aviso',
+              body: 'El aviso de prueba',
+              url: '/spots/playa-venao/',
+              tag: playaVenao.spot_id,
+              ttl_seconds: 60,
+            }],
+            responses: [
+              { endpoint_hash: endpointHash, status: firstStatus },
+              { endpoint_hash: endpointHash, status: laterStatus },
+            ],
+          });
+
+          assert.deepEqual(
+            result.deletions,
+            [403, 404, 410].includes(firstStatus) ? [endpointHash] : [],
+            'the gone-status set and planned endpoint deletion are equivalent across status codes',
+          );
+          assert.equal(
+            result.events.length,
+            [403, 404, 410].includes(firstStatus) ? 1 : 0,
+            'the pure core declares a prune reaction but does not execute a delete or retry',
+          );
         },
       ),
       { numRuns: 100 },
