@@ -97,7 +97,8 @@ type CallRow = {
   h_eff_m: number;
   size_band: SizeBandToken;
   size_range_m: SizeRangeM;
-  wind_state: WindState;
+  /** null: wind was never observed this hour (05-scoring-engine.md section 3.6 / L16); never collapsed onto "clean", the best-case reading. */
+  wind_state: WindState | null;
   /** null: no genuine daylight peak this day (05-scoring-engine.md section 7, "null when max_q = 0"); never an invented span. */
   best_window: BestWindow | null;
   bias_applied: number;
@@ -275,11 +276,13 @@ function surfaceCall(call: CallRow): SurfaceCall {
     conf_level: call.conf_level,
     size_band: call.size_band,
     size_range_m: call.size_range_m,
-    wind_state: call.wind_state,
-    // best_window is optional on the wire (SurfaceCall), never null: a day
-    // with no genuine peak omits the field rather than publishing a null
-    // token no reading route expects (application-architecture.md section 7:
-    // "best_window absent -> bars omitted").
+    // wind_state and best_window are optional on the wire (SurfaceCall),
+    // never null: an unknown wind reading, or a day with no genuine peak,
+    // omits the field rather than publishing a null the reading routes
+    // don't expect and RankedList.astro already degrades gracefully around
+    // (application-architecture.md section 7: absent structured fields fall
+    // back to the baked call sentence, never a raw null).
+    ...(call.wind_state === null ? {} : { wind_state: call.wind_state }),
     ...(call.best_window === null ? {} : { best_window: call.best_window }),
   };
 }
@@ -309,8 +312,15 @@ function sizeRange(sizeBand: string): SizeRangeM {
   return [lo_m, band.hi_m];
 }
 
-function windState(score: number | null): 'clean' | 'choppy' | 'blown_out' {
-  if (score === null || score >= 0.75) return 'clean';
+// A null wind sub-score means wind was never observed this hour
+// (05-scoring-engine.md section 3.6 / L16) -- distinct from a real, poor
+// reading, and never the same as the best-case "clean" bucket. Carrying that
+// absence through as `null` is the fix; the scoring layer upstream already
+// modeled it honestly (sWind returns null, wind leaves the geometric mean),
+// this presentation mapping was the only place still collapsing it.
+function windState(score: number | null): WindState | null {
+  if (score === null) return null;
+  if (score >= 0.75) return 'clean';
   if (score >= 0.35) return 'choppy';
   return 'blown_out';
 }
@@ -419,6 +429,7 @@ function longestHighScoreRun(
 }
 
 function spanishWind(windState: CallRow['wind_state']): string {
+  if (windState === null) return 'sin datos';
   return ({ clean: 'limpio', choppy: 'picado', blown_out: 'destrozado' })[windState];
 }
 
