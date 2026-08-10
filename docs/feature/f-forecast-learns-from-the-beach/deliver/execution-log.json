@@ -841,6 +841,41 @@
       "s": "EXECUTED",
       "d": "{\"commit\":\"4ef8df6\",\"message\":\"feat(learning): fence wild same-day residuals\",\"status\":\"green\"}",
       "t": "2026-08-10T22:04:05Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "04-03 begins after 04-02. Concordance is non-visual: it changes only the relative influence of repeated co-observed residuals, while the existing fence and newcomer guard remain regression rails.",
+      "t": "2026-08-10T22:11:05Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm run test:at -- --name Chronic disagreement is down-weighted, never silenced\",\"exit\":1,\"classification\":\"expected behavioral RED\",\"failure\":\"chronic movement 0.14844503968644757m exceeded the 60% of full-trust ceiling\"}",
+      "t": "2026-08-10T22:11:10Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm test -- --run tests/unit/learning-weight-laws.test.ts\",\"exit\":1,\"classification\":\"expected unit RED\",\"failure\":\"concordanceWeight was absent, so the generated formula-and-floor property failed with TypeError\",\"test_budget\":\"2 behaviors x 2 = 4; 1 new property\"}",
+      "t": "2026-08-10T22:11:37Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "{\"focused_acceptance\":\"chronic disagreement 1 scenario/21 steps PASS; newcomer full voice 1 scenario/19 steps PASS; prior same-day fence 1 scenario/21 steps PASS\",\"learning_units\":\"10 files, 67 tests PASS\",\"typecheck\":\"PASS\",\"falsification\":\"changing CONCORDANCE_FLOOR from 0.2 to 0.1 made the property fail and shrink to disagreement=16; restored 0.2\",\"global_qualification\":\"the all-acceptance baseline is intentionally not green: 135 scenarios, 85 passed, 14 skipped, 36 failed. It is blocked by the stale 2026-08-09 published surface against Panama 2026-08-10, the separately-owned 02-03 builder seam, and later slice-04 work; none is attributed to 04-03. npm run build independently fails on the same stale-surface guard.\",\"non_visual_rationale\":\"only stored correction weighting changes; no rendered surface changed\"}",
+      "t": "2026-08-10T22:15:07Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "{\"commit\":\"b94ff4b\",\"message\":\"feat(learning): down-weight chronic disagreement - step 04-03\",\"status\":\"scoped green\"}",
+      "t": "2026-08-10T22:15:27Z"
     }
   ]
 }
