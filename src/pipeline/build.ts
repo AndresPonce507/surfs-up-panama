@@ -15,7 +15,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import type { BuildDeps, BuildOutcome } from './ports';
+import type { BuildDeps, BuildOutcome, BuildStore } from './ports';
 import {
   confidence,
   DEFAULT_CONFIDENCE_FACTORS,
@@ -123,6 +123,10 @@ type CallRow = {
   bias_gate: string;
   members_used: number;
   members_null: number;
+  /** Additive, forward-only record of the multi-model spread used to build
+   * this call. Historical climatology reads this value only from completed,
+   * one-per-day dawn receipts; old receipts without it never qualify. */
+  spread_penalty: number;
   missing: ('wind' | 'tide')[];
   confidence_reason_es: string;
   weakest_link: Factor | null;
@@ -134,12 +138,21 @@ type DraftCallRow = Omit<CallRow, 'best_window'>;
 export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
   const now = deps.clock.now();
   const spots = deps.spots ?? loadLaunchSpotSeeds(deps.launchData);
-  const confidenceFactors = readConfidenceFactors(deps.launchData?.policyPath);
+  const confidencePolicy = readConfidencePolicy(deps.launchData?.policyPath);
   const date = regionalCivilDate(now, spots[0]?.timezone ?? 'America/Panama');
   const hour = now.toISOString().slice(11, 13);
   const dates = [date, followingCivilDate(date)] as const;
   const rows = await predictionRows(deps, dates);
-  const calls = spots.flatMap((spot) => callsForSpot(spot, rows, dates, hour, confidenceFactors));
+  const history = await completedSpreadHistory(deps, spots, now);
+  const calls = spots.flatMap((spot) => callsForSpot(
+    spot,
+    rows,
+    dates,
+    hour,
+    confidencePolicy.factors,
+    confidencePolicy.minimumHistoryDays,
+    history.get(spot.spot_id) ?? [],
+  ));
   if (calls.length === 0) return { published: false, reason: 'no usable wave members' };
 
   const build_id = `b_${date}T${hour}Z`;
@@ -200,6 +213,8 @@ function callsForSpot(
   dates: readonly string[],
   hour: string,
   confidenceFactors: ConfidenceFactors,
+  minimumHistoryDays: number,
+  history: readonly number[],
 ): CallRow[] {
   const validHours = [...new Set(rows.filter((row) => row.spot_id === spot.spot_id).map((row) => row.valid_ts))].sort();
   const correction = applyCorrection(spot, null);
@@ -238,7 +253,12 @@ function callsForSpot(
       tide: sTide(tide, correction.params),
     }, correction.params, correction.delta_q);
     const members = declared.filter((member): member is MemberRow => !('exclusion' in member));
-    const confidenceResult = confidence(members, { kind: 'absolute' }, null, null, score.missing, confidenceFactors);
+    const absoluteSpread = confidence(members, { kind: 'absolute' }, null, null, [], { spread: true });
+    const spreadPenalty = 1 - absoluteSpread.c_spread;
+    const spread = confidenceFactors.spread && members.length >= 2 && history.length >= minimumHistoryDays
+      ? { kind: 'climatology' as const, pct: percentileRank(history, spreadPenalty) }
+      : { kind: 'absolute' as const };
+    const confidenceResult = confidence(members, spread, null, null, score.missing, confidenceFactors);
     // SIZE_BANDS is derived from the one canonical vocabulary whose tokens ARE
     // the v1 enum, so classification can only land on one of them.
     const band = sizeBand(effectiveHeight, SIZE_BANDS) as SizeBandToken;
@@ -258,8 +278,11 @@ function callsForSpot(
       bias_gate: correction.gate,
       members_used: blended.members_used,
       members_null: blended.members_null,
+      spread_penalty: spreadPenalty,
       missing: score.missing,
-      confidence_reason_es: composeConfidenceReasonEs(confidenceResult, FACTOR_VOCAB_ES, confidenceFactors),
+      confidence_reason_es: composeConfidenceReasonEs(confidenceResult, FACTOR_VOCAB_ES, confidenceFactors, {
+        comparesAgainstSpotNormal: spread.kind === 'climatology' && spread.pct >= 80,
+      }),
       weakest_link: score.weakest_link,
     }];
   });
@@ -316,15 +339,109 @@ function surfaceCall(call: CallRow): SurfaceCall {
   };
 }
 
-function readConfidenceFactors(policyPath: string | undefined): ConfidenceFactors {
+function readConfidencePolicy(policyPath: string | undefined): {
+  readonly factors: ConfidenceFactors;
+  readonly minimumHistoryDays: number;
+} {
   const policy = JSON.parse(readFileSync(policyPath ?? DEFAULT_LAUNCH_POLICY_PATH, 'utf8')) as {
     confidence_factors?: { spread?: unknown };
+    spread_climatology?: { minimum_history_days?: unknown };
   };
   const spread = policy.confidence_factors?.spread;
   if (typeof spread !== 'boolean') {
     throw new Error('launch policy refused: confidence_factors.spread must be a boolean');
   }
-  return { ...DEFAULT_CONFIDENCE_FACTORS, spread };
+  const minimumHistoryDays = policy.spread_climatology?.minimum_history_days;
+  if (typeof minimumHistoryDays !== 'number' || !Number.isSafeInteger(minimumHistoryDays) || minimumHistoryDays < 1) {
+    throw new Error('launch policy refused: spread_climatology.minimum_history_days must be a positive integer');
+  }
+  return {
+    factors: { ...DEFAULT_CONFIDENCE_FACTORS, spread },
+    minimumHistoryDays,
+  };
+}
+
+type HistoricalCallRow = {
+  readonly spot_id: string;
+  readonly valid_ts: string;
+  readonly members_used: number;
+  readonly spread_penalty: number;
+};
+
+type HistoricalCallRecord = {
+  readonly publishedCivilDate: string;
+  readonly row: HistoricalCallRow;
+};
+
+type PublishedCallHistoryStore = {
+  list(prefix: string): Promise<string[]>;
+  get(key: string): Promise<string | null>;
+};
+
+/**
+ * The live history adapter is intentionally optional while its source is
+ * being wired. An absent, unreadable, or malformed source produces no
+ * climatology input, which preserves the absolute form. The production
+ * adapter must expose this same read pair before it can activate history.
+ */
+async function completedSpreadHistory(
+  deps: BuildDeps,
+  spots: readonly NonNullable<BuildDeps['spots']>[number][],
+  currentInstant: Date,
+): Promise<Map<string, readonly number[]>> {
+  const store = deps.store as BuildStore & Partial<PublishedCallHistoryStore>;
+  if (typeof store.list !== 'function' || typeof store.get !== 'function') return new Map();
+  try {
+    const keys = await store.list('log/calls/v1/');
+    const dawnKeys = keys.filter((key) => /\/build=11Z\//.test(key));
+    const records = await Promise.all(dawnKeys.map(async (key) => {
+      const publishedCivilDate = /\/dt=(\d{4}-\d{2}-\d{2})\//.exec(key)?.[1];
+      if (publishedCivilDate === undefined) throw new Error(`malformed published call key: ${key}`);
+      const body = await store.get!(key);
+      if (body === null) throw new Error(`published call disappeared: ${key}`);
+      return body.split('\n').filter((line) => line !== '').map((line) => ({
+        publishedCivilDate,
+        row: JSON.parse(line) as HistoricalCallRow,
+      }));
+    }));
+    return historicalSpreadBySpot(records.flat(), spots, currentInstant);
+  } catch {
+    return new Map();
+  }
+}
+
+function historicalSpreadBySpot(
+  records: readonly HistoricalCallRecord[],
+  spots: readonly NonNullable<BuildDeps['spots']>[number][],
+  currentInstant: Date,
+): Map<string, readonly number[]> {
+  const spotsById = new Map(spots.map((spot) => [spot.spot_id, spot]));
+  const bySpotAndDay = new Map<string, number>();
+  for (const { publishedCivilDate, row } of records) {
+    const spot = spotsById.get(row.spot_id);
+    if (spot === undefined || row.members_used < 2 || !Number.isFinite(row.spread_penalty)) continue;
+    if (!row.valid_ts.startsWith(`${publishedCivilDate}T18:00`)) continue;
+    const civilDate = regionalCivilDate(new Date(row.valid_ts), spot.timezone);
+    if (civilDate !== publishedCivilDate) continue;
+    const currentCivilDate = regionalCivilDate(currentInstant, spot.timezone);
+    if (civilDate >= currentCivilDate) continue;
+    const key = `${row.spot_id}\u0000${civilDate}`;
+    if (bySpotAndDay.has(key)) return new Map();
+    bySpotAndDay.set(key, row.spread_penalty);
+  }
+  const history = new Map<string, number[]>();
+  for (const [key, spreadPenalty] of bySpotAndDay) {
+    const [spotId] = key.split('\u0000');
+    if (spotId === undefined) return new Map();
+    const values = history.get(spotId) ?? [];
+    values.push(spreadPenalty);
+    history.set(spotId, values);
+  }
+  return history;
+}
+
+function percentileRank(history: readonly number[], value: number): number {
+  return 100 * history.filter((sample) => sample <= value).length / history.length;
 }
 
 function spanishCall(call: CallRow): string {

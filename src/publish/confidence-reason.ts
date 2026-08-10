@@ -72,6 +72,9 @@ export const REASON_PHRASES_ES = {
    * never on a single-model day (step 01-05's shape).
    */
   spread_disagreement: 'Los modelos no se ponen de acuerdo en el {factor}',
+  /** The spot has earned its own completed-day distribution. This remains a
+   * qualitative comparison: the percentile never reaches the reader. */
+  spread_worse_than_spot_normal: 'Hoy los modelos se parten más de lo normal en este spot',
   /**
    * `c_fresh === null`: no beach report has ever reached this spot, so the
    * level is agreement between forecast models, never a confirmation from the
@@ -117,9 +120,10 @@ export function composeConfidenceReasonEs(
   result: ConfidenceResult,
   vocab: FactorVocabEs,
   factors: ConfidenceFactors = DEFAULT_CONFIDENCE_FACTORS,
+  context: { readonly comparesAgainstSpotNormal?: boolean } = {},
 ): string {
   const clauses = [
-    bindingCauseClause(result, vocab, factors),
+    bindingCauseClause(result, vocab, factors, context),
     ...singleModelClause(result),
     ...honestyClauses(result),
   ];
@@ -155,6 +159,7 @@ function bindingCauseClause(
   result: ConfidenceResult,
   vocab: FactorVocabEs,
   factors: ConfidenceFactors,
+  context: { readonly comparesAgainstSpotNormal?: boolean },
 ): string {
   const missing = orderedMissingInputs(result.missing);
   if (missing.length > 0) {
@@ -164,6 +169,9 @@ function bindingCauseClause(
     return template.replace('{inputs}', namedMissingInputs(missing, vocab));
   }
   if (!result.has_usable_signal) return REASON_PHRASES_ES.no_usable_signal;
+  if (factors.spread && context.comparesAgainstSpotNormal === true) {
+    return REASON_PHRASES_ES.spread_worse_than_spot_normal;
+  }
   if (factors.spread && result.dominant === 'spread_period') {
     return REASON_PHRASES_ES.spread_disagreement.replace('{factor}', vocab.period);
   }
