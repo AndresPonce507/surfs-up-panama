@@ -63,6 +63,26 @@ the correct JIT state, not a gap.
 
 ## Current DISTILL coverage
 
+Updated 2026-08-09 at slice-01 JIT DISTILL verification (Pre-requisite 1 closed by
+`src/data/report-vocab.ts`). Evidence files: `tests/acceptance/f-tell-us-what-you-saw-cold/`
+`three-taps-locks-the-label.feature` + `nothing-of-ours-before-yours.feature` with steps under
+`steps/`. Gate run: `npm run test:at -- --tags "@feature-f-tell-us-what-you-saw-cold and
+@slice-01"`, real exit 1, 10 scenarios (7 active-RED `MISSING_FUNCTIONALITY`, 3 already-satisfied
+regression guards). Per-scenario classification and falsifiability proofs:
+`distill/red-classification.md`.
+
 | Current requirement | Active acceptance evidence | Status |
 |---|---|---|
-| All rows R1 to R45 | none: no `.feature` file, step definition, scaffold or test module exists for this feature | Expected-uncovered under the JIT rule (HANDOFF §1). slice-01 rows R1 to R11 become coverable at slice-01 JIT DISTILL, which is gated on feature-delta Pre-requisite 1 (canonical enum tokens). slice-02 rows R12 to R18 are coverable immediately after (no AWS needed). Rows for slices 03 to 05 additionally sit behind Pre-requisites 2, 5, 6 and 7 at deploy time, though authoring and in-memory port coverage do not need an AWS account. |
+| R1 | `@covers-R1`: "A surfer walking off Playa Venao locks a label in three taps" — three-questions oracle asserts the settled labels and the 14 canonical tokens from the constants files | Covered; form-shape steps green against the scaffold, journey RED (`MISSING_FUNCTIONALITY`) |
+| R2 | `@covers-R2`: offline commit scenario + shared-vocabulary scenario observe the durable queue at the driven storage port | Covered; RED (`MISSING_FUNCTIONALITY`, no island commits yet) |
+| R3 | `@covers-R3`: walking skeleton asserts the saved confirmation carries no score, no forecast, no way back | Covered; RED (`MISSING_FUNCTIONALITY`) |
+| R4 | `@covers-R4`: "Back never returns to an editable form and a new report starts blank" | Covered; RED (`MISSING_FUNCTIONALITY`) |
+| R5 | `@covers-R5`: saved record asserts canonical tokens, fresh ULID, `photo_ids: []`, zero placeholder wording | Covered; RED (`MISSING_FUNCTIONALITY`) |
+| R6 | `@covers-R6`: "A phone that cannot keep the label is told plainly before answering" — behavioural oracle on `[data-storage-notice]` (verbatim string pending Pre-requisite 8a) | Covered; RED (`MISSING_FUNCTIONALITY`) |
+| R7 | `@covers-R7`: walked anti-leak negative (falsifiability proven by source-poisoning the built route, see red-classification.md) + "A deliberately poisoned page cannot slip past the leak gate" (gate CLI `scripts/check-report-leak.mjs` does not exist yet) | Covered; RED (`MISSING_FUNCTIONALITY`) |
+| R8 | `@covers-R8`: offline scenario runs the whole journey with the signal cut against the local built site; zero AWS anywhere in the slice-01 suite | Covered; RED (`MISSING_FUNCTIONALITY`) |
+| R9 | `@covers-R9`: JS-off scenario asserts the verbatim noscript copy, no live submit control, reading intact | Covered; PASSING (already satisfied by the committed scaffold; regression guard) |
+| R10 | `@covers-R10`: English-twin scenario over both built report documents; matcher proven non-vacuous. Dead `altPath` props remain in `ReportCapture.astro:44` / `ReportShell.astro:32` (source debt, artifact clean) | Covered; PASSING (already satisfied; regression guard) |
+| R11 | `@covers-R11`: gzip ceilings on both documents plus the 5 KB island budget (island budget trivially green until the island ships) | Covered; PASSING (already satisfied; regression guard) |
+| R38 | `@covers-R38` (feature-wide, slice-01 contribution): walked anti-leak negative over live page, both built documents, and every referenced asset | Partially covered — slice-01 surface only; later slices extend to write-path payloads |
+| R12 to R37, R39 to R45 | none | Expected-uncovered under the JIT rule (HANDOFF §1). slice-02 rows R12 to R18 are coverable now (no AWS needed). Rows for slices 03 to 05 additionally sit behind Pre-requisites 2, 5, 6 and 7 at deploy time, though authoring and in-memory port coverage do not need an AWS account. U-row coverage (R39 to R45) lands with the `test:ui` checks per visible slice. |
