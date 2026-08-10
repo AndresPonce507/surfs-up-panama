@@ -7,16 +7,31 @@
 // SCOPE: 01-01 shipped the upsert-by-identity walking skeleton (R10, R11).
 // 01-02 added the endpoint-allowlist reject (R12): a request whose
 // destination host is not on the caller-declared `allowlist` is rejected
-// loudly, before anything is stored. 01-03 (this step) closes the other
-// half of R12: a destination reached over plain http is rejected the same
-// way, even when its host IS on the allowlist -- an allowlisted host over
-// http still leaks the subscription and lets anyone on the path forge or
-// read notifications, so transport is checked independently of host
-// membership, never folded into a single "bad endpoint" branch (that would
-// destroy the loudness the ADR's self-reporting mitigation depends on). The
-// daily-quota reject (R13) still does not read `writes_today` -- that is a
-// later slice-01 step and only adds another branch, never changes the
-// signature.
+// loudly, before anything is stored. 01-03 closed the other half of R12: a
+// destination reached over plain http is rejected the same way, even when
+// its host IS on the allowlist -- an allowlisted host over http still leaks
+// the subscription and lets anyone on the path forge or read notifications,
+// so transport is checked independently of host membership, never folded
+// into a single "bad endpoint" branch (that would destroy the loudness the
+// ADR's self-reporting mitigation depends on). 01-04 (this step) adds the
+// daily-quota reject (R13): a device that already used its day's 20
+// sub-writes (07-write-path.md §8.4, count ratified) is refused, loudly, in
+// the same {what, why, how} vocabulary. Checked FIRST, before the endpoint
+// is even parsed -- the write-path sequence diagram's own step order is
+// "cap -> schema -> HMAC -> endpoint host allowlist" (§8.6), and quota is
+// the cheapest possible gate: no reason to parse a URL for a device that is
+// refused regardless of what it names.
+//
+// FLAGGED, NOT FIXED: this function still unconditionally reads
+// `request.subscription.endpoint`, which is only ever populated for a
+// `{action:"subscribe"}` request. An `{action:"unsubscribe"}` request
+// carries a top-level `endpoint` and no `subscription` at all (§8.1), so a
+// call with such a request still throws here rather than deciding
+// `unsubscribed`. 01-01 flagged this and recommended dispatching on
+// `request.action` to fix it; this step's own criteria are quota-only (no
+// scenario here exercises unsubscribe), so introducing that dispatch stays
+// out of scope rather than landing half of the R14 behaviour with no test
+// requiring it. Left flagged for whichever slice-01 step ships R14.
 //
 // APPLY-AT-SEND, not stamp-at-subscribe (this step's implementation notes):
 // `threshold_score` is stored exactly as the surfer declared it, explicit
@@ -29,6 +44,12 @@ import { createHash } from 'node:crypto';
 
 import { isAllowedHost } from './push-hosts';
 import type { StoredSub, SubscribeDecision, SubscribeRequest } from './types';
+
+/** Ratified, unlike the notify-time score threshold (01-10): 20
+ *  subscription writes/day/device, ADOPTED by 07-write-path.md §8.4 and
+ *  fixed by the slice-01 acceptance fixture. A settled number belongs in a
+ *  named constant, not a magic literal at the call site. */
+const DAILY_SUBSCRIPTION_WRITE_QUOTA = 20;
 
 /** sha256(endpoint), hex-truncated to 128 bits, per 07-write-path.md §8.1. */
 function hashEndpoint(endpoint: string): string {
@@ -135,7 +156,34 @@ function rejectInsecureDestination(rawEndpoint: string): SubscribeDecision {
   };
 }
 
+/**
+ * The R13 reject (07-write-path.md §8.4): loud, in the same {what, why,
+ * how} shape as the two endpoint rejects above -- one vocabulary for every
+ * refusal a caller has to learn, not three. Deliberately blind to whether
+ * `existing` carries a row matching this request's identity: an upsert of
+ * an already-subscribed device is still one write, so it is gated the same
+ * as a brand-new subscribe, never exempted and never punished twice for
+ * being a repeat.
+ */
+function rejectDailyQuotaExceeded(): SubscribeDecision {
+  return {
+    outcome: 'rejected',
+    stored: [],
+    rejection: {
+      what: 'el cupo de escrituras de suscripción de este teléfono para hoy',
+      why:
+        `este teléfono ya usó su cupo de ${DAILY_SUBSCRIPTION_WRITE_QUOTA} escrituras de suscripción del día; ` +
+        'sin ese tope, un dispositivo comprometido podría inundar el servidor de suscripciones basura ' +
+        '(07-write-path.md sección 8.4).',
+      how: 'volvé a pedir avisos mañana, cuando el cupo del día se reinicia.',
+    },
+  };
+}
+
 export function decideSubscribe(request: SubscribeRequest): SubscribeDecision {
+  if (request.writes_today >= DAILY_SUBSCRIPTION_WRITE_QUOTA) {
+    return rejectDailyQuotaExceeded();
+  }
   const rawEndpoint = request.subscription.endpoint;
   const parsed = parseEndpoint(rawEndpoint);
   if (parsed === null) {

@@ -6,6 +6,7 @@
 // declared driving-port signature, per tests/unit/scoring-laws.test.ts.
 
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 
 import fc from 'fast-check';
 import { describe, it } from 'vitest';
@@ -403,6 +404,158 @@ describe('decideSubscribe -- insecure transport reject (R12, step 01-03)', () =>
           (insecureRejection?.what ?? '').includes(insecureEndpoint),
           'the insecure refusal must name the destination the surfer actually supplied',
         );
+      }),
+      { numRuns: 50 },
+    );
+  });
+});
+
+// ------------------------------------------------ daily write quota (R13, step 01-04)
+//
+// The law (implementation notes, step 01-04): a single inclusive cut on
+// `writes_today`. Below the ratified cap (20 sub-writes/day/device,
+// 07-write-path.md §8.4) a request is never refused for quota; at or above
+// it, every request is refused for quota, loudly, in the same {what, why,
+// how} vocabulary as the allowlist and transport refusals. `existing` also
+// varies across these properties (sometimes carrying a row matching the
+// request's own identity, sometimes not) specifically to prove the quota
+// gate is blind to that distinction: an upsert of an identity already on
+// file is not a free pass past the cap, and a brand-new identity is not
+// punished any harder than an upsert would be -- one gate, one boundary,
+// regardless of what `existing` holds.
+
+const DAILY_SUBSCRIPTION_WRITE_QUOTA = 20;
+
+function requestAtQuotaBoundary(
+  spotId: string,
+  endpoint: string,
+  deviceId: string,
+  writesToday: number,
+  existing: StoredSub[],
+): SubscribeRequest {
+  return {
+    action: 'subscribe',
+    spot_id: spotId,
+    subscription: { endpoint, keys: { p256dh: 'clave-publica', auth: 'clave-auth' } },
+    lang: 'es',
+    device_id: deviceId,
+    now: '2026-08-10T18:00:00-05:00',
+    existing,
+    writes_today: writesToday,
+    allowlist: ['fcm.googleapis.com'],
+  };
+}
+
+const belowCapWrites = fc.integer({ min: 0, max: DAILY_SUBSCRIPTION_WRITE_QUOTA - 1 });
+const atOrOverCapWrites = fc.integer({ min: DAILY_SUBSCRIPTION_WRITE_QUOTA, max: DAILY_SUBSCRIPTION_WRITE_QUOTA + 30 });
+const httpsAllowedEndpoint = identifier.map((s) => `https://fcm.googleapis.com/fcm/send/${s}`);
+
+describe('decideSubscribe -- daily write quota reject (R13, step 01-04)', () => {
+  // covers: R13 (accept branch) + contract:declared-inputs-not-ambient-reads
+  it('never refuses for quota below the cap, whether the identity is brand new or already on file', () => {
+    fc.assert(
+      fc.property(
+        identifier,
+        httpsAllowedEndpoint,
+        identifier,
+        belowCapWrites,
+        fc.boolean(),
+        (spotId, endpoint, deviceId, writesToday, hasExistingMatch) => {
+          const endpointHash = createHash('sha256').update(endpoint).digest('hex').slice(0, 32);
+          const existing: StoredSub[] = hasExistingMatch
+            ? [
+                {
+                  spot_id: spotId,
+                  endpoint_hash: endpointHash,
+                  lang: 'en',
+                  threshold_score: null,
+                  last_notified_date: null,
+                  followup_date: null,
+                  device_id: deviceId,
+                },
+              ]
+            : [];
+          const decision = decideSubscribe(requestAtQuotaBoundary(spotId, endpoint, deviceId, writesToday, existing));
+          assert.equal(
+            decision.outcome,
+            'subscribed',
+            `writes_today=${writesToday} is below the cap of ${DAILY_SUBSCRIPTION_WRITE_QUOTA} and must never be refused for quota (existing match: ${hasExistingMatch})`,
+          );
+          assert.equal(decision.rejection, null, 'an accepted destination must carry no rejection');
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  // covers: R13 (reject branch) -- the point of this step
+  it('always refuses for quota at or above the cap, storing nothing, whether the identity is brand new or already on file', () => {
+    fc.assert(
+      fc.property(
+        identifier,
+        httpsAllowedEndpoint,
+        identifier,
+        atOrOverCapWrites,
+        fc.boolean(),
+        (spotId, endpoint, deviceId, writesToday, hasExistingMatch) => {
+          const endpointHash = createHash('sha256').update(endpoint).digest('hex').slice(0, 32);
+          const existing: StoredSub[] = hasExistingMatch
+            ? [
+                {
+                  spot_id: spotId,
+                  endpoint_hash: endpointHash,
+                  lang: 'en',
+                  threshold_score: null,
+                  last_notified_date: null,
+                  followup_date: null,
+                  device_id: deviceId,
+                },
+              ]
+            : [];
+          const decision = decideSubscribe(requestAtQuotaBoundary(spotId, endpoint, deviceId, writesToday, existing));
+          assert.equal(
+            decision.outcome,
+            'rejected',
+            `writes_today=${writesToday} is at or above the cap of ${DAILY_SUBSCRIPTION_WRITE_QUOTA} and must always be refused for quota (existing match: ${hasExistingMatch})`,
+          );
+          assert.deepEqual(decision.stored, [], 'a quota-rejected request must store nothing');
+          const rejection = decision.rejection;
+          assert.ok(rejection !== null, 'a quota rejection must carry a stated reason, never a silent drop');
+          const joined = JSON.stringify(rejection ?? {});
+          assert.ok(/cupo|quota|l[íi]mite/i.test(joined), 'the rejection must name the quota as the reason');
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  // covers: contract shape parity across all three rejection reasons
+  it('rejects for quota in the same {what, why, how} shape as the allowlist and transport rejections', () => {
+    fc.assert(
+      fc.property(identifier, httpsAllowedEndpoint, identifier, atOrOverCapWrites, (spotId, endpoint, deviceId, writesToday) => {
+        const quotaDecision = decideSubscribe(requestAtQuotaBoundary(spotId, endpoint, deviceId, writesToday, []));
+        const offAllowlistDecision = decideSubscribe(
+          requestAtQuotaBoundary(spotId, 'https://un-servicio-no-listado.test/push', deviceId, 0, []),
+        );
+
+        assert.equal(quotaDecision.outcome, 'rejected');
+        const quotaRejection = quotaDecision.rejection;
+        const otherRejection = offAllowlistDecision.rejection;
+        assert.ok(
+          quotaRejection !== null && otherRejection !== null,
+          'both the quota refusal and the off-allowlist refusal must carry a stated reason',
+        );
+        assert.deepEqual(
+          Object.keys(quotaRejection ?? {}).sort(),
+          Object.keys(otherRejection ?? {}).sort(),
+          'the quota refusal must carry the same {what, why, how} shape as the off-allowlist refusal',
+        );
+        for (const field of ['what', 'why', 'how'] as const) {
+          assert.ok(
+            (quotaRejection?.[field] ?? '').trim().length > 0,
+            `the quota refusal must fill in ${field}, same as the off-allowlist refusal`,
+          );
+        }
       }),
       { numRuns: 50 },
     );
