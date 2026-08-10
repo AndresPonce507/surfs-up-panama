@@ -84,6 +84,7 @@ const PREDATES_THE_GATE = new Map([
   ['f-tell-us-what-you-saw-cold', '2026-08-10: DISCUSS ran before the ledger existed'],
   ['f-works-with-no-signal', '2026-08-10: DISCUSS ran before the ledger existed'],
   ['f-looks-like-the-ocean-and-reads-in-the-sun', '2026-08-10: DISCUSS ran before the ledger existed'],
+  ['f-read-it-in-your-language', '2026-08-10: DISCUSS ran before the ledger existed'],
 ]);
 
 const problems = [];
