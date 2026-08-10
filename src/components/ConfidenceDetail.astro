@@ -1,0 +1,55 @@
+---
+// WHY-NEW-FILE: src/components/ConfidenceDetail.astro
+//   CLOSEST-EXISTING: src/components/Confidence.astro
+//   EXTENSION-COST: Confidence.astro derives its reason from `level` alone
+//     (`confidenceReasonEs(level)`), so every row on the page reads the exact
+//     same sentence for the same level -- twenty spots, one of three
+//     canned paragraphs. No caller of that component can pass a per-row
+//     reason without breaking its own declared contract (day-one confidence
+//     is model agreement only, HANDOFF.md section 5). This component is the
+//     new, honest shape: the reason travels in from the row that carries it.
+//   PARALLEL-RATIONALE: a different data source (a prop, not a derivation)
+//     and a second real caller once the cross-lane wiring lands (the ranked
+//     rows and the spot-detail day sections), neither of which has any
+//     reason to depend on a component that computes its own reason.
+//
+// The confidence disclosure: the level word beside the score, always
+// visible; THIS row's own published reason, one tap away via native
+// <details>/<summary>. Zero JavaScript (adr-publish-time-html-rendering.md)
+// -- the browser's own disclosure widget does the work, no script ships.
+//
+// Rendering a reason this component invented, derived, or borrowed from
+// another row would be worse than rendering nothing: every spot would carry
+// a specific-sounding explanation computed for somebody else. So this
+// component composes nothing. It takes the row's own reason as a prop and
+// prints it, unmodified, or omits the block entirely when the row has none
+// (the degrade path: a stated absence -- no disclosure to open -- never an
+// empty box and never an invented sentence).
+//
+// `name="confidence"` makes every disclosure on the page an exclusive HTML5
+// details group: opening one auto-closes any other already open, natively,
+// no JS.
+//
+// The visible trigger reads the full "Confianza alta/media/baja" (see
+// Confidence.astro's header for why a bare level word is not enough).
+//
+// No aria-label: the visible text already says the full phrase, and
+// <summary>'s native disclosure-triangle semantics already announce the
+// expand/collapse state, so adding one would double-announce both.
+import { CONFIDENCE_LEVEL_WORD_ES, type ConfidenceLevel } from '../scoring/confidence';
+
+interface Props {
+  level: ConfidenceLevel;
+  /** THIS row's own published reason. Absent means no reason was published
+   * for this (spot, day) -- the degrade path, never a fabricated one. */
+  reason?: string;
+}
+
+const { level, reason } = Astro.props;
+const word = CONFIDENCE_LEVEL_WORD_ES[level];
+---
+
+<details class="confidence" name="confidence" data-level={level}>
+  <summary>Confianza {word}</summary>
+  {reason !== undefined && <div>{reason}</div>}
+</details>
