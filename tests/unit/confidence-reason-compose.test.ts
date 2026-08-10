@@ -304,6 +304,29 @@ describe('composeConfidenceReasonEs', () => {
     );
   });
 
+  it('removes a disabled spread factor from the level cause and the published reason', () => {
+    fc.assert(
+      fc.property(members, spreadInput, trackInput, freshnessInput, missingInputs, sentinelVocab,
+        (rows, spread, track, fresh, missing, vocab) => {
+          const factors = { spread: false } as const;
+          const result = confidence(rows, spread, track, fresh, missing, factors);
+          const reason = composeConfidenceReasonEs(result, vocab, factors);
+
+          assert.equal(result.c_spread, 1, 'un término apagado aporta su neutro, nunca una penalidad escondida');
+          assert.deepEqual(result.spread_terms, { height: 0, period: 0, direction: 0 }, 'un término apagado no conserva subcostos que puedan ganar la causa');
+          assert.ok(
+            ![vocab.height, vocab.period, vocab.direction].some((term) => reason.includes(term))
+              && !CLAIMS_MODEL_DISAGREEMENT.test(reason),
+            `la razón nombra desacuerdo o un término apagado: "${reason}"`,
+          );
+          if (track === null && fresh === null && missing.length === 0) {
+            assert.equal(result.level, 'low', 'sin ningún factor sobreviviente la confianza no puede fabricarse alta');
+            assert.match(reason, /se[ñn]al/iu, `sin una señal sobreviviente la razón debe admitirlo: "${reason}"`);
+          }
+        }),
+    );
+  });
+
   /**
    * application-architecture.md section 7 P1 bounds the published reason at
    * 160 characters, and the project copy rules forbid technical text and long

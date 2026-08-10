@@ -18,7 +18,11 @@
 // application-architecture.md section 7 P1 (one reason per (spot_id, day),
 // at most 160 characters, degrade = the details block omitted).
 
-import type { ConfidenceResult } from '../scoring/confidence';
+import {
+  DEFAULT_CONFIDENCE_FACTORS,
+  type ConfidenceFactors,
+  type ConfidenceResult,
+} from '../scoring/confidence';
 
 /**
  * The Spanish factor nouns, injected rather than owned. DELIVER owes ONE
@@ -56,6 +60,9 @@ export const REASON_PHRASES_ES = {
    * is true of every such morning. It is a placeholder, not settled copy.
    */
   nothing_missing: 'Hoy no falta ningún dato para esta playa',
+  /** Every participating factor lacks input. Low confidence is an honest
+   * absence of signal, not a perfect product of neutral fallback values. */
+  no_usable_signal: 'Todavía no hay una señal usable para medir la confianza',
   /**
    * Nothing was missing, so no cap bound the level, and the models split on
    * this term instead: `{factor}` names it from the injected vocabulary,
@@ -109,9 +116,10 @@ const MISSING_INPUT_ORDER: readonly MissingInput[] = ['wind', 'tide'];
 export function composeConfidenceReasonEs(
   result: ConfidenceResult,
   vocab: FactorVocabEs,
+  factors: ConfidenceFactors = DEFAULT_CONFIDENCE_FACTORS,
 ): string {
   const clauses = [
-    bindingCauseClause(result, vocab),
+    bindingCauseClause(result, vocab, factors),
     ...singleModelClause(result),
     ...honestyClauses(result),
   ];
@@ -143,7 +151,11 @@ function honestyClauses(result: ConfidenceResult): readonly string[] {
   return clauses;
 }
 
-function bindingCauseClause(result: ConfidenceResult, vocab: FactorVocabEs): string {
+function bindingCauseClause(
+  result: ConfidenceResult,
+  vocab: FactorVocabEs,
+  factors: ConfidenceFactors,
+): string {
   const missing = orderedMissingInputs(result.missing);
   if (missing.length > 0) {
     const template = missing.length === 1
@@ -151,7 +163,8 @@ function bindingCauseClause(result: ConfidenceResult, vocab: FactorVocabEs): str
       : REASON_PHRASES_ES.missing_several_inputs;
     return template.replace('{inputs}', namedMissingInputs(missing, vocab));
   }
-  if (result.dominant === 'spread_period') {
+  if (!result.has_usable_signal) return REASON_PHRASES_ES.no_usable_signal;
+  if (factors.spread && result.dominant === 'spread_period') {
     return REASON_PHRASES_ES.spread_disagreement.replace('{factor}', vocab.period);
   }
   return REASON_PHRASES_ES.nothing_missing;

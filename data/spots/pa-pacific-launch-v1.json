@@ -30,6 +30,9 @@
     "playa-blanca-farallon": "source-mismatch",
     "playa-el-toro": "low-confidence-mixed-exposure"
   },
+  "confidence_factors": {
+    "spread": true
+  },
   "scoring_priors": {
     "h_ref_m": 1.3,
     "s_size": 0.5,

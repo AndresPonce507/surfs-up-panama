@@ -31,6 +31,7 @@ const DAY_SUMMARY_FIELDS = [
   'best_window',
   'call',
   'conf_level',
+  'confidence_reason',
   'score_q',
   'size_band',
   'size_range_m',
@@ -201,6 +202,12 @@ describe('published region bundle contract', () => {
         assert.ok(
           ['low', 'medium', 'high'].includes(String(summary.conf_level)),
           `Day ${index} confidence must publish as one of the three levels a page can print, not a raw number. Got ${String(summary.conf_level)}.`,
+        );
+        const reason = summary.confidence_reason as { es?: unknown } | undefined;
+        assert.equal(
+          typeof reason?.es,
+          'string',
+          `Day ${index} confidence must carry its own Spanish reason beside the level, not leave the reading surface to invent one.`,
         );
       }
     }

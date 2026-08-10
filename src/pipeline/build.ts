@@ -12,10 +12,18 @@
 // previous artifacts keep serving and the manifest stamp does not advance.
 // The build never fetches; the log is the only contract with the fetch run.
 
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+
 import type { BuildDeps, BuildOutcome } from './ports';
-import { confidence } from '../scoring/confidence';
+import {
+  confidence,
+  DEFAULT_CONFIDENCE_FACTORS,
+  type ConfidenceFactors,
+} from '../scoring/confidence';
 import { loadLaunchSpotSeeds } from '../data/launch-spots';
 import { sizeBands, type SizeBandToken } from '../data/size-bands';
+import { composeConfidenceReasonEs, type FactorVocabEs } from '../publish/confidence-reason';
 import type {
   BundleDay,
   BundleDaySummary,
@@ -63,6 +71,16 @@ const SIZE_BANDS: SizeBandTable = sizeBands.map(({ value, lo_m, hi_m }) => ({
   hi_m,
 }));
 
+const DEFAULT_LAUNCH_POLICY_PATH = resolve('data/spots/pa-pacific-launch-v1.json');
+
+const FACTOR_VOCAB_ES: FactorVocabEs = {
+  height: 'altura',
+  period: 'período',
+  direction: 'dirección',
+  wind: 'viento',
+  tide: 'marea',
+};
+
 type PredictionRow = {
   spot_id: string;
   source: string;
@@ -106,6 +124,7 @@ type CallRow = {
   members_used: number;
   members_null: number;
   missing: ('wind' | 'tide')[];
+  confidence_reason_es: string;
   weakest_link: Factor | null;
 };
 
@@ -115,11 +134,12 @@ type DraftCallRow = Omit<CallRow, 'best_window'>;
 export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
   const now = deps.clock.now();
   const spots = deps.spots ?? loadLaunchSpotSeeds(deps.launchData);
+  const confidenceFactors = readConfidenceFactors(deps.launchData?.policyPath);
   const date = regionalCivilDate(now, spots[0]?.timezone ?? 'America/Panama');
   const hour = now.toISOString().slice(11, 13);
   const dates = [date, followingCivilDate(date)] as const;
   const rows = await predictionRows(deps, dates);
-  const calls = spots.flatMap((spot) => callsForSpot(spot, rows, dates, hour));
+  const calls = spots.flatMap((spot) => callsForSpot(spot, rows, dates, hour, confidenceFactors));
   if (calls.length === 0) return { published: false, reason: 'no usable wave members' };
 
   const build_id = `b_${date}T${hour}Z`;
@@ -174,7 +194,13 @@ async function predictionRows(deps: BuildDeps, dates: readonly string[]): Promis
   return rows;
 }
 
-function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: PredictionRow[], dates: readonly string[], hour: string): CallRow[] {
+function callsForSpot(
+  spot: NonNullable<BuildDeps['spots']>[number],
+  rows: PredictionRow[],
+  dates: readonly string[],
+  hour: string,
+  confidenceFactors: ConfidenceFactors,
+): CallRow[] {
   const validHours = [...new Set(rows.filter((row) => row.spot_id === spot.spot_id).map((row) => row.valid_ts))].sort();
   const correction = applyCorrection(spot, null);
   const drafts: DraftCallRow[] = validHours.flatMap((validTs) => {
@@ -212,7 +238,7 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
       tide: sTide(tide, correction.params),
     }, correction.params, correction.delta_q);
     const members = declared.filter((member): member is MemberRow => !('exclusion' in member));
-    const confidenceResult = confidence(members, { kind: 'absolute' }, null, null, score.missing);
+    const confidenceResult = confidence(members, { kind: 'absolute' }, null, null, score.missing, confidenceFactors);
     // SIZE_BANDS is derived from the one canonical vocabulary whose tokens ARE
     // the v1 enum, so classification can only land on one of them.
     const band = sizeBand(effectiveHeight, SIZE_BANDS) as SizeBandToken;
@@ -233,6 +259,7 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
       members_used: blended.members_used,
       members_null: blended.members_null,
       missing: score.missing,
+      confidence_reason_es: composeConfidenceReasonEs(confidenceResult, FACTOR_VOCAB_ES, confidenceFactors),
       weakest_link: score.weakest_link,
     }];
   });
@@ -259,6 +286,7 @@ function daySummary(call: CallRow): BundleDaySummary {
     spot_id: call.spot_id,
     score_q: call.score_q,
     conf_level: call.conf_level,
+    confidence_reason: { es: call.confidence_reason_es },
     call: { es: spanishCall(call) },
     size_band: call.size_band,
     size_range_m: call.size_range_m,
@@ -274,6 +302,7 @@ function surfaceCall(call: CallRow): SurfaceCall {
     score_q: call.score_q,
     call_es: spanishCall(call),
     conf_level: call.conf_level,
+    confidence_reason_es: call.confidence_reason_es,
     size_band: call.size_band,
     size_range_m: call.size_range_m,
     // wind_state and best_window are optional on the wire (SurfaceCall),
@@ -285,6 +314,17 @@ function surfaceCall(call: CallRow): SurfaceCall {
     ...(call.wind_state === null ? {} : { wind_state: call.wind_state }),
     ...(call.best_window === null ? {} : { best_window: call.best_window }),
   };
+}
+
+function readConfidenceFactors(policyPath: string | undefined): ConfidenceFactors {
+  const policy = JSON.parse(readFileSync(policyPath ?? DEFAULT_LAUNCH_POLICY_PATH, 'utf8')) as {
+    confidence_factors?: { spread?: unknown };
+  };
+  const spread = policy.confidence_factors?.spread;
+  if (typeof spread !== 'boolean') {
+    throw new Error('launch policy refused: confidence_factors.spread must be a boolean');
+  }
+  return { ...DEFAULT_CONFIDENCE_FACTORS, spread };
 }
 
 function spanishCall(call: CallRow): string {

@@ -15,6 +15,14 @@ export type SpreadInput =
  * module is where `level` is computed. */
 export type ConfidenceLevel = 'high' | 'medium' | 'low';
 
+/** Data-owned participation flags. A disabled factor contributes its neutral
+ * value and cannot become the stated reason for a level. */
+export type ConfidenceFactors = Readonly<{
+  spread: boolean;
+}>;
+
+export const DEFAULT_CONFIDENCE_FACTORS: ConfidenceFactors = { spread: true };
+
 export type ConfidenceResult = {
   c_spread: number;
   c_track: number;
@@ -31,6 +39,9 @@ export type ConfidenceResult = {
    * that tells "nobody disagreed because one model spoke" apart from
    * "the models agree". */
   members_used: number;
+  /** False when every participating confidence factor lacks a real input.
+   * In that state confidence is low by policy, never fabricated as 1.0. */
+  has_usable_signal: boolean;
   spread_terms: { height: number; period: number; direction: number };
   dominant:
     | 'spread_height'
@@ -48,10 +59,12 @@ export function confidence(
   track: { mae: number; mae_ref: number } | null,
   last_report_age_h: number | null,
   missing: ('wind' | 'tide')[],
+  factors: ConfidenceFactors = DEFAULT_CONFIDENCE_FACTORS,
 ): ConfidenceResult {
-  const c_spread = spread.kind === 'climatology'
+  const calculatedSpread = spread.kind === 'climatology'
     ? spread.pct <= 20 ? 1 : spread.pct < 80 ? 0.7 : 0.35
     : absoluteSpread(members);
+  const c_spread = factors.spread ? calculatedSpread : 1;
   const c_track = track === null ? 1 : clamp(1 - track.mae / track.mae_ref);
   const c_fresh = last_report_age_h === null ? null : Math.max(Math.exp(-last_report_age_h / 36), 0.3);
   const product = c_spread * c_track * (c_fresh ?? 1);
@@ -59,9 +72,14 @@ export function confidence(
     missing.includes('wind') ? 0.4 : 1,
     missing.includes('tide') ? 0.7 : 1,
   );
-  const c_total = Math.min(product, cap);
+  // Participation is policy data, while the engine's existing cap guards own
+  // member-count edge cases. An enabled spread factor remains informative for
+  // the synthetic cap fixtures as well as for real member rows; only a policy
+  // that removes spread AND lacks track/freshness evidence has no survivor.
+  const has_usable_signal = factors.spread || track !== null || c_fresh !== null;
+  const c_total = has_usable_signal ? Math.min(product, cap) : 0;
   const level = c_total <= 0.4 ? 'low' : c_total <= 0.7 ? 'medium' : 'high';
-  const spread_terms = spread.kind === 'climatology'
+  const spread_terms = !factors.spread || spread.kind === 'climatology'
     ? { height: 0, period: 0, direction: 0 }
     : absoluteSpreadTerms(members);
   const dominant = missing.length > 0
@@ -77,6 +95,7 @@ export function confidence(
     track_state: track === null ? 'unverified' : 'measured',
     missing: [...missing],
     members_used: members.length,
+    has_usable_signal,
     spread_terms,
     dominant,
   };
