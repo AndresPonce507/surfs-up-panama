@@ -1,0 +1,71 @@
+---
+// WHY-NEW-FILE: src/components/WeakestLink.astro
+//   CLOSEST-EXISTING: src/components/Confidence.astro
+//   EXTENSION-COST: Confidence.astro already owns its own <details> disclosure
+//     and its own reading of a level enum; folding a second, unrelated
+//     per-day fact (an optional culprit sourced from a different module pair,
+//     01-03/01-04) into it would tangle two independent honesty stories into
+//     one file for no shared markup.
+//   PARALLEL-RATIONALE: this component is mounted twice per spot page, once
+//     per day section, each with its own spotId/day pair and its own silent
+//     branch; neither existing component has that shape or that caller
+//     count.
+//
+// The one visible callout naming which factor cost a day its score. Reads
+// 01-03's WeakestLinkReading through resolveWeakestLink() and 01-04's
+// settled Spanish sentence through formatWeakestLinkEs(): this component
+// performs no lookup, no arithmetic and no derivation of its own beyond the
+// one mounting decision display-format.ts explicitly leaves to its caller
+// ("Whether either sentence ever reaches a page is a mounting decision this
+// module does not make.").
+//
+// SILENCE IS TWO HONEST FACTS, NOT ONE STATE, AND NEITHER RENDERS: a clean
+// day (`kind: 'clean'`) and a day whose forecast published without the field
+// (`kind: 'unknown'`) both render NOTHING here -- zero elements, never an
+// empty one. That is the markup contract the acceptance oracle fixes
+// (tests/acceptance/f-see-what-killed-it/steps/weakest-link-callout.steps.ts,
+// "MARKUP CONTRACT" and the "ninguna de las dos secciones nombra un
+// culpable" / "no queda un recuadro vacío" Then steps, which read
+// `document.querySelector(...)` and require it to be null): rendering either
+// silent case's own honest sentence would still be an element at this
+// selector, and the oracle treats any element here -- regardless of its
+// words -- as a claimed culprit. So the two silent facts stay visually
+// identical (nothing) on purpose; what must never happen is either one
+// borrowing the other's affirmative claim, and silence cannot do that.
+// Reaching for `??` on the reading would have collapsed "we know it was
+// clean" and "we do not know" into one rendering decision; the tagged union
+// out of weakest-link.ts is what keeps that from compiling.
+//
+// ZERO NEW JAVASCRIPT (adr-publish-time-html-rendering.md): this resolves at
+// publish time, like every other spot-page field; nothing here ships to the
+// browser.
+import { formatWeakestLinkEs } from '../publish/display-format';
+import { assertStrictTwoDayUpdate } from '../publish/static-surface';
+import { resolveWeakestLink, type SurfaceDayIndex } from '../publish/weakest-link';
+import surface from '../../data/published-surface.json';
+
+interface Props {
+  spotId: string;
+  day: SurfaceDayIndex;
+}
+
+const { spotId, day } = Astro.props;
+const publishedSurface = assertStrictTwoDayUpdate(surface.current);
+const reading = resolveWeakestLink(publishedSurface, spotId, day);
+---
+
+{reading.kind === 'named' && (
+  <p class="weakest-link" data-field="weakest-link">{formatWeakestLinkEs(reading)}</p>
+)}
+
+<style>
+  .weakest-link {
+    margin: var(--sp-2) 0 0;
+    padding-left: var(--sp-3);
+    border-left: 3px solid var(--danger);
+    color: var(--ink);
+    font-size: var(--text-body);
+    font-weight: 600;
+    line-height: var(--leading-snug);
+  }
+</style>
