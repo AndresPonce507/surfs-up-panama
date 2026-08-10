@@ -71,19 +71,11 @@
           "test_file": "tests/acceptance/f-paste-the-call-into-the-group/whatsapp-call-from-home.feature",
           "scenario_name": "La acción de compartir se ve terminada y respeta las preferencias del teléfono",
           "slice_id": "slice-01",
-          "surface_classification": "user-visible",
-          "charter_path": "docs/product/expectations/f-paste-the-call-into-the-group/a-surfer-on-the-home-page-taps-the-whatsapp-button-once-and-whatsapp-opens-with-the-days-call.md",
-          "u8_observation": "En la tarjeta grande hay una sola acción de WhatsApp de al menos 44 px que se toca una vez; se ve terminada a 390 px en tema claro y oscuro, legible contra el fondo real, sin recortes, y nada se mueve con movimiento reducido activado.",
-          "non_visual_rationale": "",
-          "ui_checks": {
-            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u1"],
-            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u2"],
-            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u3"],
-            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u4"],
-            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u5"],
-            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u6"],
-            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u7"]
-          },
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Emits src/components/ShareControls.astro but mounts it nowhere; step 01-04 is the one that wires it into the home page. The U1-U7 checks and Vera both drive the BUILT page, so at this step they measure a surface that does not exist and fail by construction, not by defect. Verified 2026-08-09: des-verify-ui returned FAIL on all seven, and grep confirmed ShareControls is referenced by no page, layout or component. Reclassified by the orchestrator; the visible gate moved intact to 01-04.",
+          "ui_checks": {},
           "files_to_modify": [
             "src/components/ShareControls.astro",
             "tests/unit/share-controls.test.ts"
@@ -107,15 +99,68 @@
           "u8_observation": "Un toque en la acción de WhatsApp de la tarjeta grande abre WhatsApp con el mensaje completo ya escrito: SURF y la fecha, Mejor: con el spot y su puntaje, el tamaño y el viento, la ventana, Confianza con el nivel, y una dirección https que termina en ?b= con el sello del build. El mismo enlace y el mismo mensaje con JavaScript apagado.",
           "non_visual_rationale": "",
           "ui_checks": {
-            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u1"],
-            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u2"],
-            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u3"],
-            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u4"],
-            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u5"],
-            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u6"],
-            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u7"]
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u3"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u7"
+            ]
           },
-          "deps": ["01-01", "01-02", "01-03"],
+          "deps": [
+            "01-01",
+            "01-02",
+            "01-03"
+          ],
           "files_to_modify": [
             "src/pages/index.astro",
             "src/components/ShareControls.astro"
