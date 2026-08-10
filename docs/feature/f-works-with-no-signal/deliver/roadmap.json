@@ -603,9 +603,10 @@
           "files_to_modify": [
             "public/sw.js",
             "src/offline/flush.ts",
+            "src/layouts/Base.astro",
             "tests/unit/offline-flush.test.ts"
           ],
-          "implementation_notes": "THE QUEUE SEAM, LOUD: the queue module is f-tell slice-01's deliverable and DOES NOT EXIST. The acceptance harness plants committed records at tests/acceptance/f-works-with-no-signal/steps/support/queue-seam.ts, which PROPOSES IndexedDB database \"surf-reports\", store \"queue\", keyPath \"report_id\" — proposed, not settled. RECONCILE IN THE SAME CHANGE as whichever side ships first: if f-tell's module names differ, queue-seam.ts follows; if this lands first, f-tell inherits. One name, two consumers, zero drift. THE TRIGGER'S HOME: the online event fires in page context, never in the worker; the page-side line (an online listener that posts a flush message to the helper, or runs the flush module) needs a seat in the document head — that seat is part of the SAME coordinator-owned Base.astro seam as the registration snippet (cross_lane_seams), lands as one combined inline line inside the booked section 5/6 budgets, and this lane does not write Base.astro. The flush logic itself lives in src/offline/flush.ts (new directory, added to scope) and/or the helper; keep listener registrations independent (push seat, 01-11). MINT ORDER: 07 section 5 fixes mint-before-flush; the mint is f-tell slice-03's /api/mint. Until it ships, the harness accepts an uncredentialed send; when it lands, mint must complete before the first replay — leave the seam visible in the flush module. ZERO AWS: the live endpoint is deploy-blocked (CloudFormation writes are denied to the CLI identity today, HANDOFF section 6 item 6, and the write stack does not exist — f-tell Pre-requisite 5); everything here is authorable and provable against the harness, and NOTHING in this phase may require an account, a deployed resource or a live origin. Background Sync: never load-bearing, iOS availability UNVERIFIED; the acceptance step asserts zero sync registrations."
+          "implementation_notes": "THE QUEUE SEAM, LOUD: the queue module is f-tell slice-01's deliverable and DOES NOT EXIST. The acceptance harness plants committed records at tests/acceptance/f-works-with-no-signal/steps/support/queue-seam.ts, which PROPOSES IndexedDB database \"surf-reports\", store \"queue\", keyPath \"report_id\" — proposed, not settled. RECONCILE IN THE SAME CHANGE as whichever side ships first: if f-tell's module names differ, queue-seam.ts follows; if this lands first, f-tell inherits. One name, two consumers, zero drift. THE TRIGGER'S HOME: the online event fires in page context, never in the worker. This step owns one additive listener in the existing Base.astro body script: on `online`, it posts the flush nudge to the helper or runs the flush module. It is a declared shared-file seam, not an implied coordinator follow-up: serialize it after Paste 03-03's OG block and before Signal 05-01, preserve Paste's `og:title`, `og:description`, `og:url`, `og:locale`, and clean canonical unchanged, and touch no other Base line. The existing registration stays intact. The flush logic itself lives in src/offline/flush.ts (new directory, added to scope) and/or the helper; keep listener registrations independent (push seat, 01-11). MINT ORDER: 07 section 5 fixes mint-before-flush; the mint is f-tell slice-03's /api/mint. Until it ships, the harness accepts an uncredentialed send; when it lands, mint must complete before the first replay — leave the seam visible in the flush module. ZERO AWS: the live endpoint is deploy-blocked (CloudFormation writes are denied to the CLI identity today, HANDOFF section 6 item 6, and the write stack does not exist — f-tell Pre-requisite 5); everything here is authorable and provable against the harness, and NOTHING in this phase may require an account, a deployed resource or a live origin. Background Sync: never load-bearing, iOS availability UNVERIFIED; the acceptance step asserts zero sync registrations."
         },
         {
           "id": "03-02",
@@ -933,7 +934,7 @@
           "name": "The settled identity makes the site installable",
           "criteria": [
             "The manifest ships the settled identity: display standalone, start_url /, lang es, theme colours per theme, both icon sizes real files.",
-            "The head names the manifest; that line is the recorded Base.astro seam, coordinator-owned, and is not written by this lane.",
+            "The head names the manifest through this step's declared, serialized Base.astro seam; existing theme-colour, OG and canonical declarations remain unchanged.",
             "Both icons are derived from the existing favicon mark and flagged for Andres's eye, not his hands."
           ],
           "test_file": "tests/acceptance/f-works-with-no-signal/it-opens-like-an-app.feature",
@@ -1001,9 +1002,10 @@
           "files_to_modify": [
             "public/manifest.webmanifest",
             "public/icon-192.png",
-            "public/icon-512.png"
+            "public/icon-512.png",
+            "src/layouts/Base.astro"
           ],
-          "implementation_notes": "The identity is section 12 verbatim: display standalone (the installed context IS the future push context — research 12 section 4: iOS 16.4+ allows Web Push only for PWAs added to the Home Screen, no automatic prompt exists), start_url \"/\", lang \"es\", both icon sizes, theme colours per theme (manifest theme_color plus the per-theme meta in the head seam). THE HEAD SEAM: the manifest link and theme-color meta go into the Base.astro head, which is outside this lane — same coordinator-owned seam as the registration snippet, serialized AFTER f-paste slice-03's OG block (feature-delta Pre-requisite 5); the seam entry in cross_lane_seams carries it. The acceptance scenario reads the identity from the built home head, so it stays RED until that one line lands; never fabricate a link elsewhere to get green. ICONS (Pre-requisite 6b): public/ holds only favicon.svg; derive 192 and 512 PNGs from the same mark (PNG, not SVG: manifest-icon SVG support is uneven and an install must never gamble), commit them, and flag the rendered result for Andres's eyeball — his eye, not his hands. Icons are fetched at INSTALL time only: zero bytes on any visit (section 5 line item 6, gated in 05-03). The page-weight document gate ignores non-HTML files, so the manifest's ceiling is enforced by this slice's own weight scenario, not the build gate."
+          "implementation_notes": "The identity is section 12 verbatim: display standalone (the installed context IS the future push context — research 12 section 4: iOS 16.4+ allows Web Push only for PWAs added to the Home Screen, no automatic prompt exists), start_url \"/\", lang \"es\", both icon sizes, theme colours per theme (manifest theme_color plus the existing per-theme meta in Base.astro). THE HEAD SEAM: this step owns one additive manifest link in the Base.astro head. It runs only after Paste 03-03's OG block and Signal 03-01's online-listener line; preserve Paste's `og:title`, `og:description`, `og:url`, `og:locale`, clean canonical, and the existing light/dark theme-colour meta unchanged. The acceptance scenario reads the identity from the built home head, so it stays RED until that one line lands; never fabricate a link elsewhere to get green. ICONS (Pre-requisite 6b): public/ holds only favicon.svg; derive 192 and 512 PNGs from the same mark (PNG, not SVG: manifest-icon SVG support is uneven and an install must never gamble), commit them, and flag the rendered result for Andres's eyeball — his eye, not his hands. Icons are fetched at INSTALL time only: zero bytes on any visit (section 5 line item 6, gated in 05-03). The page-weight document gate ignores non-HTML files, so the manifest's ceiling is enforced by this slice's own weight scenario, not the build gate."
         },
         {
           "id": "05-02",
@@ -1074,13 +1076,13 @@
       "consequence": "This slice ships zero push code. Background Sync is never load-bearing: iOS availability is UNVERIFIED and section 12 makes it progressive enhancement only."
     },
     {
-      "seam": "Base.astro head, manifest link + theme-color meta (slice-05) and the page-context flush trigger line (slice-03)",
-      "status": "RECORDED, NOT BUILT BY THIS LANE",
-      "where": "src/layouts/Base.astro, inside the existing <head>, appended after f-paste slice-03's OG meta block and alongside/after the slice-01 registration snippet",
-      "what": "One manifest <link> plus per-theme theme-color meta (05-01), and the ≤0.2 KB-class inline line that lets a page notice the signal returned and nudge the flush (03-01). Both inside booked section 5/6 budgets.",
-      "ordering": "Serializes behind f-paste slice-03's OG block and behind (or together with) the registration snippet. Base.astro stays outside this lane's write boundary.",
-      "owner": "coordinator, handing the head to this lane's steps once the REACH lane's block has landed",
-      "consequence": "05-01's installability scenario and 03-01's online-trigger path stay RED until their lines land. Never fabricate a head line from another document to get green."
+      "seam": "Base.astro: page-context flush trigger (03-01) and manifest identity link (05-01)",
+      "status": "EXECUTABLE SERIAL SHARED SEAM",
+      "where": "src/layouts/Base.astro: the existing body script receives the 03-01 online listener; the head receives the 05-01 manifest link. The existing per-theme theme-color meta remains in place.",
+      "what": "03-01 adds only the page-context online listener that nudges the flush; 05-01 adds only `<link rel=\"manifest\" href=\"/manifest.webmanifest\">`. Both stay inside the booked section 5/6 budgets.",
+      "ordering": "Paste 03-03 owns and lands its OG block first and alone. Then Signal 03-01 may append its online listener. Then Signal 05-01 may append its manifest link. These are serial writes to Base.astro only; their non-Base work remains independently schedulable.",
+      "owner": "Coordinator schedules the shared file. Paste owns `og:title`, `og:description`, `og:url`, `og:locale`, and the clean canonical; Signal owns only the two named additive lines and must preserve every existing declaration.",
+      "consequence": "The existing acceptance scenarios remain strict against the built home document: 03-01 proves the online-trigger path and 05-01 proves the manifest link. Neither may be made green by a substitute document or weakened oracle."
     },
     {
       "seam": "IndexedDB queue module naming (f-tell slice-01 <-> this lane's flush)",
@@ -1109,15 +1111,16 @@
       "src/publish/",
       "scripts/",
       "src/offline/",
-      "src/components/"
+      "src/components/",
+      "src/layouts/Base.astro"
     ],
     "test_directories": [
       "tests/unit/",
-      "tests/acceptance/daily-call-with-permanent-receipts/steps/"
+      "tests/acceptance/daily-call-with-permanent-receipts/steps/",
+      "tests/acceptance/f-works-with-no-signal/"
     ],
     "excluded_patterns": [
       "src/pipeline/**",
-      "src/layouts/Base.astro",
       "src/share/**",
       "src/report/**",
       "src/data/**",
@@ -1126,8 +1129,7 @@
       "vitest.config.ts",
       "astro.config.mjs",
       "package.json",
-      "package-lock.json",
-      "tests/acceptance/f-works-with-no-signal/**"
+      "package-lock.json"
     ]
   },
   "validation": {
