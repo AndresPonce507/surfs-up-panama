@@ -4,6 +4,11 @@
 // device-day voice before precision, winsorization, concordance, or selection
 // can inspect it.
 
+import { SIGMA_EFF } from './constants';
+
+const CONCORDANCE_TAU = 4;
+const CONCORDANCE_FLOOR = 0.2;
+
 export type DeviceDaySample = {
   readonly spot_id?: string;
   readonly session_day?: string;
@@ -78,5 +83,76 @@ export function winsorizeSpotDayResiduals(samples: readonly DeviceDaySample[]): 
     }
   }
 
-  return samples.map((sample, index) => replacements.get(index) ?? sample);
+  return applyConcordanceWeights(samples.map((sample, index) => replacements.get(index) ?? sample));
+}
+
+/**
+ * Chronic disagreement reduces a reporter's influence, never removes it.
+ * A missing disagreement means the reporter has never shared a spot-day
+ * median with anyone, which is the explicit newcomer-at-full-voice case.
+ */
+export function concordanceWeight(disagreementSigmaSquared: number | undefined): number {
+  if (disagreementSigmaSquared === undefined) return 1;
+  return Math.min(1, Math.max(CONCORDANCE_FLOOR, CONCORDANCE_TAU / (CONCORDANCE_TAU + disagreementSigmaSquared)));
+}
+
+/**
+ * Apply the concordance term after same-day fencing.  Only days with another
+ * device supply a disagreement datum; an isolated first morning stays at its
+ * precision weight.  Sparse histories shrink toward the observed population
+ * mean so one unusual shared morning cannot manufacture a shadow ban.
+ */
+function applyConcordanceWeights(samples: readonly DeviceDaySample[]): DeviceDaySample[] {
+  const disagreementsByDevice = new Map<string, number[]>();
+  const positionsByDay = positionsGroupedBySpotDay(samples);
+  for (const positions of positionsByDay.values()) {
+    // This seam is the robust same-day operation.  Its established contract
+    // leaves sub-three-voice days untouched, including their weights.
+    if (positions.length < 3) continue;
+    const day = positions.map((position) => samples[position]).filter((sample): sample is DeviceDaySample => sample !== undefined);
+    const median = lowerMedian(day);
+    if (median === undefined) continue;
+    for (const sample of day) {
+      const disagreement = ((sample.value - median.value) / SIGMA_EFF.height.value) ** 2;
+      const values = disagreementsByDevice.get(sample.device_id) ?? [];
+      values.push(disagreement);
+      disagreementsByDevice.set(sample.device_id, values);
+    }
+  }
+
+  const population = [...disagreementsByDevice.values()].flat();
+  if (population.length === 0) return [...samples];
+  const populationMean = population.reduce((sum, value) => sum + value, 0) / population.length;
+  const disagreementByDevice = new Map(
+    [...disagreementsByDevice].map(([deviceId, values]) => {
+      // One shared morning is a data point, not a chronic pattern.  It keeps
+      // the reporter at full voice and lets the repeated-history calculation
+      // below start only when there is a pattern to shrink.
+      if (values.length < 2) return [deviceId, undefined] as const;
+      const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+      const shrunk = (values.length * mean + CONCORDANCE_TAU * populationMean) / (values.length + CONCORDANCE_TAU);
+      return [deviceId, shrunk] as const;
+    }),
+  );
+  return samples.map((sample) => ({
+    ...sample,
+    weight: sample.weight * concordanceWeight(disagreementByDevice.get(sample.device_id)),
+  }));
+}
+
+function positionsGroupedBySpotDay(samples: readonly DeviceDaySample[]): Map<string, number[]> {
+  const positionsByDay = new Map<string, number[]>();
+  for (const [index, sample] of samples.entries()) {
+    if (sample.spot_id === undefined || sample.session_day === undefined) continue;
+    const key = `${sample.spot_id}\u0000${sample.session_day}`;
+    const positions = positionsByDay.get(key) ?? [];
+    positions.push(index);
+    positionsByDay.set(key, positions);
+  }
+  return positionsByDay;
+}
+
+function lowerMedian(samples: readonly DeviceDaySample[]): DeviceDaySample | undefined {
+  const ordered = [...samples].sort((left, right) => left.value - right.value);
+  return ordered[Math.floor((ordered.length - 1) / 2)];
 }

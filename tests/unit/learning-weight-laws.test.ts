@@ -9,6 +9,7 @@ import { describe, it } from 'vitest';
 
 import {
   collapseDeviceDayMedian,
+  concordanceWeight,
   winsorizeSpotDayResiduals,
   type DeviceDaySample,
 } from '../../src/learning/weights';
@@ -78,5 +79,25 @@ describe('spot-day winsorization', () => {
       { ...sample(2), device_id: 'd_two', band_width_m: 0.5 },
     ];
     assert.deepEqual(winsorizeSpotDayResiduals(samples), samples);
+  });
+});
+
+describe('reporter concordance', () => {
+  it('clips chronic disagreement without discounting an unobserved newcomer', () => {
+    fc.assert(
+      fc.property(
+        fc.option(
+          fc.double({ min: 0, max: 10_000, noNaN: true, noDefaultInfinity: true }),
+          { nil: undefined },
+        ),
+        (disagreement) => {
+          const expected = disagreement === undefined
+            ? 1
+            : Math.min(1, Math.max(0.2, 4 / (4 + disagreement)));
+          assert.equal(concordanceWeight(disagreement), expected);
+        },
+      ),
+      { numRuns: 50 },
+    );
   });
 });
