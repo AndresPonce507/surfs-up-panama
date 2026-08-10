@@ -35,6 +35,15 @@ const anyCount = fc.oneof(
 
 const satisfyingCount = (minimum: number) => fc.integer({ min: minimum, max: minimum + 100_000 });
 
+// Concentrated just below a threshold, rather than spanning the same wide
+// range as `anyCount`. A pure threshold-value mutation (10 -> 0) only
+// changes the outcome for counts inside the shifted band, so a diffuse
+// generator samples that band too rarely to falsify reliably; re-centering
+// on the boundary (Hebert ch.7's ?SHRINK: prefer simpler, domain-relevant
+// alternative generators) makes every mandatory-refusal property below a
+// dependable falsification, not a lucky one.
+const belowThreshold = (minimum: number) => fc.integer({ min: minimum - 10, max: minimum - 1 });
+
 describe('publish gate — totality and the fail-closed rule', () => {
   // covers: criterion 1 (total, exactly one of two outcomes, no throws) and
   // criterion 2 (a claim only when all three clauses read satisfied).
@@ -87,8 +96,8 @@ describe('publish gate — the reporter-count law (mandatory)', () => {
   it('with fewer than five distinct trust-eligible reporters the decision is always the counter state, never a claim, whatever the other numbers say', () => {
     fc.assert(
       fc.property(
-        anyCount,
-        fc.integer({ min: -1_000, max: 4 }),
+        satisfyingCount(10),
+        belowThreshold(5),
         clauseResult,
         (pairedObservations, distinctTrustEligibleReporters, biasClause) => {
           const decision = decidePublishGate({ pairedObservations, distinctTrustEligibleReporters, biasClause });
@@ -101,6 +110,46 @@ describe('publish gate — the reporter-count law (mandatory)', () => {
         },
       ),
     );
+  });
+
+  // G1's mirror of the mandatory law above: fewer than ten paired
+  // observations must always decide the counter state too, whatever the
+  // reporter count and the bias clause say -- including cases where both
+  // would otherwise satisfy their own clauses. Without this, G1's threshold
+  // is unpinned: nothing else in this file ties the number 10 to anything.
+  it('with fewer than ten paired observations the decision is always the counter state, never a claim, whatever the other numbers say', () => {
+    fc.assert(
+      fc.property(
+        belowThreshold(10),
+        satisfyingCount(5),
+        clauseResult,
+        (pairedObservations, distinctTrustEligibleReporters, biasClause) => {
+          const decision = decidePublishGate({ pairedObservations, distinctTrustEligibleReporters, biasClause });
+          assert.equal(
+            decision.claimOk,
+            false,
+            `fewer than ten paired observations (${pairedObservations}) must always decide the counter state; ` +
+              `got claimOk=true with distinctTrustEligibleReporters=${distinctTrustEligibleReporters}, biasClause=${biasClause}`,
+          );
+        },
+      ),
+    );
+  });
+});
+
+describe('publish gate — the claim is reachable at all', () => {
+  // Both mandatory-refusal properties above are trivially satisfiable by an
+  // always-false predicate. This is the witness that stops that: the exact
+  // boundary of all three clauses (G1 at 10, G2 at 5, bias satisfied) must
+  // decide the gated claim, not the counter state.
+  it('decides the gated claim exactly at the boundary: n_obs=10, n_reporters=5, bias satisfied', () => {
+    const decision = decidePublishGate({
+      pairedObservations: 10,
+      distinctTrustEligibleReporters: 5,
+      biasClause: 'satisfied',
+    });
+    assert.equal(decision.claimOk, true, `the exact boundary must decide a claim; got clauses ${JSON.stringify(decision.clauses)}`);
+    assert.deepEqual(decision.clauses, { pairedObservations: 'satisfied', distinctReporters: 'satisfied', bias: 'satisfied' });
   });
 });
 
