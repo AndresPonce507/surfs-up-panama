@@ -59,5 +59,8 @@ const inlineCss = minify(`${tokens}\n${base}\n${components}`);
   </head>
   <body>
     <slot />
+    <script>
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+    </script>
   </body>
 </html>
