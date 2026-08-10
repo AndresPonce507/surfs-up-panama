@@ -56,10 +56,7 @@ looks reasonable. Nothing has earned a claim yet, so the count-only box is the o
 this site can show right now.
 
 ## Expected observations (oracle)
-- U8 (lectura normal, 390 px): "Abro la página de mi playa a 390 px y, justo debajo del pronóstico
-  de mañana y antes del botón para reportar, leo un recuadro tranquilo que dice que todavía no
-  pueden decirme si aciertan aquí y que van 0 reportes de los 30 que hacen falta. No hay ningún
-  porcentaje, ningún margen y ninguna cifra de acierto en ninguna parte de la página."
+- U8 (lectura normal, 390 px): "Abro la página de mi playa a 390 px y, justo debajo del pronóstico de mañana y antes del botón para reportar, leo un recuadro tranquilo que dice que todavía no pueden decirme si aciertan aquí y que van 0 reportes de los 30 que hacen falta. No hay ningún porcentaje, ningún margen y ninguna cifra de acierto en ninguna parte de la página."
 - U8 (temas y movimiento reducido): "Con el teléfono en tema claro y en tema oscuro, el recuadro
   se lee cómodo a 390 px: nada se sale de la pantalla, ningún texto queda cortado, los números se
   alinean parejos y el recuadro se ve como un todavía no, no como un error. Con el movimiento
