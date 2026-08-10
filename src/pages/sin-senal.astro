@@ -1,0 +1,23 @@
+---
+// The precached offline fallback: what a surfer with nothing kept on their
+// phone lands on when there is no signal to fetch a live page
+// (application-architecture.md section 4, route `/sin-senal`). Ships today;
+// the second settled sentence, "Los reportes que mandes quedan guardados.",
+// is FALSE until slice-03 builds the report queue, so it is deliberately
+// absent here -- no step in this roadmap may add it before then.
+//
+// The settled sentence names the hour of the last thing we saw ("...de las
+// {hora}."), filled by the offline helper at serve time when it answers this
+// page from its own cache (a later step in this slice). This document is
+// built once, offline, with no forecast data and no last-seen hour to read,
+// so baking an hour here would report when the SITE was published, not when
+// this PHONE last saw a forecast -- a different and less honest claim. The
+// honest fallback until that helper exists: the sentence without the hour
+// clause, never a placeholder token.
+import Base from '../layouts/Base.astro';
+import { paths } from '../i18n/routes';
+---
+
+<Base locale="es" title="Sin señal" currentPath={paths.offline()}>
+  <h1>Sin señal. Esto es lo último que vimos.</h1>
+</Base>

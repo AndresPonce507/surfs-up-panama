@@ -59,13 +59,18 @@ const DECLARED_ROUTES = [
   // matches the smallest ceiling already in the section 4 route map; the built
   // page measures well inside it.
   { shape: '/404', pattern: /^404\.html$/, route: () => '/404', label: '4 KB', bytes: 4 * KB, reading: true },
+  // Slice-01 emits this. The precached fallback a reading or report route
+  // falls back to with nothing kept on the phone: it has to arrive with
+  // nothing else in flight, so it is a reading route under the same
+  // no-render-blocking-subresource rule (application-architecture.md section 4).
+  { shape: '/sin-senal', pattern: /^sin-senal\.html$/, route: () => '/sin-senal', label: '3 KB', bytes: 3 * KB, reading: true },
 ];
 
 /**
  * Declared in section 4, built by later features. Printed, never silently
  * skipped: a reader has to see the edge of what was measured.
  */
-const DECLARED_BUT_UNBUILT = '/sin-senal (3 KB), /acerca (8 KB), and the /en/ mirror (deferred to F-READ-IT-IN-YOUR-LANGUAGE)';
+const DECLARED_BUT_UNBUILT = '/acerca (8 KB), and the /en/ mirror (deferred to F-READ-IT-IN-YOUR-LANGUAGE)';
 
 function count(bytes) {
   return bytes.toLocaleString('en-US');
