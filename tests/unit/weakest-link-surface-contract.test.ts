@@ -20,6 +20,7 @@
 // falsifiable by deliberately breaking it once, per QUALITY_GATES.
 
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 
 import fc from 'fast-check';
 import { describe, it } from 'vitest';
@@ -30,6 +31,10 @@ import {
   type PublishedSurfaceUpdate,
   type SurfaceCall,
 } from '../../src/publish/static-surface';
+import {
+  resolveWeakestLink,
+  type WeakestLinkReading,
+} from '../../src/publish/weakest-link';
 
 // ------------------------------------------------------------- fixtures --
 
@@ -257,5 +262,181 @@ describe('SurfaceCall.weakest_link: the reading-surface half of the day summary'
         },
       ),
     );
+  });
+});
+
+// --------------------------------------------------- weakest-link reader --
+//
+// Slice-01, step 01-03: `resolveWeakestLink()` is the publish-side reader
+// that answers, for one spot id and one day index, the published culprit
+// token or the honest reason there isn't one. These properties reuse the
+// fixtures above -- the same generated surfaces that prove the wire contract
+// also drive the reader, so the two halves of the same contract can never
+// quietly disagree about what a well-formed surface looks like.
+
+function expectedReading(mode: WeakestLinkMode, token: FactorToken): WeakestLinkReading {
+  if (mode === 'absent') return { kind: 'unknown' };
+  if (mode === 'null') return { kind: 'clean' };
+  return { kind: 'named', factor: token };
+}
+
+describe('resolveWeakestLink: the publish-side reader for one spot, one day', () => {
+  // The falsifiable law QUALITY_GATES demands: missing and null must never
+  // collapse into each other, and neither may ever surface as a named
+  // factor. Proven falsifiable by deliberately collapsing `readingFor()` to
+  // `weakestLink ?? { kind: 'unknown' }` in src/publish/weakest-link.ts and
+  // re-running this file: the 'null' rows then read as `{ kind: 'unknown' }`
+  // instead of `{ kind: 'clean' }`, and this property fails with a semantic
+  // AssertionError naming the mismatched spot and day (see the RED_UNIT
+  // phase log / crafter report for the captured failing run). Reverted, and
+  // `git diff` shows src/publish/weakest-link.ts unchanged.
+  it('keeps missing, explicit null and a named factor as three distinguishable readings, for every published row on either day', () => {
+    fc.assert(
+      fc.property(
+        spotCountArb.chain((count) => fc.record({
+          count: fc.constant(count),
+          dayOffset: dayOffsetArb,
+          todayModes: modesArb(count),
+          tomorrowModes: modesArb(count),
+          todayTokens: tokensArb(count),
+          tomorrowTokens: tokensArb(count),
+        })),
+        ({ count, dayOffset, todayModes, tomorrowModes, todayTokens, tomorrowTokens }) => {
+          const surface = buildValidSurface(count, dayOffset, todayModes, tomorrowModes, todayTokens, tomorrowTokens);
+          spotIds(count).forEach((spotId, index) => {
+            const todayExpected = expectedReading(todayModes[index] ?? 'absent', todayTokens[index] ?? 'dir');
+            const tomorrowExpected = expectedReading(tomorrowModes[index] ?? 'absent', tomorrowTokens[index] ?? 'dir');
+            assert.deepEqual(resolveWeakestLink(surface, spotId, 0), todayExpected, `today reading for ${spotId}`);
+            assert.deepEqual(resolveWeakestLink(surface, spotId, 1), tomorrowExpected, `tomorrow reading for ${spotId}`);
+          });
+        },
+      ),
+    );
+  });
+
+  // Pins src/data/forecast.ts line 77 exactly. The acceptance suite cannot
+  // catch a reversal of this rule (its own fixture plants the same today
+  // plan into both `calls` and `days[0].spots`), so this is a UNIT-TEST
+  // OBLIGATION: `calls` and `days[0].spots` are given deliberately different
+  // weakest_link values below, a shape assertStrictTwoDayUpdate allows, and
+  // day 0 must always resolve from `calls`.
+  it("reads today from surface.calls and tomorrow from surface.days[1].spots -- forecast.ts:77's alias, never the more obvious days[0].spots", () => {
+    fc.assert(
+      fc.property(
+        spotCountArb.chain((count) => fc.record({
+          count: fc.constant(count),
+          dayOffset: dayOffsetArb,
+          callsModes: modesArb(count),
+          callsTokens: tokensArb(count),
+          days0Modes: modesArb(count),
+          days0Tokens: tokensArb(count),
+        })),
+        ({ count, dayOffset, callsModes, callsTokens, days0Modes, days0Tokens }) => {
+          const ids = spotIds(count);
+          const surfDate = civilDate(dayOffset);
+          const tomorrowDate = nextCivilDate(surfDate);
+          const calls = ids.map((id, index) => withWeakestLink(baseCall(id, index, 'hoy'), callsModes[index] ?? 'absent', callsTokens[index] ?? 'dir'));
+          // days[0].spots deliberately diverges from calls in its
+          // weakest_link only -- a legitimate shape the validator allows --
+          // so this property fails the instant the reader picks the wrong
+          // array.
+          const days0Spots = ids.map((id, index) => withWeakestLink(baseCall(id, index, 'hoy'), days0Modes[index] ?? 'absent', days0Tokens[index] ?? 'dir'));
+          const tomorrowSpots = ids.map((id, index) => baseCall(id, index + 1000, 'mañana'));
+          const surface: PublishedSurfaceUpdate = {
+            schema: 'published-surface-update/v1',
+            surf_date: surfDate,
+            published_at: `${surfDate}T11:00:00.000Z`,
+            build_kind: 'dawn',
+            calls,
+            days: [
+              { date: surfDate, spots: days0Spots },
+              { date: tomorrowDate, spots: tomorrowSpots },
+            ],
+          };
+          const validated = assertStrictTwoDayUpdate(surface);
+          ids.forEach((spotId, index) => {
+            const expectedFromCalls = expectedReading(callsModes[index] ?? 'absent', callsTokens[index] ?? 'dir');
+            assert.deepEqual(resolveWeakestLink(validated, spotId, 0), expectedFromCalls, `${spotId}: day 0 must read surface.calls, not surface.days[0].spots`);
+          });
+        },
+      ),
+    );
+  });
+
+  it('answers unknown for a spot with no row on that day at all, on either day, never a fabricated factor', () => {
+    fc.assert(
+      fc.property(
+        spotCountArb.chain((count) => fc.record({
+          count: fc.constant(count),
+          dayOffset: dayOffsetArb,
+          todayModes: modesArb(count),
+          tomorrowModes: modesArb(count),
+          todayTokens: tokensArb(count),
+          tomorrowTokens: tokensArb(count),
+        })),
+        ({ count, dayOffset, todayModes, tomorrowModes, todayTokens, tomorrowTokens }) => {
+          const surface = buildValidSurface(count, dayOffset, todayModes, tomorrowModes, todayTokens, tomorrowTokens);
+          const unpublishedSpotId = 'playa-que-no-esta-publicada';
+          assert.deepEqual(resolveWeakestLink(surface, unpublishedSpotId, 0), { kind: 'unknown' });
+          assert.deepEqual(resolveWeakestLink(surface, unpublishedSpotId, 1), { kind: 'unknown' });
+        },
+      ),
+    );
+  });
+
+  it("keeps each spot's reading tied to its own row and its own day: two spots with different published factors never read the same, and one spot's today never equals its own tomorrow when the morning published them differently", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 2, max: 4 }),
+        dayOffsetArb,
+        fc.uniqueArray(tokenArb, { minLength: 3, maxLength: 3 }),
+        (count, dayOffset, distinctTokens) => {
+          const [spotAToday, spotBToday, spotATomorrow] = distinctTokens as [FactorToken, FactorToken, FactorToken];
+          const ids = spotIds(count);
+          const modes: WeakestLinkMode[] = ids.map(() => 'token');
+          const todayTokens: FactorToken[] = ids.map((_, index) => {
+            if (index === 0) return spotAToday;
+            if (index === 1) return spotBToday;
+            return 'dir';
+          });
+          const tomorrowTokens: FactorToken[] = ids.map((_, index) => (index === 0 ? spotATomorrow : 'dir'));
+          const surface = buildValidSurface(count, dayOffset, modes, modes, todayTokens, tomorrowTokens);
+
+          const readingA = resolveWeakestLink(surface, ids[0]!, 0);
+          const readingB = resolveWeakestLink(surface, ids[1]!, 0);
+          const readingATomorrow = resolveWeakestLink(surface, ids[0]!, 1);
+
+          assert.deepEqual(readingA, { kind: 'named', factor: spotAToday });
+          assert.deepEqual(readingB, { kind: 'named', factor: spotBToday });
+          assert.deepEqual(readingATomorrow, { kind: 'named', factor: spotATomorrow });
+          assert.notDeepEqual(readingA, readingB, `${ids[0]} and ${ids[1]} published different factors today and must read differently`);
+          assert.notDeepEqual(readingA, readingATomorrow, `${ids[0]}'s own today must never equal its own tomorrow when the morning published them differently`);
+        },
+      ),
+    );
+  });
+
+  // Single-example smoke read against the real committed artifact, the same
+  // one src/data/forecast.ts imports -- proves the reader works against
+  // production data, not only synthetic fixtures.
+  it('reads a real culprit or an honest absence from the committed data/published-surface.json, for its first published spot', () => {
+    const committed = JSON.parse(readFileSync(
+      new URL('../../data/published-surface.json', import.meta.url),
+      'utf8',
+    )) as { current: unknown };
+    const surface = assertStrictTwoDayUpdate(committed.current);
+    const firstSpot = surface.calls[0];
+    assert.ok(firstSpot, 'test fixture error: the committed surface published zero spots');
+    const today = resolveWeakestLink(surface, firstSpot.spot_id, 0);
+    const tomorrow = resolveWeakestLink(surface, firstSpot.spot_id, 1);
+    for (const reading of [today, tomorrow]) {
+      assert.ok(
+        reading.kind === 'named' || reading.kind === 'clean' || reading.kind === 'unknown',
+        `the reader must always return one of the three honest outcomes, got ${JSON.stringify(reading)}`,
+      );
+      if (reading.kind === 'named') {
+        assert.ok(FACTOR_TOKENS.includes(reading.factor), `${reading.factor} must be one of the declared factor tokens`);
+      }
+    }
   });
 });
