@@ -337,6 +337,27 @@
       "s": "EXECUTED",
       "d": "PASS: staged only 02-01 timestamp metadata components, build-output contract tests, authorized semantic-oracle correction, and feature-local execution evidence after all gates passed.",
       "t": "2026-08-10T21:14:34Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: target browser acceptance 1 scenario/13 steps; emitted age-script boundary test 1/1 covers exactly-three-hour and just-past threshold across home, tomorrow, and spot; full units 95/95; typecheck; build; fast CI 8/8 with 0 skipped; worker remains 2,276 B gz. User-visible proof follows with declared U1-U7 and Vera.",
+      "t": "2026-08-10T21:28:16Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T21:28:38Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T21:28:58Z"
     }
   ]
 }
