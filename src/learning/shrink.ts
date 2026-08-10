@@ -15,7 +15,14 @@ function ownWeight(n: number, tau: number): number {
   return n / (n + tau);
 }
 
-/** b_hat = ownWeight * raw + (1 - ownWeight) * parent. */
+/**
+ * b_hat = ownWeight * raw + (1 - ownWeight) * parent.
+ *
+ * This returns the full pooled estimate. It deliberately does not apply a
+ * reader-facing clamp: the stored value must remain available for the
+ * apply-time clamp in slice 02, while this function's only constraint is the
+ * corridor from the raw estimate toward its parent.
+ */
 export function shrinkTowardParent(rawEstimate: number, n: number, tau: number, parentEstimate: number): number {
   // A one-spot hierarchy defines its parent from the same weighted mean. Keep
   // that mathematical identity exact instead of manufacturing rounding drift

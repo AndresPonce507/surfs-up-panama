@@ -175,6 +175,37 @@ describe('gateCorrection: G3 physical noise floor -- agreement cannot buy precis
   });
 });
 
+describe('shrinkTowardParent: G4 corridor -- the stored difference stays between its raw estimate and parent', () => {
+  it('keeps generated 10-to-40-morning height differences inside the zero-parent corridor, across every required count, spread, and difference', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 10, max: 40 }),
+        fc.double({ min: 0.05, max: 1.2, noNaN: true, noDefaultInfinity: true }),
+        fc.double({ min: 0, max: 0.3, noNaN: true, noDefaultInfinity: true }),
+        (count, biggerThanForecastM, spreadM) => {
+          // The acceptance fixture's convention is forecast minus observed,
+          // hence reports bigger than forecast yield a negative raw difference.
+          // Its alternating spread cancels for even counts and leaves one
+          // same-signed half-spread divided by count for odd counts.
+          const residualSpread = count % 2 === 0 ? 0 : spreadM / count;
+          const rawDifference = -biggerThanForecastM + residualSpread;
+          const storedDifference = shrinkTowardParent(rawDifference, count, TAU_SPOT_PRIOR, 0);
+
+          assert.ok(
+            Math.abs(storedDifference) <= Math.abs(rawDifference) + Number.EPSILON,
+            `the stored difference ${storedDifference} must not exceed raw ${rawDifference} after ${count} mornings`,
+          );
+          assert.ok(
+            storedDifference * rawDifference >= 0,
+            `the stored difference ${storedDifference} must not flip raw ${rawDifference}'s sign after ${count} mornings`,
+          );
+        },
+      ),
+      { numRuns: 20 },
+    );
+  });
+});
+
 describe('gateCorrection: this step\'s own acceptance numbers, as fixture examples', () => {
   it('refuses twelve mornings from three people, and the reason names the reporters, not the mornings', () => {
     const verdict = gateCorrection({ n: 12, reporters: 3, b: 0.22, se: 0.05 });
