@@ -1,5 +1,113 @@
 ---
+// The home is the ranked-list screen for today, plus the one share action the
+// top card offers. The action is composed here, in the route, so the card
+// component stays a reading surface and knows nothing about WhatsApp.
+//
+// One data path: the message is filled from `forecast.days[0][0]`, the very
+// entry RankedList paints as the big card. There is no second read of the
+// published surface and no second vocabulary, so the message can never tell a
+// different story than the card above it.
 import RankedList from '../components/RankedList.astro';
+import ShareControls from '../components/ShareControls.astro';
+import { forecast } from '../data/forecast';
+import { spotById } from '../data/region';
+import { stampedShareLink, whatsAppShareHref } from '../share/share-link';
+import {
+  composeWhatsAppCallMessage,
+  type ShareDaySummary,
+} from '../share/whatsapp-call-message';
+
+const MONTHS_ES = [
+  'enero',
+  'febrero',
+  'marzo',
+  'abril',
+  'mayo',
+  'junio',
+  'julio',
+  'agosto',
+  'septiembre',
+  'octubre',
+  'noviembre',
+  'diciembre',
+] as const;
+
+/**
+ * The surfing day in plain Spanish, read off the published stamp in UTC so the
+ * built page says the same day on every machine. Never a raw timestamp: the
+ * paste surface carries no technical text.
+ */
+function publishedDayEs(publishedAt: string): string {
+  const [year, month, day] = publishedAt.slice(0, 10).split('-').map(Number);
+  const monthName = year === undefined || month === undefined ? undefined : MONTHS_ES[month - 1];
+  if (day === undefined || monthName === undefined) {
+    throw new Error(`home: la mañana publicada no trae una fecha legible ("${publishedAt}")`);
+  }
+  return `${day} de ${monthName}`;
+}
+
+function shareSpotName(spotId: string): string {
+  const spot = spotById(spotId);
+  if (spot === undefined) {
+    // Same contract as the card's own lookup: a day entry with no identity is
+    // a broken build input. Fail the build LOUD, never paste invented data.
+    throw new Error(`home: no hay identidad de spot para spot_id "${spotId}"`);
+  }
+  return spot.name;
+}
+
+/**
+ * The five call fields are optional on a published day entry but required by
+ * the share template. A morning that cannot fill them honestly stops the
+ * build instead of shipping a half-written call to a group chat.
+ */
+function shareSummary(publishedAt: string): ShareDaySummary {
+  const top = forecast.days[0][0];
+  if (top === undefined) {
+    throw new Error('home: la mañana publicada no trae un mejor spot para hoy');
+  }
+  const { size_band, wind_state, best_window, conf_level } = top;
+  if (
+    size_band === undefined
+    || wind_state === undefined
+    || best_window === undefined
+    || conf_level === undefined
+  ) {
+    throw new Error(
+      `home: el mejor spot ${top.spot_id} llega sin los campos del llamado y no se puede compartir`,
+    );
+  }
+  return {
+    fecha: publishedDayEs(publishedAt),
+    spotName: shareSpotName(top.spot_id),
+    scoreQ: top.score_q,
+    sizeBand: size_band,
+    windState: wind_state,
+    windowStart: best_window.start,
+    windowEnd: best_window.end,
+    confidenceLevel: conf_level,
+  };
+}
+
+// The absolute host has exactly one owner: `site` in astro.config.mjs. Reading
+// it here means registering a real domain never touches a component.
+const configuredSite = Astro.site;
+if (configuredSite === undefined) {
+  throw new Error('home: astro.config.mjs no declara site y el mensaje no puede llevar una dirección absoluta');
+}
+
+const shareHref = whatsAppShareHref(
+  composeWhatsAppCallMessage(
+    shareSummary(forecast.published_at),
+    stampedShareLink(configuredSite.toString(), forecast.published_at),
+  ),
+);
 ---
 
-<RankedList locale="es" day={0} />
+<RankedList locale="es" day={0}>
+  <ShareControls
+    slot="top-card-action"
+    href={shareHref}
+    label="Mandar el llamado por WhatsApp"
+  />
+</RankedList>

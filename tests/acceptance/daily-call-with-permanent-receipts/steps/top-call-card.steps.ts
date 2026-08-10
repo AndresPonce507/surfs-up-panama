@@ -491,11 +491,21 @@ Then('el llamado cumple las siete comprobaciones visuales de la superficie publi
   const expectedHeadline = `VE A ${expected.spotName.toLocaleUpperCase('es-PA')}`;
   const audit = await page.evaluate(`(() => {
     const expectedHeadline = ${JSON.stringify(expectedHeadline)};
+    // Keeps ALPHA. An earlier version sliced to three channels, which turned
+    // rgba(0,0,0,0) — a fully TRANSPARENT background — into [0,0,0], identical
+    // to opaque black. Every element then measured its text against black, and
+    // in light theme #14181d on black is exactly 1.17:1, which is the number
+    // this check reported for three different elements at once. Three identical
+    // ratios for three different tags was the tell: they were not measuring
+    // three things, they were measuring one wrong thing.
     const parse = (value) => {
       const match = value.match(/rgba?\\(([^)]+)\\)/i);
       if (!match || match[1] === undefined) return null;
-      const channels = match[1].split(',').slice(0, 3).map((part) => Number(part.trim()));
-      return channels.length === 3 && channels.every(Number.isFinite) ? channels : null;
+      const parts = match[1].split(',').map((part) => Number(part.trim()));
+      const [r, g, b] = parts;
+      const alpha = parts.length >= 4 ? parts[3] : 1;
+      if (![r, g, b, alpha].every(Number.isFinite)) return null;
+      return [r, g, b, alpha];
     };
     const luminance = ([r, g, b]) => {
       const channel = (value) => {
@@ -522,11 +532,38 @@ Then('el llamado cumple las siete comprobaciones visuales de la superficie publi
       ? []
       : [...hero.querySelectorAll('a, strong, p, span')]
         .filter((element) => element.textContent?.trim() && element.getBoundingClientRect().width > 0);
+    // The backdrop a surfer's eye actually receives, which is not always the
+    // card's gradient. An element painting its own OPAQUE background (a solid
+    // button) hides the gradient completely, so measuring its text against the
+    // gradient measures a combination that is never on screen: white on --go
+    // reads 6.75:1 to a person and 1.05:1 to a naive walk.
+    //
+    // Anything less than fully opaque still measures against the gradient, and
+    // that is the point. A translucent surface lets the gradient through, so it
+    // owes the same 4.5:1 every stop of the gradient owes. This is the rule
+    // that keeps a future glass element honest, and it is why the fix belongs
+    // here rather than in the button: the check was measuring the wrong
+    // backdrop, not enforcing too strict a bar.
+    const opaqueBackdropOf = (element) => {
+      let node = element;
+      while (node !== null && node !== hero) {
+        const own = parse(getComputedStyle(node).backgroundColor);
+        // Only a FULLY opaque surface hides the gradient. Anything translucent,
+        // transparent included, lets the gradient through and therefore still
+        // owes the gradient its 4.5:1 — which is the rule that keeps a future
+        // glass element honest.
+        if (own !== null && own[3] >= 1) return own;
+        node = node.parentElement;
+      }
+      return null;
+    };
     const contrastFailures = textElements.flatMap((element) => {
       if (element === null) return ['falta un texto principal de la tarjeta'];
       const foreground = parse(getComputedStyle(element).color);
       if (foreground === null || background.length === 0) return ['no se pudo medir texto contra el fondo real de la tarjeta'];
-      return background
+      const ownBackdrop = opaqueBackdropOf(element);
+      const backdrops = ownBackdrop === null ? background : [ownBackdrop];
+      return backdrops
         .filter((stop) => contrast(foreground, stop) < 4.5)
         .map((stop) => element.tagName.toLowerCase() + ' queda en ' + contrast(foreground, stop).toFixed(2) + ':1');
     });

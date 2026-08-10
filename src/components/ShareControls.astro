@@ -1,0 +1,70 @@
+---
+// The one share action the home's big card offers.
+//
+// It composes nothing and reads nothing. The five Spanish lines are laid out
+// by src/share/whatsapp-call-message.ts (step 01-01), the number-less wa.me
+// carrier holding them is derived by src/share/share-link.ts (step 01-02), and
+// the words on the button arrive from the caller. This file's whole job is to
+// put that pair on the page as a plain anchor.
+//
+// Rendered at publish time, so the action is already in the HTML a surfer
+// receives: one tap, no intermediate step, and it keeps working with scripts
+// off (adr-publish-time-html-rendering.md). Nothing here ships JavaScript.
+interface Props {
+  /** The finished `wa.me/?text=` carrier holding the already-written call. */
+  href: string;
+  /** The Spanish words on the button, which are also its accessible name. */
+  label: string;
+}
+
+const { href, label } = Astro.props;
+---
+
+<div class="share-controls">
+  <a class="share-whatsapp" href={href}>{label}</a>
+</div>
+
+<style>
+  /* The action sits below the card's own lines and spans them: inside the
+     hero grid (`ol.ranked li:first-child`, two columns) `1 / -1` gives it the
+     full width of the card; outside a grid the declaration is inert. The
+     wrapper is a div and not a p on purpose, so the ranked-list rule that
+     clamps a card's call text to two lines can never reach this button. */
+  .share-controls {
+    grid-column: 1 / -1;
+    margin-top: var(--sp-4);
+  }
+
+  /* A primary action, so solid --go and never translucent (09-design-system
+     section 4). Measured against the real button surface rather than the page:
+     --on-go on --go is 6.75:1 in day theme and 8.72:1 in dark, and the button
+     itself stands off the hero gradient's worst stop at 5.91:1 day / 6.89:1
+     dark, well over the 3:1 that non-text UI owes. Section 3's rider for the
+     5.7-6.9 band is met by construction here: 17 px at weight 600, and the
+     words carry the meaning, never the colour alone. */
+  .share-whatsapp {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: var(--tap);
+    min-height: var(--tap);
+    padding: var(--sp-3) var(--sp-4);
+    border-radius: var(--r-m);
+    background: var(--go);
+    color: var(--on-go);
+    font-size: var(--text-body);
+    font-weight: 600;
+    line-height: var(--leading-snug);
+    text-align: center;
+    text-decoration: none;
+    /* Spanish runs about a fifth longer and the longest name on the coast can
+       ride in this label: it wraps onto a second line and grows the button,
+       and is never truncated (09-design-system section 5). */
+    overflow-wrap: break-word;
+    /* Nothing on this control transitions or animates, so a phone with
+       reduced motion switched on sees exactly the same button as one without.
+       Same construction as the confidence disclosure: motion-free rather than
+       motion-that-opts-out. */
+    transition: none;
+  }
+</style>
