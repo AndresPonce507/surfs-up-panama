@@ -26,7 +26,9 @@ import {
   currentCorrectionKey,
   historyCorrectionKey,
   serializeCorrection,
+  type StoredCorrection,
 } from './correction-file';
+import { partitionByBasin, type PoolingSpot } from './hierarchy';
 import { readObservationLog, readPredictionLog, spotsReportedIn, type LearningInputStore } from './inputs';
 import { TRUST_GATE_KEY, eligibleTrustRecords, parseTrustGate } from './trust';
 
@@ -38,6 +40,8 @@ export interface LearningStore extends LearningInputStore {
 export interface LearningFitDeps {
   store: LearningStore;
   clock: Clock;
+  /** Optional seed metadata activates the pooling hierarchy; omission preserves the launch fit. */
+  spots?: readonly PoolingSpot[];
 }
 
 /**
@@ -59,16 +63,16 @@ export async function runLearningFitOnce(deps: LearningFitDeps): Promise<Learnin
   const predictions = await readPredictionLog(deps.store);
   const trustGate = await readTrustGate(deps.store);
   const eligibleObservations = eligibleTrustRecords(observations, trustGate);
-  const spots = spotsReportedIn(observations);
-
-  const records = buildCorrectionRecords(
-    spots.map((spotId) => ({
-      spotId,
-      observations: eligibleObservations.filter((observation) => observation.spot_id === spotId),
-      predictions,
-    })),
-    deps.clock,
-  );
+  const spotIds = spotsReportedIn(observations);
+  const inputs = spotIds.map((spotId) => ({
+    spotId,
+    observations: eligibleObservations.filter((observation) => observation.spot_id === spotId),
+    predictions,
+  }));
+  const records = new Map<string, StoredCorrection>();
+  for (const basinInputs of partitionByBasin(inputs, deps.spots)) {
+    for (const [spotId, record] of buildCorrectionRecords(basinInputs, deps.clock)) records.set(spotId, record);
+  }
 
   for (const [spotId, record] of records) {
     const body = serializeCorrection(record);
@@ -76,11 +80,11 @@ export async function runLearningFitOnce(deps: LearningFitDeps): Promise<Learnin
     await deps.store.put(historyCorrectionKey(spotId, record.computed_at), body);
   }
 
-  const events = spots.map((spot_id) => ({ type: 'spot_examined', detail: spot_id }));
+  const events = spotIds.map((spot_id) => ({ type: 'spot_examined', detail: spot_id }));
 
   return {
     completed: true,
-    spots_examined: spots.length,
+    spots_examined: spotIds.length,
     corrections_written: records.size,
     events,
   };
