@@ -81,6 +81,17 @@ export const REASON_PHRASES_ES = {
    * code edit.
    */
   no_verified_record: 'Este spot todavía no tiene historial verificado',
+  /**
+   * `members_used === 1`: with a single member every spread term is forced
+   * to zero (`confidence()`, 05-scoring-engine.md section 6.1's f(M) cap), so
+   * there is nothing to compare and nothing to disagree about. Read off the
+   * result, never asserted unconditionally: the day a second model answers
+   * `members_used` stops being 1 and this clause drops itself with no code
+   * edit. Composed instead of `spread_disagreement` on that day, never
+   * alongside it -- `dominant` can never be a spread_* term with one member,
+   * so the two clauses can never both fire.
+   */
+  single_model_answered: 'Solo un modelo respondió',
 } as const;
 
 /**
@@ -99,8 +110,24 @@ export function composeConfidenceReasonEs(
   result: ConfidenceResult,
   vocab: FactorVocabEs,
 ): string {
-  const clauses = [bindingCauseClause(result, vocab), ...honestyClauses(result)];
+  const clauses = [
+    bindingCauseClause(result, vocab),
+    ...singleModelClause(result),
+    ...honestyClauses(result),
+  ];
   return `${clauses.join('. ')}.`;
+}
+
+/**
+ * A single answering model has nothing to compare itself against, which is a
+ * different fact from "the models agree" -- the most confident-sounding lie
+ * this system could tell, since a lone member looks like perfect consensus
+ * from the inside. Stated plainly whenever `members_used === 1`, regardless
+ * of what else the sentence says, so it never gets buried under a missing-
+ * input clause and never leaves the reader to infer agreement from silence.
+ */
+function singleModelClause(result: ConfidenceResult): readonly string[] {
+  return result.members_used === 1 ? [REASON_PHRASES_ES.single_model_answered] : [];
 }
 
 /**

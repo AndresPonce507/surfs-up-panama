@@ -108,6 +108,14 @@ const CLAIMS_MODEL_DISAGREEMENT =
 const SAYS_NOBODY_REPORTED = /nadie[\s\S]*playa|playa[\s\S]*nadie/iu;
 
 /**
+ * "un solo modelo", "solo un modelo", "único modelo" or "un modelo solo".
+ * Kept byte-identical to the acceptance oracle in
+ * tests/acceptance/f-know-how-much-to-trust-it/steps/confidence-reason.steps.ts
+ * so the unit bound and the published bound cannot drift apart.
+ */
+const SAYS_ONE_MODEL_ANSWERED = /\b(?:un\s+solo|solo\s+un|[uú]nico)\s+modelo\b|\bun\s+modelo\s+solo\b/iu;
+
+/**
  * "historial" or "historiales". Kept byte-identical to the acceptance oracle
  * for scenario 2 (05-scoring-engine.md section 6.2, track_state unverified).
  */
@@ -145,6 +153,24 @@ const LEVELS: readonly ConfidenceLevel[] = ['high', 'medium', 'low'];
  * already shipped twice.
  */
 const WORST_CASE_RESULT: ConfidenceResult = confidence([], { kind: 'absolute' }, null, null, ['wind', 'tide']);
+
+/**
+ * The tightest single-model shape: exactly one member answered AND both
+ * declared inputs are missing, so the cap clause, the single-model clause and
+ * both honesty clauses all compose in the same sentence at once (01-05's own
+ * worst case). Default sampling for `engineResult` reaches exactly one member
+ * crossed with both inputs missing rarely enough that this rides as an
+ * explicit fast-check example rather than hoping a random run finds it --
+ * the same "green tests do not mean it works" trap `WORST_CASE_RESULT` above
+ * exists to close.
+ */
+const SINGLE_MODEL_WORST_CASE: ConfidenceResult = confidence(
+  [{ source: 'uno', lead_h: 0, swell: { h_m: 0.7, t_s: 12, dir_deg: 205 }, swell2: null }],
+  { kind: 'absolute' },
+  null,
+  null,
+  ['wind', 'tide'],
+);
 
 /**
  * The real 2026-08-08 Venao pull with the tide present, mirroring
@@ -216,6 +242,38 @@ describe('composeConfidenceReasonEs', () => {
   });
 
   /**
+   * The degenerate case 01-05 exists for: with exactly one answering model
+   * there is nothing to compare, so the sentence must say so plainly and
+   * must never read as either agreement or disagreement between models.
+   * `members_used` is the only input that tells "nobody disagreed because
+   * one model spoke" apart from "the models agree": `dominant` carries no
+   * signal here, because `confidence()` already forces every spread term to
+   * zero below two members, so a composer that fell through to
+   * spread_disagreement on a single-model day would invent a disagreement
+   * that cannot exist.
+   */
+  it('says exactly one model answered when members_used is 1, and never claims disagreement', () => {
+    fc.assert(
+      fc.property(engineResult, (result) => {
+        const reason = composeConfidenceReasonEs(result, FACTOR_VOCAB_ES);
+
+        assert.equal(
+          SAYS_ONE_MODEL_ANSWERED.test(reason),
+          result.members_used === 1,
+          `members_used=${result.members_used} pero la razón ${result.members_used === 1 ? 'no dice' : 'dice'} que respondió un solo modelo: "${reason}"`,
+        );
+        if (result.members_used === 1) {
+          assert.ok(
+            !CLAIMS_MODEL_DISAGREEMENT.test(reason),
+            `con un solo modelo la razón habla de un desacuerdo entre modelos que no puede existir: "${reason}"`,
+          );
+        }
+      }),
+      { examples: [[SINGLE_MODEL_WORST_CASE]] },
+    );
+  });
+
+  /**
    * The other half of 01-04's misattribution fix. `PERIOD_SPLIT_RESULT`
    * confirms the branch is reachable at all (default sampling rarely lands
    * period alone dominating), and the generic property alongside it proves
@@ -272,7 +330,7 @@ describe('composeConfidenceReasonEs', () => {
           `la razón reclama o sugiere una confirmación desde la playa que hoy no existe: "${reason}"`,
         );
       }),
-      { examples: [[WORST_CASE_RESULT]] },
+      { examples: [[WORST_CASE_RESULT], [SINGLE_MODEL_WORST_CASE]] },
     );
   });
 
