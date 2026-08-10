@@ -9,11 +9,12 @@
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { gunzipSync } from 'node:zlib';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { runCapture } from '../../src/pipeline/capture-cli';
-import type { ForecastSource, MemberSeries, SourceResult, TideHour, WindHour } from '../../src/pipeline/ports';
+import type { ForecastSource, MemberSeries, ReceivedSourcePayload, SourceResult, TideHour, WindHour } from '../../src/pipeline/ports';
 import type { SpotSeed } from '../../src/scoring/engine';
 
 const RUN_TS = '2026-08-09T06:00Z';
@@ -32,22 +33,28 @@ const VENAO_SEED: SpotSeed = {
 };
 
 class StubSource implements ForecastSource {
-  fetchWaveMembers(spot_id: string): Promise<SourceResult<MemberSeries[]>> {
+  fetchWavePayload(spot_id: string): Promise<ReceivedSourcePayload> {
+    return Promise.resolve({ ok: true as const, verbatim: JSON.stringify({ spot_id }) });
+  }
+
+  parseWaveMembers(): SourceResult<MemberSeries[]> {
     const data: MemberSeries[] = [{
       source: 'ncep_gfswave016',
       run_ts: RUN_TS,
       hours: [{ valid_ts: '2026-08-09T18:00Z', swell: { h_m: 1.1, t_s: 14, dir_deg: 204 }, swell2: null, land_masked: false }],
     }];
-    return Promise.resolve({ ok: true, verbatim: JSON.stringify({ spot_id }), data });
+    return { ok: true, data };
   }
 
-  fetchWind(): Promise<SourceResult<WindHour[]>> {
-    return Promise.resolve({ ok: true, verbatim: '{}', data: [{ valid_ts: '2026-08-09T18:00Z', wind: { speed_kt: 6, dir_deg: 40 } }] });
+  fetchWindPayload(): Promise<ReceivedSourcePayload> { return Promise.resolve({ ok: true as const, verbatim: '{}' }); }
+  parseWind(): SourceResult<WindHour[]> {
+    return { ok: true, data: [{ valid_ts: '2026-08-09T18:00Z', wind: { speed_kt: 6, dir_deg: 40 } }] };
   }
 
-  fetchTide(): Promise<SourceResult<TideHour[]>> {
-    return Promise.resolve({ ok: false, reason: 'dark' });
+  fetchTidePayload(): Promise<ReceivedSourcePayload> {
+    return Promise.resolve({ ok: false as const, reason: 'dark' as const });
   }
+  parseTide(): SourceResult<TideHour[]> { return { ok: false, reason: 'dark' }; }
 }
 
 describe('runCapture (one-time real-data snapshot composition root)', () => {
@@ -68,10 +75,9 @@ describe('runCapture (one-time real-data snapshot composition root)', () => {
       clock: { now: () => new Date('2026-08-09T14:00:00Z') },
     });
 
-    const written = await readFile(
+    const written = gunzipSync(await readFile(
       join(out, 'predictions/v1/dt=2026-08-09/src=ncep_gfswave016/cyc=06Z/all.jsonl.gz'),
-      'utf8',
-    );
+    )).toString('utf8');
     expect(written).toContain('"spot_id":"playa-venao"');
 
     const provenance = JSON.parse(await readFile(result.provenancePath, 'utf8')) as {

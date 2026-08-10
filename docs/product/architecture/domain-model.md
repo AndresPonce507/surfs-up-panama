@@ -170,7 +170,8 @@ Deviation from research 09 §13.1's sketch, deliberate: `score_q`/`score_confide
 ```
 s3://<data-bucket>/predictions/v1/dt=<run_date>/src=<source>/cyc=<HH>Z/<partition>.jsonl.gz
       <partition> = "all" at ≤40 spots per region; geohash4 tile past that
-s3://<data-bucket>/raw/<provider>/dt=YYYY-MM-DD/<HH>/...        # verbatim payloads, 30-day lifecycle
+s3://<data-bucket>/raw/<provider>/dt=YYYY-MM-DD/<HH>/spot=<spot_id>/run=YYYY-MM-DDTHH-mm-ss.sssZ.json.gz
+                                                              # verbatim gzip bytes, 30-day lifecycle
 ```
 
 **Amended 2026-08-08 coherence round: the prediction log moved from `log/predictions/v1/` to the top-level `predictions/v1/` prefix** (`adr-prediction-log-prefix-isolation.md`). Three specs converge on the top-level form and none covered the nested one: system-architecture's guardrail asserts no expiration rule overlaps the literal `predictions/`, its context diagram shows ingest writing `raw/ + predictions/`, and the ingest IAM role grants `s3:PutObject` on `raw/*` and `predictions/*` only. `log/` now holds exactly the two derived logs (`calls/`, `observations/`), so a `log/*` lifecycle rule can never reach the one artifact HANDOFF §3 calls impossible to add later.
@@ -178,6 +179,7 @@ s3://<data-bucket>/raw/<provider>/dt=YYYY-MM-DD/<HH>/...        # verbatim paylo
 - **Partitioned by run date first** — retention, backfill and learning-job scans are all date-scoped (research 09 §13.1).
 - **Format: gzipped JSONL now, Parquet compaction when a region exceeds ~500 spots** — see `adr-prediction-log-format.md`. DuckDB/pandas read both.
 - **Idempotency:** the natural key of a record is `(spot_id, source, run_ts, valid_ts)`; the natural key of a *file* is `(run_date, source, cycle, partition)`. Ingest creates a file with conditional PUT (`If-None-Match: *`). A duplicate returns a verified already-exists acknowledgement and leaves the first bytes untouched. Gap repair may create an absent key from `raw/`, but may never replace an existing prediction receipt.
+- **Raw provenance:** a raw key identifies `(provider, spot_id, capture_run_ts)`. `capture_run_ts` is the UTC instant the HTTP response was received by ingest, rendered with colon-safe time separators as the `run=` filename. This keeps all spot-specific response bodies distinct while preserving the existing provider/date/hour partition. The raw body is gzip-compressed verbatim bytes; no parser or validator may run before that archive write.
 - **Timestamps: UTC everywhere in logs.** Local time is a display concern derived from the spot's `timezone` field.
 
 #### 5.3 Volume math (measured, gzip JSONL, full fidelity: 4 sources × 4 runs/day × 168 lead-hours, hourly)

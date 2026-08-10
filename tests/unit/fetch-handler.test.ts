@@ -11,7 +11,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { runFetch } from '../../src/pipeline/lambda/fetch-handler';
 import { INGEST_SUCCESS_EVENT, PROVIDER_ERROR_EVENT } from '../../src/pipeline/lambda/log-events';
-import type { ForecastSource, IngestStore, MemberSeries, SourceResult, TideHour, WindHour } from '../../src/pipeline/ports';
+import type { ForecastSource, IngestStore, MemberSeries, RawArchiveRecord, ReceivedSourcePayload, SourceResult, TideHour, WindHour } from '../../src/pipeline/ports';
 import type { SpotSeed } from '../../src/scoring/engine';
 
 const VENAO: SpotSeed = {
@@ -31,8 +31,8 @@ class InMemoryIngestStore implements IngestStore {
   readonly rawKeys: string[] = [];
   readonly predictionKeys: string[] = [];
 
-  async putRaw(key: string): Promise<void> {
-    this.rawKeys.push(key);
+  async putRaw(record: RawArchiveRecord): Promise<void> {
+    this.rawKeys.push(record.key);
   }
 
   async putPredictionIfAbsent(key: string): Promise<'created' | 'already-exists'> {
@@ -42,36 +42,45 @@ class InMemoryIngestStore implements IngestStore {
 }
 
 class WorkingSource implements ForecastSource {
-  fetchWaveMembers(spot_id: string): Promise<SourceResult<MemberSeries[]>> {
+  fetchWavePayload(spot_id: string): Promise<ReceivedSourcePayload> {
+    return Promise.resolve({ ok: true as const, verbatim: JSON.stringify({ spot_id }) });
+  }
+
+  parseWaveMembers(): SourceResult<MemberSeries[]> {
     const data: MemberSeries[] = [{
       source: 'ncep_gfswave016',
       run_ts: '2026-08-10T06:00Z',
       hours: [{ valid_ts: '2026-08-10T18:00Z', swell: { h_m: 1.1, t_s: 14, dir_deg: 204 }, swell2: null, land_masked: false }],
     }];
-    return Promise.resolve({ ok: true, verbatim: JSON.stringify({ spot_id }), data });
+    return { ok: true, data };
   }
 
-  fetchWind(): Promise<SourceResult<WindHour[]>> {
-    return Promise.resolve({ ok: true, verbatim: '{}', data: [] });
+  fetchWindPayload(): Promise<ReceivedSourcePayload> {
+    return Promise.resolve({ ok: true as const, verbatim: '{}' });
   }
+  parseWind(): SourceResult<WindHour[]> { return { ok: true, data: [] }; }
 
-  fetchTide(): Promise<SourceResult<TideHour[]>> {
-    return Promise.resolve({ ok: false, reason: 'dark' });
+  fetchTidePayload(): Promise<ReceivedSourcePayload> {
+    return Promise.resolve({ ok: false as const, reason: 'dark' as const });
   }
+  parseTide(): SourceResult<TideHour[]> { return { ok: false, reason: 'dark' }; }
 }
 
 class DarkSource implements ForecastSource {
-  fetchWaveMembers(): Promise<SourceResult<MemberSeries[]>> {
-    return Promise.resolve({ ok: false, reason: 'error' });
+  fetchWavePayload(): Promise<ReceivedSourcePayload> {
+    return Promise.resolve({ ok: false as const, reason: 'error' as const });
   }
+  parseWaveMembers(): SourceResult<MemberSeries[]> { return { ok: false, reason: 'dark' }; }
 
-  fetchWind(): Promise<SourceResult<WindHour[]>> {
-    return Promise.resolve({ ok: false, reason: 'error' });
+  fetchWindPayload(): Promise<ReceivedSourcePayload> {
+    return Promise.resolve({ ok: false as const, reason: 'error' as const });
   }
+  parseWind(): SourceResult<WindHour[]> { return { ok: false, reason: 'dark' }; }
 
-  fetchTide(): Promise<SourceResult<TideHour[]>> {
-    return Promise.resolve({ ok: false, reason: 'dark' });
+  fetchTidePayload(): Promise<ReceivedSourcePayload> {
+    return Promise.resolve({ ok: false as const, reason: 'dark' as const });
   }
+  parseTide(): SourceResult<TideHour[]> { return { ok: false, reason: 'dark' }; }
 }
 
 describe('runFetch (Lambda Fetch composition root)', () => {
@@ -87,13 +96,38 @@ describe('runFetch (Lambda Fetch composition root)', () => {
     });
 
     expect(outcome.completed).toBe(true);
-    expect(store.rawKeys).toContain('raw/open-meteo-marine/dt=2026-08-10/06/payload.json');
+    expect(store.rawKeys).toContain('raw/open-meteo-marine/dt=2026-08-10/06/spot=playa-venao/run=2026-08-10T06-17-00.000Z.json.gz');
     expect(store.predictionKeys).toEqual(['predictions/v1/dt=2026-08-10/src=ncep_gfswave016/cyc=06Z/all.jsonl.gz']);
 
     const loggedEvents = logSpy.mock.calls.map(([line]) => (JSON.parse(String(line)) as { event: string }).event);
     expect(loggedEvents).toContain(INGEST_SUCCESS_EVENT);
 
     logSpy.mockRestore();
+  });
+
+  it('archives a malformed received wave response before parser refusal, then writes no prediction receipt', async () => {
+    const store = new InMemoryIngestStore();
+    const timeline: string[] = [];
+    const archive = store.putRaw.bind(store);
+    store.putRaw = async (record) => {
+      timeline.push('archive');
+      await archive(record);
+    };
+    const source: ForecastSource = {
+      async fetchWavePayload() { return { ok: true, verbatim: '{not-json' }; },
+      parseWaveMembers() { timeline.push('parse'); return { ok: false, reason: 'malformed' }; },
+      async fetchWindPayload() { return { ok: false, reason: 'dark' }; },
+      parseWind() { return { ok: false, reason: 'dark' }; },
+      async fetchTidePayload() { return { ok: false, reason: 'dark' }; },
+      parseTide() { return { ok: false, reason: 'dark' }; },
+    };
+
+    const outcome = await runFetch({ source, store, spots: [VENAO], clock: { now: () => new Date('2026-08-10T06:17:00Z') } });
+
+    expect(outcome.events).toContainEqual({ type: 'wave_source_unavailable', detail: 'malformed' });
+    expect(timeline).toEqual(['archive', 'parse']);
+    expect(store.rawKeys).toEqual(['raw/open-meteo-marine/dt=2026-08-10/06/spot=playa-venao/run=2026-08-10T06-17-00.000Z.json.gz']);
+    expect(store.predictionKeys).toEqual([]);
   });
 
   it('never logs ingest.success, and logs provider.error instead, when every wave source is dark this run', async () => {

@@ -29,8 +29,9 @@ import {
   PutObjectCommand,
   type S3Client,
 } from '@aws-sdk/client-s3';
+import { gunzipSync, gzipSync } from 'node:zlib';
 
-import type { BuildStore, IngestStore } from '../ports';
+import type { BuildStore, IngestStore, RawArchiveRecord } from '../ports';
 
 /** The narrow slice of the real S3 client this adapter calls, so a test can
  * inject a fake `send` without ever touching AWS credentials or the network
@@ -51,16 +52,16 @@ export class S3Store implements IngestStore, BuildStore {
     private readonly bucket: string,
   ) {}
 
-  async putRaw(key: string, body: string): Promise<void> {
-    await this.put(key, body);
+  async putRaw(record: RawArchiveRecord): Promise<void> {
+    await this.putGzip(record.key, record.verbatim);
   }
 
   async putPredictionIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
-    return this.putIfAbsent(key, body);
+    return this.putGzipIfAbsent(key, body);
   }
 
   async getPrediction(key: string): Promise<string | null> {
-    return this.get(key);
+    return this.getGzip(key);
   }
 
   async listPredictions(prefix: string): Promise<string[]> {
@@ -72,7 +73,7 @@ export class S3Store implements IngestStore, BuildStore {
   }
 
   async putCallIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
-    return this.putIfAbsent(key, body);
+    return this.putGzipIfAbsent(key, body);
   }
 
   async putBundle(key: string, body: string): Promise<void> {
@@ -83,11 +84,15 @@ export class S3Store implements IngestStore, BuildStore {
     await this.put(key, body);
   }
 
-  private async put(key: string, body: string): Promise<void> {
+  private async put(key: string, body: string | Uint8Array): Promise<void> {
     await this.client.send(new PutObjectCommand({ Bucket: this.bucket, Key: toBucketKey(key), Body: body }));
   }
 
-  private async putIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
+  private async putGzip(key: string, body: string): Promise<void> {
+    await this.put(key, encodeText(key, body));
+  }
+
+  private async putIfAbsent(key: string, body: string | Uint8Array): Promise<'created' | 'already-exists'> {
     try {
       await this.client.send(new PutObjectCommand({
         Bucket: this.bucket,
@@ -102,10 +107,25 @@ export class S3Store implements IngestStore, BuildStore {
     }
   }
 
+  private async putGzipIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
+    return this.putIfAbsent(key, encodeText(key, body));
+  }
+
   private async get(key: string): Promise<string | null> {
     try {
       const response = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: toBucketKey(key) }));
       return (await response.Body?.transformToString('utf8')) ?? '';
+    } catch (error) {
+      if (isMissingKey(error)) return null;
+      throw error;
+    }
+  }
+
+  private async getGzip(key: string): Promise<string | null> {
+    try {
+      const response = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: toBucketKey(key) }));
+      const bytes = await response.Body?.transformToByteArray();
+      return bytes === undefined ? '' : decodeText(key, bytes);
     } catch (error) {
       if (isMissingKey(error)) return null;
       throw error;
@@ -128,6 +148,15 @@ export class S3Store implements IngestStore, BuildStore {
     } while (continuationToken !== undefined);
     return keys.sort();
   }
+}
+
+function encodeText(key: string, body: string): Uint8Array {
+  const bytes = Buffer.from(body, 'utf8');
+  return key.endsWith('.gz') ? gzipSync(bytes) : bytes;
+}
+
+function decodeText(key: string, bytes: Uint8Array): string {
+  return key.endsWith('.gz') ? gunzipSync(bytes).toString('utf8') : Buffer.from(bytes).toString('utf8');
 }
 
 function isPreconditionFailed(error: unknown): boolean {

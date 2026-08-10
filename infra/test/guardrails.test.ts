@@ -685,11 +685,11 @@ describe('real stack guardrails: ingest scheduling and the dead-man signal chain
     const fetchPackage = await import(pathToFileURL(resolve(fetchAsset, 'index.mjs')).href) as typeof import('../../src/pipeline/lambda/fetch-handler.js');
     const buildPackage = await import(pathToFileURL(resolve(buildAsset, 'index.mjs')).href) as typeof import('../../src/pipeline/lambda/build-handler.js');
     const source: ForecastSource = {
-      async fetchWaveMembers(spot_id) {
-        return {
-          ok: true,
-          verbatim: JSON.stringify({ spot_id }),
-          data: [{
+      async fetchWavePayload(spot_id) {
+        return { ok: true, verbatim: JSON.stringify({ spot_id }) };
+      },
+      parseWaveMembers() {
+        return { ok: true, data: [{
             source: 'ncep_gfswave016',
             run_ts: '2026-08-10T06:00Z',
             hours: [{
@@ -698,15 +698,16 @@ describe('real stack guardrails: ingest scheduling and the dead-man signal chain
               swell2: null,
               land_masked: false,
             }],
-          }],
-        };
+          }] };
       },
-      async fetchWind() {
-        return { ok: true, verbatim: '{}', data: [] };
+      async fetchWindPayload() {
+        return { ok: true, verbatim: '{}' };
       },
-      async fetchTide() {
+      parseWind() { return { ok: true, data: [] }; },
+      async fetchTidePayload() {
         return { ok: false, reason: 'dark' };
       },
+      parseTide() { return { ok: false, reason: 'dark' }; },
     };
     let rawWrites = 0;
     let predictionWrites = 0;
