@@ -337,6 +337,34 @@
       "s": "EXECUTED",
       "d": "PASS",
       "t": "2026-08-10T18:29:01Z"
+    },
+    {
+      "sid": "01-07",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T19:08:57Z"
+    },
+    {
+      "sid": "01-07",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T19:08:59Z"
+    },
+    {
+      "sid": "01-07",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: no new production code needed -- WeakestLink.astro's existing kind==='named' guard and weakest-link.ts's existing resolveWeakestLink already render nothing and resolve 'unknown' for a missing weakest_link key, proven via poison-and-revert falsifiability in RED_ACCEPTANCE. Same .astro frontmatter unit-testability exemption as 01-05/01-06; the missing-vs-null distinction is already covered by 01-03's property tests on resolveWeakestLink (absent field, null field, absent row all answer null/unknown, never fabricated).",
+      "t": "2026-08-10T19:09:06Z"
+    },
+    {
+      "sid": "01-07",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T19:10:07Z"
     }
   ]
 }
