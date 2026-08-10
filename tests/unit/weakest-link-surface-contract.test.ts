@@ -418,8 +418,18 @@ describe('resolveWeakestLink: the publish-side reader for one spot, one day', ()
 
   // Single-example smoke read against the real committed artifact, the same
   // one src/data/forecast.ts imports -- proves the reader works against
-  // production data, not only synthetic fixtures.
-  it('reads a real culprit or an honest absence from the committed data/published-surface.json, for its first published spot', () => {
+  // production data, not only synthetic fixtures. The oracle below reads the
+  // row directly (own-key check, own value), independently of
+  // resolveWeakestLink()'s internals, so this stays a real assertion rather
+  // than a tautology once the cross-lane population lands and some spot
+  // finally carries a token here.
+  function readOwnWeakestLink(row: SurfaceCall | undefined): WeakestLinkReading {
+    if (row === undefined || withoutOwnKey(row, 'weakest_link')) return { kind: 'unknown' };
+    if (row.weakest_link === null) return { kind: 'clean' };
+    return { kind: 'named', factor: row.weakest_link as FactorToken };
+  }
+
+  it('reads a real culprit or an honest absence from the committed data/published-surface.json, matching the row itself', () => {
     const committed = JSON.parse(readFileSync(
       new URL('../../data/published-surface.json', import.meta.url),
       'utf8',
@@ -427,16 +437,17 @@ describe('resolveWeakestLink: the publish-side reader for one spot, one day', ()
     const surface = assertStrictTwoDayUpdate(committed.current);
     const firstSpot = surface.calls[0];
     assert.ok(firstSpot, 'test fixture error: the committed surface published zero spots');
-    const today = resolveWeakestLink(surface, firstSpot.spot_id, 0);
-    const tomorrow = resolveWeakestLink(surface, firstSpot.spot_id, 1);
-    for (const reading of [today, tomorrow]) {
-      assert.ok(
-        reading.kind === 'named' || reading.kind === 'clean' || reading.kind === 'unknown',
-        `the reader must always return one of the three honest outcomes, got ${JSON.stringify(reading)}`,
-      );
-      if (reading.kind === 'named') {
-        assert.ok(FACTOR_TOKENS.includes(reading.factor), `${reading.factor} must be one of the declared factor tokens`);
-      }
-    }
+    const tomorrowRow = surface.days[1].spots.find((call) => call.spot_id === firstSpot.spot_id);
+
+    assert.deepEqual(
+      resolveWeakestLink(surface, firstSpot.spot_id, 0),
+      readOwnWeakestLink(firstSpot),
+      'today reading must match what the committed calls row itself carries',
+    );
+    assert.deepEqual(
+      resolveWeakestLink(surface, firstSpot.spot_id, 1),
+      readOwnWeakestLink(tomorrowRow),
+      'tomorrow reading must match what the committed days[1] row itself carries',
+    );
   });
 });
