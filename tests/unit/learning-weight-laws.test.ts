@@ -10,6 +10,7 @@ import { describe, it } from 'vitest';
 import {
   collapseDeviceDayMedian,
   concordanceWeight,
+  selectionWeight,
   winsorizeSpotDayResiduals,
   type DeviceDaySample,
 } from '../../src/learning/weights';
@@ -95,6 +96,37 @@ describe('reporter concordance', () => {
             ? 1
             : Math.min(1, Math.max(0.2, 4 / (4 + disagreement)));
           assert.equal(concordanceWeight(disagreement), expected);
+        },
+      ),
+      { numRuns: 50 },
+    );
+  });
+});
+
+describe('selection propensity', () => {
+  it('caps organic rarity and leaves solicited mornings exactly plain', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 90 }),
+        fc.integer({ min: 0, max: 90 }),
+        fc.integer({ min: 0, max: 90 }),
+        fc.boolean(),
+        (totalDays, reportedDays, totalReportedDays, solicited) => {
+          const boundedReportedDays = Math.min(reportedDays, totalDays);
+          const boundedTotalReportedDays = Math.min(totalReportedDays, totalDays);
+          const actual = selectionWeight({
+            totalDays,
+            reportedDays: boundedReportedDays,
+            totalReportedDays: boundedTotalReportedDays,
+            trigger: solicited ? 'push_solicited' : 'organic',
+          });
+          const expected = solicited
+            ? 1
+            : boundedReportedDays === 0
+              ? 3
+              : Math.min(3, (boundedTotalReportedDays / totalDays) / (boundedReportedDays / totalDays));
+          assert.equal(actual, expected);
+          assert.ok(actual <= 3, 'a rare decile can never dominate the fit');
         },
       ),
       { numRuns: 50 },

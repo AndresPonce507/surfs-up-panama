@@ -8,6 +8,14 @@ import { SIGMA_EFF } from './constants';
 
 const CONCORDANCE_TAU = 4;
 const CONCORDANCE_FLOOR = 0.2;
+const SELECTION_WEIGHT_CAP = 3;
+
+export type SelectionWeightInput = {
+  readonly totalDays: number;
+  readonly reportedDays: number;
+  readonly totalReportedDays: number;
+  readonly trigger?: 'organic' | 'push_solicited' | undefined;
+};
 
 export type DeviceDaySample = {
   readonly spot_id?: string;
@@ -94,6 +102,21 @@ export function winsorizeSpotDayResiduals(samples: readonly DeviceDaySample[]): 
 export function concordanceWeight(disagreementSigmaSquared: number | undefined): number {
   if (disagreementSigmaSquared === undefined) return 1;
   return Math.min(1, Math.max(CONCORDANCE_FLOOR, CONCORDANCE_TAU / (CONCORDANCE_TAU + disagreementSigmaSquared)));
+}
+
+/**
+ * Inverse propensity is pooled over the published-call window.  A solicited
+ * report is a near-random sample of pushed days and must stay at one exactly.
+ * With no published history there is no honest propensity estimate, so the
+ * neutral weight preserves the launch fit rather than inventing a bonus.
+ */
+export function selectionWeight(input: SelectionWeightInput): number {
+  if (input.trigger === 'push_solicited') return 1;
+  if (input.totalDays <= 0) return 1;
+  if (input.reportedDays <= 0) return SELECTION_WEIGHT_CAP;
+  const averagePropensity = input.totalReportedDays / input.totalDays;
+  const decilePropensity = input.reportedDays / input.totalDays;
+  return Math.min(SELECTION_WEIGHT_CAP, averagePropensity / decilePropensity);
 }
 
 /**

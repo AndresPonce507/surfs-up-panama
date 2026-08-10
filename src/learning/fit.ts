@@ -29,7 +29,7 @@ import {
   type StoredCorrection,
 } from './correction-file';
 import { activeSimilarityGroups, estimatedSpotTau, partitionByBasin, type PoolingSpot } from './hierarchy';
-import { readObservationLog, readPredictionLog, spotsReportedIn, type LearningInputStore } from './inputs';
+import { readCallHistory, readObservationLog, readPredictionLog, spotsReportedIn, withSelectionWeights, type LearningInputStore } from './inputs';
 import { TRUST_GATE_KEY, eligibleTrustRecords, parseTrustGate } from './trust';
 
 /** What the fit needs of the store: read its inputs, store what it earns. */
@@ -61,12 +61,14 @@ export type LearningFitOutcome = {
 export async function runLearningFitOnce(deps: LearningFitDeps): Promise<LearningFitOutcome> {
   const observations = await readObservationLog(deps.store);
   const predictions = await readPredictionLog(deps.store);
+  const calls = await readCallHistory(deps.store);
   const trustGate = await readTrustGate(deps.store);
   const eligibleObservations = eligibleTrustRecords(observations, trustGate);
+  const weightedObservations = withSelectionWeights(eligibleObservations, calls);
   const spotIds = spotsReportedIn(observations);
   const inputs = spotIds.map((spotId) => ({
     spotId,
-    observations: eligibleObservations.filter((observation) => observation.spot_id === spotId),
+    observations: weightedObservations.filter((observation) => observation.spot_id === spotId),
     predictions,
   }));
   const records = new Map<string, StoredCorrection>();

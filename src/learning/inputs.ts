@@ -24,6 +24,7 @@
 
 import type { QualityToken, WindStateToken } from '../data/report-vocab';
 import type { SizeBandToken } from '../data/size-bands';
+import { selectionWeight } from './weights';
 
 /** The read half of the store the fit is handed: what reading inputs needs. */
 export interface LearningInputStore {
@@ -35,6 +36,8 @@ export interface LearningInputStore {
 export const OBSERVATION_LOG_PREFIX = 'log/observations/v1/';
 /** predictions/v1/dt=<run-date>/src=<source>/cyc=<cycle>Z/all.jsonl.gz, one row per line. */
 export const PREDICTION_LOG_PREFIX = 'predictions/v1/';
+/** Published calls supply the pooled, trailing propensity denominator only. */
+export const CALL_LOG_PREFIX = 'log/calls/v1/';
 
 /**
  * One row of the nightly observation export, domain-model.md section 7.3,
@@ -52,6 +55,9 @@ export type ObservationRow = {
   wind?: WindStateToken;
   quality?: QualityToken;
   predicted?: { score_q: number } | null;
+  trigger?: 'organic' | 'push_solicited';
+  /** Fit-only derived state. It never reaches a stored observation or correction. */
+  selection_weight?: number;
 };
 
 /** One prediction receipt row, the same shape src/pipeline/ingest.ts writes (04-ingest-pipeline.md). */
@@ -63,6 +69,12 @@ export type PredictionRow = {
   swell_h_m: number;
   swell_t_s: number;
   land_masked: boolean;
+};
+
+export type PublishedCallRow = {
+  spot_id?: string;
+  valid_ts?: string;
+  score_q?: number;
 };
 
 /** A line whose parsed JSON is not an object (or is `null`) is dropped here: reading a `.spot_id` off it later must never throw. */
@@ -117,6 +129,86 @@ export async function readPredictionLog(store: LearningInputStore): Promise<Pred
     rows.push(...(parseJsonLines(body) as PredictionRow[]));
   }
   return rows;
+}
+
+/** Every published call available to this run, pooled across spots for selection weighting. */
+export async function readCallHistory(store: LearningInputStore): Promise<PublishedCallRow[]> {
+  const keys = await store.list(CALL_LOG_PREFIX);
+  const rows: PublishedCallRow[] = [];
+  for (const key of keys) {
+    const body = await store.get(key);
+    if (body === null) continue;
+    rows.push(...(parseJsonLines(body) as PublishedCallRow[]));
+  }
+  return rows;
+}
+
+/**
+ * Add the inverse-propensity term to each usable observation.  The window is
+ * the latest 90 published calendar days present in the immutable call log;
+ * unavailable or malformed call rows cannot manufacture a rarity bonus.
+ */
+export function withSelectionWeights(
+  observations: readonly ObservationRow[],
+  calls: readonly PublishedCallRow[],
+): ObservationRow[] {
+  const usableCalls = calls.flatMap((call) => {
+    const date = utcDateOf(call.valid_ts);
+    if (call.spot_id === undefined || date === undefined || typeof call.score_q !== 'number' || !Number.isFinite(call.score_q)) return [];
+    return [{ spotId: call.spot_id, date, decile: scoreDecile(call.score_q) }];
+  });
+  const latestDate = usableCalls.map((call) => call.date).sort().at(-1);
+  if (latestDate === undefined) return observations.map((observation) => ({ ...observation, selection_weight: 1 }));
+  const firstDate = ninetyDaysBefore(latestDate);
+  const windowCalls = usableCalls.filter((call) => call.date >= firstDate);
+  const bySpotDay = new Map(windowCalls.map((call) => [`${call.spotId}\u0000${call.date}`, call]));
+  const windowDays = [...bySpotDay.values()];
+  const reportedSpotDays = new Set(
+    observations.flatMap((observation) => {
+      const date = utcDateOf(observation.observed_at);
+      if (date === undefined) return [];
+      const key = `${observation.spot_id}\u0000${date}`;
+      return bySpotDay.has(key) ? [key] : [];
+    }),
+  );
+  const reportsByDecile = new Map<number, number>();
+  for (const key of reportedSpotDays) {
+    const call = bySpotDay.get(key);
+    if (call === undefined) continue;
+    reportsByDecile.set(call.decile, (reportsByDecile.get(call.decile) ?? 0) + 1);
+  }
+  return observations.map((observation) => {
+    const date = utcDateOf(observation.observed_at);
+    const call = date === undefined ? undefined : bySpotDay.get(`${observation.spot_id}\u0000${date}`);
+    if (call === undefined) return { ...observation, selection_weight: 1 };
+    const totalDays = windowDays.length;
+    return {
+      ...observation,
+      selection_weight: selectionWeight({
+        totalDays,
+        reportedDays: reportsByDecile.get(call.decile) ?? 0,
+        totalReportedDays: reportedSpotDays.size,
+        trigger: observation.trigger,
+      }),
+    };
+  });
+}
+
+function utcDateOf(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date.toISOString().slice(0, 10);
+}
+
+function ninetyDaysBefore(date: string): string {
+  const first = new Date(`${date}T00:00:00Z`);
+  first.setUTCDate(first.getUTCDate() - 89);
+  return first.toISOString().slice(0, 10);
+}
+
+function scoreDecile(score: number): number {
+  return Math.min(9, Math.max(0, Math.floor(score / 10)));
 }
 
 /** The spots the log actually names, each once, in the order they first appear. */

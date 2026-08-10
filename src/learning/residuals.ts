@@ -72,7 +72,7 @@ export function formHeightResidualRows(
         leadBucket: leadBucketOf(prediction.lead_h),
         sample: {
           value,
-          weight: heightPrecisionWeight(varianceM2),
+          weight: heightPrecisionWeight(varianceM2) * selectionWeightOf(observation),
           device_id: deviceId,
           spot_id: observation.spot_id,
           session_day: sessionDay,
@@ -102,7 +102,7 @@ export function formScoreResidualSamples(observations: readonly ObservationRow[]
     const observedHourMs = floorUtcHourMs(observation.observed_at);
     samples.push({
       value: predictedScore - qObs,
-      weight: scorePrecisionWeight(),
+      weight: scorePrecisionWeight() * selectionWeightOf(observation),
       device_id: deviceId,
       ...(observedHourMs === null ? {} : { spot_id: observation.spot_id, session_day: utcDayOf(observedHourMs) }),
     });
@@ -114,6 +114,10 @@ export function formScoreResidualSamples(observations: readonly ObservationRow[]
 function capturedScore(predicted: ObservationRow['predicted']): number | null {
   if (predicted === null || predicted === undefined || typeof predicted.score_q !== 'number') return null;
   return predicted.score_q;
+}
+
+function selectionWeightOf(observation: ObservationRow): number {
+  return observation.selection_weight ?? 1;
 }
 
 // ---------- pairing ----------
