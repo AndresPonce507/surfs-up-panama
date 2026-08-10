@@ -288,6 +288,27 @@
       "s": "EXECUTED",
       "d": "PASS: test budget checked. Two distinct direct port behaviors are covered by the two distilled acceptance scenarios; no additional unit test was needed for this small pure boundary.",
       "t": "2026-08-10T21:06:59Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: 03-02 JIT acceptance collected two scenarios and failed one semantic AssertionError because Base.astro did not publish the prepared og:title, og:description, og:url, or og:locale; the no-announcement head scenario already passed.",
+      "t": "2026-08-10T21:07:46Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: Base.astro publishes all four provided Open Graph values and preserves the existing head when announcement is absent. UI N/A by roadmap: this shared-head seam has no page supplying it yet; source-blind preview examination belongs to the home integration in 03-03.",
+      "t": "2026-08-10T21:08:12Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: test budget checked. The two direct Base publication acceptance scenarios cover the supplied-announcement and no-announcement behaviors; no additional unit test is needed for this thin adapter seam.",
+      "t": "2026-08-10T21:08:12Z"
     }
   ]
 }
