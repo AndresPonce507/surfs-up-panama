@@ -547,6 +547,13 @@
       "s": "EXECUTED",
       "d": "PASS_SCOPE: target acceptance 1/1 (15 steps), learning unit suite 46/46, full feature acceptance 20/20 (264 steps), and typecheck pass. Non-visual: generated residuals and the learned-correction prefix are the observable. Full unit 127/128 and fast CI 5/8 retain only the unrelated stale 2026-08-09 published-surface refusal, which blocks build-dependent test, UI, and budget jobs before this learning code runs.",
       "t": "2026-08-10T20:43:00Z"
+    },
+    {
+      "sid": "01-18",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: scoped unit-law coverage committed as f6bc37e with Step-ID 01-18. No production rewrite was required because the inherited residual former already satisfies the declared formula. Non-visual rationale recorded; full unit and fast CI remain blocked only by the unrelated stale 2026-08-09 published surface.",
+      "t": "2026-08-10T20:43:22Z"
     }
   ]
 }
