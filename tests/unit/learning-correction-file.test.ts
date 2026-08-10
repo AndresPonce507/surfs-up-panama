@@ -19,6 +19,8 @@ import { describe, it } from 'vitest';
 import { buildCorrectionRecords, type SpotInputs } from '../../src/learning/correction-file';
 import { G1_MIN_MORNINGS } from '../../src/learning/constants';
 import type { ObservationRow, PredictionRow } from '../../src/learning/inputs';
+import { formScoreResidualSamples } from '../../src/learning/residuals';
+import { QUALITY_OBSERVED_SCORE, type QualityToken } from '../../src/data/report-vocab';
 
 const SPOT_ID = 'playa-venao';
 const SOURCE = 'ncep_gfswave016';
@@ -141,6 +143,42 @@ describe('buildCorrectionRecords: the point -- below the morning threshold, no c
         },
       ),
       { numRuns: 50 },
+    );
+  });
+});
+
+describe('formScoreResidualSamples: displayed score residual law', () => {
+  it('uses the shown score less the shipped quality anchor and skips a report with no captured prediction', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom<QualityToken>('bad', 'ok', 'good', 'epic'),
+        fc.integer({ min: 0, max: 100 }),
+        (quality, shownScore) => {
+          const samples = formScoreResidualSamples([
+            {
+              spot_id: SPOT_ID,
+              device_id: 'd_shown_score',
+              quality,
+              predicted: { score_q: shownScore },
+            },
+            {
+              spot_id: SPOT_ID,
+              device_id: 'd_no_prediction',
+              quality,
+              predicted: null,
+            },
+          ]);
+
+          assert.deepEqual(samples, [
+            {
+              device_id: 'd_shown_score',
+              value: shownScore - QUALITY_OBSERVED_SCORE[quality],
+              weight: 1 / 25 ** 2,
+            },
+          ]);
+        },
+      ),
+      { numRuns: 100 },
     );
   });
 });
