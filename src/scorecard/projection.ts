@@ -1,5 +1,6 @@
 import { aggregateDaily, type DailyAggregate } from './daily-aggregate';
 import { pairResiduals, type PredictionSnapshot, type Residual, type ScorecardVariable, type SurfReport } from './pairing';
+import { deriveWindows, type WindowStat } from './windows';
 
 export type ProjectionInput = {
   readonly predictions: readonly PredictionSnapshot[];
@@ -13,7 +14,7 @@ export type ProjectionInput = {
 export type ScorecardProjection = {
   readonly residuals: readonly Residual[];
   readonly daily: readonly DailyAggregate[];
-  readonly keys: readonly unknown[];
+  readonly keys: readonly WindowStat[];
   readonly blocks: Readonly<Record<string, unknown>>;
 };
 
@@ -31,10 +32,11 @@ export const projectScorecard = (input: ProjectionInput): ScorecardProjection =>
   validateVariables(input.variables);
   const selected = new Set<ScorecardVariable>((input.variables ?? allowedVariables) as readonly ScorecardVariable[]);
   const residuals = pairResiduals(input).filter((residual) => selected.has(residual.variable));
+  const daily = aggregateDaily(residuals);
   return {
     residuals,
-    daily: aggregateDaily(residuals),
-    keys: [],
+    daily,
+    keys: deriveWindows(daily, input.asOf, input.resolveReporter),
     blocks: {},
   };
 };
