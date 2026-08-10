@@ -19,10 +19,12 @@ import { sizeBands, type SizeBandToken } from '../data/size-bands';
 import type {
   BundleDay,
   BundleDaySummary,
+  BundleSpotDetail,
   RegionBundle,
 } from '../publish/region-bundle';
 import type {
   BestWindow,
+  ConfidenceReason,
   ConfLevel,
   SizeRangeM,
   SurfaceCall,
@@ -107,6 +109,7 @@ type CallRow = {
   members_null: number;
   missing: ('wind' | 'tide')[];
   weakest_link: Factor | null;
+  confidence_reason: ConfidenceReason;
 };
 
 /** Every hourly call for a spot's day, before that day's one best_window is known. */
@@ -135,15 +138,20 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
     bundleDay(dates[0], rankedCallsByDay[0] ?? []),
     bundleDay(dates[1], rankedCallsByDay[1] ?? []),
   ];
+  // Day-independent identity, held once. An object has no order, so it can
+  // never encode a ranking that disagrees with either day array. Computed
+  // once and referenced from both the bundle and the surface below: not a
+  // second projection that could disagree with the first, the same object.
+  const spot_detail: Readonly<Record<string, BundleSpotDetail>> = Object.fromEntries(
+    spots.map((spot) => [spot.spot_id, { name: spot.name }]),
+  );
   const bundle: RegionBundle = {
     schema: 'region-bundle/1',
     region_id: deps.region_id,
     build_id,
     published_at: publishedAt,
     days,
-    // Day-independent identity, held once. An object has no order, so it can
-    // never encode a ranking that disagrees with either day array.
-    spot_detail: Object.fromEntries(spots.map((spot) => [spot.spot_id, { name: spot.name }])),
+    spot_detail,
     publish_surface: {
       schema: 'published-surface-update/v1' as const,
       surf_date: date,
@@ -154,6 +162,7 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
         { date: dates[0], spots: (rankedCallsByDay[0] ?? []).map(surfaceCall) },
         { date: dates[1], spots: (rankedCallsByDay[1] ?? []).map(surfaceCall) },
       ],
+      spot_detail,
     },
   };
   await deps.store.putBundle(`pub/v1/regions/${deps.region_id}/bundle.json`, JSON.stringify(bundle));
@@ -234,6 +243,11 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
       members_null: blended.members_null,
       missing: score.missing,
       weakest_link: score.weakest_link,
+      confidence_reason: {
+        dominant: confidenceResult.dominant,
+        spread_terms: confidenceResult.spread_terms,
+        track_state: confidenceResult.track_state,
+      },
     }];
   });
   const windowsByCivilDate = bestWindowsByCivilDate(drafts, spot.timezone);
@@ -268,7 +282,18 @@ function daySummary(call: CallRow): BundleDaySummary {
   };
 }
 
-function surfaceCall(call: CallRow): SurfaceCall {
+/**
+ * SurfaceCall's own fields the build always knows, even though the wire type
+ * keeps `weakest_link` and `confidence_reason` optional so surfaces committed
+ * before adr-enriched-fields-reach-the-reading-surface.md keep parsing.
+ * Typing surfaceCall()'s return as this stricter shape means a future edit
+ * that drops either field here is a compile error, not a silent gap
+ * discovered on a spot page -- the exact drift daySummary() and
+ * surfaceCall() had (one computation, two projections, silently desynced).
+ */
+type FreshSurfaceCall = SurfaceCall & Required<Pick<SurfaceCall, 'weakest_link' | 'confidence_reason'>>;
+
+function surfaceCall(call: CallRow): FreshSurfaceCall {
   return {
     spot_id: call.spot_id,
     score_q: call.score_q,
@@ -276,6 +301,8 @@ function surfaceCall(call: CallRow): SurfaceCall {
     conf_level: call.conf_level,
     size_band: call.size_band,
     size_range_m: call.size_range_m,
+    weakest_link: call.weakest_link,
+    confidence_reason: call.confidence_reason,
     // wind_state and best_window are optional on the wire (SurfaceCall),
     // never null: an unknown wind reading, or a day with no genuine peak,
     // omits the field rather than publishing a null the reading routes
