@@ -9,6 +9,8 @@
 // with a single sample there is no spread to measure and the formula must
 // say so as 0, never throw or invent one.
 
+import { PHYSICAL_NOISE_FLOOR_MULTIPLIER } from './constants';
+
 export type WeightedSample = { readonly value: number; readonly weight: number };
 
 /** Sigma(w_i * v_i) / Sigma(w_i). A sample with no total weight has nothing to average and reads as 0. */
@@ -28,6 +30,24 @@ export function weightedSampleStandardError(samples: readonly WeightedSample[]):
   const weightedVariance =
     samples.reduce((sum, sample) => sum + sample.weight * (sample.value - mean) ** 2, 0) / totalWeight;
   return Math.sqrt(weightedVariance) / Math.sqrt(n);
+}
+
+/**
+ * G3's irreducible uncertainty for one claim-bearing variable. `sampleCount`
+ * is the count the gate actually considers, so once trust eligibility removes
+ * a sample this denominator follows the stored, eligible `n` too.
+ */
+export function physicalNoiseFloor(sigmaEff: number, sampleCount: number): number {
+  if (sampleCount <= 0) return 0;
+  return PHYSICAL_NOISE_FLOOR_MULTIPLIER * sigmaEff / Math.sqrt(sampleCount);
+}
+
+/**
+ * se_gate = max(se_sample, physical floor). Agreement can reduce a sample's
+ * measured spread only until this physical limit, never past it.
+ */
+export function gateStandardError(sampleStandardError: number, sigmaEff: number, sampleCount: number): number {
+  return Math.max(sampleStandardError, physicalNoiseFloor(sigmaEff, sampleCount));
 }
 
 function totalWeightOf(samples: readonly WeightedSample[]): number {

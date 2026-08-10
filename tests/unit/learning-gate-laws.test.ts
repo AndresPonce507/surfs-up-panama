@@ -19,7 +19,8 @@ import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
 import { gateCorrection, G3_SIGNIFICANCE_MULTIPLE } from '../../src/learning/gates';
-import { G1_MIN_MORNINGS, TAU_SPOT_PRIOR } from '../../src/learning/constants';
+import { gateStandardError, physicalNoiseFloor } from '../../src/learning/estimate';
+import { G1_MIN_MORNINGS, SIGMA_EFF, TAU_SPOT_PRIOR } from '../../src/learning/constants';
 import { shrinkTowardParent } from '../../src/learning/shrink';
 
 /** This step's own required floor (06 section 7; 09 section 13.2 puts the
@@ -105,6 +106,48 @@ describe('gateCorrection: G3, the point -- significance is a floor independent o
   });
 });
 
+describe('gateCorrection: G3 physical noise floor -- agreement cannot buy precision below the measurement itself', () => {
+  it('records the exact height floor and refuses the twenty-two-morning, seven-person zero-spread fixture', () => {
+    const n = 22;
+    const floor = physicalNoiseFloor(SIGMA_EFF.height.value, n);
+    const verdict = gateCorrection({ n, reporters: 7, b: -0.08, se: 0, sigma_eff: SIGMA_EFF.height.value });
+
+    assert.equal(verdict.applied, false, 'twenty-two perfectly agreeing reports cannot make an eight-centimetre difference significant');
+    assert.equal(verdict.reason, 'not_significant');
+    assert.ok(Math.abs(verdict.se - floor) < 1e-6, `stored se must be the physical floor ${floor}, not the zero sample error`);
+  });
+
+  it('makes every sub-physical spread share one stored error and one gate outcome, however closely reports agree', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: G1_MIN_MORNINGS, max: 500 }),
+        fc.integer({ min: REQUIRED_DISTINCT_REPORTERS, max: 50 }),
+        fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true }),
+        fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true }),
+        (n, reporters, firstFraction, secondFraction) => {
+          const floor = physicalNoiseFloor(SIGMA_EFF.height.value, n);
+          const lowerSampleError = Math.min(firstFraction, secondFraction) * floor;
+          const higherSampleError = Math.max(firstFraction, secondFraction) * floor;
+          const b = G3_SIGNIFICANCE_MULTIPLE * floor;
+          const lowerSpread = gateCorrection({ n, reporters, b, se: lowerSampleError, sigma_eff: SIGMA_EFF.height.value });
+          const higherSpread = gateCorrection({ n, reporters, b, se: higherSampleError, sigma_eff: SIGMA_EFF.height.value });
+
+          assert.equal(lowerSpread.se, floor, 'a below-floor spread must store the physical floor');
+          assert.equal(higherSpread.se, floor, 'less agreement below the same floor must store that same physical floor');
+          assert.equal(lowerSpread.applied, higherSpread.applied, 'dropping a sub-physical spread must never make the gate easier to pass');
+          assert.equal(lowerSpread.applied, false, 'a difference exactly at twice the floor still has not cleared G3');
+          assert.equal(
+            gateStandardError(lowerSampleError, SIGMA_EFF.height.value, n),
+            lowerSpread.se,
+            'the pure stored-error function and the gate must share exactly one floor calculation',
+          );
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+});
+
 describe('gateCorrection: this step\'s own acceptance numbers, as fixture examples', () => {
   it('refuses twelve mornings from three people, and the reason names the reporters, not the mornings', () => {
     const verdict = gateCorrection({ n: 12, reporters: 3, b: 0.22, se: 0.05 });
@@ -139,11 +182,12 @@ describe('gateCorrection: this step\'s own acceptance numbers, as fixture exampl
   });
 
   it('turns on exactly at the significance boundary: a difference at twice se still refuses, a hair beyond it applies', () => {
-    const atBoundary = gateCorrection({ n: 22, reporters: 7, b: 0.1, se: 0.05 });
+    const storedSe = physicalNoiseFloor(SIGMA_EFF.height.value, 22);
+    const atBoundary = gateCorrection({ n: 22, reporters: 7, b: G3_SIGNIFICANCE_MULTIPLE * storedSe, se: 0.05 });
     assert.equal(atBoundary.applied, false, 'a difference exactly twice its standard error has not cleared it, only reached it');
     assert.equal(atBoundary.reason, 'not_significant');
 
-    const justBeyond = gateCorrection({ n: 22, reporters: 7, b: 0.1 + 1e-9, se: 0.05 });
+    const justBeyond = gateCorrection({ n: 22, reporters: 7, b: G3_SIGNIFICANCE_MULTIPLE * storedSe + 1e-9, se: 0.05 });
     assert.equal(justBeyond.applied, true, 'a difference a hair beyond twice its standard error has cleared it');
   });
 });

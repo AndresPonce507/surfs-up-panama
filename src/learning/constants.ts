@@ -29,6 +29,9 @@ export const SIGMA_EFF: { readonly height: NoiseFloor; readonly score: NoiseFloo
   },
 };
 
+/** G3, 06 section 7: the physical-error share below which reported agreement buys no extra precision. */
+export const PHYSICAL_NOISE_FLOOR_MULTIPLIER = 0.5;
+
 /** G1, 06 section 7: fewer paired mornings than this and nothing may be evaluated further. */
 export const G1_MIN_MORNINGS = 10;
 
