@@ -414,6 +414,34 @@
       "s": "EXECUTED",
       "d": "PASS: non-visual gate satisfied; no source change because measured artifact stays inside every ceiling. Commit records exact evidence only.",
       "t": "2026-08-10T20:09:51Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T20:20:26Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: active acceptance scenario already green; whole journey ran against the real built surface, so no new inner test was required.",
+      "t": "2026-08-10T20:20:31Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: the already-green acceptance scenario needs no additional inner test.",
+      "t": "2026-08-10T20:20:31Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 10/10 slice acceptance, build, leak gate, U1-U7 and fresh sealed Vera PASS; direct artifact inspection found zero forecast marker matches across report documents.",
+      "t": "2026-08-10T20:27:07Z"
     }
   ]
 }
