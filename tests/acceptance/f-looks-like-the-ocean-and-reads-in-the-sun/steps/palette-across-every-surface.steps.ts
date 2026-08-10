@@ -13,7 +13,7 @@ import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { tmpdir } from 'node:os';
 
 type SurfaceWorld = object;
-type Mode = 'normal' | 'wrong-card-palette';
+type Mode = 'normal' | 'wrong-card-palette' | 'raw-unknown-page' | 'forecast-before-report';
 type Palette = { bodyBackground: string; bg: string; ink: string; surface: string };
 type VisibleFact = Record<string, string>;
 type VisibleBaseline = {
@@ -38,10 +38,25 @@ type OpenedSurface = {
   spotAudit: PageAudit;
   yesterdayAudit: PageAudit;
 };
+type ReportAudit = { findings: string[]; hasHomePalette: boolean };
+type ReportState = { selectionIsVisible: boolean; disabledActionIsVisible: boolean; findings: string[] };
+type OpenedReportSurfaces = {
+  unknownUrl: string;
+  captureUrl: string;
+  revealUrl: string;
+  preview: ChildProcess;
+  browser: Browser;
+  page: Page;
+  unknownAudit: ReportAudit;
+  captureAudit: ReportAudit;
+  revealAudit: ReportAudit;
+  reportState: ReportState;
+};
 
 const projectRoot = process.cwd();
 const prepared = new WeakMap<SurfaceWorld, { root: string; mode: Mode }>();
 const opened = new WeakMap<SurfaceWorld, OpenedSurface>();
+const openedReports = new WeakMap<SurfaceWorld, OpenedReportSurfaces>();
 
 function credentialFreeEnvironment(): NodeJS.ProcessEnv {
   const environment = { ...process.env };
@@ -59,6 +74,17 @@ function isolatedRoot(mode: Mode): string {
   if (mode === 'wrong-card-palette') {
     const components = join(root, 'src/styles/components.css');
     writeFileSync(components, `${readFileSync(components, 'utf8')}\nsection[data-day] { background: #220000; }\n`);
+  }
+  if (mode === 'raw-unknown-page') {
+    writeFileSync(join(root, 'src/pages/404.astro'), `---\nimport Base from '../layouts/Base.astro';\n---\n<Base locale="es" title="Error" currentPath="/404/">\n  <h1>AccessDenied</h1>\n</Base>\n`);
+  }
+  if (mode === 'forecast-before-report') {
+    const capture = join(root, 'src/components/ReportCapture.astro');
+    const forecastCall = visibleBaseline(root).today.call;
+    writeFileSync(capture, readFileSync(capture, 'utf8').replace(
+      '  <noscript>',
+      `  <p>${forecastCall}</p>\n  <noscript>`,
+    ));
   }
   return root;
 }
@@ -232,10 +258,94 @@ async function audit(page: Page, kind: 'spot' | 'ayer', expected: Palette, basel
   })()`) as Promise<PageAudit>;
 }
 
+async function auditReportSurface(page: Page, kind: 'unknown' | 'capture' | 'reveal', expected: Palette): Promise<ReportAudit> {
+  return page.evaluate(`(() => {
+    const expected = ${JSON.stringify(expected)};
+    const kind = '${kind}';
+    const forecastValues = JSON.parse(document.documentElement.dataset.testForecastValues || '[]');
+    const parse = (value) => (value.match(/rgba?\\(([^)]+)\\)/i)?.[1] ?? '0,0,0,1').split(',').map(Number);
+    const compact = (value) => value.replace(/\\s+/g, ' ').trim();
+    const luminance = (rgb) => rgb.map((n = 0) => { const v = n / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((sum, n, i) => sum + n * ([0.2126, 0.7152, 0.0722][i] ?? 0), 0);
+    const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + 0.05) / (Math.min(luminance(a), luminance(b)) + 0.05);
+    const resolve = (name) => { const marker = document.createElement('i'); marker.style.backgroundColor = 'var(' + name + ')'; document.body.append(marker); const value = getComputedStyle(marker).backgroundColor; marker.remove(); return value; };
+    const backdropFor = (element) => {
+      let current = element;
+      while (current) {
+        const colour = parse(getComputedStyle(current).backgroundColor);
+        if ((colour[3] ?? 1) > 0) return colour;
+        current = current.parentElement;
+      }
+      return parse(getComputedStyle(document.body).backgroundColor);
+    };
+    const findings = [];
+    const hasHomePalette = getComputedStyle(document.body).backgroundColor === expected.bodyBackground
+      && resolve('--bg') === expected.bg && resolve('--ink') === expected.ink;
+    if (!hasHomePalette) findings.push('el fondo no conserva la paleta exacta de la portada');
+    const reading = [...document.querySelectorAll('h1, h2, p, legend, label, a, button')]
+      .filter((element) => compact(element.textContent || '').length > 0);
+    if (reading.length === 0) findings.push('la página llega en blanco');
+    for (const element of reading) {
+      const ratio = contrast(parse(getComputedStyle(element).color), backdropFor(element));
+      if (ratio < 4.5) findings.push('lectura: "' + compact(element.textContent || '').slice(0, 42) + '" queda en ' + ratio.toFixed(2) + ':1 contra su fondo real, piso 4.5:1');
+    }
+    for (const control of [...document.querySelectorAll('a, button, label:has(input)')]) {
+      const box = control.getBoundingClientRect();
+      if (box.width < 44 || box.height < 44) findings.push('control: "' + compact(control.textContent || '') + '" mide ' + box.width.toFixed(0) + 'x' + box.height.toFixed(0) + 'px, piso 44x44px');
+    }
+    if (document.documentElement.scrollWidth > document.documentElement.clientWidth) findings.push('la página tiene scroll horizontal');
+    if (document.readyState !== 'complete' || document.querySelector('[aria-busy="true"]')) findings.push('la página no llega lista');
+    const words = compact(document.body.textContent || '');
+    if (kind === 'unknown') {
+      if (!words.includes('No encontramos esa playa')) findings.push('la playa inexistente no explica qué pasó');
+      if (/(AccessDenied|NoSuchKey|Internal Server Error|^Not Found$)/iu.test(words)) findings.push('la playa inexistente muestra un error crudo');
+      const back = document.querySelector('[data-field="back-to-list"]');
+      if (back?.getAttribute('href') !== '/') findings.push('la playa inexistente no ofrece volver a la lista');
+    }
+    if (kind === 'reveal' && !document.querySelector('[data-reveal-shell]')) findings.push('la pantalla posterior al reporte no ofrece su lugar para la respuesta');
+    if (kind !== 'unknown' && (document.querySelector('[data-forecast-score], [data-forecast-call], [data-forecast-size], [data-forecast-wind]') || forecastValues.some((value) => words.includes(value)))) {
+      findings.push('la pantalla de reportar adelanta la llamada del pronóstico');
+    }
+    return { findings, hasHomePalette };
+  })()`) as Promise<ReportAudit>;
+}
+
+async function placeForecastOracle(page: Page, forecastValues: string[]): Promise<void> {
+  await page.evaluate((values) => { document.documentElement.dataset.testForecastValues = JSON.stringify(values); }, forecastValues);
+}
+
+async function reportState(page: Page): Promise<ReportState> {
+  return page.evaluate(`(() => {
+    const findings = [];
+    const choice = document.querySelector('input[type="radio"]');
+    const label = choice?.closest('label');
+    const action = document.querySelector('button[type="submit"]');
+    if (!(choice instanceof HTMLInputElement) || !(label instanceof HTMLLabelElement)) {
+      findings.push('la pantalla de reportar no ofrece una selección visible');
+      return { selectionIsVisible: false, disabledActionIsVisible: false, findings };
+    }
+    const before = getComputedStyle(label);
+    choice.click();
+    const after = getComputedStyle(label);
+    const nativeMark = getComputedStyle(choice).appearance !== 'none';
+    const labelChanged = before.borderColor !== after.borderColor || before.backgroundColor !== after.backgroundColor || before.boxShadow !== after.boxShadow;
+    const selectionIsVisible = choice.checked && nativeMark && labelChanged && label.getBoundingClientRect().height >= 44;
+    const disabledActionIsVisible = action instanceof HTMLButtonElement && action.disabled && action.getBoundingClientRect().height >= 44;
+    if (!selectionIsVisible) findings.push('la selección de reportar depende solo del color o no se puede tocar');
+    if (!disabledActionIsVisible) findings.push('la acción todavía no disponible no se entiende ni se puede leer');
+    return { selectionIsVisible, disabledActionIsVisible, findings };
+  })()`) as Promise<ReportState>;
+}
+
 function openedSurface(world: SurfaceWorld): OpenedSurface {
   const surface = opened.get(world);
   assert.ok(surface, 'test fixture error: todavía no se abrió una superficie');
   return surface;
+}
+
+function openedReportSurfaces(world: SurfaceWorld): OpenedReportSurfaces {
+  const surfaces = openedReports.get(world);
+  assert.ok(surfaces, 'test fixture error: todavía no se abrieron las pantallas de reportar');
+  return surfaces;
 }
 
 async function assertStill(page: Page, url: string): Promise<void> {
@@ -248,6 +358,9 @@ function prepare(world: SurfaceWorld, mode: Mode): void { prepared.set(world, { 
 
 Given('el sitio de Playa Venao está listo para visitar', function (this: SurfaceWorld) { prepare(this, 'normal'); });
 Given('una copia del sitio de Playa Venao con sus tarjetas pintadas de otro color', function (this: SurfaceWorld) { prepare(this, 'wrong-card-palette'); });
+Given('el sitio de Playa Venao y la página que no existe están listos para visitar', function (this: SurfaceWorld) { prepare(this, 'normal'); });
+Given('una copia del sitio donde una playa inexistente no explica qué pasó', function (this: SurfaceWorld) { prepare(this, 'raw-unknown-page'); });
+Given('una copia del sitio donde reportar recibe la llamada del pronóstico antes de tiempo', function (this: SurfaceWorld) { prepare(this, 'forecast-before-report'); });
 
 When('el surfista abre la página de Playa Venao y su recibo de ayer a {int} px, con tema {string}', async function (this: SurfaceWorld, width: number, theme: string) {
   const fixture = prepared.get(this);
@@ -300,11 +413,84 @@ Then('la comprobación rechaza las tarjetas porque ya no conservan la paleta de 
   assert.ok(spotAudit.findings.some((finding) => finding.includes('no conservan la paleta exacta de la portada')), `se esperaba el rechazo de paleta; se obtuvo ${spotAudit.findings.join('; ')}`);
 });
 
+When('el surfista abre la página que no existe y las dos pantallas de reportar de Playa Venao en un teléfono estrecho, con tema {string}', async function (this: SurfaceWorld, theme: string) {
+  const fixture = prepared.get(this);
+  assert.ok(fixture, 'test fixture error: falta el sitio preparado');
+  build(fixture.root);
+  const port = await unusedPort();
+  const preview = spawn(join(projectRoot, 'node_modules/.bin/vite'), ['preview', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: fixture.root, env: credentialFreeEnvironment(), stdio: 'ignore' });
+  const base = `http://127.0.0.1:${port}`;
+  await waitFor(base, preview);
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
+  await page.goto(base, { waitUntil: 'load' });
+  const homePalette = await paletteOf(page);
+  const baseline = visibleBaseline(fixture.root);
+  const forecastValues = [...new Set([...Object.values(baseline.today), ...Object.values(baseline.tomorrow)].filter((value) => value.length > 1))];
+  const unknownUrl = `${base}/404.html`;
+  const captureUrl = `${base}/spots/playa-venao/reportar.html`;
+  const revealUrl = `${base}/spots/playa-venao/reportado.html`;
+  await page.goto(unknownUrl, { waitUntil: 'load' });
+  await placeForecastOracle(page, forecastValues);
+  const unknownAudit = await auditReportSurface(page, 'unknown', homePalette);
+  await page.goto(captureUrl, { waitUntil: 'load' });
+  await placeForecastOracle(page, forecastValues);
+  const captureAudit = await auditReportSurface(page, 'capture', homePalette);
+  const reportStateResult = await reportState(page);
+  await page.goto(revealUrl, { waitUntil: 'load' });
+  await placeForecastOracle(page, forecastValues);
+  const revealAudit = await auditReportSurface(page, 'reveal', homePalette);
+  openedReports.set(this, {
+    unknownUrl, captureUrl, revealUrl, preview, browser, page,
+    unknownAudit, captureAudit, revealAudit, reportState: reportStateResult,
+  });
+});
+
+Then('las tres pantallas conservan el agua tropical, la lectura bajo el sol y una llegada honesta', function (this: SurfaceWorld) {
+  const surfaces = openedReportSurfaces(this);
+  for (const audit of [surfaces.unknownAudit, surfaces.captureAudit, surfaces.revealAudit]) {
+    assert.deepEqual(audit.findings, [], audit.findings.join('; '));
+  }
+});
+
+Then('los controles de reportar muestran la selección y la indisponibilidad sin depender solo del color', function (this: SurfaceWorld) {
+  const state = openedReportSurfaces(this).reportState;
+  assert.ok(state.selectionIsVisible && state.disabledActionIsVisible, state.findings.join('; '));
+});
+
+Then('las pantallas de reportar no adelantan la llamada del pronóstico', function (this: SurfaceWorld) {
+  const { captureAudit, revealAudit } = openedReportSurfaces(this);
+  assert.deepEqual(captureAudit.findings, [], captureAudit.findings.join('; '));
+  assert.deepEqual(revealAudit.findings, [], revealAudit.findings.join('; '));
+});
+
+Then('con el movimiento reducido activado, las tres pantallas se quedan quietas', async function (this: SurfaceWorld) {
+  const surfaces = openedReportSurfaces(this);
+  for (const url of [surfaces.unknownUrl, surfaces.captureUrl, surfaces.revealUrl]) await assertStill(surfaces.page, url);
+});
+
+Then('la comprobación rechaza la página porque deja al surfista sin una explicación humana', function (this: SurfaceWorld) {
+  const { unknownAudit } = openedReportSurfaces(this);
+  assert.ok(unknownAudit.findings.some((finding) => finding.includes('no explica qué pasó') || finding.includes('error crudo')), `se esperaba el rechazo de la página desconocida; se obtuvo ${unknownAudit.findings.join('; ')}`);
+});
+
+Then('la comprobación rechaza las pantallas de reportar antes de que adelanten la llamada', function (this: SurfaceWorld) {
+  const { captureAudit, revealAudit } = openedReportSurfaces(this);
+  const findings = [...captureAudit.findings, ...revealAudit.findings];
+  assert.ok(findings.some((finding) => finding.includes('adelanta la llamada del pronóstico')), `se esperaba el rechazo de adelantar la llamada; se obtuvo ${findings.join('; ')}`);
+});
+
 After(async function (this: SurfaceWorld) {
   const surface = opened.get(this);
   await surface?.browser.close();
   if (surface?.preview.exitCode === null) {
     await new Promise<void>((resolve) => { surface.preview.once('exit', () => resolve()); surface.preview.kill(); setTimeout(resolve, 1_000).unref(); });
+  }
+  const reportSurfaces = openedReports.get(this);
+  await reportSurfaces?.browser.close();
+  if (reportSurfaces?.preview.exitCode === null) {
+    await new Promise<void>((resolve) => { reportSurfaces.preview.once('exit', () => resolve()); reportSurfaces.preview.kill(); setTimeout(resolve, 1_000).unref(); });
   }
   const fixture = prepared.get(this);
   if (fixture) rmSync(fixture.root, { recursive: true, force: true });

@@ -1,7 +1,7 @@
 # Slice-02 and Slice-03 red classification
 
 Feature: `f-looks-like-the-ocean-and-reads-in-the-sun`
-Slices entered: `slice-02` and `slice-03 / 03-01`, 2026-08-10
+Slices entered: `slice-02` and `slice-03 / 03-01, 03-02`, 2026-08-10
 
 ## Commands observed
 
@@ -47,5 +47,24 @@ npm run test:at -- --tags '@feature-f-looks-like-the-ocean-and-reads-in-the-sun 
 | Playa Venao and its yesterday receipt, light and dark | Real emitted spot and yesterday documents at 390 px | `GUARD_GREEN` | The contained production build reached Chromium in both themes. The user-visible today/tomorrow cards, score, size, window, navigation, report action, reading margin, touch surfaces, viewport and reduced-motion checks all reached their browser oracles. |
 
 The inherited token cascade already satisfies this visual consistency contract, so a missing-style
-RED is not honestly available. This is a guard contract, not a fabricated failure. Slice-03/03-02
-and Slice-03/03-03 remain unarmed and absent.
+RED is not honestly available. This is a guard contract, not a fabricated failure.
+
+## Slice-03 / 03-02 commands observed
+
+```sh
+npm run typecheck
+npm run test:at -- --dry-run --tags '@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-02'
+npm run test:at -- --tags '@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-02'
+```
+
+## Slice-03 / 03-02 classification
+
+| Scenario group | Observable exercised | Classification | Evidence |
+|---|---|---|---|
+| Unknown page, capture screen and reveal screen, light and dark | Real emitted 404 and report documents at 390 px | `MISSING_FUNCTIONALITY` | The reveal screen's only live link, `Playa Venao`, measures 92×20 px in both themes. The contract requires 44×44 px minimum for an interactive target, so this is a user-visible RED rather than a setup failure. |
+| Raw unknown-page regression | Contained emitted 404 document | `GUARD_GREEN` | Replacing the human Spanish explanation with `AccessDenied` is rejected by the built-surface oracle. |
+| Early prediction regression | Contained emitted report document | `GUARD_GREEN` | Adding the current forecast call as plain visible text to the capture document is rejected by the browser oracle before publication. |
+
+The 03-02 scaffold compiles, all four scenarios bind, and its two deliberate regressions reach
+their intended oracles. The remaining positive failure is an honest product gap, not an import,
+fixture, browser-startup or assertion-shape failure. Slice-03/03-03 remains unarmed and absent.

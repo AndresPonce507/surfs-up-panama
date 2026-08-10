@@ -1,7 +1,7 @@
 # Slice-02 and Slice-03 requirement checklist
 
 Feature: `f-looks-like-the-ocean-and-reads-in-the-sun`
-Slices entered: `slice-02` and `slice-03 / 03-01`, 2026-08-10
+Slices entered: `slice-02` and `slice-03 / 03-01, 03-02`, 2026-08-10
 
 ## Reconciliation
 
@@ -49,13 +49,24 @@ manufacturing markup or treating the absent control as current user functionalit
 | Sunlight, phone, touch and reduced-motion disciplines hold | same scenario / real built routes | Rendered body words clear 7:1, controls are at least 44 px where present, no horizontal scroll occurs, and reduced motion removes movement. |
 | Source-blind U8 observation | `every-other-surface-belongs-to-the-same-product-spot-pages-manana-ayer-the-404-and-both-report-sc.md` | The charter carries the roadmap's exact 03-01 observation and negative observations without asking the examiner to inspect code. |
 
+## Slice-03 / 03-02 coverage
+
+| Requirement | Scenario / driving surface | Evidence shape |
+|---|---|---|
+| The unknown page and both report screens remain one readable product | `La página que no existe y las dos pantallas de reportar...` / real emitted 404, capture and reveal documents | A contained production Astro build is served to Chromium at 390 px in both themes. The browser checks palette, AA contrast, no horizontal scroll, ready state and 44 px interactive targets. |
+| Selection and unavailable report action do not rely on colour alone | same scenario / real emitted capture document | Chromium selects a real radio card, observes its native checked state plus its card treatment, and confirms the disabled action remains visible and legible at its full control size. |
+| Reporting does not visibly reveal the prediction before the surfer reports | same scenario / real emitted capture and reveal documents | Chromium rejects score, call, size, wind and forecast markers in both built documents. The architecture's separate CI source-dependency rule remains its own enforcement mechanism, not a substitute acceptance assertion. |
+| A raw unexplained unknown page is rejected | `Una playa inexistente que no explica qué pasó...` / contained mutated 404 document | The copy emits only a raw denial word, and the same built-surface oracle must reject it. |
+| A report page that visibly advances the prediction is rejected | `Una pantalla de reportar que adelanta la llamada...` / contained mutated report document | The copy adds the real current forecast call as plain visible text and the browser oracle rejects the emitted report before publication. |
+| Source-blind U8 observation | `every-other-surface-belongs-to-the-same-product-spot-pages-manana-ayer-the-404-and-both-report-sc.md` | The charter states the 03-02 observation and its two user-visible failure modes without asking the examiner to inspect source. |
+
 ## Deferred inventory, not authored
 
 | Slice | Build map | Charter | Acceptance suite | Status |
 |---|---|---|---|---|
-| slice-03 | Existing roadmap rows 03-01..03-03 | 03-01 present | 03-01 armed | 03-02 and 03-03 remain absent until their dependency turn. |
+| slice-03 | Existing roadmap rows 03-01..03-03 | 03-01 and 03-02 present | 03-01 green; 03-02 armed RED | 03-03 remains absent until its dependency turn. |
 | slice-04 | Existing roadmap rows 04-01..04-03 | Missing | Missing | JIT DISTILL has not opened it. |
 | slice-05 | Existing roadmap rows 05-01..05-03 | Present | Missing | JIT DISTILL has not opened it. |
 
 No future-slice feature file, charter, or step definition was created in this turn. The new
-Slice-03 contract covers only the dependency-ready 03-01 route pair.
+Slice-03 contract covers only the dependency-ready 03-01 and 03-02 route groups.

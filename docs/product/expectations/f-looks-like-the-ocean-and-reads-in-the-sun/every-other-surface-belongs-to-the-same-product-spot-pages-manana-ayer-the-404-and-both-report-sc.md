@@ -1,21 +1,25 @@
 # Cada página de playa conserva el mismo agua tropical de la portada
 
-ID: EXP-f-looks-like-the-ocean-and-reads-in-the-sun-3 · Spec rows: slice-03 / 03-01 · Persona: surfista que abre una playa concreta antes de manejar, y vuelve al recibo de ayer para comparar lo que pasó
+ID: EXP-f-looks-like-the-ocean-and-reads-in-the-sun-3 · Spec rows: slice-03 / 03-01, 03-02 · Persona: surfista que abre una playa concreta antes de manejar, vuelve al recibo de ayer para comparar lo que pasó, y necesita una salida clara si escribió mal la dirección o quiere contar lo que vio
 
 ## Intent
 
 Una persona abre Playa Venao para decidir si sale hoy, mira el llamado de mañana y después revisa
-el recibo de ayer. No debería sentir que cada ruta fue hecha por un producto distinto: las tres
-lecturas mantienen el azul-verde tropical de la portada y siguen siendo cómodas de leer bajo el
-sol. La identidad visual no borra ni cambia el número, el tamaño, la ventana ni los enlaces que
-la persona necesita para tomar esa decisión.
+el recibo de ayer. También puede escribir mal una dirección o abrir la pantalla para contar lo que
+vio. No debería sentir que cada ruta fue hecha por un producto distinto: todas mantienen el
+azul-verde tropical de la portada y siguen siendo cómodas de leer bajo el sol. La identidad visual
+no borra ni cambia el número, el tamaño, la ventana ni los enlaces que la persona necesita para
+tomar esa decisión, y contar lo visto no adelanta la llamada antes de que la persona dé su propia
+lectura.
 
 ## Preconditions
 
 1. Desde el árbol bajo prueba, ejecutar `npm run build` y servir `dist/` en `127.0.0.1`.
 2. Abrir `http://127.0.0.1:<puerto>/spots/playa-venao.html` a aproximadamente 390 px de ancho.
 3. Abrir también `http://127.0.0.1:<puerto>/spots/playa-venao/ayer.html`.
-4. Repetir ambas páginas en tema claro y oscuro, con movimiento reducido activado en la última
+4. Abrir una dirección de playa inexistente, y las pantallas para reportar y para ver el resultado
+   de un reporte de Playa Venao.
+5. Repetir todas las páginas en tema claro y oscuro, con movimiento reducido activado en la última
    pasada. Si no hay un recibo de ayer, observar el mensaje honesto que ocupa su lugar.
 
 ## Charter
@@ -27,7 +31,11 @@ de ayer. Compará las dos pantallas en claro y oscuro: deberían sentirse como l
 mismo producto, no como una portada nueva pegada a páginas viejas. Probá a leer los párrafos con
 el brazo estirado y reducí el movimiento antes de terminar. Mirá los bordes, los nombres y los
 controles a ancho de teléfono para detectar algo que se corte, se superponga o aparezca a medio
-cargar.
+cargar. Ahora escribí mal el nombre de una playa y abrí las dos pantallas para reportar. Las tres
+deben explicar dónde estás o qué podés hacer, conservar la misma costa visual y no mostrar ningún
+número, tamaño, viento o llamado antes de que hayas contado lo tuyo. En el formulario, elegí una
+opción: la marca de selección debe ser clara incluso si el color no te ayuda, y la acción que aún
+no se puede usar debe seguir siendo legible.
 
 ## Expected observations (oracle)
 
@@ -38,9 +46,14 @@ cargar.
 - Negative: si Playa Venao o ayer vuelven al blanco/gris anterior, o se ven como una aplicación distinta de la portada, es FALLA aunque las palabras sigan presentes.
 - Negative: si el repintado pierde un número, cambia el tamaño, la ventana o un enlace de salida, es FALLA. La identidad visual no autoriza cambiar la llamada.
 - Negative: si una palabra se ve bien en escritorio pero se pierde con luz fuerte, si un control queda pequeño, o si algo se corta a 390 px, es FALLA.
+- Escribo mal el nombre de una playa y abro la pantalla de reportar de otra: las tres se ven con el mismo azul-verde tropical, el formulario de reportar no muestra ningún número del pronóstico, y nada se ve roto ni en blanco.
+- La página de una playa inexistente explica en español qué pasó y ofrece volver a la lista; no llega una página de error cruda ni vacía.
+- Al elegir una respuesta para reportar, la selección se entiende por su marca y su tarjeta, no solo por color; la acción todavía inactiva sigue siendo visible y legible.
+- Negative: si una pantalla para reportar adelanta un número, tamaño, viento o llamado antes de recibir la lectura de la persona, es FALLA.
+- Negative: si la dirección inexistente muestra palabras técnicas, un error crudo o una página en blanco, es FALLA.
 
-Diferido, fuera de 03-01: el 404 y las dos pantallas de reportar son 03-02; el recorrido completo de
-las seis superficies es 03-03. Su ausencia no hace fallar esta observación inicial.
+Diferido, fuera de 03-02: el recorrido completo de las seis superficies es 03-03. Su ausencia no
+hace fallar estas dos observaciones de ruta.
 
 ## Session log (append-only)
 
