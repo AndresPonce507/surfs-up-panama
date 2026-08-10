@@ -2,7 +2,7 @@
   "roadmap": {
     "project_id": "f-see-what-killed-it",
     "created_at": "2026-08-09T23:50:00Z",
-    "total_steps": 27,
+    "total_steps": 33,
     "quality_contract_version": 1
   },
   "phases": [
@@ -795,6 +795,192 @@
           "implementation_notes": "JIT DISTILL ONLY: do not author future feature files, steps, fixtures, expectation charter, tags or RED-classification evidence while mapping. When Slice-04 legally opens, create six example-based production-build and browser behaviors from slice-04-contract.md, record RED against real ports, then implement one behavior at a time. Pure selector and formatter properties remain unit-level fast-check; browser and build failure cases remain pinned examples."
         }
       ]
+    },
+    {
+      "id": "05",
+      "name": "Slice-05: the spot page carries a small, honest static break map",
+      "description": "One lazily loaded, pre-rendered static asset per launch spot shows the break and its seed-owned orientation. An approved imagery source and visible attribution are hard prerequisites. No visitor-time tile request, map library, geolocation, endpoint, or interactive map is introduced.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "05-01",
+          "name": "Map source decision becomes a reproducible asset policy",
+          "criteria": [
+            "After X11 approval, one tracked policy identifies an approved imagery source or accepted orientation-only fallback, with license, acquisition, visible attribution and refresh rules.",
+            "The policy enumerates each launch spot, coordinate provenance, asset identity and shore-normal provenance; a missing or contested input refuses that asset rather than guessing.",
+            "The policy fixes a stable generated asset path and attribution payload that the static page can consume without a runtime request or hidden third-party credit.",
+            "The decision records why the chosen path costs zero at serving time and why any rejected tile, browser-library, scraped or uncredited source cannot enter the build."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "Cada playa recibe un mapa con una fuente que sí podemos mostrar",
+          "slice_id": "slice-05",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The policy authorizes a later asset and does not change a rendered route. Visible map behavior starts in 05-04.",
+          "ui_checks": {},
+          "deps": ["01-10"],
+          "files_to_modify": [
+            "data/maps/pa-pacific-map-policy.json",
+            "tests/unit/map-policy-contract.test.ts"
+          ],
+          "implementation_notes": "HARD DECISION GATE: do not select a provider by inference. X11 must choose the image-source path and exact attribution, or explicitly approve the seed-only orientation diagram as a changed product fulfillment. Existing seed coordinates are citable but source imagery is not. The policy must be committed with its license evidence reference; it is not a private build secret or a README footnote."
+        },
+        {
+          "id": "05-02",
+          "name": "Build creates bounded static map assets only",
+          "criteria": [
+            "The approved policy drives a reproducible generator that emits one content-addressed WebP per eligible launch spot under public/maps, each at or under the settled 12 KB target.",
+            "Generation happens before the Astro route build and writes no network URL, tile template, provider token or map-library code into emitted spot HTML or browser JavaScript.",
+            "Property: an unchanged policy and seed reproduce the same asset manifest; changing one approved spot record changes only that spot asset identity and manifest row.",
+            "A failed fetch, missing attribution, invalid bytes, absent coordinate or unsupported content type fails the asset build before site publication, never by replacing the map with an unrelated image."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "El mapa que abre el surfista ya viene listo, sin pedir un mosaico",
+          "slice_id": "slice-05",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "This is an asset-generation and build-boundary change. The page first exposes it in 05-04.",
+          "ui_checks": {},
+          "deps": ["05-01"],
+          "files_to_modify": [
+            "scripts/generate-static-maps.ts",
+            "data/maps/pa-pacific-map-manifest.json",
+            "public/maps/",
+            "package.json",
+            "tests/unit/static-map-assets.test.ts"
+          ],
+          "implementation_notes": "Use a content-addressed local output and a checked manifest, so an image revision cannot be served under a stale fixed path. The asset generator is a build-time adapter, never an Astro component concern. Do not introduce a dependency merely to rasterize a diagram before X11 says which legal path is in force. The ordinary page-weight gate must continue to exclude loading=lazy images from first-visit bytes while the map-specific asset test enforces the individual target."
+        },
+        {
+          "id": "05-03",
+          "name": "Map orientation is encoded from the declared spot seed",
+          "criteria": [
+            "The generated map marks the same spot coordinates and the direction indicated by that spot's declared shore_normal_deg; it never infers orientation from a coastline picture or a generic regional arrow.",
+            "The marker and orientation arrow are baked into the approved static asset or the expressly accepted orientation-only diagram, so the page needs no map computation or script.",
+            "Property: rotating one seed orientation changes only its own generated arrow, not another spot, its map source, ranking, forecast or image dimensions contract.",
+            "A null, contested or out-of-range orientation refuses generation for that spot and leaves no deceptive map; the launch policy exclusion remains authoritative."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "La flecha del mapa sigue la orientación que conoce esa playa",
+          "slice_id": "slice-05",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The orientation transform is build-time asset behavior; its visible arrow and image arrive together in 05-04.",
+          "ui_checks": {},
+          "deps": ["05-02"],
+          "files_to_modify": [
+            "scripts/generate-static-maps.ts",
+            "src/pipeline/adapters/spot-coordinates.ts",
+            "tests/unit/static-map-assets.test.ts",
+            "tests/unit/spot-coordinates.test.ts"
+          ],
+          "implementation_notes": "The current coordinate adapter reads lat/lon only; extend the map-specific build input deliberately rather than leaking map fields into src/data/region.ts, which remains report-safe identity. Coordinate, shore-normal and launch-policy validation happen at the asset boundary. Existing source seed comments say shore normals are derived and potentially uncertain, so the map may show only the declared orientation, never claim a more precise physical coastline fact."
+        },
+        {
+          "id": "05-04",
+          "name": "Static map component renders lazy image and visible credit",
+          "criteria": [
+            "A self-contained spot-page component renders one meaningful Spanish figure with a local content-addressed WebP, loading=lazy, declared width and height or aspect ratio, meaningful alt text, and the policy's visible attribution.",
+            "The image frame reserves space before loading. A missing image preserves that sunken frame and readable alt text, never a spinner, jump, raw URL or invisible element.",
+            "The component imports only the local manifest and approved strings. It does not fetch, calculate coordinates, derive orientation, initialize a map, add a control, or import client JavaScript.",
+            "The image and caption expose no technical token, raw degree, secret, provider template or unapproved copy; attribution stays visible and legible in both themes."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "El surfista ve el break y hacia dónde mira sin abrir otro mapa",
+          "slice_id": "slice-05",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-see-what-killed-it/a-surfer-ve-el-mapa-estatico-de-su-break-y-su-orientacion.md",
+          "u8_observation": "El mapa se siente parte de la ficha de mi playa, no una página cargando encima. Veo dónde está el break y la flecha de orientación sin una leyenda complicada, y si no hay señal queda un cuadro tranquilo que todavía explica qué debería estar ahí.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u7"]
+          },
+          "deps": ["05-03"],
+          "files_to_modify": [
+            "src/components/StaticMap.astro",
+            "src/i18n/strings.ts",
+            "src/styles/components.css"
+          ],
+          "implementation_notes": "Move the existing unshipped .img-frame recipe from src/styles/recipes.css into components.css with the component markup. The credit may be a static caption or approved link; if it is a link it must meet the existing 44 px target rule. The map never receives a browser-side loading state: native image failure plus the reserved frame is the settled offline/degrade surface."
+        },
+        {
+          "id": "05-05",
+          "name": "Spot-page mount and map cache strategy integrate serially",
+          "criteria": [
+            "The static map appears once on the Spanish spot page, never home, tomorrow, report or archive; SpotDetail retains both day summaries and its report action.",
+            "The emitted image has loading=lazy and the map adds zero document bytes or route JavaScript; page-weight output still reports the spot document under its 14 KB ceiling.",
+            "When the owner worker is available, map assets use its cache-first bounded-image policy. An uncached offline image leaves a usable reserved alt-text frame with no request loop.",
+            "The source, attribution and generated asset identity stay paired in the emitted page; a manifest mismatch refuses the build instead of crediting one image while showing another."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "El mapa de la playa carga tarde sin pesar ni romper la página",
+          "slice_id": "slice-05",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-see-what-killed-it/a-surfer-ve-el-mapa-estatico-de-su-break-y-su-orientacion.md",
+          "u8_observation": "La página sigue ligera. El mapa aparece cuando llego a él y no tapa la llamada ni el botón de reportar; sin señal, su espacio no salta ni se convierte en un error técnico.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u7"]
+          },
+          "deps": ["05-04"],
+          "files_to_modify": [
+            "src/components/SpotDetail.astro",
+            "public/sw.js",
+            "tests/unit/sw-router-table.test.ts",
+            "tests/unit/page-weight-laws.test.ts"
+          ],
+          "implementation_notes": "SERIALIZED INTEGRATION: SpotDetail.astro is the shared host (X10 precedent) and public/sw.js is owned by F-WORKS-WITH-NO-SIGNAL, not present on this branch. X12 must land or grant a serialized cache edit before this step dispatches. Do not create a second service worker. The native reserved-frame degrade is required even before the cache owner lands; the 5 MB LRU rule is asserted only against the real worker when available."
+        },
+        {
+          "id": "05-06",
+          "name": "Built surface proves map source, orientation and honest offline state",
+          "criteria": [
+            "The future run proves every eligible spot page has one lazy local WebP, policy attribution, correct asset identity and an orientation marker tied to its seed record.",
+            "A bad asset, absent cache and offline visit leave a fixed-size readable-alt frame without horizontal overflow, technical error, map fetch, tile request, map library or displaced report action.",
+            "The real build rejects a missing credit, mismatched manifest, over-target asset or unresolved map input before `dist/` is accepted; the page-weight and zero-route-JavaScript assertions remain green.",
+            "The map passes two-theme contrast, 390 px, reduced-motion, type, token and attribution legibility checks, plus a fresh source-blind U8 observation."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "El surfista encuentra su break sin abrir un mapa pesado",
+          "slice_id": "slice-05",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-see-what-killed-it/a-surfer-ve-el-mapa-estatico-de-su-break-y-su-orientacion.md",
+          "u8_observation": "Puedo reconocer el lugar y su orientación de un vistazo. No me aparece un mapa que lucha por cargar, no me saca de la página y aun sin señal queda claro qué mapa debía ver.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-05 and @ui-u7"]
+          },
+          "deps": ["05-05"],
+          "files_to_modify": [
+            "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+            "tests/acceptance/f-see-what-killed-it/steps/weakest-link-callout.steps.ts",
+            "tests/acceptance/f-see-what-killed-it/fixtures/slice-05-map-profiles.json"
+          ],
+          "implementation_notes": "JIT DISTILL ONLY: do not author future feature files, steps, fixtures, expectation charter, tags or RED-classification evidence while mapping. When Slice-05 legally opens after X11, the host integration and the cache owner are available, add the six production-build and browser behaviors in slice-05-contract.md. The image/worker failure paths are concrete example cases; deterministic asset-policy laws use fast-check at the build boundary."
+        }
+      ]
     }
   ],
   "implementation_scope": {
@@ -931,6 +1117,28 @@
       "owner": "spot-page integration lane",
       "serialized": true,
       "decision_record": "docs/feature/f-see-what-killed-it/deliver/slice-04-contract.md"
+    },
+    {
+      "id": "X11",
+      "what": "Approved static-map imagery source or expressly accepted orientation-only fallback",
+      "exact_change": "Andres/DESIGN records one legal path for each launch map: source identity, license terms, permitted build-time acquisition, exact visible Spanish attribution, refresh/cache terms and source evidence. If imagery cannot meet those terms at $0 serving cost, they may explicitly accept the seed-only orientation diagram instead; it must not be silently substituted.",
+      "why_not_here": "Decision 20 and the architecture settle only the static image form. No accepted document identifies a base image source or attribution. Choosing one is a product/legal decision outside this feature's mapping authority, and an uncredited or scraped image would violate the source contract even if it looked correct.",
+      "blocks": ["05-01", "05-02", "05-03", "05-04", "05-05", "05-06"],
+      "blocks_scenario": "every Slice-05 map behavior and JIT entry",
+      "owner": "Andres and DESIGN",
+      "serialized": true,
+      "decision_record": "docs/feature/f-see-what-killed-it/deliver/slice-05-contract.md"
+    },
+    {
+      "id": "X12",
+      "what": "Map cache policy lands in the owning offline service worker",
+      "exact_change": "Extend the real public/sw.js owned by F-WORKS-WITH-NO-SIGNAL to recognize local map assets as cache-first images under the accepted bounded 5 MB image policy, preserving its existing route and write-path exclusions.",
+      "why_not_here": "This branch has no public/sw.js or worker tests; all known worker implementation commits live on the F-WORKS-WITH-NO-SIGNAL release branches. A second worker or copied router would create competing caches and violates the architecture's single service-worker boundary.",
+      "blocks": ["05-05", "05-06"],
+      "blocks_scenario": "the cache-first and offline-cache map behavior; native image alt-text degrade remains required independently",
+      "owner": "F-WORKS-WITH-NO-SIGNAL / offline worker owner",
+      "serialized": true,
+      "decision_record": "docs/feature/f-see-what-killed-it/deliver/slice-05-contract.md"
     }
   ],
   "validation": {
