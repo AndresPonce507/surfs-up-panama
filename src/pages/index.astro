@@ -8,6 +8,7 @@
 // published surface and no second vocabulary, so the message can never tell a
 // different story than the card above it.
 import RankedList from '../components/RankedList.astro';
+import CopyControl from '../components/CopyControl.astro';
 import ShareControls from '../components/ShareControls.astro';
 import { forecast } from '../data/forecast';
 import { spotById } from '../data/region';
@@ -96,15 +97,16 @@ if (configuredSite === undefined) {
   throw new Error('home: astro.config.mjs no declara site y el mensaje no puede llevar una dirección absoluta');
 }
 
-const shareHref = whatsAppShareHref(
-  composeWhatsAppCallMessage(
-    shareSummary(forecast.published_at),
-    stampedShareLink(configuredSite.toString(), forecast.published_at),
-  ),
+const completedCall = composeWhatsAppCallMessage(
+  shareSummary(forecast.published_at),
+  stampedShareLink(configuredSite.toString(), forecast.published_at),
 );
+
+const shareHref = whatsAppShareHref(completedCall);
 ---
 
 <RankedList locale="es" day={0}>
+  <CopyControl slot="top-card-action" call={completedCall} />
   <ShareControls
     slot="top-card-action"
     href={shareHref}
