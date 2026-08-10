@@ -64,6 +64,48 @@
       "s": "EXECUTED",
       "d": "PASS",
       "t": "2026-08-10T02:36:01Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T02:41:21Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T02:48:20Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T02:50:34Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T02:52:10Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T02:59:24Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "COMMIT",
+      "s": "SKIPPED",
+      "d": "CHECKPOINT_PENDING: user-visible step held at GREEN; COMMIT is refused until des-verify-ui records U1 through U7 PASS and the source-blind examiner records a fresh PASS against the charter",
+      "t": "2026-08-10T03:00:29Z"
     }
   ]
 }
