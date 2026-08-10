@@ -15,7 +15,7 @@ Feature: The fit refuses to correct anything until the evidence earns it
     And the shipped trust settings, which exclude nobody
     And the morning call that was published before anyone had reported anything
 
-  @slice-01 @walking_skeleton @driving_port @in-memory @negative @covers-R1 @covers-R18
+  @slice-01 @walking_skeleton @driving_port @in-memory @negative @covers-R1 @covers-R18 @covers-R19 @covers-R40
   Scenario: Nobody has reported a session yet, so the nightly fit writes nothing at all
     Given nobody has reported a session at Playa Venao
     When the nightly fit runs

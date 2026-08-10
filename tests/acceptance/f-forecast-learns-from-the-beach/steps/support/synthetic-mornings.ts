@@ -132,7 +132,6 @@ const SHOWN_SCORES = [82, 76];
 
 export function syntheticMornings(spec: MorningsSpec): Morning[] {
   const band = spec.band ?? REPORTED_BAND;
-  const observedMidM = bandMidM(band);
   const dayOffset = spec.dayOffset ?? 0;
   const withoutForecastEvery = spec.withoutCapturedForecastEvery ?? 0;
   const windRotation = spec.windRotation ?? 0;
@@ -142,7 +141,14 @@ export function syntheticMornings(spec: MorningsSpec): Morning[] {
   return Array.from({ length: spec.count }, (_unused, index) => {
     const deviation = spec.spreadM === 0 ? 0 : (index % 2 === 0 ? spec.spreadM : -spec.spreadM);
     // forecast - observed = -biggerThanForecastM + deviation + forecastShiftM
-    const forecastEffectiveHeightM = observedMidM - spec.biggerThanForecastM + deviation + forecastShiftM;
+    // ... at the REFERENCE band. The forecast is anchored to the fixed
+    // reference band's midpoint, never to the band actually reported, so
+    // moving the reported band moves ONLY what the person said they saw.
+    // (Roadmap 01-18 records the trap this one line fixes: when the forecast
+    // followed the reported band around, the law "reporting a bigger size
+    // lowers the difference" compared a number to itself and was unsatisfiable
+    // by any implementation. Fixed by the DISTILL lane, 2026-08-10.)
+    const forecastEffectiveHeightM = bandMidM(REPORTED_BAND) - spec.biggerThanForecastM + deviation + forecastShiftM;
     const observedDate = addDays(FIRST_REPORTED_DATE, index + dayOffset);
     const runDate = addDays(observedDate, -1);
     const reporterIndex = (index + reporterRotation) % spec.reporters;
