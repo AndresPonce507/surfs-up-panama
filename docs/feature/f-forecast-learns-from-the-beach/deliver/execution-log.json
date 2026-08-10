@@ -876,6 +876,41 @@
       "s": "EXECUTED",
       "d": "{\"commit\":\"b94ff4b\",\"message\":\"feat(learning): down-weight chronic disagreement - step 04-03\",\"status\":\"scoped green\"}",
       "t": "2026-08-10T22:15:27Z"
+    },
+    {
+      "sid": "04-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "04-04 begins after 04-03. The slice was already unskipped by the prior completed step. Selection weighting is non-visual: it only changes the relative influence of residuals before stored corrections are estimated.",
+      "t": "2026-08-10T22:50:00Z"
+    },
+    {
+      "sid": "04-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm run test:at -- --name A morning of a kind nobody usually reports counts for more|A morning the site asked for counts plainly, wherever it lands\",\"exit\":1,\"classification\":\"expected behavioral RED\",\"failure\":\"rare-day and often-reported-day movements were both 0.013043478260869629m; solicited and volunteered movements were also equal\"}",
+      "t": "2026-08-10T22:50:05Z"
+    },
+    {
+      "sid": "04-04",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm test -- --run tests/unit/learning-weight-laws.test.ts\",\"exit\":1,\"classification\":\"expected unit RED\",\"failure\":\"selectionWeight was absent, so the generated cap-and-solicited property failed with TypeError\",\"test_budget\":\"2 behaviors x 2 = 4; 1 new property\"}",
+      "t": "2026-08-10T22:50:18Z"
+    },
+    {
+      "sid": "04-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "{\"focused_acceptance\":\"rare volunteered morning and solicited plain morning: 2 scenarios/40 steps PASS; all prior completed slice-04 acceptance scenarios: 6 scenarios/120 steps PASS\",\"learning_units\":\"10 files, 68 tests PASS\",\"typecheck\":\"PASS\",\"roadmap_integrity\":\"PASS\",\"falsification\":\"changing SELECTION_WEIGHT_CAP from 3 to 4 made the property fail and shrink to totalDays=1, reportedDays=0, totalReportedDays=0, organic; restored 3\",\"global_qualification\":\"all acceptance remains intentionally not green: 135 scenarios, 87 passed, 14 skipped, 34 failed. The non-scoped failures are the stale 2026-08-09 published surface against Panama 2026-08-10, the separately-owned 02-03 builder seam, and later slice-04 behaviors (habit subtraction and incident override); none is attributed to 04-04.\",\"non_visual_rationale\":\"only fit weights and stored correction values change; no rendered surface changed\"}",
+      "t": "2026-08-10T22:50:42Z"
+    },
+    {
+      "sid": "04-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "{\"commit\":\"6788ba1\",\"message\":\"feat(learning): weight rare volunteered mornings - step 04-04\",\"status\":\"scoped green\"}",
+      "t": "2026-08-10T22:50:50Z"
     }
   ]
 }
