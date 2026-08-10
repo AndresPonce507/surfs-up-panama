@@ -4,11 +4,12 @@
 // AWS SDK import — enforced by CI's dependency-cruiser rule, not just this
 // comment).
 //
-// SCOPE OF THIS SLICE (01-01, covers R10/R11 only): the upsert-by-identity
-// walking skeleton. `writes_today` and `allowlist` already arrive as
-// declared inputs (criterion 4) so later steps that add the daily-quota
-// reject (R12) and the endpoint-allowlist reject (R13) only add branches,
-// never change the signature; this function does not yet read either.
+// SCOPE: 01-01 shipped the upsert-by-identity walking skeleton (R10, R11).
+// 01-02 (this step) adds the endpoint-allowlist reject (R12): a request
+// whose destination host is not on the caller-declared `allowlist` is
+// rejected loudly, before anything is stored. The daily-quota reject (R13)
+// still does not read `writes_today` -- that is a later slice-01 step and
+// only adds another branch, never changes the signature.
 //
 // APPLY-AT-SEND, not stamp-at-subscribe (this step's implementation notes):
 // `threshold_score` is stored exactly as the surfer declared it, explicit
@@ -19,6 +20,7 @@
 
 import { createHash } from 'node:crypto';
 
+import { isAllowedHost } from './push-hosts';
 import type { StoredSub, SubscribeDecision, SubscribeRequest } from './types';
 
 /** sha256(endpoint), hex-truncated to 128 bits, per 07-write-path.md §8.1. */
@@ -59,8 +61,48 @@ function upsert(existing: readonly StoredSub[], request: SubscribeRequest, endpo
     : existing.map((row) => (sameIdentity(row, identity) ? mergedRow : row));
 }
 
+/** The parsed destination host, or null when the endpoint cannot even be
+ *  parsed as a URL -- an unclassifiable destination is rejected the same as
+ *  a classified-but-unknown one (fail closed, no "probably fine" branch). */
+function destinationHost(endpoint: string): string | null {
+  try {
+    return new URL(endpoint).hostname;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The R12 reject: loud by contract (07-write-path.md §8.4), never a silent
+ * drop. Names the destination the surfer actually supplied, states why it
+ * was refused, and states how to subscribe for real -- the ADR's own
+ * mitigation for an incomplete allowlist depends on this rejection being
+ * legible, not vague (adr-push-vapid-direct.md).
+ */
+function rejectUnknownDestination(rawEndpoint: string): SubscribeDecision {
+  return {
+    outcome: 'rejected',
+    stored: [],
+    rejection: {
+      what: `el destino ${rawEndpoint}`,
+      why:
+        'los destinos de avisos tienen que venir de un servicio de avisos conocido ' +
+        '(FCM, el push web de Apple, el autopush de Mozilla o WNS); aceptar cualquier ' +
+        'otro convierte el servidor en un lanzador de tráfico hacia la dirección que le pongan.',
+      how:
+        'pedí avisos de nuevo desde un navegador real con las notificaciones push ' +
+        'habilitadas, para que la suscripción salga de ese mismo servicio de avisos conocido.',
+    },
+  };
+}
+
 export function decideSubscribe(request: SubscribeRequest): SubscribeDecision {
-  const endpointHash = hashEndpoint(request.subscription.endpoint);
+  const rawEndpoint = request.subscription.endpoint;
+  const host = destinationHost(rawEndpoint);
+  if (host === null || !isAllowedHost(host, request.allowlist)) {
+    return rejectUnknownDestination(rawEndpoint);
+  }
+  const endpointHash = hashEndpoint(rawEndpoint);
   return {
     outcome: 'subscribed',
     stored: upsert(request.existing, request, endpointHash),
