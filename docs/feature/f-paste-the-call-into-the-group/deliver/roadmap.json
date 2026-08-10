@@ -292,8 +292,8 @@
             "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-paste-the-call-into-the-group and @slice-03"]
           },
           "deps": ["03-02"],
-          "files_to_modify": ["src/pages/index.astro", "src/components/RankedList.astro"],
-          "implementation_notes": "Serialized shared surface: use RankedList's established top-card-action path and pass the home preview through the same render route."
+          "files_to_modify": ["src/pages/index.astro", "src/components/RankedList.astro", "src/layouts/Base.astro"],
+          "implementation_notes": "Serialized shared surface: use RankedList's established top-card-action path and pass the home preview through the same render route. Base.astro also mounts the canonical link because application-architecture.md §13 requires it to strip the shared ?b= stamp."
         }
       ]
     },
