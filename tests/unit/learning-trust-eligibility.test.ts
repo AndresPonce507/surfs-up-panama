@@ -48,6 +48,16 @@ const storedRecords = fc.array(
   { maxLength: 40 },
 );
 
+const orderedAgeThresholds = fc
+  .tuple(
+    fc.integer({ min: 0, max: 120 }),
+    fc.integer({ min: 0, max: 60 }),
+  )
+  .map(([minimum, extraStanding]) => ({
+    lower: minimum,
+    higher: minimum + extraStanding,
+  }));
+
 describe('shipped trust settings', () => {
   it('drop nobody, including same-morning credentials, and are bit-identical to no settings', () => {
     const twentyTwoMorningsFromSevenPeople = Array.from({ length: 22 }, (_unused, index) =>
@@ -71,6 +81,30 @@ describe('shipped trust settings', () => {
           eligibleTrustRecords(records, SHIPPED_TRUST_GATE),
           eligibleTrustRecords(records),
           'the shipped gate must be a pure no-op over every stored record, not an accidental dependence on the wall clock',
+        );
+      }),
+      { numRuns: 100 },
+    );
+  });
+
+  it('never gains an eligible record when the required credential age rises', () => {
+    fc.assert(
+      fc.property(storedRecords, orderedAgeThresholds, (records, thresholds) => {
+        const lowerGate = {
+          ...SHIPPED_TRUST_GATE,
+          min_credential_age_days: thresholds.lower,
+        };
+        const higherGate = {
+          ...SHIPPED_TRUST_GATE,
+          min_credential_age_days: thresholds.higher,
+        };
+        const eligibleAtLowerThreshold = eligibleTrustRecords(records, lowerGate);
+        const eligibleAtHigherThreshold = eligibleTrustRecords(records, higherGate);
+
+        assert.equal(
+          eligibleAtHigherThreshold.every((record) => eligibleAtLowerThreshold.includes(record)),
+          true,
+          'raising only the age-at-receipt requirement may remove records, never add one; no aggregation clock participates',
         );
       }),
       { numRuns: 100 },
