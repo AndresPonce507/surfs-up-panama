@@ -292,6 +292,9 @@ FAIL, the ranked list is the product):
 | `size_range_m` | `[lo, hi]` metres, always rendered with "≈", never a point | FAIL (decision 18) |
 | `wind_state` | 3-value wind enum | degrade: wind word + glyph omitted |
 | `weakest_link` | enum `dir` \| `size` \| `wind` \| `tide` \| `null` (null = perfect day, no callout rendered — scoring ADR) | degrade: callout omitted |
+| `weakest_link_subscore` | optional finite raw scalar 0–1; fresh named weakest-link rows carry exactly that row's `sub[weakest_link]` | degrade: the named sentence stays complete and omits only its numeric suffix; never select or invent another factor's value |
+| `counterfactual_score_q` | optional integer 0–100, present only when strictly greater than that same row's `score_q` | degrade: the named sentence stays complete and omits only the counterfactual clause |
+| `counterfactual_suppression` | optional enum `rounded_equal`; fresh named row only, mutually exclusive with `counterfactual_score_q` | degrade: no counterfactual clause and no legacy-gap event; this is a deliberate equality suppression, not missing data |
 | `damages` | array `{factor, damage}` sorted desc (scoring §4) | degrade: weakest-link callout omitted |
 | `best_window` | `{start, end}` spot-local `HH:MM` strings (client renders, never computes — domain §14) | degrade: window line omitted; breakdown bars for that day also omitted (they derive at this hour — see below) |
 
@@ -317,10 +320,18 @@ Decided: **derive, don't ask.** The breakdown bars for day `d` render the `sub{d
 tide}` of the single hourly point whose spot-local timestamp falls in the hour containing
 `days[d].spots[i].best_window.start` — the hour that day's call is about. The builder computes
 exactly that: one array lookup, no averaging, no invention. `best_window` absent → bars omitted
-(the degrade declared in the day-summary table). The "what killed it" callout (decision 17)
-renders from the day summary's `weakest_link` + `damages` only — authoritative, never re-derived
-from the bars — and the callout arrow anchors on the `weakest_link` factor, never on the visually
-lowest bar, so the two surfaces cannot disagree about which factor killed the day.
+(the degrade declared in the day-summary table). The "what killed it" label and arrow (decision
+17) render from the day summary's `weakest_link` + `damages` only — authoritative, never
+re-derived from the bars — and the callout arrow anchors on the `weakest_link` factor, never on
+the visually lowest bar, so the two surfaces cannot disagree about which factor killed the day. The shorter
+callout projections are likewise producer-decided: `weakest_link_subscore` is the exact row's
+`sub[weakest_link]`, and `counterfactual_score_q` is an already-calculated strictly higher
+integer. The page does not select a sub-score, inspect damages, or calculate a counterfactual. A
+named row lacking both counterfactual representations is a legacy compatibility gap; the
+publish-time render omits the clause and records one
+`health.publish.counterfactual_field_missing` event for its `(spot_id, day, published_at)`. The
+explicit `rounded_equal` marker suppresses the clause without that event. See
+`adr-weakest-link-scalar-and-counterfactual-projections.md`.
 
 **P2 fields dropped, decided (2026-08-08 coherence round, answering `07-write-path.md` §1 row
 6):** `queued_offline` and `lang` are **removed** from P2, not defended. `queued_offline` had no

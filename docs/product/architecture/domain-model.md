@@ -431,7 +431,8 @@ Bundle shape (amended 2026-08-08 coherence round: top-level header + P1 fields a
       "confidence_reason":{"es":"Los modelos difieren 40% en el período y el último reporte fue el martes.","en":"..."},
       "call":{"es":"Pecho a cabeza y limpio temprano. Terral hasta las 10, después se arruina.","en":"..."},
       "size_band":"waist_chest","size_range_m":[0.8,1.4],
-      "weakest_link":"wind",
+      "weakest_link":"wind","weakest_link_subscore":0.66,
+      "counterfactual_score_q":89,
       "damages":[{"factor":"wind","damage":0.190},{"factor":"size","damage":0.095},{"factor":"tide","damage":0.016},{"factor":"dir","damage":0.0}],
       "best_window":{"start":"06:00","end":"09:30"},"wind_state":"clean"},
      ...19 more day-summary objects, array order = today's rank... ]},
@@ -452,7 +453,7 @@ Bundle shape (amended 2026-08-08 coherence round: top-level header + P1 fields a
 - **Validity invariants — builder fails the publish LOUD on violation (P1's failure contract):** every `days[*].spots[*].spot_id` appears exactly once as a `spot_detail` key; both day arrays contain the same spot set (each is a permutation of it — every spot carries 48 h of hourly data, so both days are always rankable); `days[1].date` = `days[0].date` + 1 day.
 - **`build_id` is the canonical per-publish stamp.** The frontend doc briefly called it `cycle_id`, which collided with this document's own "cycle" term for the model run (00/06/12/18Z). Renamed there in the 2026-08-08 coherence round; `cycle_id` no longer exists anywhere as a live field name.
 
-**Day-summary object — complete field list (exhaustive, nothing abridged):** `spot_id` · `score_q` (int 0–100) · `conf_level` (`low|medium|high`) · `confidence_reason{es,en}` · `call{es,en}` · `size_band` · `size_range_m` (`[lo,hi]` metres) · `weakest_link` (nullable) · `damages[]` (sorted descending) · `best_window{start,end}` (local-time strings) · `wind_state`. Every value is for that object's day; each may legitimately differ between `days[0]` and `days[1]` (confidence genuinely drops with lead — `C_spread`/`C_track` are lead-dependent).
+**Day-summary object — complete field list (exhaustive, nothing abridged):** `spot_id` · `score_q` (int 0–100) · `conf_level` (`low|medium|high`) · `confidence_reason{es,en}` · `call{es,en}` · `size_band` · `size_range_m` (`[lo,hi]` metres) · `weakest_link` (nullable) · `weakest_link_subscore?` (finite raw 0–1, present iff a freshly produced `weakest_link` is named) · `counterfactual_score_q?` (integer 0–100, present only when strictly greater than that row's `score_q`) · `counterfactual_suppression?` (`"rounded_equal"`, the mutually exclusive fresh-row marker for a valid rounded equality) · `damages[]` (sorted descending) · `best_window{start,end}` (local-time strings) · `wind_state`. A freshly produced named row carries exactly one counterfactual representation: the strictly higher integer or `counterfactual_suppression: "rounded_equal"`; a clean row carries neither. A named row with neither is a legacy compatibility gap, not a clean score. `weakest_link_subscore` is selected from the exact scored row's `sub[weakest_link]`; neither scalar is page-derived. Every value is for that object's day; each may legitimately differ between `days[0]` and `days[1]` (confidence genuinely drops with lead — `C_spread`/`C_track` are lead-dependent). Full rationale and legacy-event discriminator: `adr-weakest-link-scalar-and-counterfactual-projections.md`.
 
 **`spot_detail` value — complete field list (exhaustive):** `name` · `coast` · `tide{next_high, next_high_m, next_low, next_low_m}` (publish-relative "next", rendered on a page built at publish time) · `scorecard{n_obs, n_reporters, threshold, counter, claim_ok, headline}` (§9's gate; `headline` null whenever `claim_ok` is false). **`threshold` is an integer and `counter` is its display string** (added 2026-08-08 coherence round second pass, flagged by the frontend lane): the day-one empty state needs the threshold as a number, and parsing it back out of `"22 / 30"` would make a display string load-bearing. Both ship; `counter` stays because the rendered form is what decision 19 promises and one place should own its formatting · `reports{last_ts, count_24h, distinct_24h}` · `members[]` · `hourly[]` (48 points spanning both days — one series, shared by both days, never split per day).
 
@@ -477,16 +478,21 @@ Route → render input (the builder's whole read contract per route):
 | `scorecard.n_obs` `.n_reporters` `.counter` `.claim_ok` `.headline` | `n_reports`, `n_distinct_reporters`, window | `counter` is decision-19's `"22 / 30"` string; the 30-day window is fixed by §9, never a payload field |
 | `build_id` | `cycle_id` | header, once (settled earlier in the 2026-08-08 round) |
 
-**Implemented names, settled 2026-08-09 by the shared-contract lane** so the per-spot-page lane and the per-row-confidence lane could not each mint a name for the same value (the failure §17 and HANDOFF §7 record twice). The bundle type is `src/publish/region-bundle.ts`; the producer is `src/pipeline/build.ts`:
+**Implemented names plus accepted X7/X8 additions.** The shared-contract lane settled the
+existing names on 2026-08-09 so the per-spot-page lane and the per-row-confidence lane could
+not each mint a name for the same value (the failure §17 and HANDOFF §7 record twice). X7/X8 add
+the three optional fields below, with their fresh-output invariants defined by this section's
+complete list and `adr-weakest-link-scalar-and-counterfactual-projections.md`. The bundle type is
+`src/publish/region-bundle.ts`; the producer is `src/pipeline/build.ts`:
 
 | Where | Fields, verbatim |
 |---|---|
 | Bundle header | `schema: "region-bundle/1"` · `region_id` · `build_id` · `published_at` |
-| `days[d].spots[i]` | `spot_id` · `score_q` · `conf_level` · `call{es}` · `size_band` · `size_range_m` · `wind_state` · `best_window{start,end}` · `weakest_link` |
+| `days[d].spots[i]` | `spot_id` · `score_q` · `conf_level` · `call{es}` · `size_band` · `size_range_m` · `wind_state` · `best_window{start,end}` · `weakest_link` · `weakest_link_subscore?` · `counterfactual_score_q?` · `counterfactual_suppression?` |
 | `spot_detail[spot_id]` | `name` |
 | PublishedCall log row only | `conf_value` (continuous), beside its `conf_level` |
 
-Two consequences worth stating plainly. **`conf_level` is a DAY field, not a spot field** — it sits in each day summary because confidence genuinely drops with lead, so tomorrow's is legitimately lower than today's and there is no single per-spot confidence to hold in `spot_detail`. **`conf_value` never enters the bundle**: a page prints a level, and keeping the continuous value in the call receipt is what lets a later threshold change be replayed against what was actually shown. `spot_detail` ships with `name` only; the other §13 members (`tide`, `scorecard`, `reports`, `members`, `hourly`) have no producer yet and are deliberately absent rather than fabricated. `size_range_m` for `double_overhead_plus` is published as `[2.4, 3]`, a finite placeholder with no reader — the display format ignores its upper edge and reads the band as open-ended.
+Two consequences worth stating plainly. **`conf_level` is a DAY field, not a spot field** — it sits in each day summary because confidence genuinely drops with lead, so tomorrow's is legitimately lower than today's and there is no single per-spot confidence to hold in `spot_detail`. **`conf_value` never enters the bundle**: a page prints a level, and keeping the continuous value in the call receipt is what lets a later threshold change be replayed against what was actually shown. The X7/X8 additions are schema-authorized but not asserted to populate an old committed surface; their producer lane must project and prove the fresh-row invariants before delivery. `spot_detail` ships with `name` only; the other §13 members (`tide`, `scorecard`, `reports`, `members`, `hourly`) have no producer yet and are deliberately absent rather than fabricated. `size_range_m` for `double_overhead_plus` is published as `[2.4, 3]`, a finite placeholder with no reader — the display format ignores its upper edge and reads the band as open-ended.
 
 Bare `confidence` is retired as a field name in every C4 artifact (bundle and PublishedCall log): round 1 used it for a float in §6 and a string in §13 — one name, two types in the same document. The `conf_value`/`conf_level` split closes that. The seed's `"confidence":"2+sources"` (§11, `spot-seed/1`) is a different concept (per-spot research evidence grade) in a different schema namespace and keeps its name — flagged, not renamed.
 

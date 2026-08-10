@@ -457,7 +457,7 @@
           "name": "Counterfactual integer is an authorized optional surface field",
           "criteria": [
             "After X8 approval, SurfaceCall accepts optional counterfactual_score_q only with a named weakest_link and only as an integer from 0 through 100 greater than score_q.",
-            "An absent field remains valid for retained dawn receipts and older named rows; a clean day or an equal, lower, fractional or out-of-range field is rejected when present.",
+            "An absent score field remains valid for retained dawn receipts and older named rows; a fresh named rounding collision instead carries counterfactual_suppression: rounded_equal. A clean day or an equal, lower, fractional or out-of-range score field is rejected when present.",
             "Property: valid named rows retain every existing observable field and counterfactual_score_q unchanged through strict two-day validation.",
             "The field is documented as a producer-decided score without the named weakness, never as frontend arithmetic or the Slice-04 damage disclosure."
           ],
@@ -505,7 +505,7 @@
           "name": "Producer carries only a meaningful counterfactual score",
           "criteria": [
             "The build computes the candidate while ScoreResult damages and the applied correction are in scope, then carries counterfactual_score_q only when it is strictly greater than score_q.",
-            "Fresh named rows carry the integer or deliberately omit it for a rounding collision; fresh clean rows omit it. A candidate below score_q refuses publication before artifacts advance.",
+            "Fresh named rows carry the integer or counterfactual_suppression: rounded_equal for a rounding collision; fresh clean rows carry neither. A candidate below score_q refuses publication before artifacts advance.",
             "Property: changing the named factor's damage or correction changes only the counterfactual projection, while unrelated published fields retain their values.",
             "A newly built committed surface proves every present field is integral, greater than its row score and paired with a named weakest link."
           ],
@@ -557,7 +557,7 @@
             "The display formatter appends one day-aware Spanish counterfactual clause using the published integer verbatim; it does not calculate a score.",
             "The existing weakest-link element changes text only, with no new mount, control, route, client fetch, island or JavaScript.",
             "Absent, clean and collision states retain a complete named sentence or no callout as appropriate, with no empty gap, dangling punctuation, raw token, English, null or undefined.",
-            "A named legacy row without counterfactual_score_q omits only the clause and records one health.publish.counterfactual_field_missing event with spot, day and publish stamp; it adds no client telemetry.",
+            "A named legacy row without counterfactual_score_q or counterfactual_suppression omits only the clause and records one health.publish.counterfactual_field_missing event per spot-day and publish invocation; it adds no client telemetry. The rounded_equal marker suppresses without that event.",
             "At 390 px in both themes, the longer sentence remains readable against its real backdrop and leaves the report call to action reachable."
           ],
           "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
@@ -590,7 +590,7 @@
           "criteria": [
             "The future acceptance run proves both day sections show their own published higher counterfactual integers through the built production surface at 390 px.",
             "A correction-aware fixture proves the producer carries the formula with delta_q, and a lower-than-score mutation refuses publication instead of rendering a lie.",
-            "Rounding collision and perfect day suppress only the clause; named legacy absence also emits one health.publish.counterfactual_field_missing event without client telemetry.",
+            "Rounding collision carries the rounded_equal marker and perfect day carries neither representation, each suppressing only the clause; named legacy absence of both representations emits one health.publish.counterfactual_field_missing event without client telemetry.",
             "The two-theme, reduced-motion, overflow, type, target and token checks pass with the longer sentence and the route adds zero JavaScript."
           ],
           "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
@@ -1077,24 +1077,32 @@
     {
       "id": "X7",
       "what": "Schema-authorized scalar projection of the named weakest-link raw sub-score",
-      "exact_change": "Accept optional SurfaceCall.weakest_link_subscore: number, present only for a named weakest_link; update the authoritative reading-surface schema record and have surfaceCall() project call.sub[call.weakest_link] while both fields are in the producer record.",
+      "exact_change": "ACCEPTED 2026-08-10: add optional day-summary and SurfaceCall field weakest_link_subscore: number. Every freshly built named weakest_link row carries exactly its finite [0,1] call.sub[call.weakest_link] value; a fresh clean row carries none; a named null/non-finite/out-of-range source value refuses publication. Update the authoritative schema record and project only while both fields are in the producer record.",
       "why_not_here": "The accepted domain-model day-summary list is explicit and does not yet include sub-scores. This feature cannot silently enlarge that contract, and src/pipeline/build.ts is the serialized producer lane. Carrying full sub would pre-build Slice-04; a scalar is the minimum Slice-02 projection.",
       "blocks": ["02-01", "02-02", "02-03", "02-04", "02-05"],
       "blocks_scenario": "every Slice-02 scenario that requires a newly published numeric suffix; JIT authoring itself remains blocked until Slice-01 is sealed",
       "owner": "schema authority and keystone / producer lane",
       "serialized": true,
-      "decision_record": "docs/feature/f-see-what-killed-it/deliver/slice-02-contract.md"
+      "status": "approved",
+      "approved_at": "2026-08-10T00:00:00Z",
+      "decision_record": "docs/product/architecture/adr-weakest-link-scalar-and-counterfactual-projections.md",
+      "contract_record": "docs/feature/f-see-what-killed-it/deliver/slice-02-contract.md",
+      "delivery_gate": "Schema authority is closed. JIT DISTILL and production work remain blocked by their declared slice dependencies."
     },
     {
       "id": "X8",
       "what": "Schema-authorized counterfactual score field for the named weakest link",
-      "exact_change": "The domain/schema owner accepts the canonical optional day-summary and SurfaceCall field, proposed as counterfactual_score_q: an integer 0..100 present only for a named weakest_link and strictly greater than score_q. The producer computes it from ScoreResult damages plus the applied correction before CallRow drops damage data.",
+      "exact_change": "ACCEPTED 2026-08-10: add optional day-summary and SurfaceCall counterfactual_score_q: integer 0..100, present only for a named weakest_link and strictly greater than score_q, plus counterfactual_suppression: 'rounded_equal'. Every fresh named row carries exactly one: the higher integer or the equality marker; the two are mutually exclusive, and a fresh clean row carries neither. A named row missing both is legacy and emits one health.publish.counterfactual_field_missing event per spot-day and publish invocation. The producer computes before CallRow drops damages and the applied correction.",
       "why_not_here": "The domain-model P1 list is exhaustive and deliberately has no counterfactual field. This feature may not alter the contract by inference, and build.ts plus region-bundle.ts are serialized producer/schema paths. The full damages record remains Slice-04 scope.",
       "blocks": ["03-01", "03-02", "03-03", "03-04", "03-05", "03-06"],
       "blocks_scenario": "every Slice-03 counterfactual behavior; JIT test authoring also waits for Slice-02 to be sealed",
       "owner": "domain schema authority and keystone / producer lane",
       "serialized": true,
-      "decision_record": "docs/feature/f-see-what-killed-it/deliver/slice-03-contract.md"
+      "status": "approved",
+      "approved_at": "2026-08-10T00:00:00Z",
+      "decision_record": "docs/product/architecture/adr-weakest-link-scalar-and-counterfactual-projections.md",
+      "contract_record": "docs/feature/f-see-what-killed-it/deliver/slice-03-contract.md",
+      "delivery_gate": "Schema authority is closed. JIT DISTILL and production work remain blocked by their declared slice dependencies."
     },
     {
       "id": "X9",
