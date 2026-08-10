@@ -4,12 +4,24 @@
 // home through Chromium at 390 px. Steps ACT through the production driving
 // surface (the built page a surfer taps) and OBSERVE only user-facing
 // outcomes: the visible action, the prewritten message, the shared address.
-// State is stashed per scenario in a WeakMap so this file never registers a
-// second cucumber World beside the pipeline one.
+// State is stashed per scenario in the feature-shared WeakMap
+// (steps/support/share-stash.ts) so this file never registers a second
+// cucumber World beside the pipeline one, and so the later slices' steps can
+// chain onto the state these steps produce.
 
 import { After, Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 
+import {
+  dropStash,
+  peekStash,
+  requiredExpected,
+  requiredHome,
+  requiredRoot,
+  stash,
+  type PasteWorld,
+  type Stash,
+} from './support/share-stash';
 import {
   assertBehavior,
   assertIntactCopy,
@@ -30,44 +42,7 @@ import {
   promoteLongestNameSpot,
   shareFieldFindings,
   whatsappActionsInTopCard,
-  type ExpectedShare,
-  type OpenHome,
 } from './support/built-share-surface';
-
-type PasteWorld = object;
-
-type Stash = {
-  root?: string;
-  home?: OpenHome;
-  expected?: ExpectedShare;
-  originalSiteHost?: string;
-};
-
-const stashes = new WeakMap<PasteWorld, Stash>();
-
-function stash(world: PasteWorld): Stash {
-  let state = stashes.get(world);
-  if (state === undefined) {
-    state = {};
-    stashes.set(world, state);
-  }
-  return state;
-}
-
-function requiredRoot(state: Stash): string {
-  assert.ok(state.root !== undefined, 'test fixture error: the isolated surface copy is required');
-  return state.root;
-}
-
-function requiredHome(state: Stash): OpenHome {
-  assert.ok(state.home !== undefined, 'test fixture error: the built home must be open');
-  return state.home;
-}
-
-function requiredExpected(state: Stash): ExpectedShare {
-  assert.ok(state.expected !== undefined, 'test fixture error: the expected share values are required');
-  return state.expected;
-}
 
 const MISSING_ACTION =
   'WHAT: la tarjeta grande no ofrece la acción de WhatsApp con el mensaje ya escrito. ' +
@@ -109,7 +84,9 @@ When(
   { timeout: 120_000 },
   async function (this: PasteWorld, width: number, theme: string, motion: string) {
     const state = stash(this);
-    state.home = await openBuiltHome(requiredRoot(state), { width, theme, motion, javaScript: true });
+    // The clipboard permission is granted so later-slice Then oracles can read
+    // what the copy action wrote. Slice-01's own scenarios never touch it.
+    state.home = await openBuiltHome(requiredRoot(state), { width, theme, motion, javaScript: true, clipboard: 'granted' });
     state.expected = expectedShare(requiredRoot(state));
   },
 );
@@ -545,9 +522,9 @@ Then(
 );
 
 After({ timeout: 20_000 }, async function (this: PasteWorld) {
-  const state = stashes.get(this);
+  const state = peekStash(this);
   if (state === undefined) return;
   await disposeHome(state.home);
   disposeRoot(state.root);
-  stashes.delete(this);
+  dropStash(this);
 });
