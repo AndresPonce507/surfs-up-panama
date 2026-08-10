@@ -1,0 +1,55 @@
+---
+import type { Locale } from '../i18n/strings';
+import { pushCopy } from '../push/copy';
+
+interface Props {
+  locale: Locale;
+  spotId: string;
+}
+
+const { locale, spotId } = Astro.props;
+---
+
+<section class="avisos-control" data-field="avisos" data-spot-id={spotId} lang={locale} hidden>
+  <button class="avisos-action" type="button" data-field="avisos-activate">
+    {pushCopy.activate}
+  </button>
+</section>
+
+<script>
+  import '../push/island';
+</script>
+
+<style>
+  .avisos-control {
+    margin-bottom: var(--sp-3);
+    padding: var(--sp-3);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-m);
+    background: var(--surface);
+  }
+
+  .avisos-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    min-height: var(--tap);
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--go);
+    border-radius: var(--r-s);
+    background: var(--go);
+    color: var(--on-go);
+    font: inherit;
+    font-size: var(--text-body);
+    font-weight: 700;
+    line-height: var(--leading-snug);
+    letter-spacing: var(--track-meta);
+    text-align: start;
+  }
+
+  .avisos-action:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+</style>

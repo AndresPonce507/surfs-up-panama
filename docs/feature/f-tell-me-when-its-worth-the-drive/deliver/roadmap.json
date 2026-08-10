@@ -467,8 +467,8 @@
           "scenario_name": "Donde el teléfono no puede pedir avisos, no aparece un botón muerto",
           "slice_id": "slice-01",
           "surface_classification": "user-visible",
-          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/a-surfer-opens-playa-venao-taps-avisos-de-este-spot-grants-permission-and-sees-listo-only-after.md",
-          "u8_observation": "En la página de Playa Venao a 390 px aparece la línea de avisos de este spot como una acción que puedo tocar; en un teléfono que no puede pedir avisos esa acción no aparece por ninguna parte, y en ninguno de los dos casos la página dice que ya tengo avisos activos.",
+          "charter_path": "../../../product/expectations/f-tell-me-when-its-worth-the-drive/a-surfer-opens-playa-venao-taps-avisos-de-este-spot-grants-permission-and-sees-listo-only-after.md",
+          "u8_observation": "En la página de Playa Venao a 390 px aparece la línea de avisos de este spot como una acción que\n  puedo tocar; en un teléfono que no puede pedir avisos esa acción no aparece por ninguna parte, y\n  en ninguno de los dos casos la página dice que ya tengo avisos activos.",
           "non_visual_rationale": "",
           "ui_checks": {
             "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u1"],
