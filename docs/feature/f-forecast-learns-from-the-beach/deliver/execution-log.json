@@ -589,6 +589,13 @@
       "s": "EXECUTED",
       "d": "PASS_SCOPE: both named loader scenarios pass (20 and 19 steps), loader unit suite 6/6, learning units 52/52, and typecheck pass. Non-visual report object only. Full learning AT is 22 passed, 7 expected later-slice-02 apply/recheck/clamp/deletion failures, 28 skipped. Full unit 133/134 and fast CI 5/8 retain only the unrelated stale 2026-08-09 published-surface refusal.",
       "t": "2026-08-10T20:49:22Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: total correction loader and slice-02 activation committed as ba931ef with Step-ID 02-01. The loader parses no applied state, returns diagnostics on malformed or foreign-unit bytes, and leaves later apply/recheck/clamp scenarios red for their mapped steps.",
+      "t": "2026-08-10T20:49:35Z"
     }
   ]
 }
