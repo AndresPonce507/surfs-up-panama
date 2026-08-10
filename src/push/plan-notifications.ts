@@ -60,14 +60,22 @@ const MORNING_START_HOUR = 6;
 const MORNING_END_HOUR = 9;
 const FOUR_HOURS_IN_SECONDS = 4 * 60 * 60;
 
-function spotLocalHour(now: string, timezone: string): number {
+type SpotLocalTime = { date: string; hour: number };
+
+function spotLocalTime(now: string, timezone: string): SpotLocalTime {
   const parts = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
     hour: '2-digit',
     hourCycle: 'h23',
   }).formatToParts(new Date(now));
-  const hour = parts.find((part) => part.type === 'hour')?.value;
-  return Number(hour);
+  const part = (kind: 'year' | 'month' | 'day' | 'hour'): string => parts.find((candidate) => candidate.type === kind)?.value ?? '';
+  return {
+    date: `${part('year')}-${part('month')}-${part('day')}`,
+    hour: Number(part('hour')),
+  };
 }
 
 /**
@@ -76,18 +84,10 @@ function spotLocalHour(now: string, timezone: string): number {
  * the same date convention.
  */
 export function spotLocalDate(now: string, timezone: string): string {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date(now));
-  const part = (kind: 'year' | 'month' | 'day'): string => parts.find((candidate) => candidate.type === kind)?.value ?? '';
-  return `${part('year')}-${part('month')}-${part('day')}`;
+  return spotLocalTime(now, timezone).date;
 }
 
-function isMorningAtSpot(now: string, spot: PushSpot): boolean {
-  const hour = spotLocalHour(now, spot.timezone);
+function isMorningHour(hour: number): boolean {
   return hour >= MORNING_START_HOUR && hour < MORNING_END_HOUR;
 }
 
@@ -124,19 +124,19 @@ type PlannedNotification = { send: PlannedSend; write: NotificationWrite };
 
 function eligibleMorningNotifications(input: PlanNotificationsInput): PlannedNotification[] {
   return input.spots.flatMap((spot) => {
-    if (!isMorningAtSpot(input.now, spot)) return [];
+    const localTime = spotLocalTime(input.now, spot.timezone);
+    if (!isMorningHour(localTime.hour)) return [];
     const score = input.scores[spot.spot_id];
-    const date = spotLocalDate(input.now, spot.timezone);
     return input.subscriptions
       .filter((subscription) => subscription.spot_id === spot.spot_id)
       .filter((subscription) => isAtOrAboveSubscriberBar(score, subscription, input.default_threshold_score))
-      .filter((subscription) => hasNotBeenNotifiedForSpotDate(subscription, date))
+      .filter((subscription) => hasNotBeenNotifiedForSpotDate(subscription, localTime.date))
       .map((subscription) => ({
         send: composeSpanishMorningSend(spot, subscription, score!),
         write: {
           spot_id: spot.spot_id,
           endpoint_hash: subscription.endpoint_hash,
-          last_notified_date: date,
+          last_notified_date: localTime.date,
         },
       }));
   });

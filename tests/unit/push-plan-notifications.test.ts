@@ -47,6 +47,15 @@ function utcClockAtMinute25(hour: number): string {
   return `2026-08-10T${String(hour).padStart(2, '0')}:25:00Z`;
 }
 
+function fixedOffsetTimezone(offsetFromUtc: number): string {
+  const sign = offsetFromUtc >= 0 ? '-' : '+';
+  return `Etc/GMT${sign}${Math.abs(offsetFromUtc)}`;
+}
+
+function localHourAtOffset(utcHour: number, offsetFromUtc: number): number {
+  return (utcHour + offsetFromUtc + 24) % 24;
+}
+
 describe('planNotifications', () => {
   it('plans a send if and only if a morning score reaches the subscriber-supplied bar across the full scale', () => {
     fc.assert(
@@ -138,6 +147,39 @@ describe('planNotifications', () => {
             plan.sends.length,
             seed.utcHoursInMorning.some((morningUtcHour) => morningUtcHour === utcHour) ? 1 : 0,
             'solo las 06:25, 07:25 y 08:25 locales del huso declarado por el spot permiten un aviso',
+          );
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  it('follows every spot-local fixed-offset hour, never the Panama or UTC hour', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: -12, max: 12 }),
+        fc.integer({ min: 0, max: 23 }),
+        (offsetFromUtc, utcHour) => {
+          const spot = {
+            ...playaVenao,
+            timezone: fixedOffsetTimezone(offsetFromUtc),
+          };
+          const plan = planNotifications({
+            now: utcClockAtMinute25(utcHour),
+            spots: [spot],
+            scores: { [spot.spot_id]: 100 },
+            subscriptions: [subscriptionWithBar(0)],
+            default_threshold_score: fixtureServerThresholdScore,
+            run_cap: 1,
+          });
+          const spotLocalHour = localHourAtOffset(utcHour, offsetFromUtc);
+          const isSpotLocalMorning = spotLocalHour >= 6 && spotLocalHour < 9;
+
+          assert.ok(plan && typeof plan === 'object', 'the run always returns a plan, including outside a spot-local morning');
+          assert.equal(
+            plan.sends.length,
+            isSpotLocalMorning ? 1 : 0,
+            `the verdict must follow the spot-local hour ${spotLocalHour}, not the UTC hour ${utcHour} or Panama's clock`,
           );
         },
       ),
