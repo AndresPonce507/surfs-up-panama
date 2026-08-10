@@ -11,6 +11,7 @@
 // and is a contract violation, not a style preference.
 
 import { OPEN_ENDED_SIZE_BAND, sizeBands, type SizeBandToken } from '../data/size-bands';
+import { formatPanamaTime } from './reading-state';
 import type { BestWindow } from './static-surface';
 
 const APPROXIMATELY = '≈';
@@ -31,6 +32,20 @@ export function formatSizeEs(
 /** `Ventana 6:00–9:30`. Renders the published `best_window` spot-local strings. */
 export function formatBestWindowEs(window: BestWindow): string {
   return `Ventana ${readableHour(window.start)}${RANGE_DASH}${readableHour(window.end)}`;
+}
+
+/**
+ * `Actualizado 6:04 a.m.` (application-architecture.md section 10, the exact
+ * settled staleness-stamp copy; section 10 also settles the identical "a.m."
+ * form for the English "Updated 6:04 a.m." string, so this one clock format
+ * serves both locales). Renders the published `published_at` instant as the
+ * Panama-local wall-clock time, resolved at build time so the document
+ * stays true with JavaScript off and true for a service-worker-served stale
+ * copy (section 12: "the stamp travels inside the document it describes").
+ * A page must never interpolate the raw ISO instant.
+ */
+export function formatUpdatedAtEs(publishedAt: string): string {
+  return formatPanamaTime(publishedAt);
 }
 
 function bandWordEs(band: SizeBandToken): string {
