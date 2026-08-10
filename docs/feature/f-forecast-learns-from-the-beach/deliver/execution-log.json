@@ -701,6 +701,41 @@
       "s": "EXECUTED",
       "d": "PASS: 03-02 regression-rail tests committed as HEAD with Step-ID 03-02. No production change was needed because both pre-authored acceptance laws were already green after 03-01, as mapped. 03-03 is now dependency-ready; 02-03 remains blocked on external build.ts wiring.",
       "t": "2026-08-10T21:18:56Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "03-03 begins after 03-02. Non-visual fit hierarchy work only: activate break-type parents at three gated spots without crossing the blocked 02-03 build seam.",
+      "t": "2026-08-10T21:24:29Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "FAIL expected: three-beach activation scenario reached its stored-neighbourhood oracle; newcomer remained nearer regional mix than beach family.",
+      "t": "2026-08-10T21:25:32Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "FAIL expected: generated activation law shrank to equal beach/reef differences 0.25; flat region pooling left the newcomer outside its three-gated-beach family.",
+      "t": "2026-08-10T21:25:32Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: activation and non-activation acceptance scenarios each 1/19; focused hierarchy/fit/correction/gate units 29 tests; full learning units 9 files/60 tests; typecheck. Falsification: changing threshold from three to two failed the generated unfired-half law. Full learning AT now has 27 passed/22 skipped/8 expected later or blocked failures. Non-visual stored-number parent selection only.",
+      "t": "2026-08-10T21:26:33Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 03-03 committed as HEAD with Step-ID 03-03. Break-type grouping activates at three region-local gated spots; non-active spots retain the regional parent. The 02-03 builder seam remains untouched and blocked.",
+      "t": "2026-08-10T21:26:41Z"
     }
   ]
 }
