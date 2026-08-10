@@ -184,17 +184,26 @@ Absent:
 | 06 §10 | Two claim ladders, never conflated; monthly metrics rows fixed; kill switch: calibration failure removes the offending confidence term, C_spread first. | n/a | slice-05 oracles come from the metrics table verbatim; one scenario proves the pairwise tie-exclusion rule (ties under one quality step excluded); the product-level claim appears in no copy. |
 | Project CLAUDE.md (functional paradigm, PBT default; green-is-not-working) | Laws proven as properties; after GREEN inspect `dist/`; negative tests proven falsifiable by breaking the code once. | n/a | The claim-gate refusal properties must each be shown failing against a deliberately broken gate before they count. |
 | `HANDOFF.md` §4 + nw-ui-quality-mandates | Slice classification at DISTILL open; visible slices carry U1-U7 rows and a U8 charter observation; non-visual slices an honest N/A. | n/a | Classification table above; charters owed under `docs/product/expectations/f-show-our-track-record/` at DISTILL open. |
-| `HANDOFF.md` §1 DISTILL row (JIT rule) | Each slice's acceptance tests are written when that slice legally enters DISTILL, never earlier. | n/a | No `.feature` file, step definition or scaffold exists in this workspace; slice-01 is the first legal entrant, gated on the keystone seam (Pre-requisite 2). |
+| `HANDOFF.md` §1 DISTILL row (JIT rule) | Each slice's acceptance tests are written when that slice legally enters DISTILL, never earlier. | n/a | slice-01 entered 2026-08-09 and its 8 scenarios are the only `.feature` content in this workspace; no scaffold was needed. slice-02 is the next legal entrant. DELIVER still owes the keystone seam order (Pre-requisite 2) before it edits the three contended files. |
 
 ### [REF] JIT status
 
-No acceptance test exists for this feature. That is correct, not a gap: the project's JIT rule
-(`HANDOFF.md` §1) keeps each slice's tests absent until that slice enters DISTILL. slice-01 is
-the first legal entrant once the keystone seam (Pre-requisite 2) is settled; slice-02 follows
-with zero AWS and zero data. Slices 03-05 cannot enter DISTILL until their hard blocks clear,
-and no test for them may simulate report data into a claim: fixtures may exercise the arithmetic,
-never the public surface's honesty state. The requirement checklist and the RED-classification
-contract live under `docs/feature/f-show-our-track-record/distill/`.
+slice-01 entered DISTILL 2026-08-09 on lane `build/f2-record`. Its acceptance tests live at
+`tests/acceptance/f-show-our-track-record/honest-track-record-box.feature` (8 scenarios, all
+tagged `@feature-f-show-our-track-record` at file level and `@slice-01` per scenario) with steps
+under `steps/`. All 8 are RED as `MISSING_FUNCTIONALITY`; the run, the three defused traps, and
+the requirements deliberately REFUSED rather than covered weakly (R3, R5, R33) are recorded in
+`distill/red-classification.md`. No production code and no RED scaffold was written: every
+scenario enters through a surface that already exists on disk.
+
+No test exists for any other slice, and that is correct, not a gap: the project's JIT rule
+(`HANDOFF.md` §1) keeps each slice's tests absent until that slice enters DISTILL. slice-02 is
+the next legal entrant, with zero AWS and zero data; it was buildable during the slice-01 pass
+and deliberately withheld because a slice-01-only dispatch does not license authoring another
+Slice Plan row. Slices 03-05 cannot enter DISTILL until their hard blocks clear, and no test for
+them may simulate report data into a claim: fixtures may exercise the arithmetic, never the
+public surface's honesty state. The requirement checklist and the RED-classification contract
+live under `docs/feature/f-show-our-track-record/distill/`.
 
 ## Reuse Analysis
 
