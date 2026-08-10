@@ -17,6 +17,7 @@ import { strings, type Locale } from '../i18n/strings';
 import { paths } from '../i18n/routes';
 import { formatBestWindowEs, formatSizeEs, formatUpdatedAtEs } from '../publish/display-format';
 import WeakestLink from './WeakestLink.astro';
+import TrackRecordBox from './TrackRecordBox.astro';
 
 interface Props {
   locale: Locale;
@@ -93,6 +94,7 @@ const tomorrow = summaryFor(1);
       )
     }
   </section>
+  <TrackRecordBox spotId={spotId} />
   <p>
     <a class="cta" href={paths.report(locale, spotId)}>{t.spot.reportCta}</a>
   </p>

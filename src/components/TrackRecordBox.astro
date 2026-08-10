@@ -1,0 +1,75 @@
+---
+// WHY-NEW-FILE: src/components/TrackRecordBox.astro
+//   CLOSEST-EXISTING: src/components/Confidence.astro
+//   EXTENSION-COST: Confidence.astro renders a different disclosure (level +
+//     one-tap reason) driven by a different domain module (src/scoring/*);
+//     folding this box's markup in there would mix an unrelated decision
+//     (publish-gate honesty) into a component that owns confidence wording.
+//   PARALLEL-RATIONALE: this is the one mount point for the scorecard block
+//     (domain-model.md section 13, decisions 13/19) and has no other caller
+//     today; a second real caller is the gated-claim variant slice-04 adds.
+//
+// The track-record box: the site's honest answer, right now, to "have you
+// been right about THIS beach lately". Composed entirely at build time from
+// the scorecard modules landed in 01-01 (observation source), 01-02 (publish
+// gate) and 01-03 (settled copy) -- this component derives no statistic of
+// its own, it only asks the source, lets the gate decide, and prints what
+// those modules already decided (P5: the frontend renders, it never
+// computes).
+//
+// Composition root ordering, forced by 01-01: probe the source, then read
+// it, then compose. A refused probe throws and fails the build rather than
+// silently rendering a zero nobody can stand behind.
+//
+// Today `dayOneObservationSource` always answers store-absent, so the gate's
+// bias clause is always 'unavailable' and `claim_ok` is always false: every
+// spot page renders the counter state below. The gated claim headline that
+// replaces the counter once a beach earns one is deferred (slice-04) and has
+// no settled copy yet, so a `claim_ok: true` block reaching this component
+// would have nothing honest to print -- fail loud instead of guessing at
+// wording, the same choice SpotDetail.astro already makes for an unknown
+// spot id.
+//
+// Markup carries BOTH `.scorecard` and `.state-empty` (src/styles/recipes.css
+// lines 61-116, decisions 13/19), consumed as shipped -- no stylesheet
+// edited here (R37): `.state-empty` alone has no background, and because
+// `.scorecard .counter` is a descendant selector, an element missing
+// `.scorecard` would leave the counter without `tabular-nums`. Source order
+// then puts `.state-empty`'s dashed border (line 113) after `.scorecard`'s
+// solid one (line 66), so the same-specificity cascade lands the dashed
+// "not yet" treatment, never the error-adjacent solid one.
+//
+// Each counted number sits in its own `.counter` span, never inline in the
+// prose: `composeEmptyStateSentence` (01-03) hands back an ordered sequence
+// of text and count parts for exactly this reason, so the paragraph's own
+// text nodes carry no digit and the counter alone carries tabular-nums (U6).
+import { scorecardBlockFromObservationCount } from '../scorecard/scorecard-block';
+import { dayOneObservationSource, probeObservationSource } from '../scorecard/observation-source';
+import { composeEmptyStateSentence } from '../scorecard/copy';
+
+interface Props {
+  spotId: string;
+}
+
+const { spotId } = Astro.props;
+
+probeObservationSource('dayOneObservationSource', dayOneObservationSource);
+const observationCount = dayOneObservationSource(spotId);
+const block = scorecardBlockFromObservationCount(observationCount);
+
+if (block.claim_ok) {
+  // No gated claim copy is implemented yet (deferred to a later slice): this
+  // build has no honest sentence to print for a spot that passed the gate.
+  throw new Error(
+    `TrackRecordBox: spot "${spotId}" passed the publish gate but no claim copy is implemented yet.`,
+  );
+}
+
+const parts = composeEmptyStateSentence(block);
+---
+
+<div class="scorecard state-empty" data-field="track-record">
+  <p>
+    {parts.map((part) => (part.kind === 'count' ? <span class="counter">{part.value}</span> : part.value))}
+  </p>
+</div>
