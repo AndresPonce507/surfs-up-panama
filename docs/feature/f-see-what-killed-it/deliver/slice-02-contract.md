@@ -1,6 +1,7 @@
 # Slice-02 delivery contract: the named factor carries its published value
 
-Status: mapped only, 2026-08-10. This is not JIT DISTILL. It deliberately
+Status: mapped only, 2026-08-10. X7 schema authority accepted 2026-08-10 in
+`adr-weakest-link-scalar-and-counterfactual-projections.md`. This is not JIT DISTILL. It deliberately
 creates no future acceptance label, feature file, step definition, fixture,
 or RED classification entry. Those artefacts are authored only after Slice-01
 has its sealed commit and Slice-02 is legally opened.
@@ -25,10 +26,9 @@ other rounding or rescaling rule.
 
 ## Serialized schema seam
 
-The domain-model day-summary list is explicitly exhaustive and does not yet
-contain `sub`. Slice-02 therefore cannot add the full four-factor record to a
-page as an accidental schema change. The owner of the producer/schema seam
-must first accept this additive reading-surface field:
+The domain-model day-summary list is explicitly exhaustive. X7 now authorizes
+this additive scalar on both the day summary and reading surface; it does not
+authorize a full four-factor record:
 
 ```ts
 // present only when weakest_link is a named factor
@@ -36,10 +36,12 @@ weakest_link_subscore?: number // finite, 0 <= value <= 1
 ```
 
 The pipeline selects `call.sub[call.weakest_link]` while the complete
-`ScoreResult` is still in scope. A named weakest link with a null or non-finite
-matching score is a publish-refusing inconsistency, because L16 already says a
-null observation can never become the weakest link. An omitted field is only
-the compatibility state for pre-Slice-02 surfaces.
+`ScoreResult` is still in scope. Every freshly produced named row carries the
+finite inclusive-range scalar; a fresh clean row carries none. A named weakest
+link with a null or non-finite matching score is a publish-refusing
+inconsistency, because L16 already says a null observation can never become
+the weakest link. An omitted field is only the compatibility state for
+pre-Slice-02 surfaces.
 
 This is deliberately a scalar instead of `sub`: Slice-04 owns exposing all
 four values and its own best-window-hour join. Slice-02 needs one published

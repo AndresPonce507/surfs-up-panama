@@ -1,6 +1,7 @@
 # Slice-03 delivery contract: the honest score without the named weakness
 
-Status: mapped only, 2026-08-10. This is not JIT DISTILL. It creates no
+Status: mapped only, 2026-08-10. X8 schema authority accepted 2026-08-10 in
+`adr-weakest-link-scalar-and-counterfactual-projections.md`. This is not JIT DISTILL. It creates no
 future acceptance label, feature file, step definition, fixture, expectation
 charter, or RED-classification entry. Slice-03 opens only after Slice-02 is
 sealed and the counterfactual schema seam below is accepted.
@@ -33,28 +34,35 @@ That makes the following visual states honest and element-free:
 - a legacy row with no field;
 - a malformed candidate, which refuses publication instead of reaching a page.
 
-A named legacy row missing the field is a compatible display degrade, not a
-clean score. The publish-time render records one structured
-`health.publish.counterfactual_field_missing` event with the spot, day and
-publish stamp while omitting the clause. It is an operator-visible log only:
-no client beacon, metric, endpoint or JavaScript is added.
+A named legacy row missing both the field and the fresh-row equality marker is
+a compatible display degrade, not a clean score. The publish-time render
+records exactly one structured `health.publish.counterfactual_field_missing`
+event **per such spot-day and publish invocation**, with `spot_id`, `day`, and
+`published_at`, while omitting the clause. It is an operator-visible log only:
+no client beacon, metric, endpoint or JavaScript is added. A valid fresh
+rounding collision carries the marker below and emits no event.
 
 ## Serialized schema seam
 
-The domain-model day-summary field list is exhaustive and has no
-counterfactual. Pre-requisite 4 therefore remains a hard producer/schema
-dependency. The schema owner must approve the canonical field name and add it
-to the bundle day summary and reading surface together. This mapping proposes:
+The domain-model day-summary field list is exhaustive. X8 now authorizes the
+canonical fields on the bundle day summary and reading surface together:
 
 ```ts
 // present only when weakest_link is named and this value is > score_q
 counterfactual_score_q?: number
+counterfactual_suppression?: 'rounded_equal'
 ```
 
-The proposed name intentionally carries the existing `score_q` unit. A full
-`damages` array or `sub` record must not be copied into the reading surface:
-Slice-04 owns that disclosure. The producer calculates while `ScoreResult`
-and `delta_q` are both in scope, then carries the already-decided integer.
+The score name intentionally carries the existing `score_q` unit. A fresh
+named row contains exactly one representation: the integer when it is strictly
+higher, or `counterfactual_suppression: 'rounded_equal'` when the valid rounded
+candidate equals `score_q`. The two keys are mutually exclusive; a fresh clean
+row contains neither. Without the marker, a renderer cannot distinguish the
+valid equality omission from a legacy missing field and would log a false
+compatibility gap. A full `damages` array or `sub` record must not be copied
+into the reading surface: Slice-04 owns that disclosure. The producer
+calculates while `ScoreResult` and `delta_q` are both in scope, then carries
+the already-decided result.
 
 ## Planned Given-When-Then mapping
 
@@ -76,8 +84,8 @@ helper boundary; slow build and browser cases remain example-based.
 
 ## Delivery sequence
 
-1. The schema owner accepts the additive optional integer field for both
-   day-summary artifacts and records its canonical name.
+1. The accepted schema projects the additive optional integer and its
+   equality discriminator for both day-summary artifacts.
 2. A pure scoring helper forms the correction-aware integer from damages and
    the named factor, keeping the existing L10 identity testable.
 3. The producer invokes that helper while it still has `ScoreResult` and the
@@ -85,7 +93,8 @@ helper boundary; slow build and browser cases remain example-based.
    collisions and clean days.
 4. The reading-surface validator and reader retain only a matching,
    strictly-higher integer from the same spot-day row; the publish-time caller
-   records the named compatibility-gap event when a named legacy row omits it.
+   records the named compatibility-gap event only when a named legacy row
+   omits both counterfactual representations.
 5. The existing formatter and existing callout element append the day-aware
    Spanish sentence. No mount, page route, data fetch, island, or JavaScript
    is added.
