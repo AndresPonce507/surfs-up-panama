@@ -253,6 +253,20 @@
       "s": "EXECUTED",
       "d": "PASS: existing route-table behavior verified after registration seam; only feature-local DES evidence is staged because no source or test change was required",
       "t": "2026-08-10T20:45:40Z"
+    },
+    {
+      "sid": "01-08",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: never-opened spot and report browser scenarios 2/26 steps; navigation-only property proves assets and POST stay outside fallback; focused SW tests 10/10, full units 92/92, typecheck, build, and fast CI 8/8 with 0 skipped",
+      "t": "2026-08-10T20:48:07Z"
+    },
+    {
+      "sid": "01-08",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: verified 01-08 navigation fallback files staged for commit after all requested gates passed",
+      "t": "2026-08-10T20:48:07Z"
     }
   ]
 }
