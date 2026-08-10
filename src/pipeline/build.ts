@@ -25,6 +25,7 @@ import type {
   BestWindow,
   ConfLevel,
   SizeRangeM,
+  SurfaceCall,
   WindState,
 } from '../publish/static-surface';
 import {
@@ -96,8 +97,10 @@ type CallRow = {
   h_eff_m: number;
   size_band: SizeBandToken;
   size_range_m: SizeRangeM;
-  wind_state: WindState;
-  best_window: BestWindow;
+  /** null: wind was never observed this hour (05-scoring-engine.md section 3.6 / L16); never collapsed onto "clean", the best-case reading. */
+  wind_state: WindState | null;
+  /** null: no genuine daylight peak this day (05-scoring-engine.md section 7, "null when max_q = 0"); never an invented span. */
+  best_window: BestWindow | null;
   bias_applied: number;
   bias_gate: string;
   members_used: number;
@@ -105,6 +108,9 @@ type CallRow = {
   missing: ('wind' | 'tide')[];
   weakest_link: Factor | null;
 };
+
+/** Every hourly call for a spot's day, before that day's one best_window is known. */
+type DraftCallRow = Omit<CallRow, 'best_window'>;
 
 export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
   const now = deps.clock.now();
@@ -171,7 +177,7 @@ async function predictionRows(deps: BuildDeps, dates: readonly string[]): Promis
 function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: PredictionRow[], dates: readonly string[], hour: string): CallRow[] {
   const validHours = [...new Set(rows.filter((row) => row.spot_id === spot.spot_id).map((row) => row.valid_ts))].sort();
   const correction = applyCorrection(spot, null);
-  return validHours.flatMap((validTs) => {
+  const drafts: DraftCallRow[] = validHours.flatMap((validTs) => {
     if (!dates.some((date) => validTs.startsWith(date))) return [];
     const bySource = new Map(rows.filter((row) => row.spot_id === spot.spot_id && row.valid_ts === validTs).map((row) => [row.source, row]));
     const declared = DECLARED_MEMBER_SOURCES.map((source): DeclaredMember => {
@@ -222,7 +228,6 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
       size_band: band,
       size_range_m: sizeRange(band),
       wind_state: windState(score.sub.wind),
-      best_window: bestWindow(validTs, spot.timezone),
       bias_applied: correction.delta_q,
       bias_gate: correction.gate,
       members_used: blended.members_used,
@@ -231,6 +236,17 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
       weakest_link: score.weakest_link,
     }];
   });
+  const windowsByCivilDate = bestWindowsByCivilDate(drafts, spot.timezone);
+  return drafts.map((draft) => ({
+    ...draft,
+    // A civil date with zero usable daylight score (every hour blanked, or a
+    // flat day whose max_q is 0) has no honest peak to build a window
+    // around; bestWindowsByCivilDate leaves that date out of the map on
+    // purpose (05-scoring-engine.md section 7: "null when max_q = 0"), so
+    // this lookup can genuinely miss and null is the honest result, not a
+    // bug to paper over with a non-null assertion.
+    best_window: windowsByCivilDate.get(civilDatePrefix(draft.valid_ts)) ?? null,
+  }));
 }
 
 function bundleDay(date: string, calls: readonly CallRow[]): BundleDay {
@@ -252,7 +268,7 @@ function daySummary(call: CallRow): BundleDaySummary {
   };
 }
 
-function surfaceCall(call: CallRow) {
+function surfaceCall(call: CallRow): SurfaceCall {
   return {
     spot_id: call.spot_id,
     score_q: call.score_q,
@@ -260,18 +276,27 @@ function surfaceCall(call: CallRow) {
     conf_level: call.conf_level,
     size_band: call.size_band,
     size_range_m: call.size_range_m,
-    wind_state: call.wind_state,
-    best_window: call.best_window,
+    // wind_state and best_window are optional on the wire (SurfaceCall),
+    // never null: an unknown wind reading, or a day with no genuine peak,
+    // omits the field rather than publishing a null the reading routes
+    // don't expect and RankedList.astro already degrades gracefully around
+    // (application-architecture.md section 7: absent structured fields fall
+    // back to the baked call sentence, never a raw null).
+    ...(call.wind_state === null ? {} : { wind_state: call.wind_state }),
+    ...(call.best_window === null ? {} : { best_window: call.best_window }),
   };
 }
 
 function spanishCall(call: CallRow): string {
-  return `${spanishSizeBand(call.size_band)}, viento ${spanishWind(call.wind_state)}, mejor de ${call.best_window.start} a ${call.best_window.end}.`;
+  const windowPhrase = call.best_window === null
+    ? 'sin ventana estimada'
+    : `mejor de ${call.best_window.start} a ${call.best_window.end}`;
+  return `${spanishSizeBand(call.size_band)}, viento ${spanishWind(call.wind_state)}, ${windowPhrase}.`;
 }
 
 function followingCivilDate(civilDate: string): string { const date = new Date(`${civilDate}T12:00:00Z`); date.setUTCDate(date.getUTCDate() + 1); return date.toISOString().slice(0, 10); }
 function regionalCivilDate(instant: Date, timezone: string): string { const fields = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(instant); const part = (type: Intl.DateTimeFormatPartTypes) => fields.find((field) => field.type === type)?.value ?? ''; return `${part('year')}-${part('month')}-${part('day')}`; }
-function sameRankedCalls(left: readonly CallRow[], right: readonly CallRow[]): boolean { return left.length === right.length && left.every((call, index) => { const other = right[index]; return other !== undefined && call.spot_id === other.spot_id && call.score_q === other.score_q && call.size_band === other.size_band && call.wind_state === other.wind_state && call.best_window.start === other.best_window.start && call.best_window.end === other.best_window.end; }); }
+function sameRankedCalls(left: readonly CallRow[], right: readonly CallRow[]): boolean { return left.length === right.length && left.every((call, index) => { const other = right[index]; return other !== undefined && call.spot_id === other.spot_id && call.score_q === other.score_q && call.size_band === other.size_band && call.wind_state === other.wind_state && call.best_window?.start === other.best_window?.start && call.best_window?.end === other.best_window?.end; }); }
 
 function sizeRange(sizeBand: string): SizeRangeM {
   const band = SIZE_BANDS.find((candidate) => candidate.band === sizeBand);
@@ -287,25 +312,124 @@ function sizeRange(sizeBand: string): SizeRangeM {
   return [lo_m, band.hi_m];
 }
 
-function windState(score: number | null): 'clean' | 'choppy' | 'blown_out' {
-  if (score === null || score >= 0.75) return 'clean';
+// A null wind sub-score means wind was never observed this hour
+// (05-scoring-engine.md section 3.6 / L16) -- distinct from a real, poor
+// reading, and never the same as the best-case "clean" bucket. Carrying that
+// absence through as `null` is the fix; the scoring layer upstream already
+// modeled it honestly (sWind returns null, wind leaves the geometric mean),
+// this presentation mapping was the only place still collapsing it.
+function windState(score: number | null): WindState | null {
+  if (score === null) return null;
+  if (score >= 0.75) return 'clean';
   if (score >= 0.35) return 'choppy';
   return 'blown_out';
 }
 
-function bestWindow(validTs: string, timezone: string): { readonly start: string; readonly end: string } {
-  const start = new Date(validTs);
-  const end = new Date(start.getTime() + 3 * 60 * 60 * 1000);
-  const format = (instant: Date): string => new Intl.DateTimeFormat('en-GB', {
+// D6(a), 05-scoring-engine.md section 7: best_window is the longest
+// contiguous run of daylight hours whose score is at least 80% of that
+// day's daylight peak, derived from THIS spot's own hourly series -- never
+// a fixed offset shared by every spot, which is the defect this replaces
+// (every row read "mejor de 13:00 a 16:00" because every spot's window used
+// to be the same T18:00Z ranking hour plus three hours, in the same shared
+// timezone).
+//
+// The design also calls for real per-spot, per-date daylight bounds from
+// shell-computed solar-position arithmetic (lat/lon in). This pipeline does
+// not carry lat/lon into scoring today -- SpotSeed has none; only the
+// ingest-side capture adapter (src/pipeline/adapters/spot-coordinates.ts)
+// does, and it is out of this fix's file scope to plumb it through. Every
+// launch spot shares one timezone (data/spots/pa-pacific.yaml: all
+// `America/Panama`), and Panama sits close enough to the equator (~7-9N)
+// that sunrise and sunset drift by only about twenty minutes across the
+// year, so a fixed 06:00-18:00 local bound is an honest regional
+// approximation of daylight, not a fabricated one. It is NOT the exact
+// per-spot, per-date computation the design ultimately wants -- flagged,
+// not fixed, same as the missing lat/lon plumbing it depends on.
+const DAYLIGHT_LOCAL_HOURS: readonly [number, number] = [6, 18];
+
+const BEST_WINDOW_RATIO = 0.8;
+
+/** The UTC calendar-date prefix of an hourly `valid_ts`, e.g. `2026-08-09`. */
+function civilDatePrefix(validTs: string): string {
+  return validTs.slice(0, 10);
+}
+
+/** `06:00`. Spot-local clock time, the same format the published field carries. */
+function localHhmm(validTs: string, timezone: string): string {
+  return new Intl.DateTimeFormat('en-GB', {
     timeZone: timezone,
     hour: '2-digit',
     minute: '2-digit',
     hourCycle: 'h23',
-  }).format(instant);
-  return { start: format(start), end: format(end) };
+  }).format(new Date(validTs));
+}
+
+/**
+ * One honest best_window per (spot, published day), keyed by the same UTC
+ * date-prefix grouping the rest of this file already ranks by
+ * (`call.valid_ts.startsWith(civilDate)`). Every draft row's own key is
+ * present in the returned map because the map is built entirely from those
+ * same rows: no draft can look up a key nothing produced.
+ */
+function bestWindowsByCivilDate(drafts: readonly DraftCallRow[], timezone: string): ReadonlyMap<string, BestWindow> {
+  const byDate = new Map<string, DraftCallRow[]>();
+  for (const draft of drafts) {
+    const key = civilDatePrefix(draft.valid_ts);
+    const bucket = byDate.get(key);
+    if (bucket === undefined) byDate.set(key, [draft]);
+    else bucket.push(draft);
+  }
+  const windows = new Map<string, BestWindow>();
+  for (const [key, dayRows] of byDate) {
+    const daylight = dayRows
+      .map((draft) => ({ validTs: draft.valid_ts, hour: Number(localHhmm(draft.valid_ts, timezone).slice(0, 2)), score_q: draft.score_q }))
+      .filter((row) => row.hour >= DAYLIGHT_LOCAL_HOURS[0] && row.hour <= DAYLIGHT_LOCAL_HOURS[1])
+      .sort((left, right) => left.hour - right.hour);
+    const window = longestHighScoreRun(daylight, timezone);
+    if (window !== null) windows.set(key, window);
+  }
+  return windows;
+}
+
+/** Longest contiguous run of daylight hours at or above 80% of that run's own daylight peak. */
+function longestHighScoreRun(
+  daylight: readonly { readonly validTs: string; readonly hour: number; readonly score_q: number }[],
+  timezone: string,
+): BestWindow | null {
+  if (daylight.length === 0) return null;
+  const dayMax = Math.max(...daylight.map((row) => row.score_q));
+  // A flat or fully-gated day (every daylight hour scores exactly zero) has
+  // no genuine peak to build a window around. Without this guard every
+  // zero-score hour would satisfy `0 >= 0.8 * 0` and the entire daylight
+  // span would wrongly read as "best" -- the design's own documented
+  // exception (05-scoring-engine.md section 7: "null when max_q = 0").
+  if (dayMax === 0) return null;
+  const threshold = BEST_WINDOW_RATIO * dayMax;
+  let best: { startIndex: number; endIndex: number } | null = null;
+  let runStartIndex: number | null = null;
+  daylight.forEach((row, index) => {
+    const previous = daylight[index - 1];
+    const contiguous = previous !== undefined && row.hour === previous.hour + 1;
+    if (!contiguous) runStartIndex = null;
+    if (row.score_q < threshold) {
+      runStartIndex = null;
+      return;
+    }
+    if (runStartIndex === null) runStartIndex = index;
+    if (best === null || index - runStartIndex > best.endIndex - best.startIndex) {
+      best = { startIndex: runStartIndex, endIndex: index };
+    }
+  });
+  if (best === null) return null;
+  const { startIndex, endIndex } = best as { startIndex: number; endIndex: number };
+  return {
+    start: localHhmm(daylight[startIndex]!.validTs, timezone),
+    end: localHhmm(daylight[endIndex]!.validTs, timezone),
+  };
 }
 
 function spanishWind(windState: CallRow['wind_state']): string {
+  if (windState === null) return 'sin datos';
   return ({ clean: 'limpio', choppy: 'picado', blown_out: 'destrozado' })[windState];
 }
 
