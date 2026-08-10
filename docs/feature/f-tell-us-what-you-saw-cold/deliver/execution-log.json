@@ -183,6 +183,132 @@
       "s": "SKIPPED",
       "d": "CHECKPOINT_PENDING: GREEN not reached (blocked by file-boundary authorization on ReportShell.astro/reportado.astro, out of files_to_modify); user-visible step stops for U1-U7 and Vera before any COMMIT in any case. Committing only the RED regression check and this log so the defect and its proof are visible to the orchestrator; no feature/fix code exists to commit.",
       "t": "2026-08-10T13:21:04Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:43:00Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:43:00Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:43:00Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE:cold-load defect already caught by the RED_ACCEPTANCE-layer structural check; no unit test was needed to drive GREEN",
+      "t": "2026-08-10T13:43:13Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T14:46:59Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T14:47:04Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T14:47:12Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T14:47:12Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T15:00:42Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: skills loaded (tdd-methodology, quality-framework, fp-principles, fp-domain-modeling); project CLAUDE.md and repo paradigm (functional) read; grep confirmed no @skip/@ignore/@pending tags in three-taps-locks-the-label.feature -- no-op unskip, target scenario 'Back never returns to an editable form and a new report starts blank' already active",
+      "t": "2026-08-10T17:51:47Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: npm run test:at -- --tags \"@feature-f-tell-us-what-you-saw-cold and @slice-01\" --name \"Back never returns to an editable form and a new report starts blank\" on unmodified tree, output redirected then $? read: exit 0, 1 scenario passed, 18 steps passed (JSON formatter output confirmed exactly 1 scenario matched with its 9 Gherkin steps + 3 Before + 6 After hooks = 18, proving the --tags/--name filter genuinely selected only this scenario, not the whole suite -- the lane's known filtering trap). No RED observed: 01-03 already implemented the full mechanism these criteria require (history.replaceState ordering, per-commit ULID mint via composeReportRecord, no persisted form state). Falsifiability proven via two poison-and-revert cycles instead of a captured RED: (1) src/report/island.ts line 291 history.replaceState swapped to history.pushState -- reran filtered scenario, exit 1, semantic AssertionError 'back landed on /spots/playa-venao/reportar/, not the spot page' at the exact assertion this criterion needs, 12 passed/5 skipped/1 failed; reverted, git diff src/report/island.ts empty (byte-identical). (2) composeReportRecord's injected clock/random swapped from (() => new Date(), Math.random) to (() => new Date(0), () => 0.5) -- reran, exit 1, semantic AssertionError '1 !== 2' on 'the phone holds two saved reports with two different identities' (queue overwrote the duplicate report_id key), 17 passed/1 failed; reverted, git diff empty. Both oracles proven load-bearing, not vacuous.",
+      "t": "2026-08-10T17:51:59Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: AT already passes on unmodified code, no PBT/unit test needed to drive GREEN. Criteria (b) and (c) verified by absence via grep: zero occurrences of localStorage/sessionStorage/popstate in src/report/island.ts. The two poison-and-revert cycles logged at RED_ACCEPTANCE serve as this step's falsifiability proof in place of a captured unit-level RED.",
+      "t": "2026-08-10T17:52:05Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: all three criteria already satisfied by 01-03's implementation, zero production changes needed (Fixture Theater guard does not apply -- the test never flipped RED to GREEN, it was always GREEN; confirmed via git diff src/report/island.ts and tests/unit/report-island.test.ts both empty after the poison-and-revert cycles). Full suite after GREEN: npm run test:at -- --tags \"@feature-f-tell-us-what-you-saw-cold and @slice-01\" (whole slice, no --name filter), output redirected then $? read: exit 1, 8/10 scenarios passed, 148/157 steps passed -- the 2 failures are pre-existing and out of this step's scope, identical to the 2 flagged in 01-03's GREEN log entry: (a) nothing-of-ours-before-yours.feature leak-gate scenario fails on missing scripts/check-report-leak.mjs (01-08's file, not built yet), (b) 'A phone that cannot keep the label is told plainly before answering' fails a documented flaky Playwright isVisible() check under cucumber-js only (01-03's GREEN entry has the full 4-repro investigation, UNRESOLVED and flagged, not this step's scenario or files). npm run test -- tests/unit/report-island.test.ts tests/unit/report-record.test.ts tests/unit/report-queue.test.ts: exit 0, 22/22 passed. npm run typecheck: exit 0.",
+      "t": "2026-08-10T17:52:17Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "COMMIT",
+      "s": "SKIPPED",
+      "d": "CHECKPOINT_PENDING: surface_classification is user-visible (charter shared with 01-03: docs/product/expectations/f-tell-us-what-you-saw-cold/a-surfer-walking-off-playa-venao-...md). That charter's session log's only entry is Vera FAIL from before the reportado cold-load fix -- no current PASS is sealed to it yet, so U1-U7 plus a fresh source-blind examine are owed before this step's feature work can be called closed, per the quality gate. No feature code changed in this step regardless (GREEN was pre-satisfied), so there is nothing at risk of shipping unexamined; committing only this step's log entries as the durable record of the RED/GREEN proof. Orchestrator: dispatch des-verify-ui + nw-user-examiner against the charter (covering both 01-03's and 01-04's expected observations, since they share one charter) before treating either step's user-visible surface as sealed.",
+      "t": "2026-08-10T17:52:40Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:56:23Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:56:25Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:56:28Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T18:11:33Z"
     }
   ]
 }

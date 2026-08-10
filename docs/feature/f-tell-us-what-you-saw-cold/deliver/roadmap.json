@@ -77,22 +77,76 @@
           "u8_observation": "En la pantalla del reporte de Playa Venao respondo las tres preguntas con una mano, toco Mandar y la pantalla cambia a la confirmación guardada: sin puntaje, sin pronóstico, sin camino de vuelta al formulario. Se ve terminada a 390 px en tema claro y oscuro, y con movimiento reducido activado nada se anima.",
           "non_visual_rationale": "",
           "ui_checks": {
-            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u1"],
-            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u2"],
-            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u3"],
-            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u4"],
-            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u5"],
-            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u6"],
-            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u7"]
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u3"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u7"
+            ]
           },
-          "deps": ["01-01", "01-02"],
+          "deps": [
+            "01-01",
+            "01-02"
+          ],
           "files_to_modify": [
             "src/report/island.ts",
             "src/components/ReportCapture.astro",
             "src/pages/spots/[slug]/reportar.astro",
-            "tests/unit/report-island.test.ts"
+            "tests/unit/report-island.test.ts",
+            "src/pages/spots/[slug]/reportado.astro"
           ],
-          "implementation_notes": "EXEMPT FROM PARADIGM: DOM orchestration wiring, single-shot by nature; compensated by the property-based tests on record (01-01) and queue (01-02); the unit render test covers state transitions example-based with a documented reason. The island is the ONLY script the reportar document may load (application-architecture section 6 budgets it at 5.0 KB gz; 01-09 asserts it). Wire it as a script in ReportCapture.astro. FLOW after a passing probe: enable Mandar (the static HTML keeps disabled - progressive enhancement, 01-06 pins it); on tap with all three answered: compose record (01-01, clock and crypto injected at the composition root), commit (01-02), history.replaceState to paths.reported('es', spotId) (import src/i18n/routes read-only), then render the confirmation INTO THE CURRENT DOCUMENT (no navigation, no reload, no fetch): remove the form entirely (oracle counts form/input/select/textarea and must find 0), render the settled queued sentence and one link back to the spot page only (no a[href*=\"/reportar\"]). COPY, deliberate: the confirmation uses the settled queued variant 'Guardado. Cuando vuelva la señal lo mandamos y te decimos cómo nos fue.' verbatim (application-architecture section 10) in BOTH online and offline walks - slice-01 never sends anything, so it is the only settled sentence that is true; slice-03 introduces the online arrival state. It contains no digits, which the no-forecast oracle requires (no /\\d/ anywhere in body text - render no counter, no numbers of any kind). If src/i18n/strings.ts already exports this string, import it read-only; otherwise define it once in src/report/copy.ts and FLAG the future consolidation (src/i18n/** is another lane's file, never edit it). OPEN COPY ITEM (Pre-requisite 8b), do not build: the section 14 note 'Nota: aquí no te mostramos el pronóstico. Primero lo tuyo, después el nuestro.' is NOT settled shipping copy and no scenario asserts it; render nothing, record it for Andres via the cousin's crew channel. Playwright's waitForURL sees replaceState, so the world's tapMandar observes the swap."
+          "implementation_notes": "EXEMPT FROM PARADIGM: DOM orchestration wiring, single-shot by nature; compensated by the property-based tests on record (01-01) and queue (01-02); the unit render test covers state transitions example-based with a documented reason. The island is the ONLY script the reportar document may load (application-architecture section 6 budgets it at 5.0 KB gz; 01-09 asserts it). Wire it as a script in ReportCapture.astro. FLOW after a passing probe: enable Mandar (the static HTML keeps disabled - progressive enhancement, 01-06 pins it); on tap with all three answered: compose record (01-01, clock and crypto injected at the composition root), commit (01-02), history.replaceState to paths.reported('es', spotId) (import src/i18n/routes read-only), then render the confirmation INTO THE CURRENT DOCUMENT (no navigation, no reload, no fetch): remove the form entirely (oracle counts form/input/select/textarea and must find 0), render the settled queued sentence and one link back to the spot page only (no a[href*=\"/reportar\"]). COPY, deliberate: the confirmation uses the settled queued variant 'Guardado. Cuando vuelva la señal lo mandamos y te decimos cómo nos fue.' verbatim (application-architecture section 10) in BOTH online and offline walks - slice-01 never sends anything, so it is the only settled sentence that is true; slice-03 introduces the online arrival state. It contains no digits, which the no-forecast oracle requires (no /\\d/ anywhere in body text - render no counter, no numbers of any kind). If src/i18n/strings.ts already exports this string, import it read-only; otherwise define it once in src/report/copy.ts and FLAG the future consolidation (src/i18n/** is another lane's file, never edit it). OPEN COPY ITEM (Pre-requisite 8b), do not build: the section 14 note 'Nota: aquí no te mostramos el pronóstico. Primero lo tuyo, después el nuestro.' is NOT settled shipping copy and no scenario asserts it; render nothing, record it for Andres via the cousin's crew channel. Playwright's waitForURL sees replaceState, so the world's tapMandar observes the swap.",
+          "scope_widening_note": "Widened by the orchestrator 2026-08-10. No step in this roadmap owned src/pages/spots/[slug]/reportado.astro, so the confirmation route was never assigned an owner and shipped unable to render itself on a cold load. Vera caught it: reload, fresh tab or bookmark showed a blank page seconds after a surfer submitted a report. This step is named \"Mandar commits, swaps, renders\" and that render IS the confirmation, so the route belongs here."
         },
         {
           "id": "01-04",
@@ -110,15 +164,66 @@
           "u8_observation": "Desde la confirmación, el botón atrás me deja en la página del spot, nunca en un formulario editable; al abrir el reporte otra vez todo empieza en blanco, y contestar de nuevo guarda un segundo reporte aparte del primero.",
           "non_visual_rationale": "",
           "ui_checks": {
-            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u1"],
-            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u2"],
-            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u3"],
-            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u4"],
-            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u5"],
-            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u6"],
-            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u7"]
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u3"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u7"
+            ]
           },
-          "deps": ["01-03"],
+          "deps": [
+            "01-03"
+          ],
           "files_to_modify": [
             "src/report/island.ts",
             "tests/unit/report-island.test.ts"
@@ -141,15 +246,66 @@
           "u8_observation": "En un teléfono que no puede guardar, antes de contestar aparece un aviso claro en español sencillo de que el reporte no se puede guardar en este teléfono; después de tocar Mandar la pantalla nunca dice Guardado ni cambia a la confirmación.",
           "non_visual_rationale": "",
           "ui_checks": {
-            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u1"],
-            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u2"],
-            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u3"],
-            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u4"],
-            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u5"],
-            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u6"],
-            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u7"]
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u3"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u7"
+            ]
           },
-          "deps": ["01-03"],
+          "deps": [
+            "01-03"
+          ],
           "files_to_modify": [
             "src/report/island.ts",
             "src/components/ReportCapture.astro",
@@ -173,15 +329,66 @@
           "u8_observation": "Con JavaScript apagado la pantalla del reporte dice exactamente 'Para mandar reportes hace falta JavaScript. Para leer el pronóstico no.', no existe ninguna forma de mandar un reporte, y la página del spot se sigue leyendo perfectamente.",
           "non_visual_rationale": "",
           "ui_checks": {
-            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u1"],
-            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u2"],
-            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u3"],
-            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u4"],
-            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u5"],
-            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u6"],
-            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u7"]
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u3"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u7"
+            ]
           },
-          "deps": ["01-03"],
+          "deps": [
+            "01-03"
+          ],
           "files_to_modify": [
             "src/components/ReportCapture.astro",
             "src/report/island.ts"
@@ -252,7 +459,9 @@
           "u8_observation": "",
           "non_visual_rationale": "Byte ceilings are measured by the build page-weight gate and the ceiling acceptance scenario against built dist; there is no rendered state to observe beyond what 01-03 already charters.",
           "ui_checks": {},
-          "deps": ["01-03"],
+          "deps": [
+            "01-03"
+          ],
           "files_to_modify": [
             "src/report/island.ts",
             "src/report/queue.ts",
@@ -277,15 +486,72 @@
           "u8_observation": "Camino el flujo entero a 390 px: en ningún momento, ni en la pantalla uno, ni recargando a mitad del camino, ni en la confirmación, aparece un puntaje, una banda de hoy, una palabra de viento de hoy ni ninguna pista del pronóstico; la confirmación se lee tranquila y sin números.",
           "non_visual_rationale": "",
           "ui_checks": {
-            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u1"],
-            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u2"],
-            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u3"],
-            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u4"],
-            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u5"],
-            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u6"],
-            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u7"]
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u3"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u7"
+            ]
           },
-          "deps": ["01-03", "01-04", "01-05", "01-06", "01-07", "01-08", "01-09"],
+          "deps": [
+            "01-03",
+            "01-04",
+            "01-05",
+            "01-06",
+            "01-07",
+            "01-08",
+            "01-09"
+          ],
           "files_to_modify": [
             "src/report/island.ts",
             "src/components/ReportCapture.astro"
