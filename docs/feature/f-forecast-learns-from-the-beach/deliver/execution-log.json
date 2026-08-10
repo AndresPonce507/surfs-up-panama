@@ -666,6 +666,41 @@
       "s": "EXECUTED",
       "d": "PASS: 03-01 committed as 937392e with Step-ID 03-01. runLearningFitOnce now accepts optional seed metadata and partitions correction estimation by coast; omitted metadata retains the former single-universe behavior. 02-03 remains blocked at the separately-owned build.ts wiring.",
       "t": "2026-08-10T21:16:02Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "03-02 begins after 03-01. Non-visual regression rail: its pre-authored cold-start and loud-morning acceptance laws are expected already green from the launch shrinkage shape.",
+      "t": "2026-08-10T21:17:28Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS already green as mapped: cold-start scenario 1/19 and loud-morning property scenario 1/18 reached their original oracles after 03-01; this is the declared regression-rail outcome, not a skipped check.",
+      "t": "2026-08-10T21:18:10Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS already green: new 50-run cold-start and 50-run loud-morning fit-port properties both hold under the launch shrinkage shape; no production edit was required.",
+      "t": "2026-08-10T21:18:10Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS already-green acceptance remains: cold-start 1/19 and loud-morning 1/18. Added fit-port PBT regression laws, 3 hierarchy tests and focused 24 tests pass; full learning units 9 files/58 tests and typecheck pass. Falsification: returning raw shrink failed both new properties. Non-visual: compares stored correction numbers only.",
+      "t": "2026-08-10T21:18:51Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 03-02 regression-rail tests committed as HEAD with Step-ID 03-02. No production change was needed because both pre-authored acceptance laws were already green after 03-01, as mapped. 03-03 is now dependency-ready; 02-03 remains blocked on external build.ts wiring.",
+      "t": "2026-08-10T21:18:56Z"
     }
   ]
 }
