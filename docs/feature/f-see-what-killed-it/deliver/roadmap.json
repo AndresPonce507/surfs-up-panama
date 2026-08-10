@@ -2,7 +2,7 @@
   "roadmap": {
     "project_id": "f-see-what-killed-it",
     "created_at": "2026-08-09T23:50:00Z",
-    "total_steps": 21,
+    "total_steps": 27,
     "quality_contract_version": 1
   },
   "phases": [
@@ -618,6 +618,183 @@
           "implementation_notes": "JIT DISTILL ONLY: do not author these test files while mapping. On legal entry, add the six example-based real-I/O behaviors in slice-03-contract.md, record the RED classification and preserve all Slice-01 and Slice-02 evidence. The lower-score mutation must fail the producer before the page oracle, proving no impossible value can ship."
         }
       ]
+    },
+    {
+      "id": "04",
+      "name": "Slice-04: the spot page explains the best window with four honest bars",
+      "description": "The published hourly record becomes the only source for four best-window bars. The static page selects one already-scored hour, states missing observations as absences, and keeps the existing weakest-link decision authoritative. No browser scoring, averaging, fetch, island, or route change enters this phase.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "04-01",
+          "name": "Hourly best-window projection is an authorized reading-surface seam",
+          "criteria": [
+            "After X9 approval, BundleSpotDetail and SurfaceSpotDetail accept an optional hourly array of exactly the publish-time two-day horizon, with one spot-local offset timestamp t and a four-key sub record per point.",
+            "Each sub record has finite 0..1 values or null; null remains an absence, never zero or a best-case value.",
+            "The shape carries only t and sub to the reading surface. It adds no raw observations, damages, score-selection rule, browser time-zone rule, or second ranking.",
+            "Legacy spot_detail entries without hourly remain valid and distinguishable so retained surfaces can degrade by omission instead of failing a whole spot page."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "El desglose llega completo desde la mañana que publicó la llamada",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "This is the backward-compatible wire contract. Visible bars first arrive in 04-05, which owns the charter and U1 through U7 checks.",
+          "ui_checks": {},
+          "deps": ["03-06"],
+          "files_to_modify": [
+            "src/publish/static-surface.ts",
+            "src/publish/region-bundle.ts",
+            "tests/unit/published-bundle-contract.test.ts",
+            "tests/unit/weakest-link-surface-contract.test.ts"
+          ],
+          "implementation_notes": "SERIALIZED SCHEMA STEP: X9 is required because domain-model.md section 13 declares hourly[] as the intended P1 source while its implemented-name table says spot_detail currently ships name only. Define the additive point as { t: string, sub: { dir: number, size: number, wind: number | null, tide: number | null } }; t is the precomputed spot-local ISO timestamp with numeric offset shown by the authoritative payload example, not a browser-local conversion. Use fast-check at the strict-validator boundary. Do not add acceptance files or make the legacy optional shape mandatory."
+        },
+        {
+          "id": "04-02",
+          "name": "Producer projects each scored hour without substituting missing factors",
+          "criteria": [
+            "The build creates the 48-point per-spot hourly projection from the same CallRow sub values that the scoring core produced, preserving the point timestamp and every null exactly.",
+            "Every freshly built surface has one projection point for each scored hour spanning its two published civil days, and each point uses the spot's precomputed local offset timestamp.",
+            "Property: changing one CallRow sub value changes only that matching projection point's matching sub field; it changes neither day ranking, weakest_link, best_window nor any other point.",
+            "A null wind or tide remains null in the projected sub record even when the separately rendered wind-state word is absent; the repaired windState mapping from ee61840 remains green."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "Un dato ausente sigue ausente en el desglose",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "This producer projection is invisible until the static reader and bars mount in 04-05.",
+          "ui_checks": {},
+          "deps": ["04-01"],
+          "files_to_modify": [
+            "src/pipeline/build.ts",
+            "tests/unit/run-build-cli.test.ts",
+            "tests/unit/published-bundle-contract.test.ts",
+            "tests/unit/wind-state-honesty.test.ts"
+          ],
+          "implementation_notes": "Use the 48 scored CallRows already held by the build, not a new upstream query or a second scoring pass. The currently open Pre-requisite 2 wording is stale: commit ee61840 changed windState(null) to null and tests/unit/wind-state-honesty.test.ts verifies it. Treat that committed behavior as a required regression dependency, not work to redo. This is the serialized producer change that makes X9 real; do not republish a committed fixture in this mapping phase."
+        },
+        {
+          "id": "04-03",
+          "name": "Publish reader selects one declared best-window hour",
+          "criteria": [
+            "A pure publish-side reader joins one selected spot-day summary to that spot's hourly projection and returns the four sub values from exactly the point whose precomputed local hour contains best_window.start.",
+            "It performs one point lookup only: no averaging, interpolation, re-scoring, damage selection, minimum-bar choice, browser time-zone conversion, or fallback to another hour is permitted.",
+            "A missing best_window, missing hourly field, absent matching hour, duplicated matching hour or malformed sub record returns an unavailable breakdown, never an invented factor value.",
+            "Property: a result from another spot, day or hour cannot enter the selected breakdown; the reader preserves null wind and tide as explicit missing-factor states."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "Cada día lee solo la hora que explica su ventana",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure reading contract. The visible explanation is intentionally deferred to 04-05.",
+          "ui_checks": {},
+          "deps": ["04-01", "04-02"],
+          "files_to_modify": [
+            "src/publish/weakest-link.ts",
+            "tests/unit/weakest-link-surface-contract.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM: fast-check over independent spot, day and hourly inputs, with single examples for the offset-time join. Follow forecast.ts's today/current.calls and tomorrow/current.days[1].spots compatibility rule, but use the same selected day summary only as the source of best_window and weakest_link. Extracting the local hour from the already-published offset timestamp is a pure wire comparison, not client time computation. The reader must return a tagged unavailable reason for legacy hourly absence versus malformed current rows so the caller can log only the former compatibility gap."
+        },
+        {
+          "id": "04-04",
+          "name": "Four-factor breakdown formatter preserves authoritative weakness and absence",
+          "criteria": [
+            "One formatter exposes four Spanish factor rows in the fixed dir, size, wind, tide order, using the selected published values verbatim to two decimal places and no scoring arithmetic.",
+            "A null factor becomes its explicit Spanish absence, for example sin dato de viento hoy, with no numeric label, zero-width or zero-height fill, fabricated wind word, null or undefined.",
+            "Only the day summary's published weakest_link marks the arrow row. No bar height, numerical minimum or null factor can select or replace that row.",
+            "The formatter returns present or unavailable. Legacy hourly absence logs one build-side health.publish.breakdown_hourly_missing event with spot, day and publish stamp, never browser telemetry."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "La flecha sigue el punto débil publicado, no la barra más baja",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Formatting and structured compatibility logging make no pixels until the static component is mounted in 04-05.",
+          "ui_checks": {},
+          "deps": ["04-03"],
+          "files_to_modify": [
+            "src/publish/display-format.ts",
+            "src/publish/weakest-link.ts",
+            "tests/unit/published-display-format.test.ts",
+            "tests/unit/weakest-link-surface-contract.test.ts"
+          ],
+          "implementation_notes": "Reuse Slice-01 factor-vocab and display-format seams. A visual fill percentage is presentation-only and must never affect which row gets the arrow. Preserve a strict distinction: best_window absent is the accepted normal omission; legacy hourly absent is a backward-compatibility gap that logs once during publish-time render; a malformed fresh hourly projection is a producer-contract error and must not be disguised as legacy. No copy beyond factor names and stated absences is authorized."
+        },
+        {
+          "id": "04-05",
+          "name": "Static spot page renders four honest best-window bars",
+          "criteria": [
+            "A valid day renders one visible breakdown element with four named rows, published values or stated absences, and the published weakest-link arrow.",
+            "The page reuses the approved 8 px track, sunken background and weakest danger fill recipe; the arrow and factor words identify the weak row independently of colour.",
+            "No best_window yields no breakdown element or empty shell. A null wind or tide row visibly states its absence and has no fill, while the other three rows remain readable.",
+            "Both day sections use their own selected hour and weakest_link. No JavaScript, client fetch or island is added; the report action stays reachable at 390 px."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "El surfista lee cuatro razones de su mejor ventana sin una mentira por datos faltantes",
+          "slice_id": "slice-04",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-see-what-killed-it/a-surfer-taps-a-spot-y-ve-el-desglose-honesto-de-su-mejor-ventana.md",
+          "u8_observation": "En mi teléfono veo hoy y mañana como dos explicaciones separadas. Las cuatro filas me dejan entender la mejor ventana y la flecha me dice cuál fue el problema real. Si falta el viento, la página lo dice en vez de fingir una barra buena o mala.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-04 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-04 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-04 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-04 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-04 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-04 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-04 and @ui-u7"]
+          },
+          "deps": ["04-04"],
+          "files_to_modify": [
+            "src/components/Breakdown.astro",
+            "src/components/SpotDetail.astro",
+            "src/styles/components.css"
+          ],
+          "implementation_notes": "The create-new Breakdown component owns markup and scoped behavior. The SpotDetail import plus one mount in each existing day fragment is a serialized shared-host edit, recorded as X10. Move the existing unshipped .bars/.bar recipe from src/styles/recipes.css into the shipped component stylesheet in the same change, and do not edit recipes.css. The exact component locator is section[data-day=\"today\"] [data-field=\"breakdown\"] and its tomorrow twin. No client JS is allowed."
+        },
+        {
+          "id": "04-06",
+          "name": "Built surface proves the full disclosure and every honest omission",
+          "criteria": [
+            "At 390 px, valid days have four rows, each printed number equals its published best-window-hour sub value, and each arrow follows weakest_link.",
+            "Missing-wind and missing-tide examples show Spanish absence with no fill or fabricated wind state; no best_window means no breakdown while its day summary survives.",
+            "Legacy hourly absence records exactly one health.publish.breakdown_hourly_missing event with no client telemetry; malformed fresh projections fail before a misleading built page ships.",
+            "The two themes, reduced motion, overflow, type, colour-independent weak-row indication, target reachability, token and zero-JavaScript checks pass for the full component."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "La playa expone sus cuatro razones sin recalcular ni inventar nada",
+          "slice_id": "slice-04",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-see-what-killed-it/a-surfer-taps-a-spot-y-ve-el-desglose-honesto-de-su-mejor-ventana.md",
+          "u8_observation": "En un teléfono, las barras de hoy y mañana se sienten parte natural de la misma llamada. Puedo ver la razón débil sin depender del color y cuando falta un dato la frase es clara, no una cifra inventada.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-04 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-04 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-04 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-04 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-04 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-04 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-04 and @ui-u7"]
+          },
+          "deps": ["04-05"],
+          "files_to_modify": [
+            "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+            "tests/acceptance/f-see-what-killed-it/steps/weakest-link-callout.steps.ts",
+            "tests/acceptance/f-see-what-killed-it/fixtures/slice-04-breakdown-profiles.json"
+          ],
+          "implementation_notes": "JIT DISTILL ONLY: do not author future feature files, steps, fixtures, expectation charter, tags or RED-classification evidence while mapping. When Slice-04 legally opens, create six example-based production-build and browser behaviors from slice-04-contract.md, record RED against real ports, then implement one behavior at a time. Pure selector and formatter properties remain unit-level fast-check; browser and build failure cases remain pinned examples."
+        }
+      ]
     }
   ],
   "implementation_scope": {
@@ -732,6 +909,28 @@
       "owner": "domain schema authority and keystone / producer lane",
       "serialized": true,
       "decision_record": "docs/feature/f-see-what-killed-it/deliver/slice-03-contract.md"
+    },
+    {
+      "id": "X9",
+      "what": "Schema-authorized hourly subscore projection for the best-window breakdown",
+      "exact_change": "Activate the already accepted domain-model.md section 13 spot_detail[].hourly[] contract in BundleSpotDetail and SurfaceSpotDetail: 48 two-day points, each with a precomputed spot-local offset t and sub{dir,size,wind,tide}. Project them from the scored CallRows in build.ts without reconciling, averaging or fabricating null factors.",
+      "why_not_here": "The accepted P1 schema names hourly[] but the implemented-name table and current producer deliberately carry spot_detail.name only. This feature cannot treat a documentation example as a silently delivered schema. The type, build projection, committed artifact and static reader must change together in the serialized producer/schema lane.",
+      "blocks": ["04-01", "04-02", "04-03", "04-04", "04-05", "04-06"],
+      "blocks_scenario": "every Slice-04 disclosure behavior; JIT authoring also waits for Slice-03 to be sealed",
+      "owner": "domain schema authority and keystone / producer lane",
+      "serialized": true,
+      "decision_record": "docs/feature/f-see-what-killed-it/deliver/slice-04-contract.md"
+    },
+    {
+      "id": "X10",
+      "what": "Serialized SpotDetail breakdown mount",
+      "exact_change": "After the new static Breakdown component is ready, add its import and one mount inside each existing today and tomorrow summary fragment in src/components/SpotDetail.astro; do not wrap or replace the day summary.",
+      "why_not_here": "SpotDetail.astro is the shared, contention-prone host already changed by completed Slice-01 and future spot-page work. The component may be independently prepared, but host integration must be merged serially with the latest accepted page changes.",
+      "blocks": ["04-05", "04-06"],
+      "blocks_scenario": "the visible two-day bar behavior and all browser checks",
+      "owner": "spot-page integration lane",
+      "serialized": true,
+      "decision_record": "docs/feature/f-see-what-killed-it/deliver/slice-04-contract.md"
     }
   ],
   "validation": {
