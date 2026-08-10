@@ -12,8 +12,8 @@ decision, preview tooling, published-surface field failure), and the U1-U7 UI ma
 This file is the SSOT of what must be covered. Coverage markers: a test covers `Rn` iff it
 carries a Gherkin `@covers-Rn` tag or a `// covers: Rn` comment inside the test body.
 Rows whose slice has not entered DELIVER yet are expected-uncovered (per-slice JIT); they
-are visible here from day one so no requirement is silently dropped. No acceptance test
-exists yet: this feature has not entered JIT DISTILL.
+are visible here from day one so no requirement is silently dropped. Slice-01 entered JIT
+DISTILL 2026-08-09; its acceptance suite is RED on disk (see `distill/red-classification.md`).
 
 | # | Requirement | Category |
 |---|---|---|
@@ -48,6 +48,25 @@ exists yet: this feature has not entered JIT DISTILL.
 
 ## Current DISTILL coverage
 
+Slice-01 suite: `tests/acceptance/f-paste-the-call-into-the-group/whatsapp-call-from-home.feature`
+(all scenarios `@slice-01`, file-level `@feature-f-paste-the-call-into-the-group`). RED run
+recorded 2026-08-09 in `distill/red-classification.md`: 8/8 scenario runs `MISSING_FUNCTIONALITY`,
+zero BROKEN.
+
 | Current requirement | Active acceptance evidence | Status |
 |---|---|---|
-| none | No slice of this feature has entered JIT DISTILL. Acceptance tests are written per slice, one slice at a time, when the slice legally opens (HANDOFF §4 workflow; waiver history for parallel opens is recorded in HANDOFF §10 and does not change this feature's default). | expected-uncovered by design |
+| R1 | `@covers-R1`: "Un toque abre WhatsApp con el llamado del día ya escrito" (walking skeleton) and "El mensaje y la página cuentan la misma historia, sin texto técnico" | RED, awaiting slice-01 DELIVER |
+| R2 | `@covers-R2`: "Con JavaScript apagado el botón sigue siendo un enlace que funciona" | RED, awaiting slice-01 DELIVER |
+| R3 | `@covers-R3`: "La dirección del mensaje sigue a la configuración del sitio, nunca a un nombre fijo" (copy repointed to a fresh domain; expected host always derived from the copy's `astro.config.mjs`, never hardcoded) | RED, awaiting slice-01 DELIVER |
+| R4 | `@covers-R4`: walking skeleton's populated-fields oracle (five share fields for the shared spot, both published copies of today agree) plus the same-story scenario | RED, awaiting slice-01 DELIVER (the data oracle itself already passes against today's installed surface) |
+| R5 | Not a test: observed branch recorded as a product fact in `distill/red-classification.md` slice-01 entry (`wa.me/?text=` number-less → 200, redirect to `api.whatsapp.com/send/?text=...&type=custom_url&app_absent=0`; anchor SHIPS) | recorded, PASS branch |
+| R6 | `@covers-R6`: "La acción de WhatsApp respeta el presupuesto del primer vuelo" (14 KB gz home document, gzip semantics of the production page-weight gate) | RED, awaiting slice-01 DELIVER |
+| R20 | `@covers-R20`: U1-U7 Scenario Outline, contrast measured against the real rendered backdrop in both themes | RED, awaiting slice-01 DELIVER |
+| R21 | `@covers-R21`: U1-U7 outline plus "El nombre más largo de la costa cabe completo en el mensaje y en el botón" at 390 px | RED, awaiting slice-01 DELIVER |
+| R22 | `@covers-R22`: U1-U7 outline (44 px target) plus the walking skeleton's single-action oracle | RED, awaiting slice-01 DELIVER |
+| R23 | `@covers-R23`: U1-U7 outline, reduced-motion example row | RED, awaiting slice-01 DELIVER |
+| R24 | `@covers-R24`: JS-off anchor scenario (the slice-01 designed state) plus the U1-U7 outline's honest-states check; copied/denied states remain slice-02 | RED, awaiting slice-01 DELIVER |
+| R25 | `@covers-R25`: U1-U7 outline (type scale, no truncation) plus the longest-name scenario | RED, awaiting slice-01 DELIVER |
+| R26 | `@covers-R26`: U1-U7 outline (no raw hex, named tokens in every matched rule) plus the built-surface UI gate run inside every scenario | RED, awaiting slice-01 DELIVER |
+| R28 (slice-01 half) | `@covers-R28`: same-story scenario's purity oracle (no model names, internal fields, template braces, filler, or English in the pasted message) | RED, awaiting slice-01 DELIVER; preview-surface half stays with slices 03-04 |
+| R7-R19, R27 | Later slices; acceptance tests are written when each slice legally opens (HANDOFF §4 workflow) | expected-uncovered by design |

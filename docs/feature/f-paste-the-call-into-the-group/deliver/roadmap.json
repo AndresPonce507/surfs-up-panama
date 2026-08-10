@@ -1,0 +1,204 @@
+{
+  "roadmap": {
+    "project_id": "f-paste-the-call-into-the-group",
+    "created_at": "2026-08-09T21:55:57Z",
+    "total_steps": 4,
+    "quality_contract_version": 1
+  },
+  "phases": [
+    {
+      "id": "01",
+      "name": "Slice-01: zero-JS WhatsApp anchor on the home top card",
+      "description": "One tap on the home top card opens WhatsApp with the full section-10 Spanish call as a plain wa.me/?text= anchor rendered at publish time. R5 settled PASS: the anchor ships. Final wiring needs a two-line slot seam in RankedList.astro, owned by a concurrent lane (see 01-04 notes).",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "01-01",
+          "name": "Pure Spanish call-message composer with template laws",
+          "criteria": [
+            "Pure function maps a populated day-summary to the exact five-line section-10 Spanish template; no I/O, no clock, no ambient reads.",
+            "Vocabulary from canonical es constants: size band, wind, confidence; score_q rendered as-is; window start and end verbatim; no em dashes.",
+            "Property: output never contains braces, brackets, internal field names, model names, NaN, null, or English filler for any populated input.",
+            "Property: exactly five non-empty lines opening SURF, Mejor:, size-wind-window, Confianza, then the link line."
+          ],
+          "test_file": "tests/acceptance/f-paste-the-call-into-the-group/whatsapp-call-from-home.feature",
+          "scenario_name": "El mensaje y la página cuentan la misma historia, sin texto técnico",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Pure message composition; the visible surface ships in 01-03/01-04, which carry the charter and the U1-U7 checks.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/share/call-message.ts",
+            "tests/unit/share-call-message.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): unit tests are property-based with fast-check (house style: tests/unit/scoring-laws.test.ts); example-based tests are fallback only with a documented reason; integration/E2E stay single-example. Adapted from the Hypothesis wording because this repo is TypeScript + fast-check. DISPATCH: project CLAUDE.md selects @nw-functional-software-crafter for every DELIVER step; the agent field above uses the schema-valid name, the orchestrator maps it. SEAMS (import-only, never modify): src/data/size-bands.ts exports the canonical es band labels; src/data/region.ts spotById gives the display name; src/publish/display-format.ts has formatSizeEs/formatBestWindowEs. Wind (limpio/picado/destrozado) and confidence (alta/media/baja) es words per section 10: define once in src/share (src/i18n/strings.ts belongs to another lane; FLAG the future consolidation, and FLAG-not-fix the pre-existing duplicate maps inside RankedList.astro). Input type is the DaySummary of src/data/forecast.ts plus spot name, fecha, and the link line from 01-02. Message shape the acceptance oracle decodes: SURF {fecha} / Mejor: {spot}, {score} / {tamano} y {viento}. {ventana}. / Confianza {nivel}. / {url}?b={build_id}."
+        },
+        {
+          "id": "01-02",
+          "name": "Share link derived from configured site and build stamp",
+          "criteria": [
+            "Link origin comes from the Astro site configuration passed in as a parameter; no hostname literal anywhere under src/share.",
+            "Build stamp derives from published_at as b_YYYY-MM-DDTHHZ, the existing pipeline P1 contract; no second stamp format is invented.",
+            "Property: for any configured site and publish time, the link is absolute https, origin equals the configured site, ending in its ?b= stamp.",
+            "Property: the wa.me href decodes its text parameter back to the exact composed message."
+          ],
+          "test_file": "tests/acceptance/f-paste-the-call-into-the-group/whatsapp-call-from-home.feature",
+          "scenario_name": "La dirección del mensaje sigue a la configuración del sitio, nunca a un nombre fijo",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Pure URL derivation; the visible surface ships in 01-03/01-04, which carry the charter and the U1-U7 checks.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/share/share-link.ts",
+            "tests/unit/share-link.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): property-based with fast-check as in 01-01. site is ALREADY configured in astro.config.mjs (verified: https://d1j9u9fxnap4es.cloudfront.net); components read Astro.site and pass it down as a plain string parameter so the functions stay pure and the config-repoint acceptance scenario passes with zero component edits. Stamp: b_ + published_at date + T + UTC hour + Z, exactly the production format at src/pipeline/build.ts:119 and the P1 header contract; derive it from forecast.published_at, do NOT mint a second format and do NOT touch src/pipeline/** (forbidden lane). wa.me carrier per the R5 product fact recorded in distill/red-classification.md: number-less https://wa.me/?text= returns 200 and redirects to api.whatsapp.com/send with type=custom_url; the anchor SHIPS, no clipboard fallback in this slice (that is slice-02)."
+        },
+        {
+          "id": "01-03",
+          "name": "ShareControls anchor component, world-class at 390 px",
+          "criteria": [
+            "Component emits exactly one plain anchor carrying the prewritten wa.me href and a Spanish accessible name; zero JavaScript shipped.",
+            "Target at least 44 px on both axes; type at least 16 px; the longest Spanish spot name fits 390 px untruncated.",
+            "Scoped styles use named tokens only, no raw hex; text clears 4.5:1 against the real backdrop in both themes.",
+            "Nothing animates or transitions on the control, so reduced motion changes nothing; no loading or skeleton states beside published data."
+          ],
+          "test_file": "tests/acceptance/f-paste-the-call-into-the-group/whatsapp-call-from-home.feature",
+          "scenario_name": "La acción de compartir se ve terminada y respeta las preferencias del teléfono",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Emits src/components/ShareControls.astro but mounts it nowhere; step 01-04 is the one that wires it into the home page. The U1-U7 checks and Vera both drive the BUILT page, so at this step they measure a surface that does not exist and fail by construction, not by defect. Verified 2026-08-09: des-verify-ui returned FAIL on all seven, and grep confirmed ShareControls is referenced by no page, layout or component. Reclassified by the orchestrator; the visible gate moved intact to 01-04.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/components/ShareControls.astro",
+            "tests/unit/share-controls.test.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: single-shot publish-time component render; compensated by the property-based tests on the composer and link modules (01-01, 01-02). The render test uses Astro's container API to assert one anchor, href shape, and accessible name. Props: the composed message href plus label; the component does nothing but render (functional codebase rule). Styles: a scoped style block inside the .astro file using existing named tokens from src/styles/tokens.css (imported by Base already); src/styles/** is another lane's, do not edit it. Astro inlines small scoped styles, so no render-blocking subresource appears; U7's matched-rule check requires at least one rule targeting the anchor. Anchor budget roughly 120 B gz plus the urlencoded message in the href, inside the 14 KB gz home ceiling (verified by 01-04's gate run)."
+        },
+        {
+          "id": "01-04",
+          "name": "Wire anchor into home top card, suite green",
+          "criteria": [
+            "Built home shows the single WhatsApp anchor inside the top card; the whole slice-01 acceptance suite exits 0, exit captured to file.",
+            "Message composes from the same forecast days[0] top entry that renders the card; one data path, one vocabulary.",
+            "Home document at or under 14336 B gz through npm run build's page-weight gate; anchor budget roughly 120 B gz.",
+            "With JavaScript disabled the identical anchor and message remain; the address derives from the site config, never localhost or a hardcoded host."
+          ],
+          "test_file": "tests/acceptance/f-paste-the-call-into-the-group/whatsapp-call-from-home.feature",
+          "scenario_name": "Un toque abre WhatsApp con el llamado del día ya escrito",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-paste-the-call-into-the-group/a-surfer-on-the-home-page-taps-the-whatsapp-button-once-and-whatsapp-opens-with-the-days-call.md",
+          "u8_observation": "Un toque en la acción de WhatsApp de la tarjeta grande abre WhatsApp con el mensaje completo ya escrito: SURF y la fecha, Mejor: con el spot y su puntaje, el tamaño y el viento, la ventana, Confianza con el nivel, y una dirección https que termina en ?b= con el sello del build. El mismo enlace y el mismo mensaje con JavaScript apagado.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u3"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-paste-the-call-into-the-group and @slice-01 and @ui-u7"
+            ]
+          },
+          "deps": [
+            "01-01",
+            "01-02",
+            "01-03"
+          ],
+          "files_to_modify": [
+            "src/pages/index.astro",
+            "src/components/ShareControls.astro"
+          ],
+          "implementation_notes": "BLOCKER, COORDINATE BEFORE STARTING: the acceptance oracle requires the anchor INSIDE ol.ranked > li:first-child, and that markup is owned entirely by src/components/RankedList.astro, a forbidden file another lane holds concurrently, with no slot today. Required seam, two lines in RankedList.astro: render {index === 0 && <slot name=\"top-card-actions\" />} inside the first li. Then index.astro passes <ShareControls slot=\"top-card-actions\" ... /> as a child of <RankedList locale=\"es\" day={0}> and every share-specific decision stays in this lane. The orchestrator must either have the owning lane land that slot first or amend this lane's boundary for that serialized two-line edit; this step is BLOCKED until one happens. REJECTED alternatives, do not build them: (a) forking the home markup into index.astro silently detaches the home from the concurrent RankedList work, a collision without a git conflict; (b) string-transforming the rendered slot HTML inside Base.astro couples the layout to another lane's DOM shape and breaks silently when they refactor. AFTER GREEN: run the suite with output redirected to a file and $? captured, never piped (repo has committed over a red gate that way); then npm run build and inspect dist/index.html; then the orchestrator runs des-verify-ui and dispatches the source-blind examiner with only the charter and start recipe; COMMIT is refused until both records pass. Integration test level: single-example by design (paradigm directive: E2E verifies wiring, not invariants)."
+        }
+      ]
+    }
+  ],
+  "implementation_scope": {
+    "source_directories": [
+      "src/share/",
+      "src/components/",
+      "src/pages/",
+      "src/layouts/"
+    ],
+    "test_directories": [
+      "tests/unit/"
+    ],
+    "excluded_patterns": [
+      "src/components/RankedList.astro",
+      "src/components/SpotDetail.astro",
+      "src/components/ReportCapture.astro",
+      "src/components/ReportShell.astro",
+      "src/pages/spots/**",
+      "src/pipeline/**",
+      "src/publish/**",
+      "src/i18n/**",
+      "src/data/**",
+      "src/styles/**",
+      "infra/**",
+      "public/**",
+      "scripts/**"
+    ]
+  },
+  "validation": {
+    "status": "pending",
+    "reviewer": "orchestrator quality gate (des-roadmap validate run below)",
+    "approved_at": ""
+  }
+}
