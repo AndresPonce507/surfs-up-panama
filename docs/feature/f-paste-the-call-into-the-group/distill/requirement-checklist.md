@@ -68,20 +68,20 @@ runs `MISSING_FUNCTIONALITY`, zero BROKEN. Error/negative scenarios across the f
 
 | Current requirement | Active acceptance evidence | Status |
 |---|---|---|
-| R1 | `@covers-R1`: "Un toque abre WhatsApp con el llamado del día ya escrito" (walking skeleton) and "El mensaje y la página cuentan la misma historia, sin texto técnico" | RED, awaiting slice-01 DELIVER |
-| R2 | `@covers-R2`: "Con JavaScript apagado el botón sigue siendo un enlace que funciona" | RED, awaiting slice-01 DELIVER |
-| R3 | `@covers-R3`: "La dirección del mensaje sigue a la configuración del sitio, nunca a un nombre fijo" (copy repointed to a fresh domain; expected host always derived from the copy's `astro.config.mjs`, never hardcoded) | RED, awaiting slice-01 DELIVER |
-| R4 | `@covers-R4`: walking skeleton's populated-fields oracle (five share fields for the shared spot, both published copies of today agree) plus the same-story scenario | RED, awaiting slice-01 DELIVER (the data oracle itself already passes against today's installed surface) |
+| R1 | `@covers-R1`: "Un toque abre WhatsApp con el llamado del día ya escrito" (walking skeleton) and "El mensaje y la página cuentan la misma historia, sin texto técnico" | GREEN, shipped in slice-01 2026-08-10 (`f52abec`) |
+| R2 | `@covers-R2`: "Con JavaScript apagado el botón sigue siendo un enlace que funciona" | GREEN, shipped in slice-01 2026-08-10 (`f52abec`) |
+| R3 | `@covers-R3`: "La dirección del mensaje sigue a la configuración del sitio, nunca a un nombre fijo" (copy repointed to a fresh domain; expected host always derived from the copy's `astro.config.mjs`, never hardcoded) | GREEN, shipped in slice-01 2026-08-10 (`f52abec`) |
+| R4 | `@covers-R4`: walking skeleton's populated-fields oracle (five share fields for the shared spot, both published copies of today agree) plus the same-story scenario | GREEN, shipped in slice-01 2026-08-10 (`f52abec`) |
 | R5 | Not a test: observed branch recorded as a product fact in `distill/red-classification.md` slice-01 entry (`wa.me/?text=` number-less → 200, redirect to `api.whatsapp.com/send/?text=...&type=custom_url&app_absent=0`; anchor SHIPS) | recorded, PASS branch |
-| R6 | `@covers-R6`: "La acción de WhatsApp respeta el presupuesto del primer vuelo" (14 KB gz home document, gzip semantics of the production page-weight gate) | RED, awaiting slice-01 DELIVER |
-| R20 | `@covers-R20`: U1-U7 Scenario Outline, contrast measured against the real rendered backdrop in both themes | RED, awaiting slice-01 DELIVER |
-| R21 | `@covers-R21`: U1-U7 outline plus "El nombre más largo de la costa cabe completo en el mensaje y en el botón" at 390 px | RED, awaiting slice-01 DELIVER |
-| R22 | `@covers-R22`: U1-U7 outline (44 px target) plus the walking skeleton's single-action oracle | RED, awaiting slice-01 DELIVER |
-| R23 | `@covers-R23`: U1-U7 outline, reduced-motion example row | RED, awaiting slice-01 DELIVER |
-| R24 | `@covers-R24`: JS-off anchor scenario (the slice-01 designed state) plus the U1-U7 outline's honest-states check; copied/denied states remain slice-02 | RED, awaiting slice-01 DELIVER |
-| R25 | `@covers-R25`: U1-U7 outline (type scale, no truncation) plus the longest-name scenario | RED, awaiting slice-01 DELIVER |
-| R26 | `@covers-R26`: U1-U7 outline (no raw hex, named tokens in every matched rule) plus the built-surface UI gate run inside every scenario | RED, awaiting slice-01 DELIVER |
-| R28 (slice-01 half) | `@covers-R28`: same-story scenario's purity oracle (no model names, internal fields, template braces, filler, or English in the pasted message) | RED, awaiting slice-01 DELIVER; preview-surface half stays with slices 03-04 |
+| R6 | `@covers-R6`: "La acción de WhatsApp respeta el presupuesto del primer vuelo" (14 KB gz home document, gzip semantics of the production page-weight gate) | GREEN, shipped in slice-01 2026-08-10 (`f52abec`) |
+| R20 | `@covers-R20`: U1-U7 Scenario Outline, contrast measured against the real rendered backdrop in both themes | GREEN for the slice-01 WhatsApp action; RED for the later copy and spot-action surfaces |
+| R21 | `@covers-R21`: U1-U7 outline plus "El nombre más largo de la costa cabe completo en el mensaje y en el botón" at 390 px | GREEN for the slice-01 WhatsApp action; RED for the later copy and spot-action surfaces |
+| R22 | `@covers-R22`: U1-U7 outline (44 px target) plus the walking skeleton's single-action oracle | GREEN for the slice-01 WhatsApp action; RED for the later copy and spot-action surfaces |
+| R23 | `@covers-R23`: U1-U7 outline, reduced-motion example row | GREEN for the slice-01 WhatsApp action; RED for the later copy and spot-action surfaces |
+| R24 | `@covers-R24`: JS-off anchor scenario (the slice-01 designed state) plus the U1-U7 outline's honest-states check; copied/denied states remain slice-02 | GREEN for the slice-01 anchor; RED for copied, denied, and generic-card states |
+| R25 | `@covers-R25`: U1-U7 outline (type scale, no truncation) plus the longest-name scenario | GREEN for the slice-01 WhatsApp action; RED for the later copy and spot-action surfaces |
+| R26 | `@covers-R26`: U1-U7 outline (no raw hex, named tokens in every matched rule) plus the built-surface UI gate run inside every scenario | GREEN for the slice-01 WhatsApp action; RED for the later copy and spot-action surfaces |
+| R28 (slice-01 half) | `@covers-R28`: same-story scenario's purity oracle (no model names, internal fields, template braces, filler, or English in the pasted message) | GREEN, shipped in slice-01 2026-08-10 (`f52abec`); preview-surface half stays with slices 03-04 |
 | R7 | `@covers-R7`: "Un toque deja el llamado completo en el portapapeles" (clipboard content equals the anchor's message; confirmation only with the text actually copied) plus the offline scenario | RED, awaiting slice-02 DELIVER |
 | R8 | `@covers-R8`: "La mejora de copiar viaja liviana y nunca reemplaza el piso" (deferred script bytes at or under 1.0 KB gz, nothing render-blocking, JS-off anchor floor intact, no dead button offered) | RED, awaiting slice-02 DELIVER |
 | R9 | `@covers-R9`: "Si el teléfono niega el portapapeles..." (visible plain-Spanish notice, clipboard never holds the call, WhatsApp anchor still offered; never silent) | RED, awaiting slice-02 DELIVER |

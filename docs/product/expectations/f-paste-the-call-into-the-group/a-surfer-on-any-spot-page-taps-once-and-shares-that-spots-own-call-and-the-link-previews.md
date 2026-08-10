@@ -7,7 +7,7 @@ El texto literal de la feature: un surfista toca una vez en la página de un spo
 ## Preconditions
 Usar Node 22, npm y un navegador local. No usar credenciales para la parte local. Toda observación empieza desde el árbol real indicado abajo.
 
-1. `cd /Users/andres/panama-surf`
+1. `cd /Users/andres/psb-paste`
 2. Ejecutar `npm ci` solamente si las dependencias todavía no están instaladas.
 3. Ejecutar `npm run build`.
 4. Ejecutar `npm run preview` y abrir la página de un spot que no sea el primero del ranking, en una ventana de unos 390 px.

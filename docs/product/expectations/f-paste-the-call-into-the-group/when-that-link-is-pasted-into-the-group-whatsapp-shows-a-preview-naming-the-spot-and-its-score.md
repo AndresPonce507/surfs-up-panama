@@ -7,7 +7,7 @@ Cuando alguien pega el enlace del llamado en WhatsApp, el grupo ve una vista pre
 ## Preconditions
 Usar Node 22, npm y un navegador local. No usar credenciales para la parte local. Toda observación empieza desde el árbol real indicado abajo.
 
-1. `cd /Users/andres/panama-surf`
+1. `cd /Users/andres/psb-paste`
 2. Ejecutar `npm ci` solamente si las dependencias todavía no están instaladas.
 3. Ejecutar `npm run build`.
 4. Para la parte de documento: abrir `dist/index.html` con "ver código fuente" del navegador, o `npm run preview` y ver el código fuente de la home.
