@@ -19,7 +19,8 @@ import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
 import { gateCorrection, G3_SIGNIFICANCE_MULTIPLE } from '../../src/learning/gates';
-import { G1_MIN_MORNINGS } from '../../src/learning/constants';
+import { G1_MIN_MORNINGS, TAU_SPOT_PRIOR } from '../../src/learning/constants';
+import { shrinkTowardParent } from '../../src/learning/shrink';
 
 /** This step's own required floor (06 section 7; 09 section 13.2 puts the
  *  halving of observer bias at four to nine distinct people, five is the
@@ -144,5 +145,37 @@ describe('gateCorrection: this step\'s own acceptance numbers, as fixture exampl
 
     const justBeyond = gateCorrection({ n: 22, reporters: 7, b: 0.1 + 1e-9, se: 0.05 });
     assert.equal(justBeyond.applied, true, 'a difference a hair beyond twice its standard error has cleared it');
+  });
+});
+
+describe('two-level launch shrinkage: a one-spot parent is the spot mean', () => {
+  it('keeps every raw difference inside its own corridor when the only examined spot also defines the parent', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: -4, max: 4, noNaN: true, noDefaultInfinity: true }),
+        fc.integer({ min: 1, max: 500 }),
+        (rawDifference, sampleCount) => {
+          // In a one-spot region the group-weighted parent is that spot's raw
+          // mean. This proves the launch hierarchy is identity here without
+          // replacing the parent with a made-up zero.
+          const parentMean = rawDifference;
+          const storedDifference = shrinkTowardParent(rawDifference, sampleCount, TAU_SPOT_PRIOR, parentMean);
+
+          assert.ok(
+            Math.abs(storedDifference) <= Math.abs(rawDifference) + Number.EPSILON,
+            `stored difference ${storedDifference} must not exceed raw difference ${rawDifference}`,
+          );
+          assert.ok(
+            storedDifference * rawDifference >= 0,
+            `stored difference ${storedDifference} must not flip raw difference ${rawDifference}`,
+          );
+          assert.ok(
+            Math.abs(storedDifference - rawDifference) <= Number.EPSILON,
+            'one-spot pooling must retain the spot mean because its parent is the same mean',
+          );
+        },
+      ),
+      { numRuns: 100 },
+    );
   });
 });
