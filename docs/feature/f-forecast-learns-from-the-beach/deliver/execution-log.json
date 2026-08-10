@@ -526,6 +526,27 @@
       "s": "EXECUTED",
       "d": "PASS: 01-17 committed as d6ec0a6 with Step-ID 01-17. Test budget: one new behavior x 2 = 2 unit tests; the scope holds two properties for two behaviors. Target acceptance, focused learning regression, and typecheck pass. Full unit suite retains one unrelated date-sensitive staleness build failure; the known 01-18 acceptance fixture failure remains untouched.",
       "t": "2026-08-10T20:28:32Z"
+    },
+    {
+      "sid": "01-18",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: repaired active contract observed green before this step; 1 scenario and 15 steps. The production residual already obeys forecast-minus-observed, so this step adds mandatory unit-level laws without changing the acceptance fixture.",
+      "t": "2026-08-10T20:41:29Z"
+    },
+    {
+      "sid": "01-18",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: added three mandatory 100-run fast-check residual laws. They pass against inherited pure production behavior: forecast raise raises residual, larger observed band lowers residual with an identical prediction, and reporter reassignment preserves the ordered numeric residual stream while changing device assignment.",
+      "t": "2026-08-10T20:42:03Z"
+    },
+    {
+      "sid": "01-18",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS_SCOPE: target acceptance 1/1 (15 steps), learning unit suite 46/46, full feature acceptance 20/20 (264 steps), and typecheck pass. Non-visual: generated residuals and the learned-correction prefix are the observable. Full unit 127/128 and fast CI 5/8 retain only the unrelated stale 2026-08-09 published-surface refusal, which blocks build-dependent test, UI, and budget jobs before this learning code runs.",
+      "t": "2026-08-10T20:43:00Z"
     }
   ]
 }

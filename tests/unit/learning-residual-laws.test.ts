@@ -29,7 +29,12 @@ const someBand: fc.Arbitrary<SizeBandToken> = fc.constantFrom(...sizeBands.map((
 const someSwellHeightM = fc.double({ min: 0.1, max: 4, noNaN: true, noDefaultInfinity: true });
 const someSwellPeriodS = fc.double({ min: 6, max: 20, noNaN: true, noDefaultInfinity: true });
 
-function onePairedMorning(swellHeightM: number, swellPeriodS: number, band: SizeBandToken): {
+function onePairedMorning(
+  swellHeightM: number,
+  swellPeriodS: number,
+  band: SizeBandToken,
+  deviceId = 'd_law_0',
+): {
   observation: ObservationRow;
   prediction: PredictionRow;
 } {
@@ -37,7 +42,7 @@ function onePairedMorning(swellHeightM: number, swellPeriodS: number, band: Size
   return {
     observation: {
       spot_id: 'playa-venao',
-      device_id: 'd_law_0',
+      device_id: deviceId,
       observed_at: '2026-07-01T18:41:00Z',
       size_band: band,
     },
@@ -74,6 +79,95 @@ describe('the residual form is r_height = H_eff_pred - mid(band), u_hat = 0 this
           `r_height must equal hEff(swell_h_m, swell_t_s) - mid(band); got ${rows[0]!.sample.value}, expected ${expected}`,
         );
       }),
+      { numRuns: RUNS },
+    );
+  });
+
+  it('strictly rises when the paired forecast rises and the observed band is held fixed', () => {
+    fc.assert(
+      fc.property(
+        someSwellHeightM,
+        someSwellPeriodS,
+        someBand,
+        fc.double({ min: 0.01, max: 1, noNaN: true, noDefaultInfinity: true }),
+        (swellHeightM, swellPeriodS, band, raiseM) => {
+          const before = onePairedMorning(swellHeightM, swellPeriodS, band);
+          const raised = onePairedMorning(swellHeightM + raiseM, swellPeriodS, band);
+          const beforeValue = formHeightResidualRows([before.observation], [before.prediction])[0]!.sample.value;
+          const raisedValue = formHeightResidualRows([raised.observation], [raised.prediction])[0]!.sample.value;
+
+          assert.deepEqual(
+            raised.observation.size_band,
+            before.observation.size_band,
+            'this law changes the forecast alone, never what the person reported',
+          );
+          assert.ok(
+            raisedValue > beforeValue,
+            `raising H_eff's source height from ${swellHeightM} m by ${raiseM} m must raise r_height; got ${raisedValue} not above ${beforeValue}`,
+          );
+        },
+      ),
+      { numRuns: RUNS },
+    );
+  });
+
+  it('strictly falls when the observed band rises and the paired forecast is held fixed', () => {
+    fc.assert(
+      fc.property(someSwellHeightM, someSwellPeriodS, (swellHeightM, swellPeriodS) => {
+        const smaller = onePairedMorning(swellHeightM, swellPeriodS, 'chest_head');
+        const bigger = onePairedMorning(swellHeightM, swellPeriodS, 'head_overhead');
+        const smallerValue = formHeightResidualRows([smaller.observation], [smaller.prediction])[0]!.sample.value;
+        const biggerValue = formHeightResidualRows([bigger.observation], [bigger.prediction])[0]!.sample.value;
+
+        assert.deepEqual(
+          bigger.prediction,
+          smaller.prediction,
+          'this law changes the observed report alone, never the paired forecast',
+        );
+        assert.ok(
+          biggerValue < smallerValue,
+          `moving the observed band from chest_head to head_overhead must lower r_height; got ${biggerValue} not below ${smallerValue}`,
+        );
+      }),
+      { numRuns: RUNS },
+    );
+  });
+
+  it('keeps the ordered numeric residual stream unchanged when reporters are reassigned before anyone has history', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 6, max: 30 }),
+        fc.integer({ min: 1, max: 5 }),
+        someSwellHeightM,
+        someSwellPeriodS,
+        (count, rotation, swellHeightM, swellPeriodS) => {
+          const original = Array.from({ length: count }, (_unused, index) =>
+            onePairedMorning(swellHeightM, swellPeriodS, 'chest_head', `d_law_${index % 6}`),
+          );
+          const reassigned = Array.from({ length: count }, (_unused, index) =>
+            onePairedMorning(swellHeightM, swellPeriodS, 'chest_head', `d_law_${(index + rotation) % 6}`),
+          );
+          const originalRows = formHeightResidualRows(
+            original.map((morning) => morning.observation),
+            [original[0]!.prediction],
+          );
+          const reassignedRows = formHeightResidualRows(
+            reassigned.map((morning) => morning.observation),
+            [reassigned[0]!.prediction],
+          );
+
+          assert.notDeepEqual(
+            reassigned.map((morning) => morning.observation.device_id),
+            original.map((morning) => morning.observation.device_id),
+            'the reassignment must actually give mornings to different people',
+          );
+          assert.deepEqual(
+            reassignedRows.map(({ source, leadBucket, sample }) => ({ source, leadBucket, value: sample.value, weight: sample.weight })),
+            originalRows.map(({ source, leadBucket, sample }) => ({ source, leadBucket, value: sample.value, weight: sample.weight })),
+            'with u_hat fixed at zero, reassignment may change only carried identity, never the ordered residual values the deterministic fit stores',
+          );
+        },
+      ),
       { numRuns: RUNS },
     );
   });
