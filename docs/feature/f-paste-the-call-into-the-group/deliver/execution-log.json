@@ -253,6 +253,41 @@
       "s": "EXECUTED",
       "d": "PASS: 1980b57748e6e390c8e9f32114121e656abc31d6. Current native-Chrome Vera PASS physically pasted the exact five-line WhatsApp-equivalent call after Llamado copiado.; U1-U7 sealed by des-verify-ui; acceptance, units, typecheck, build, byte, UI, and slice-01 regression passed.",
       "t": "2026-08-10T20:52:11Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: confirmed 03-01 depends only on shipped 01-04; loaded the authored acceptance mappings and the existing pure share-message/address seams.",
+      "t": "2026-08-10T20:54:03Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: the two mapped active scenarios failed for the intended AssertionErrors: no announced metadata exists, so the page cannot name the shared spot/score or declare a configured-site preview address.",
+      "t": "2026-08-10T20:54:21Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: corrected controlled 03-01 RED failed for the intended AssertionErrors because composeLinkAnnouncement is absent from its owned pure boundary.",
+      "t": "2026-08-10T21:05:46Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the 03-01 direct pure-boundary acceptance passes for Spanish spot-and-score text and configured-site URL derivation. UI N/A: this roadmap step adds an unmounted pure composer only; its first user-visible publication is separately contracted in 03-02.",
+      "t": "2026-08-10T21:06:59Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: test budget checked. Two distinct direct port behaviors are covered by the two distilled acceptance scenarios; no additional unit test was needed for this small pure boundary.",
+      "t": "2026-08-10T21:06:59Z"
     }
   ]
 }
