@@ -1,3 +1,4 @@
+import { aggregateDaily, type DailyAggregate } from './daily-aggregate';
 import { pairResiduals, type PredictionSnapshot, type Residual, type ScorecardVariable, type SurfReport } from './pairing';
 
 export type ProjectionInput = {
@@ -11,7 +12,7 @@ export type ProjectionInput = {
 
 export type ScorecardProjection = {
   readonly residuals: readonly Residual[];
-  readonly daily: readonly unknown[];
+  readonly daily: readonly DailyAggregate[];
   readonly keys: readonly unknown[];
   readonly blocks: Readonly<Record<string, unknown>>;
 };
@@ -29,9 +30,10 @@ const validateVariables = (variables: readonly string[] | undefined): void => {
 export const projectScorecard = (input: ProjectionInput): ScorecardProjection => {
   validateVariables(input.variables);
   const selected = new Set<ScorecardVariable>((input.variables ?? allowedVariables) as readonly ScorecardVariable[]);
+  const residuals = pairResiduals(input).filter((residual) => selected.has(residual.variable));
   return {
-    residuals: pairResiduals(input).filter((residual) => selected.has(residual.variable)),
-    daily: [],
+    residuals,
+    daily: aggregateDaily(residuals),
     keys: [],
     blocks: {},
   };
