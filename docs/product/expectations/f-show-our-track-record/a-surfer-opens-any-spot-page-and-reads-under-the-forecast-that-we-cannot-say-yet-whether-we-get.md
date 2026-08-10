@@ -58,10 +58,7 @@ this site can show right now.
 ## Expected observations (oracle)
 - U8 (lectura normal, 390 px): "Abro la página de mi playa a 390 px y, justo debajo del pronóstico de mañana y antes del botón para reportar, leo un recuadro tranquilo que dice que todavía no pueden decirme si aciertan aquí y que van 0 reportes de los 30 que hacen falta. No hay ningún porcentaje, ningún margen y ninguna cifra de acierto en ninguna parte de la página."
 - U8 (temas y movimiento reducido): "Con el teléfono en tema claro y en tema oscuro, el recuadro se lee cómodo a 390 px: nada se sale de la pantalla, ningún texto queda cortado, los números se alinean parejos y el recuadro se ve como un todavía no, no como un error. Con el movimiento reducido activado, nada dentro del recuadro se mueve."
-- U8 (recorrido por varias playas): "Recorro el sitio en el teléfono: en cualquier playa que abra,
-  el recuadro dice siempre lo mismo, que todavía no pueden decirme si aciertan ahí y que van 0
-  reportes de los 30 que hacen falta, y en ninguna parte aparece un porcentaje ni una cifra de
-  acierto."
+- U8 (recorrido por varias playas): "Recorro el sitio en el teléfono: en cualquier playa que abra, el recuadro dice siempre lo mismo, que todavía no pueden decirme si aciertan ahí y que van 0 reportes de los 30 que hacen falta, y en ninguna parte aparece un porcentaje ni una cifra de acierto."
 - El recuadro se lee cómodo con el brazo estirado: el número del contador y la palabra "reportes"
   se distinguen de un vistazo, sin acercar la pantalla.
 - El recuadro se ve terminado, como parte normal de la página: nada de relleno, nada desalineado,
