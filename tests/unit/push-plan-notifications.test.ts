@@ -229,4 +229,40 @@ describe('planNotifications', () => {
       { numRuns: 100 },
     );
   });
+
+  it('holds every declared run cap, defers the exact remainder, and declares that remainder without executing it', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 200 }),
+        fc.integer({ min: 0, max: 200 }),
+        (population, runCap) => {
+          const subscriptions = Array.from({ length: population }, (_, index) => subscriptionWithBar(0, {
+            endpoint_hash: `suscriptor-cap-${index}`,
+          }));
+          const before = structuredClone(subscriptions);
+          const plan = planNotifications({
+            now: '2026-08-10T07:25:00-05:00',
+            spots: [playaVenao],
+            scores: { [playaVenao.spot_id]: 100 },
+            subscriptions,
+            default_threshold_score: 0,
+            run_cap: runCap,
+          });
+          const sends = Math.min(population, runCap);
+          const deferred = population - sends;
+
+          assert.equal(plan.sends.length, sends, 'the declared cap is the complete send budget for this run');
+          assert.equal(plan.writes.length, sends, 'only planned sends declare dated writes');
+          assert.equal(plan.deferred, deferred, 'every eligible subscriber above the cap is counted as deferred');
+          assert.deepEqual(
+            plan.events,
+            deferred === 0 ? [] : [{ kind: 'notification_run_cap_reached', deferred }],
+            'a non-empty remainder is declared loudly as data for an adapter, never silently lost',
+          );
+          assert.deepEqual(subscriptions, before, 'planning returns declarations and never executes or mutates subscriber work');
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
 });
