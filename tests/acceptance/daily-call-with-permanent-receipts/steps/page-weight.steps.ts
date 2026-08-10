@@ -85,7 +85,7 @@ const FIRST_VISIT_CEILING_LABEL = '100 KB';
 const FIRST_VISIT_CEILING_BYTES = 100 * 1024;
 
 /** Declared in section 4 but built by later features, so this feature measures neither. */
-const DECLARED_BUT_UNBUILT_ROUTES = ['/sin-senal', '/acerca'] as const;
+const DECLARED_BUT_UNBUILT_ROUTES = ['/acerca'] as const;
 
 const CONTRIBUTORS_ANCHOR = '<!--contributors-->';
 const HEAD_ANCHOR = '<head>';
