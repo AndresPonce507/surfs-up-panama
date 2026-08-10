@@ -67,14 +67,14 @@ Feature: La aritmética del historial existe como leyes que se niegan a publicar
     Then las muestras de la credencial joven quedan fuera de toda cuenta con reja
     And con la configuración en ceros la cuenta es idéntica a no filtrar
 
-  @slice-02 @pending @driving_port @in-memory @property @negative @covers-R10
+  @slice-02 @driving_port @in-memory @property @negative @covers-R10
   Scenario: Con menos de cinco personas de verdad nunca se publica una cifra
     Given cualquier conjunto de reportes de prueba con menos de cinco personas elegibles
     When la proyección decide qué dice el recuadro
     Then la decisión es siempre el estado del contador, jamás una afirmación
     And da igual cuán grande sea el sesgo o cuántas observaciones haya
 
-  @slice-02 @pending @driving_port @in-memory @property @negative @covers-R11
+  @slice-02 @driving_port @in-memory @property @negative @covers-R11
   Scenario: Con menos de diez observaciones emparejadas nunca se publica una cifra
     Given cualquier conjunto de reportes de prueba con menos de diez pares
     When la proyección decide qué dice el recuadro

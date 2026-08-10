@@ -396,7 +396,10 @@ Given(
     // the honest set varies around the same mean.
     const coordinated: ReportRecord[] = [];
     const honest: ReportRecord[] = [];
-    const honestBands = ['knee_waist', 'waist_chest', 'chest_head'];
+    // 13 waist-to-chest midpoints (0.9 m) plus 9 head-overhead midpoints
+    // (2.0 m) average exactly the coordinated chest-head midpoint (1.35 m),
+    // while retaining real sample variance: (13 * 0.9 + 9 * 2.0) / 22 = 1.35.
+    const honestBands = Array.from({ length: 22 }, (_, index) => (index < 13 ? 'waist_chest' : 'head_overhead'));
     for (let i = 0; i < 22; i += 1) {
       const day = i + 1;
       coordinated.push(
@@ -412,7 +415,7 @@ Given(
           observed_at: hourIso(day, 12),
           received_at: hourIso(day, 12),
           device_id: `d_honesta_${(i % 6) + 1}`,
-          size_band: honestBands[i % honestBands.length]!,
+          size_band: honestBands[i]!,
         }),
       );
     }
@@ -875,7 +878,11 @@ Then('la decisión es siempre el estado del contador, jamás una afirmación', {
   fc.assert(
     fc.property(arb, (reports) => {
       const result = project(projectionInput({ reports }));
-      for (const [spot, block] of Object.entries(blocksOf(result))) {
+      const blocks = Object.entries(blocksOf(result));
+      if (reports.length > 0) {
+        assert.ok(blocks.length > 0, 'pairable reports produced no per-spot gate decision at the projection port');
+      }
+      for (const [spot, block] of blocks) {
         assert.equal(
           block['claim_ok'],
           false,
