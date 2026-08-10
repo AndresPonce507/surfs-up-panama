@@ -30,9 +30,17 @@ import { OPEN_ENDED_SIZE_BAND, sizeBands, type SizeBandToken } from '../data/siz
 import { hEff } from '../scoring/engine';
 import { leadBucketOf, SIGMA_EFF, TOP_BAND_NOMINAL_M, TOP_BAND_VARIANCE_M2 } from './constants';
 import type { ObservationRow, PredictionRow } from './inputs';
+import { collapseDeviceDayMedian } from './weights';
 
 /** One weighted residual sample, still carrying who reported it so a key's distinct-reporter count can be formed later. */
-export type ResidualSample = { readonly value: number; readonly weight: number; readonly device_id: string };
+export type ResidualSample = {
+  readonly value: number;
+  readonly weight: number;
+  readonly device_id: string;
+  /** Present for log-derived samples, so robustness can group one device-day. */
+  readonly spot_id?: string;
+  readonly session_day?: string;
+};
 
 /** One height residual sample, keyed to the model and lead bucket it was measured on (06 section 5.1). */
 export type HeightResidualRow = { readonly source: string; readonly leadBucket: string; readonly sample: ResidualSample };
@@ -52,6 +60,7 @@ export function formHeightResidualRows(
     const band = observation.size_band;
     const observedHourMs = floorUtcHourMs(observation.observed_at);
     if (deviceId === undefined || band === undefined || observedHourMs === null) continue;
+    const sessionDay = utcDayOf(observedHourMs);
 
     for (const prediction of predictions) {
       if (!pairs(observation, prediction, observedHourMs)) continue;
@@ -60,11 +69,17 @@ export function formHeightResidualRows(
       rows.push({
         source: prediction.source,
         leadBucket: leadBucketOf(prediction.lead_h),
-        sample: { value, weight: heightPrecisionWeight(varianceM2), device_id: deviceId },
+        sample: {
+          value,
+          weight: heightPrecisionWeight(varianceM2),
+          device_id: deviceId,
+          spot_id: observation.spot_id,
+          session_day: sessionDay,
+        },
       });
     }
   }
-  return rows;
+  return collapseHeightDeviceDays(rows);
 }
 
 /**
@@ -82,9 +97,15 @@ export function formScoreResidualSamples(observations: readonly ObservationRow[]
     if (deviceId === undefined || quality === undefined || predictedScore === null) continue;
     const qObs = QUALITY_OBSERVED_SCORE[quality];
     if (qObs === undefined) continue;
-    samples.push({ value: predictedScore - qObs, weight: scorePrecisionWeight(), device_id: deviceId });
+    const observedHourMs = floorUtcHourMs(observation.observed_at);
+    samples.push({
+      value: predictedScore - qObs,
+      weight: scorePrecisionWeight(),
+      device_id: deviceId,
+      ...(observedHourMs === null ? {} : { spot_id: observation.spot_id, session_day: utcDayOf(observedHourMs) }),
+    });
   }
-  return samples;
+  return collapseDeviceDayMedian(samples).map(withoutSessionIdentity);
 }
 
 /** A missing captured forecast is absence, never a zero-valued score sample. */
@@ -115,6 +136,10 @@ function floorUtcHourMs(observedAt: string | undefined): number | null {
   return floored.getTime();
 }
 
+function utcDayOf(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
 function safeDateMs(iso: unknown): number | null {
   if (typeof iso !== 'string') return null;
   const ms = new Date(iso).getTime();
@@ -139,4 +164,31 @@ function heightPrecisionWeight(bandVarianceM2: number): number {
 /** Score carries no band interval, so its precision weight has no width term. */
 function scorePrecisionWeight(): number {
   return 1 / SIGMA_EFF.score.value ** 2;
+}
+
+/** Each source/lead key gets one device-day voice before its estimate is formed. */
+function collapseHeightDeviceDays(rows: readonly HeightResidualRow[]): HeightResidualRow[] {
+  const byKey = new Map<string, HeightResidualRow[]>();
+  for (const row of rows) {
+    const key = `${row.source}\u0000${row.leadBucket}`;
+    const group = byKey.get(key) ?? [];
+    group.push(row);
+    byKey.set(key, group);
+  }
+
+  const collapsed: HeightResidualRow[] = [];
+  for (const group of byKey.values()) {
+    const exemplar = group[0];
+    if (exemplar === undefined) continue;
+    for (const sample of collapseDeviceDayMedian(group.map((row) => row.sample))) {
+      collapsed.push({ source: exemplar.source, leadBucket: exemplar.leadBucket, sample: withoutSessionIdentity(sample) });
+    }
+  }
+  return collapsed;
+}
+
+/** Session identity is only pre-weighting work; estimates expose no new stored field. */
+function withoutSessionIdentity(sample: ResidualSample): ResidualSample {
+  const { spot_id: _spotId, session_day: _sessionDay, ...residual } = sample;
+  return residual;
 }
