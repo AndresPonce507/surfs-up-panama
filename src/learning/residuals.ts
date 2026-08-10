@@ -78,14 +78,19 @@ export function formScoreResidualSamples(observations: readonly ObservationRow[]
   for (const observation of observations) {
     const deviceId = observation.device_id;
     const quality = observation.quality;
-    const predicted = observation.predicted;
-    if (deviceId === undefined || quality === undefined || predicted === null || predicted === undefined) continue;
-    if (typeof predicted.score_q !== 'number') continue;
+    const predictedScore = capturedScore(observation.predicted);
+    if (deviceId === undefined || quality === undefined || predictedScore === null) continue;
     const qObs = QUALITY_OBSERVED_SCORE[quality];
     if (qObs === undefined) continue;
-    samples.push({ value: predicted.score_q - qObs, weight: scorePrecisionWeight(), device_id: deviceId });
+    samples.push({ value: predictedScore - qObs, weight: scorePrecisionWeight(), device_id: deviceId });
   }
   return samples;
+}
+
+/** A missing captured forecast is absence, never a zero-valued score sample. */
+function capturedScore(predicted: ObservationRow['predicted']): number | null {
+  if (predicted === null || predicted === undefined || typeof predicted.score_q !== 'number') return null;
+  return predicted.score_q;
 }
 
 // ---------- pairing ----------

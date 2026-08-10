@@ -16,9 +16,10 @@ import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
 import { weightedMean, weightedSampleStandardError, type WeightedSample } from '../../src/learning/estimate';
-import { formHeightResidualRows } from '../../src/learning/residuals';
+import { formHeightResidualRows, formScoreResidualSamples } from '../../src/learning/residuals';
 import { shrinkTowardParent } from '../../src/learning/shrink';
 import { hEff } from '../../src/scoring/engine';
+import type { QualityToken } from '../../src/data/report-vocab';
 import { sizeBands, type SizeBandToken } from '../../src/data/size-bands';
 import type { ObservationRow, PredictionRow } from '../../src/learning/inputs';
 
@@ -71,6 +72,40 @@ describe('the residual form is r_height = H_eff_pred - mid(band), u_hat = 0 this
         assert.ok(
           Math.abs(rows[0]!.sample.value - expected) < 1e-9,
           `r_height must equal hEff(swell_h_m, swell_t_s) - mid(band); got ${rows[0]!.sample.value}, expected ${expected}`,
+        );
+      }),
+      { numRuns: RUNS },
+    );
+  });
+});
+
+const someQuality: fc.Arbitrary<QualityToken> = fc.constantFrom('bad', 'ok', 'good', 'epic');
+
+describe('the score residual omits mornings without a captured forecast', () => {
+  it('emits exactly the same score samples, in the same order, after null-forecast mornings are added', () => {
+    const reportedMorning = fc.record({
+      quality: someQuality,
+      shownScore: fc.integer({ min: 0, max: 100 }),
+    });
+    const morningWithOrWithoutForecast = fc.oneof(
+      reportedMorning.map(({ quality, shownScore }) => ({ quality, shownScore, captured: true as const })),
+      reportedMorning.map(({ quality, shownScore }) => ({ quality, shownScore, captured: false as const })),
+    );
+
+    fc.assert(
+      fc.property(fc.array(morningWithOrWithoutForecast, { maxLength: 30 }), (mornings) => {
+        const observations: ObservationRow[] = mornings.map((morning, index) => ({
+          spot_id: 'playa-venao',
+          device_id: `d_score_${index}`,
+          quality: morning.quality,
+          predicted: morning.captured ? { score_q: morning.shownScore } : null,
+        }));
+        const withForecastOnly = observations.filter((observation) => observation.predicted !== null);
+
+        assert.deepEqual(
+          formScoreResidualSamples(observations),
+          formScoreResidualSamples(withForecastOnly),
+          'a null forecast is omitted, not converted into a zero-valued sample or allowed to disturb the retained sample order',
         );
       }),
       { numRuns: RUNS },
