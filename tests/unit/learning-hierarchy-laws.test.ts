@@ -157,3 +157,73 @@ describe('pooling hierarchy: cold starts retain the launch corridor', () => {
     );
   });
 });
+
+describe('pooling hierarchy: similarity groups activate from earned evidence', () => {
+  it('moves a new beach spot toward its three gated beach neighbours, not the region-wide mix', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.double({ min: 0.25, max: 0.75, noNaN: true, noDefaultInfinity: true }),
+        fc.double({ min: 0.25, max: 0.75, noNaN: true, noDefaultInfinity: true }),
+        async (beachDifference, reefDifference) => {
+          const store = new MemoryStore();
+          const spots: PoolingSpot[] = [];
+          for (let index = 1; index <= 3; index += 1) {
+            const spot_id = `beach-${index}`;
+            spots.push({ spot_id, region_id: 'pa-pacific', coast: 'pacific', break_type: 'beach' });
+            await writeSpot(store, spot_id, 22, 7, -beachDifference);
+          }
+          for (let index = 1; index <= 3; index += 1) {
+            const spot_id = `reef-${index}`;
+            spots.push({ spot_id, region_id: 'pa-pacific', coast: 'pacific', break_type: 'reef' });
+            await writeSpot(store, spot_id, 22, 7, reefDifference);
+          }
+          spots.push({ spot_id: NEW_ID, region_id: 'pa-pacific', coast: 'pacific', break_type: 'beach' });
+          await writeSpot(store, NEW_ID, 2, 2, 0);
+          await run(store, spots);
+
+          const stored = storedHeight(store, NEW_ID).b;
+          const regionalMean = (beachDifference - reefDifference) / 2;
+          assert.ok(
+            Math.abs(stored - beachDifference) < Math.abs(stored - regionalMean),
+            'three gated beach spots must become the new beach spot\'s parent instead of the regional mix',
+          );
+        },
+      ),
+      { numRuns: 50 },
+    );
+  });
+
+  it('keeps two beach spots inside the region-wide parent until a third earns its correction', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.double({ min: 0.25, max: 0.75, noNaN: true, noDefaultInfinity: true }),
+        fc.double({ min: 0.25, max: 0.75, noNaN: true, noDefaultInfinity: true }),
+        async (beachDifference, reefDifference) => {
+          const store = new MemoryStore();
+          const spots: PoolingSpot[] = [];
+          for (let index = 1; index <= 2; index += 1) {
+            const spot_id = `beach-${index}`;
+            spots.push({ spot_id, region_id: 'pa-pacific', coast: 'pacific', break_type: 'beach' });
+            await writeSpot(store, spot_id, 22, 7, -beachDifference);
+          }
+          for (let index = 1; index <= 3; index += 1) {
+            const spot_id = `reef-${index}`;
+            spots.push({ spot_id, region_id: 'pa-pacific', coast: 'pacific', break_type: 'reef' });
+            await writeSpot(store, spot_id, 22, 7, reefDifference);
+          }
+          spots.push({ spot_id: NEW_ID, region_id: 'pa-pacific', coast: 'pacific', break_type: 'beach' });
+          await writeSpot(store, NEW_ID, 2, 2, 0);
+          await run(store, spots);
+
+          const stored = storedHeight(store, NEW_ID).b;
+          const regionalMean = (2 * beachDifference - 3 * reefDifference) / 5;
+          assert.ok(
+            Math.abs(stored - regionalMean) < Math.abs(stored - beachDifference),
+            'two beach spots are not yet a family, so the region-wide parent must still carry the newcomer',
+          );
+        },
+      ),
+      { numRuns: 50 },
+    );
+  });
+});

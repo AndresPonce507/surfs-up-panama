@@ -28,7 +28,7 @@ import {
   serializeCorrection,
   type StoredCorrection,
 } from './correction-file';
-import { partitionByBasin, type PoolingSpot } from './hierarchy';
+import { activeSimilarityGroups, partitionByBasin, type PoolingSpot } from './hierarchy';
 import { readObservationLog, readPredictionLog, spotsReportedIn, type LearningInputStore } from './inputs';
 import { TRUST_GATE_KEY, eligibleTrustRecords, parseTrustGate } from './trust';
 
@@ -71,7 +71,17 @@ export async function runLearningFitOnce(deps: LearningFitDeps): Promise<Learnin
   }));
   const records = new Map<string, StoredCorrection>();
   for (const basinInputs of partitionByBasin(inputs, deps.spots)) {
-    for (const [spotId, record] of buildCorrectionRecords(basinInputs, deps.clock)) records.set(spotId, record);
+    const regionalRecords = buildCorrectionRecords(basinInputs, deps.clock);
+    for (const [spotId, record] of regionalRecords) records.set(spotId, record);
+
+    const gatedSpotIds = new Set(
+      [...regionalRecords]
+        .filter(([_spotId, record]) => hasAppliedHeight(record))
+        .map(([spotId]) => spotId),
+    );
+    for (const groupInputs of activeSimilarityGroups(basinInputs, deps.spots, gatedSpotIds)) {
+      for (const [spotId, record] of buildCorrectionRecords(groupInputs, deps.clock)) records.set(spotId, record);
+    }
   }
 
   for (const [spotId, record] of records) {
@@ -88,6 +98,11 @@ export async function runLearningFitOnce(deps: LearningFitDeps): Promise<Learnin
     corrections_written: records.size,
     events,
   };
+}
+
+function hasAppliedHeight(record: StoredCorrection): boolean {
+  return Object.values(record.bias.swell_h_m.per_source)
+    .some((byLead) => Object.values(byLead).some((key) => key.applied));
 }
 
 /** Read policy at the I/O boundary; eligibility itself remains a pure record-and-config function. */
