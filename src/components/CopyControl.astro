@@ -26,6 +26,7 @@ const { call } = Astro.props;
 
       const outcome = await copyCall(call, (text) => navigator.clipboard.writeText(text));
       notice.textContent = outcome.notice;
+      notice.dataset.copyOutcome = outcome.kind;
       notice.hidden = false;
     });
   }
