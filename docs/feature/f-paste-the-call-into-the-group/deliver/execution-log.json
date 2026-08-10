@@ -155,6 +155,13 @@
       "s": "SKIPPED",
       "d": "CHECKPOINT_PENDING: user-visible step held at GREEN; COMMIT is refused until des-verify-ui records U1 through U7 PASS and the source-blind examiner records a fresh PASS against the charter",
       "t": "2026-08-10T04:01:51Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:51:14Z"
     }
   ]
 }

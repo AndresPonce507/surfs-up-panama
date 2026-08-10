@@ -7,7 +7,7 @@ Un surfista en la home toca una sola vez, WhatsApp se abre con el llamado del d�
 ## Preconditions
 Usar Node 22, npm y un navegador local. No usar credenciales ni servicios de nube. Toda observación empieza desde el árbol real indicado abajo. Si el navegador abre otra copia, descartar esa sesión y empezar de nuevo.
 
-1. `cd /Users/andres/panama-surf`
+1. `cd /Users/andres/psb-paste`
 2. Ejecutar `npm ci` solamente si las dependencias todavía no están instaladas.
 3. Ejecutar `npm run build`.
 4. Ejecutar `npm run preview` y anotar la dirección local que muestra, normalmente `http://localhost:4321`.
@@ -16,6 +16,10 @@ Usar Node 22, npm y un navegador local. No usar credenciales ni servicios de nub
 
 ## Charter
 Explorá la home como alguien que quiere avisarle al grupo antes de manejar. Encontrá la acción de WhatsApp en la tarjeta grande. Tocala una vez y leé lo que aparece ya escrito en el chat. Compará ese mensaje con lo que dice la tarjeta. Después apagá JavaScript en el navegador, recargá, y repetí el toque: tiene que seguir funcionando como enlace normal. Probá también en tema oscuro y con movimiento reducido activado en el sistema.
+
+## U8 restraint observation (verbatim from the roadmap quality contract, step 01-04)
+
+Un toque en la acción de WhatsApp de la tarjeta grande abre WhatsApp con el mensaje completo ya escrito: SURF y la fecha, Mejor: con el spot y su puntaje, el tamaño y el viento, la ventana, Confianza con el nivel, y una dirección https que termina en ?b= con el sello del build. El mismo enlace y el mismo mensaje con JavaScript apagado.
 
 ## Expected observations (oracle)
 - En la tarjeta grande de arriba hay una acción de WhatsApp que se toca una sola vez, sin pasos intermedios, y mide al menos 44 px de alto y ancho.
@@ -33,3 +37,4 @@ Diferido, fuera de este slice: copiar al portapapeles pertenece a slice-02; que 
 | date | examiner | verdict | observations |
 |------|----------|---------|--------------|
 | 2026-08-10 | Vera | FAIL | WhatsApp action correct: 1 share-whatsapp anchor in the top card, wa.me text decodes to "SURF 10 de agosto / Mejor: Playa Guánico, 70 / Cintura a pecho y limpio. Mejor de 13:00 a 16:00. / Confianza baja. / https://d1j9u9fxnap4es.cloudfront.net/?b=b_2026-08-10T12Z", matches card's spot/score/confidence exactly, public https address ending in ?b=<build stamp>, no brackets/model names. Page has 0 <script> tags; href byte-identical with javaScriptEnabled:false. 390px light+dark: scrollWidth==clientWidth==390, target 324x46.9px (>=44px). Reduced-motion CSS disables all animation/transition. FAIL cause: home page header renders a raw machine timestamp "Actualizado 2026-08-10T12:05:00.000Z" directly above the big card in the same 390px view explored per the charter's own Charter step, a defect on the Spanish surface (task brief: any raw timestamp is a defect). |
+| 2026-08-10 | Vera | PASS | Re-examination on fresh build after build/f2-bugfix merge (c27f33b, c633a5a). Home and spot page (/spots/playa-guanico/) both now read "Actualizado 7:05 a.m." (clock time), on and off JS. Repo-wide grep of dist/ found zero em dashes and zero visible-copy ISO timestamps; the one ISO string left lives only in a <time datetime="..."> machine attribute behind human text "Publicado a las 6:22 a.m.", never shown to a reader. En dashes present are numeric/time ranges ("0.7–1.1 m", "13:00–16:00"), normal typography, not AI-tell punctuation. WhatsApp mechanics re-verified unchanged: 1 share-whatsapp anchor, wa.me text identical to prior session, href byte-identical with javaScriptEnabled:false, target 324x46.9px, no horizontal scroll at 390px light/dark. All U8 oracle rows now hold. |
