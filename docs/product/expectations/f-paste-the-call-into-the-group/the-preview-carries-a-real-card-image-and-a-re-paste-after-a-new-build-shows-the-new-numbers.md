@@ -7,7 +7,7 @@ La vista previa deja de ser solo texto: trae una imagen de tarjeta con el spot, 
 ## Preconditions
 Usar Node 22, npm y un navegador local. No usar credenciales para la parte local. Toda observación empieza desde el árbol real indicado abajo.
 
-1. `cd /Users/andres/panama-surf`
+1. `cd /Users/andres/psb-paste`
 2. Ejecutar `npm ci` solamente si las dependencias todavía no están instaladas.
 3. Ejecutar `npm run build`.
 4. Publicar la vista previa: `node scripts/preview/publish-preview.mjs` y usar `https://d1j9u9fxnap4es.cloudfront.net`. El rastreador de WhatsApp no puede leer localhost. Sin publicación, registrar la parte de WhatsApp como no ejecutada.
