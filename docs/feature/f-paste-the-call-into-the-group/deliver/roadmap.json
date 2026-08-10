@@ -314,9 +314,10 @@
             "A complete spot retains its own preview data."
           ],
           "test_file": "tests/acceptance/f-paste-the-call-into-the-group/preview-card-fresh-every-build.feature",
-          "scenario_name": "Cuando a un spot le faltan campos, da la cara la tarjeta genérica y el hueco queda anotado",
+          "scenario_name": "Una tarjeta con campos faltantes da la cara genérica y nombra el hueco",
           "scenario_mappings": [
-            {"scenario_name": "Cuando a un spot le faltan campos, da la cara la tarjeta genérica y el hueco queda anotado"}
+            {"scenario_name": "Una tarjeta completa conserva la historia de su spot"},
+            {"scenario_name": "Una tarjeta con campos faltantes da la cara genérica y nombra el hueco"}
           ],
           "slice_id": "slice-04",
           "surface_classification": "non-visual",
@@ -324,7 +325,7 @@
           "u8_observation": "",
           "non_visual_rationale": "This selects honest preview content; the visible preview card is published in 04-03.",
           "ui_checks": {},
-          "deps": ["03-03"],
+          "deps": ["03-01"],
           "files_to_modify": ["src/share/preview-card.ts"],
           "implementation_notes": "The generic card is a declared recovery outcome, not a silent substitute."
         },
@@ -365,6 +366,7 @@
           "scenario_mappings": [
             {"scenario_name": "El anuncio de la home declara su tarjeta, con las medidas y el peso acordados"},
             {"scenario_name": "Una mañana nueva rehace la tarjeta; lo viejo nunca se presenta como fresco"},
+            {"scenario_name": "Cuando a un spot le faltan campos, da la cara la tarjeta genérica y el hueco queda anotado"},
             {"scenario_name": "La tarjeta nunca viaja en el primer vuelo del surfista"}
           ],
           "slice_id": "slice-04",
