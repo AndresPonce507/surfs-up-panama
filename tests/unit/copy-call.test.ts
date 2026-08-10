@@ -32,4 +32,27 @@ describe('copyCall', () => {
       { numRuns: 100 },
     );
   });
+
+  it('Property: every denied clipboard attempt reports one plain Spanish failure outcome and never the success outcome', async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.string(), async (call) => {
+        const attempted: string[] = [];
+        const outcome = await copyCall(call, async (candidate) => {
+          attempted.push(candidate);
+          throw new Error('permission denied');
+        });
+
+        assert.deepEqual(
+          { attempted, outcome },
+          {
+            attempted: [call],
+            outcome: { kind: 'not-copied', notice: 'No se pudo copiar. Mándalo por WhatsApp.' },
+          },
+          'si el teléfono niega el portapapeles, la página debe decirlo claro sin celebrar un copiado que no pasó',
+        );
+        assert.ok(Object.isFrozen(outcome), 'el resultado del núcleo debe ser inmutable');
+      }),
+      { numRuns: 100 },
+    );
+  });
 });
