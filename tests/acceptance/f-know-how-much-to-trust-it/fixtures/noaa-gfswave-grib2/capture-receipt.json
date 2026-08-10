@@ -33,5 +33,5 @@
     "byte_count": 2652,
     "sha256": "6997a999ea6a34cfc35d347c82b249448139bfe83502685f9a807dadcf632b8c"
   },
-  "reproduction": "curl --fail --silent --show-error --location --dump-header headers.txt --output gfswave.t00z.epacif.0p16.f000.20260808.grib2 '<request.url>'"
+  "reproduction": "curl --fail --silent --show-error --location --dump-header headers.txt --output gfswave.t00z.global.0p16.f000.20260808.grib2 '<request.url>'"
 }
