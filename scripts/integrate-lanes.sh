@@ -43,6 +43,19 @@ relink_only=0
 [[ "${1:-}" == "--relink" ]] && relink_only=1
 
 if (( ! relink_only )); then
+  # Undo the anchor links BEFORE merging. Some lanes force-added their
+  # execution-log.json even though it is normally ignored, so in those features
+  # the file is tracked — and a tracked file replaced by a symlink is a
+  # TYPECHANGE, which git refuses to merge across. It aborts with "commit your
+  # changes before you merge" and names a file nobody edited, which is a
+  # confusing way to lose ten minutes. Restore, merge, relink.
+  echo "== restoring tracked logs before the merge =="
+  restored=0
+  for f in $(git status --porcelain | awk '$1=="T"{print $2}'); do
+    rm -f "$f"; git checkout -- "$f" 2>/dev/null && restored=$((restored+1))
+  done
+  echo "  ${restored} log(s) restored from git"
+
   echo "== merging lane branches into $(git rev-parse --abbrev-ref HEAD) =="
   git fetch origin --quiet 2>/dev/null
   for lane in "${LANES[@]}"; do
@@ -60,17 +73,30 @@ if (( ! relink_only )); then
 fi
 
 echo "== restoring the DES log anchor =="
+# Link ONLY execution-log.json, never the whole deliver directory.
+#
+# Symlinking the directory looked simpler and was wrong: `deliver/` also holds
+# TRACKED files — roadmap.json above all — so replacing it with a link makes git
+# report every one of them deleted, and the next merge conflicts against the
+# deletions. That cost a confusing round of phantom conflicts on 2026-08-10.
+#
+# execution-log.json is gitignored and per-worktree by design, which is exactly
+# why it never syncs through a merge and exactly why it is the one file that
+# needs linking. Linking precisely it leaves git's view untouched.
 for lane in "${LANES[@]}"; do
   src=$(ls -d "/Users/andres/psb-${lane}"/docs/feature/*/deliver 2>/dev/null | head -1)
   [[ -n "$src" ]] || continue
   feature=$(basename "$(dirname "$src")")
-  target="docs/feature/${feature}/deliver"
-  # The merge may have written a real directory here. Replace it with a link to
-  # the lane's live copy. Nothing is lost: the merged content is still in git.
-  [[ -L "$target" ]] || rm -rf "$target"
-  mkdir -p "$(dirname "$target")"
-  ln -sfn "$src" "$target"
-  printf '  %-42s -> psb-%s\n' "$feature" "$lane"
+  target_dir="docs/feature/${feature}/deliver"
+  # If a previous run replaced the directory with a link, restore the real thing
+  # from git before relinking the single file.
+  if [[ -L "$target_dir" ]]; then
+    rm "$target_dir"
+    git checkout -- "$target_dir" 2>/dev/null || mkdir -p "$target_dir"
+  fi
+  mkdir -p "$target_dir"
+  ln -sfn "${src}/execution-log.json" "${target_dir}/execution-log.json"
+  printf '  %-42s execution-log -> psb-%s\n' "$feature" "$lane"
 done
 
 echo "== verifying =="
