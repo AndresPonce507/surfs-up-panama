@@ -588,7 +588,7 @@
             "tests/acceptance/f-tell-us-what-you-saw-cold/steps/write-path-cost-guardrails.steps.ts",
             "docs/feature/f-tell-us-what-you-saw-cold/distill/red-classification.md"
           ],
-          "implementation_notes": "Acceptance drives only the production-owned local-CI command. The temporary missing-declaration case must not alter the checkout. This is an integration-shaped command surface, so it is example-based; property-based coverage belongs to the small declaration and policy units introduced in later steps."
+          "implementation_notes": "EXEMPT FROM PARADIGM: this is a real local-CI and CDK wiring surface, so it is example-based. Compensate with property-based unit coverage for declaration completeness and rejection diagnostics in 02-02. The temporary missing-declaration case must not alter the checkout."
         },
         {
           "id": "02-02",
@@ -599,7 +599,7 @@
             "Every rejection names the broken protection, the observed and required value, why the value bounds cost, and a restoration action."
           ],
           "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/write-path-cost-guardrails.feature",
-          "scenario_name": "The local gate names every protection that keeps a write flood bounded",
+          "scenario_name": "Each write address rejects a changed public posture or origin; Each write worker rejects a changed concurrency ceiling",
           "slice_id": "slice-02",
           "surface_classification": "non-visual",
           "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/nobody-can-deploy-a-write-path-that-can-run-up-a-bill-before-deploy-ci-rejects-a-write-function.md",
@@ -612,7 +612,7 @@
             "infra/guardrail-evaluator.mjs",
             "infra/test/guardrails.test.ts"
           ],
-          "implementation_notes": "Serialize this work with F-BILL because these guardrail declarations, evaluator and synthesized-template tests are shared. Keep the inspection local and credential-free. Do not introduce a deploy, a CloudFront write route, or the F-BILL budget-deny action."
+          "implementation_notes": "TEST PARADIGM (mandatory): property-test the declaration policy through its public evaluation port, using generated one-value drifts and strict state-delta assertions over emitted diagnostic records. Keep the real local-CI acceptance examples. Serialize with F-BILL; do not deploy, add CloudFront writes or take the F-BILL budget-deny action."
         },
         {
           "id": "02-03",
@@ -623,7 +623,7 @@
             "The gate rejects quota declarations that retain per-IP rows or omit the 20 reports, 10 presigns and 20 subscription writes per device per day limits."
           ],
           "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/write-path-cost-guardrails.feature",
-          "scenario_name": "The local gate names every protection that keeps a write flood bounded",
+          "scenario_name": "The write store rejects every changed fixed capacity value; Each named write breaker alarm must remain declared; Each device-only quota limit rejects a changed identity or allowance",
           "slice_id": "slice-02",
           "surface_classification": "non-visual",
           "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/nobody-can-deploy-a-write-path-that-can-run-up-a-bill-before-deploy-ci-rejects-a-write-function.md",
@@ -637,7 +637,7 @@
             "infra/test/guardrails.test.ts",
             "infra/bin/app.ts"
           ],
-          "implementation_notes": "Serialize with F-BILL's shared infra lane and integrate one branch at a time. This slice guards declarations and synthesized output before the first write-stack deploy; it does not claim that the AWS console has been audited."
+          "implementation_notes": "TEST PARADIGM (mandatory): property-test fixed capacity, named-alarm completeness and device-only quota policy through a public evaluation port with strict state-delta assertions. Retain one real CDK/local-CI example per policy. Serialize with F-BILL and do not claim an AWS-console audit."
         },
         {
           "id": "02-04",
@@ -648,7 +648,7 @@
             "The green result cites system-architecture.md section 6.1 as the corrected sizing source and never relies on 07-write-path.md section 12."
           ],
           "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/write-path-cost-guardrails.feature",
-          "scenario_name": "A gate that cannot inspect declarations says so instead of claiming the write path is safe",
+          "scenario_name": "A gate that cannot inspect declarations says so instead of claiming the write path is safe; The guard rejects the falsified sizing source",
           "slice_id": "slice-02",
           "surface_classification": "non-visual",
           "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/nobody-can-deploy-a-write-path-that-can-run-up-a-bill-before-deploy-ci-rejects-a-write-function.md",
@@ -663,7 +663,7 @@
             "tests/acceptance/f-tell-us-what-you-saw-cold/write-path-cost-guardrails.feature",
             "tests/acceptance/f-tell-us-what-you-saw-cold/steps/write-path-cost-guardrails.steps.ts"
           ],
-          "implementation_notes": "Run the slice tag, the production guardrail test and the local CI gate with their real exit codes. Record each deliberate drift and restoration in the RED classification record. The $18 budget deny action and live dead-man proof remain F-BILL work."
+          "implementation_notes": "EXEMPT FROM PARADIGM: credential-free local-CI composition and CDK synth are integration wiring, so they stay example-based. Compensate with the property-based policy units in 02-02 and 02-03. Record every deliberate drift and same-copy restoration. F-BILL retains the $18 action and live dead-man proof."
         }
       ]
     }
@@ -694,8 +694,7 @@
       "src/pages/index.astro",
       "public/**",
       "package.json",
-      "package-lock.json",
-      "tests/acceptance/**"
+      "package-lock.json"
     ]
   },
   "validation": {
