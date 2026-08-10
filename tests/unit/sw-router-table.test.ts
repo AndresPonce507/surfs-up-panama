@@ -555,6 +555,19 @@ describe('the offline helper (public/sw.js)', () => {
       Number.isFinite(NETWORK_FIRST_TIMEOUT_MS) && NETWORK_FIRST_TIMEOUT_MS > 0,
       'test bug: could not read NETWORK_FIRST_TIMEOUT_MS out of the real shipped public/sw.js',
     );
+    // Pins the settled section 12 value itself: the property below only proves the
+    // guard races and abandons its loser at whatever NETWORK_FIRST_TIMEOUT_MS says,
+    // so a helper tuned to 9 s instead of 3 s would still pass every other assertion
+    // here. The six-second acceptance oracle is the thing that would actually catch
+    // that drift, and it is seam-blocked (cross_lane_seams, Base.astro registration)
+    // until the whole slice lands, so this unit test is this step's only proof that
+    // the shipped constant is the one the step's own DoD names: three seconds, never
+    // tuned to the acceptance window (implementation_notes, 01-05).
+    assert.equal(
+      NETWORK_FIRST_TIMEOUT_MS,
+      3000,
+      'expected the shipped network-first guard to give up after exactly three seconds (application-architecture.md section 12)',
+    );
 
     await fc.assert(
       fc.asyncProperty(
