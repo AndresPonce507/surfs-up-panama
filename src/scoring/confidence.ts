@@ -23,6 +23,14 @@ export type ConfidenceResult = {
   c_total: number;
   level: ConfidenceLevel;
   track_state: 'unverified' | 'measured';
+  /** The declared inputs this morning did not have. The cap they apply is what
+   * topped `c_total`, so the reason must be able to name them (05 section 3.6). */
+  missing: ('wind' | 'tide')[];
+  /** How many members actually answered. With one member the spread terms are
+   * all zero, so `dominant` carries no signal: this count is the only input
+   * that tells "nobody disagreed because one model spoke" apart from
+   * "the models agree". */
+  members_used: number;
   spread_terms: { height: number; period: number; direction: number };
   dominant:
     | 'spread_height'
@@ -67,6 +75,8 @@ export function confidence(
     c_total,
     level,
     track_state: track === null ? 'unverified' : 'measured',
+    missing: [...missing],
+    members_used: members.length,
     spread_terms,
     dominant,
   };
