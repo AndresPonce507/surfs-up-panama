@@ -47,9 +47,13 @@ interface Props {
 
 const { level, reason } = Astro.props;
 const word = CONFIDENCE_LEVEL_WORD_ES[level];
+// An empty or whitespace-only reason degrades exactly like an absent one: a
+// stated absence, never a silent empty box a surfer taps and finds blank
+// (application-architecture.md section 7, P1's confidence_reason row).
+const hasReason = reason !== undefined && reason.trim() !== '';
 ---
 
 <details class="confidence" name="confidence" data-level={level}>
   <summary>Confianza {word}</summary>
-  {reason !== undefined && <div>{reason}</div>}
+  {hasReason && <div>{reason}</div>}
 </details>
