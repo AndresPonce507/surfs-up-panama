@@ -1,0 +1,1 @@
+{"d": "PASS: verified the pre-authored scenario 'Quien no distingue colores recibe la misma informaci\u00f3n' is active under @slice-01/@ui-u1 with no skip marker; its browser oracle flattens all colours then reads both callouts via innerText.", "p": "PREPARE", "s": "EXECUTED", "sid": "01-09", "t": "2026-08-10T20:24:12Z"}
