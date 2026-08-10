@@ -50,6 +50,15 @@ export type SurfaceCall = {
   readonly spot_id: string;
   readonly score_q: number;
   readonly call_es: string;
+  /**
+   * Why this spot's confidence is what it is, for this day, already composed
+   * in Spanish and bounded at 160 characters by `src/publish/confidence-reason.ts`.
+   * Optional exactly as `conf_level` is: P1's degrade for a missing reason is
+   * the details block omitted, never an empty or invented one. The continuous
+   * `conf_value` and the raw factor terms stay out of the bundle entirely
+   * (domain-model.md section 13).
+   */
+  readonly confidence_reason_es?: string;
   // Structured publish fields. Optional on this wire type because the surface
   // committed for slice-01 predates them; the region bundle requires them.
   readonly conf_level?: ConfLevel;
