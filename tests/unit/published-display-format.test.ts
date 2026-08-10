@@ -17,7 +17,8 @@ import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
 import { sizeBands } from '../../src/data/size-bands';
-import { formatBestWindowEs, formatSizeEs } from '../../src/publish/display-format';
+import { formatBestWindowEs, formatSizeEs, formatWeakestLinkEs } from '../../src/publish/display-format';
+import { FACTOR_TOKENS, factorWord } from '../../src/publish/factor-vocab';
 
 // domain-model.md section 7.2, transcribed. The test owns this table as its
 // oracle so a silent edit of the constants file cannot also edit the expectation.
@@ -43,6 +44,20 @@ const metre = fc.double({ min: -1, max: 30, noNaN: true, noDefaultInfinity: true
 const clockTime = fc
   .tuple(fc.integer({ min: 0, max: 23 }), fc.integer({ min: 0, max: 59 }))
   .map(([hour, minute]) => `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`);
+
+// Mirrors the two oracles that already gate this copy elsewhere (the
+// acceptance steps' copy check and tests/unit/weakest-link-vocab.test.ts), so
+// a leak fails here first, locally, in milliseconds.
+const CODE_LEAK = /\b(?:dir|size|wind|tide|weakest[_ -]?link|null|undefined|NaN|true|false|the|today|tomorrow)\b/i;
+const EM_DASH = /[—]|--/;
+const DATA_PUNCTUATION = /[{}[\]"]/;
+
+const namedReading = fc.constantFrom(...FACTOR_TOKENS).map((factor) => ({ kind: 'named', factor }) as const);
+const anyWeakestLinkReading = fc.oneof(
+  namedReading,
+  fc.constant({ kind: 'clean' } as const),
+  fc.constant({ kind: 'unknown' } as const),
+);
 
 describe('the one size vocabulary', () => {
   it('offers exactly the seven canonical bands, smallest first, on section 7.2 edges', () => {
@@ -124,6 +139,64 @@ describe('published best-window display format', () => {
         );
       }),
       { numRuns: 200 },
+    );
+  });
+});
+
+describe('published weakest-link display format', () => {
+  it('renders the settled Pre-requisite 3 wording for a named culprit, article from the shared vocabulary', () => {
+    assert.equal(
+      formatWeakestLinkEs({ kind: 'named', factor: 'wind' }),
+      'Lo que lo tumba: el viento.',
+      'This is the open copy item from Pre-requisite 3 (minus the sub-score, which is slice-02): held in one exported constant so the pending settlement is a one-line swap.',
+    );
+  });
+
+  it('never reads a missing field the same as an explicit null: a stated absence and a genuinely clean day stay two different sentences', () => {
+    const clean = formatWeakestLinkEs({ kind: 'clean' });
+    const unknown = formatWeakestLinkEs({ kind: 'unknown' });
+    assert.notEqual(
+      clean,
+      unknown,
+      `A day nothing cost any score and a day published before this field existed are different facts. Got "${clean}" for clean and "${unknown}" for unknown.`,
+    );
+  });
+
+  it('names the published factor in the shared vocabulary\'s own words, with no engine token, no English word, no em dash and no double hyphen', () => {
+    fc.assert(
+      fc.property(fc.constantFrom(...FACTOR_TOKENS), (token) => {
+        const text = formatWeakestLinkEs({ kind: 'named', factor: token });
+        const { article, noun } = factorWord(token);
+
+        assert.ok(
+          text.includes(`${article} ${noun}`),
+          `"${text}" does not name ${token} the way src/publish/factor-vocab.ts spells it.`,
+        );
+        assert.doesNotMatch(text, CODE_LEAK, `"${text}" leaks an engine token or an English word.`);
+        assert.doesNotMatch(text, EM_DASH, `"${text}" uses a long dash or a double hyphen.`);
+      }),
+    );
+  });
+
+  it('never contains data punctuation or a code sentinel word, whatever the reading', () => {
+    fc.assert(
+      fc.property(anyWeakestLinkReading, (reading) => {
+        const text = formatWeakestLinkEs(reading);
+        assert.doesNotMatch(text, DATA_PUNCTUATION, `"${text}" leaks data punctuation.`);
+        assert.doesNotMatch(text, /\b(?:null|undefined|NaN)\b/i, `"${text}" leaks a code sentinel word.`);
+      }),
+    );
+  });
+
+  it('never names a factor when the day is clean or the field was never published', () => {
+    fc.assert(
+      fc.property(fc.constantFrom('clean' as const, 'unknown' as const), (kind) => {
+        const text = formatWeakestLinkEs({ kind });
+        for (const token of FACTOR_TOKENS) {
+          const { noun } = factorWord(token);
+          assert.ok(!text.includes(noun), `"${text}" names ${noun} even though the morning published no culprit for it.`);
+        }
+      }),
     );
   });
 });
