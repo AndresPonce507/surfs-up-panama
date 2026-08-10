@@ -596,6 +596,41 @@
       "s": "EXECUTED",
       "d": "PASS: total correction loader and slice-02 activation committed as ba931ef with Step-ID 02-01. The loader parses no applied state, returns diagnostics on malformed or foreign-unit bytes, and leaves later apply/recheck/clamp scenarios red for their mapped steps.",
       "t": "2026-08-10T20:49:35Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "Non-visual pure scoring seam only; slice-02 activation remains from 02-01. Builder acceptance intentionally remains blocked on Pre-requisite 1 / 02-03.",
+      "t": "2026-08-10T20:51:47Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "FAIL expected: forged-six-mornings scenario reached its archived-gate oracle and observed no_file instead of n_lt_10, because build.ts still passes null; Pre-requisite 1 belongs to 02-03.",
+      "t": "2026-08-10T20:52:51Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "FAIL expected: new generated re-check law shrank to forged n=1/reporters=1/b=0/se=0 and observed no_file; admitted height key also observed no_file because applyCorrection remained inert.",
+      "t": "2026-08-10T20:52:51Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS unit: 2 focused apply/scoring files, 20 tests; PASS learning unit suite: 8 files, 54 tests; PASS typecheck. Falsification: reversing score sign failed property with admitted n=10/reporters=5/b=-7.905694150420949. AT remains expected-red at build.ts null boundary: 57 scenarios, 22 passed, 28 skipped, 7 later slice-02 failures. Non-visual rationale: pure scoring verdict only, no rendered surface until 02-03 wiring.",
+      "t": "2026-08-10T20:54:28Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 02-02 pure apply re-check committed as 35e0af6 with Step-ID 02-02. Gate evidence is recomputed per height key and score record; accepted score delta uses -b/100. Clamp enforcement stays owned by mapped 02-05. Acceptance remains intentionally red at build.ts null boundary until 02-03.",
+      "t": "2026-08-10T20:55:42Z"
     }
   ]
 }
