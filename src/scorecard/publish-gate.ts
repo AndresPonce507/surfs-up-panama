@@ -62,6 +62,12 @@ const MIN_DISTINCT_TRUST_ELIGIBLE_REPORTERS = 5;
 const evaluateCountClause = (count: number, minimum: number): ClauseResult =>
   count >= minimum ? 'satisfied' : 'unsatisfied';
 
+/** Evaluates G3 from computed window evidence; missing or malformed evidence refuses fail-closed. */
+export const evaluateBiasClause = (bias: number, seGate: number): ClauseResult => {
+  if (!Number.isFinite(bias) || !Number.isFinite(seGate) || seGate < 0) return 'unavailable';
+  return Math.abs(bias) > 2 * seGate ? 'satisfied' : 'unsatisfied';
+};
+
 const allSatisfied = (clauses: GateClauses): boolean =>
   clauses.pairedObservations === 'satisfied' &&
   clauses.distinctReporters === 'satisfied' &&

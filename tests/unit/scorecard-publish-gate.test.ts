@@ -17,7 +17,7 @@ import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
 import { dayOneObservationSource } from '../../src/scorecard/observation-source';
-import { decidePublishGate, type ClauseResult } from '../../src/scorecard/publish-gate';
+import { decidePublishGate, evaluateBiasClause, type ClauseResult } from '../../src/scorecard/publish-gate';
 import { decideScorecardBlock, scorecardBlockFromObservationCount } from '../../src/scorecard/scorecard-block';
 import { REPORTS_REQUIRED } from '../../src/scorecard/threshold';
 
@@ -150,6 +150,21 @@ describe('publish gate — the claim is reachable at all', () => {
     });
     assert.equal(decision.claimOk, true, `the exact boundary must decide a claim; got clauses ${JSON.stringify(decision.clauses)}`);
     assert.deepEqual(decision.clauses, { pairedObservations: 'satisfied', distinctReporters: 'satisfied', bias: 'satisfied' });
+  });
+});
+
+describe('publish gate — computed bias evidence', () => {
+  it('uses the strict two-times-floored-error boundary and refuses missing or non-finite evidence', () => {
+    const finiteStandardError = fc.double({ min: 0, max: 100, noNaN: true, noDefaultInfinity: true });
+    fc.assert(
+      fc.property(finiteStandardError, (seGate) => {
+        const margin = Math.max(Math.abs(seGate) * 1e-6, 1e-9);
+        assert.equal(evaluateBiasClause(2 * seGate, seGate), 'unsatisfied', 'a bias exactly on 2 * se_gate is not enough');
+        assert.equal(evaluateBiasClause(2 * seGate + margin, seGate), 'satisfied', 'bias must strictly exceed 2 * se_gate');
+        assert.equal(evaluateBiasClause(Number.NaN, seGate), 'unavailable', 'a non-finite bias cannot earn a claim');
+        assert.equal(evaluateBiasClause(1, Number.NaN), 'unavailable', 'a non-finite floored error cannot earn a claim');
+      }),
+    );
   });
 });
 

@@ -1,5 +1,7 @@
 import { aggregateDaily, type DailyAggregate } from './daily-aggregate';
 import { pairResiduals, type PredictionSnapshot, type Residual, type ScorecardVariable, type SurfReport } from './pairing';
+import { evaluateBiasClause } from './publish-gate';
+import { decideScorecardBlock, type ScorecardBlock } from './scorecard-block';
 import { eligibleReports, type TrustGateConfig } from './trust-eligibility';
 import { deriveWindows, type WindowStat } from './windows';
 
@@ -16,7 +18,7 @@ export type ScorecardProjection = {
   readonly residuals: readonly Residual[];
   readonly daily: readonly DailyAggregate[];
   readonly keys: readonly WindowStat[];
-  readonly blocks: Readonly<Record<string, unknown>>;
+  readonly blocks: Readonly<Record<string, ScorecardBlock>>;
 };
 
 const allowedVariables: readonly ScorecardVariable[] = ['swell_h', 'score'];
@@ -26,6 +28,22 @@ const validateVariables = (variables: readonly string[] | undefined): void => {
     if (variable === 'wind') throw new Error('wind is not a scorecard variable and cannot form a residual');
     if (!allowedVariables.includes(variable as ScorecardVariable)) throw new Error(`unsupported scorecard variable: ${variable}`);
   }
+};
+
+const blocksFrom = (keys: readonly WindowStat[]): Readonly<Record<string, ScorecardBlock>> => {
+  const bySpot = keys
+    .filter((stat) => stat.window === '30d')
+    .reduce((spots, stat) => (spots.has(stat.spot_id) ? spots : new Map(spots).set(stat.spot_id, stat)), new Map<string, WindowStat>());
+  return Object.fromEntries(
+    [...bySpot.entries()].map(([spotId, stat]) => [
+      spotId,
+      decideScorecardBlock({
+        pairedObservations: stat.n,
+        distinctTrustEligibleReporters: stat.distinct_reporters,
+        biasClause: evaluateBiasClause(stat.bias, stat.se_gate),
+      }),
+    ]),
+  );
 };
 
 /** The slice-02 driving port. Later steps fill daily, keys and blocks from these residuals. */
@@ -38,10 +56,11 @@ export const projectScorecard = (input: ProjectionInput): ScorecardProjection =>
     selected.has(residual.variable),
   );
   const daily = aggregateDaily(gatedResiduals);
+  const keys = deriveWindows(daily, input.asOf, input.resolveReporter);
   return {
     residuals,
     daily,
-    keys: deriveWindows(daily, input.asOf, input.resolveReporter),
-    blocks: {},
+    keys,
+    blocks: blocksFrom(keys),
   };
 };
