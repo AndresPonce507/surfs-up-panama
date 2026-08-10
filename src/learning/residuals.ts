@@ -30,7 +30,7 @@ import { OPEN_ENDED_SIZE_BAND, sizeBands, type SizeBandToken } from '../data/siz
 import { hEff } from '../scoring/engine';
 import { leadBucketOf, SIGMA_EFF, TOP_BAND_NOMINAL_M, TOP_BAND_VARIANCE_M2 } from './constants';
 import type { ObservationRow, PredictionRow } from './inputs';
-import { collapseDeviceDayMedian } from './weights';
+import { collapseDeviceDayMedian, winsorizeSpotDayResiduals } from './weights';
 
 /** One weighted residual sample, still carrying who reported it so a key's distinct-reporter count can be formed later. */
 export type ResidualSample = {
@@ -40,6 +40,7 @@ export type ResidualSample = {
   /** Present for log-derived samples, so robustness can group one device-day. */
   readonly spot_id?: string;
   readonly session_day?: string;
+  readonly band_width_m?: number;
 };
 
 /** One height residual sample, keyed to the model and lead bucket it was measured on (06 section 5.1). */
@@ -64,7 +65,7 @@ export function formHeightResidualRows(
 
     for (const prediction of predictions) {
       if (!pairs(observation, prediction, observedHourMs)) continue;
-      const { mid, varianceM2 } = bandMidAndVarianceM(band);
+      const { mid, varianceM2, bandWidthM } = bandMidAndVarianceM(band);
       const value = hEff(prediction.swell_h_m, prediction.swell_t_s) - mid;
       rows.push({
         source: prediction.source,
@@ -75,6 +76,7 @@ export function formHeightResidualRows(
           device_id: deviceId,
           spot_id: observation.spot_id,
           session_day: sessionDay,
+          ...(bandWidthM === undefined ? {} : { band_width_m: bandWidthM }),
         },
       });
     }
@@ -148,12 +150,12 @@ function safeDateMs(iso: unknown): number | null {
 
 // ---------- band midpoint, variance, and precision weights (06 section 5.1, 6.1) ----------
 
-function bandMidAndVarianceM(band: SizeBandToken): { mid: number; varianceM2: number } {
+function bandMidAndVarianceM(band: SizeBandToken): { mid: number; varianceM2: number; bandWidthM?: number } {
   if (band === OPEN_ENDED_SIZE_BAND) return { mid: TOP_BAND_NOMINAL_M, varianceM2: TOP_BAND_VARIANCE_M2 };
   const row = sizeBands.find((candidate) => candidate.value === band);
   if (row === undefined) return { mid: TOP_BAND_NOMINAL_M, varianceM2: TOP_BAND_VARIANCE_M2 };
   const width = row.hi_m - row.lo_m;
-  return { mid: (row.lo_m + row.hi_m) / 2, varianceM2: (width * width) / 12 };
+  return { mid: (row.lo_m + row.hi_m) / 2, varianceM2: (width * width) / 12, bandWidthM: width };
 }
 
 /** w_precision = 1 / (sigma_eff^2 + width(band)^2/12), 06 section 6.1. */
@@ -180,7 +182,8 @@ function collapseHeightDeviceDays(rows: readonly HeightResidualRow[]): HeightRes
   for (const group of byKey.values()) {
     const exemplar = group[0];
     if (exemplar === undefined) continue;
-    for (const sample of collapseDeviceDayMedian(group.map((row) => row.sample))) {
+    const collapsedDeviceDays = collapseDeviceDayMedian(group.map((row) => row.sample));
+    for (const sample of winsorizeSpotDayResiduals(collapsedDeviceDays)) {
       collapsed.push({ source: exemplar.source, leadBucket: exemplar.leadBucket, sample: withoutSessionIdentity(sample) });
     }
   }
@@ -189,6 +192,6 @@ function collapseHeightDeviceDays(rows: readonly HeightResidualRow[]): HeightRes
 
 /** Session identity is only pre-weighting work; estimates expose no new stored field. */
 function withoutSessionIdentity(sample: ResidualSample): ResidualSample {
-  const { spot_id: _spotId, session_day: _sessionDay, ...residual } = sample;
+  const { spot_id: _spotId, session_day: _sessionDay, band_width_m: _bandWidthM, ...residual } = sample;
   return residual;
 }

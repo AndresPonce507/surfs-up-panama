@@ -10,6 +10,8 @@ export type DeviceDaySample = {
   readonly device_id: string;
   readonly value: number;
   readonly weight: number;
+  /** Finite width of this report's band when the residual is height-shaped. */
+  readonly band_width_m?: number;
 };
 
 /**
@@ -40,4 +42,41 @@ export function collapseDeviceDayMedian(samples: readonly DeviceDaySample[]): De
     if (median !== undefined) collapsed.push(median);
   }
   return collapsed;
+}
+
+/**
+ * After every device has one voice, fence a well-observed spot-day at two
+ * widths of that day's median report.  Three voices are the minimum for a
+ * same-day median to be meaningful.  An open-ended median has no honest
+ * finite width, so it is left for the ordinary shrinkage and clamp backstop.
+ */
+export function winsorizeSpotDayResiduals(samples: readonly DeviceDaySample[]): DeviceDaySample[] {
+  const positionsByDay = new Map<string, number[]>();
+  for (const [index, sample] of samples.entries()) {
+    if (sample.spot_id === undefined || sample.session_day === undefined) continue;
+    const key = `${sample.spot_id}\u0000${sample.session_day}`;
+    const positions = positionsByDay.get(key) ?? [];
+    positions.push(index);
+    positionsByDay.set(key, positions);
+  }
+
+  const replacements = new Map<number, DeviceDaySample>();
+  for (const positions of positionsByDay.values()) {
+    if (positions.length < 3) continue;
+    const day = positions.map((position) => samples[position]).filter((sample): sample is DeviceDaySample => sample !== undefined);
+    const ordered = [...day].sort((left, right) => left.value - right.value);
+    const median = ordered[Math.floor((ordered.length - 1) / 2)];
+    if (median === undefined) continue;
+    const width = median?.band_width_m;
+    if (width === undefined || !Number.isFinite(width)) continue;
+    const lower = median.value - 2 * width;
+    const upper = median.value + 2 * width;
+    for (const position of positions) {
+      const sample = samples[position];
+      if (sample === undefined) continue;
+      replacements.set(position, { ...sample, value: Math.min(upper, Math.max(lower, sample.value)) });
+    }
+  }
+
+  return samples.map((sample, index) => replacements.get(index) ?? sample);
 }
