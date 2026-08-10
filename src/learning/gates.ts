@@ -20,15 +20,25 @@
 // the repair, and it ships inactive here, so this launch behaviour reads
 // distinctness over every reporter, not yet only eligible ones.
 //
-// G3 (significance against the standard-error floor) and the rest of the
-// table are later steps' TDD cycles, each adding its own failing test before
-// it adds a line here -- not hinted at, not scaffolded, in this module ahead
-// of a red test that needs it.
+// G3, first half only (06 section 7; 09 section 13.3): a difference no
+// larger than twice its own standard error is indistinguishable from noise,
+// whatever G1 and G2 already cleared, and may never be marked applied. This
+// step's se is se_sample alone -- src/learning/estimate.ts's weighted sample
+// standard error, nothing floored yet. The anti-coordination floor that
+// replaces a too-good-to-be-honest se_sample with the physical noise floor is
+// 01-11's own red test; this module must not anticipate it here.
+//
+// The rest of the table is later steps' TDD cycles, each adding its own
+// failing test before it adds a line here -- not hinted at, not scaffolded,
+// in this module ahead of a red test that needs it.
 
 import { G1_MIN_MORNINGS } from './constants';
 
 /** G2, 06 section 7: fewer distinct reporter_key values than this and a key may never be marked applied. */
 export const G2_MIN_REPORTERS = 5;
+
+/** G3, 06 section 7: a difference must clear this many multiples of its own stored standard error to be significant. */
+export const G3_SIGNIFICANCE_MULTIPLE = 2;
 
 /** What one gate call needs to know about a key: everything G1 through G3 read from (06 section 7). */
 export type GateInput = { readonly n: number; readonly reporters: number; readonly b: number; readonly se: number };
@@ -42,6 +52,9 @@ export function gateCorrection(input: GateInput): GateVerdict {
   }
   if (input.reporters < G2_MIN_REPORTERS) {
     return { applied: false, reason: 'reporters_lt_5' };
+  }
+  if (Math.abs(input.b) <= G3_SIGNIFICANCE_MULTIPLE * input.se) {
+    return { applied: false, reason: 'not_significant' };
   }
   return { applied: true, reason: 'applied' };
 }
