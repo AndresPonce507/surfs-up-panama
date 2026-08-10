@@ -1,33 +1,63 @@
-/* Design tokens. SSOT: docs/product/architecture/09-design-system.md.
-   Every text/surface pair here has a computed WCAG ratio in that document's
-   contrast table; change a hex only together with a recomputed ratio.
-   Core palette adopted verbatim from application-architecture.md §11
-   (verified by recomputation, 2026-08-08). Day theme is default; dark
-   follows prefers-color-scheme only (Decisions needing Andres #5). */
+/* Design tokens. SSOT: docs/product/architecture/09-design-system.md, whose
+   contrast table currently still describes the OLD (pre-2026-08-10) palette
+   pending f-looks-like-the-ocean-and-reads-in-the-sun slice-04. Core colour
+   palette adopted verbatim from
+   docs/product/architecture/adr-blue-tropical-glass-palette.md (Accepted
+   2026-08-09) as of this file's 2026-08-10 rewrite; every text/surface pair
+   has a computed WCAG ratio there or, where the ADR is silent, alongside
+   the value below. Day theme is default; dark follows prefers-color-scheme
+   only (Decisions needing Andres #5). */
 :root {
   color-scheme: light dark;
 
-  /* colour — day */
-  --ink: #14181d;        /* body text, 17.82:1 on --bg */
-  --ink-2: #40484f;      /* secondary text, 9.30:1 on --bg */
-  --bg: #ffffff;
-  --surface: #f2f4f6;    /* cards */
-  --sunken: #e9edf1;     /* wells, image placeholders, disabled fills */
-  --hairline: #d9dee3;   /* decorative separators only, never meaning */
-  --ctrl: #5f6a73;       /* form control borders, 5.53:1 non-text */
-  --go: #0a6a2d;         /* primary action. 6.75:1 as text-on-bg carrier */
+  /* colour — day. Values from adr-blue-tropical-glass-palette.md (Accepted
+     2026-08-09), reproduced verbatim -- see that file's ten computed
+     contrast pairs. */
+  --ink: #08252e;        /* body text, 14.90:1 on --bg (ADR table) */
+  --ink-2: #3b5a63;      /* secondary text, 6.92:1 on --bg, 7.42:1 on --surface (ADR table) */
+  --bg: #f2f8fa;
+  --surface: #ffffff;    /* cards */
+  --sunken: #e3eff3;     /* wells, image placeholders, disabled fills */
+  --hairline: #c6dae0;   /* decorative separators only, never meaning */
+  --ctrl: #5f6a73;       /* form control borders, unchanged value; ~5.15:1 non-text
+                             on the new --bg (self-computed -- not one of the ADR's
+                             ten pairs, which does not cover --ctrl) */
+  --go: #0a6a2d;         /* primary action, unchanged. "The green stays green" (ADR) */
   --on-go: #ffffff;      /* 6.75:1 on --go */
-  --go-tint: rgba(10, 106, 45, 0.08); /* selected-control wash */
-  --warn: #7a5200;       /* staleness, offline. 6.92:1 on --bg */
+  --go-tint: rgba(10, 106, 45, 0.08); /* selected-control wash, unchanged --
+                                          still derived from --go, which did not change */
+  --warn: #7a5200;       /* staleness, offline, unchanged value. 6.45:1 on --bg (ADR table) */
   --warn-bg: #f6eedc;
-  --danger: #9e1c23;     /* errors, weakest link. 7.94:1 on --bg */
-  --accent: #0b57d0;     /* links, focus ring. 6.39:1 on --bg */
-  --hero-grad: linear-gradient(180deg, #f7fafc, #eaf1f5); /* dawn sky; worst stop #EAF1F5 */
+  --danger: #9e1c23;     /* errors, weakest link, unchanged value. 7.41:1 on --bg (ADR table) */
+  --accent: #0b5f6a;     /* links, focus ring. 6.85:1 on --bg (ADR table) */
+  --hero-grad: linear-gradient(158deg, #0a3a46 0%, #0d5866 72%, #0d5866 100%);
+  /* deep tropical water. #0D5866 (72%) is the ADR's named load-bearing worst
+     stop -- do not lighten it. The shipped gradient used to end on #10707F
+     (100%), which is LIGHTER than #0D5866 by relative luminance (0.132 vs
+     the ADR's own 0.080 floor for that stop), silently breaking the ADR's
+     own contrast promise: white title dropped to ~5.76:1 and #E8F7FA body
+     to ~5.24:1 against that stop, both under the 7:1 sunlight margin. The
+     ADR's floor is the contract (white title 8.06:1, #E8F7FA body 7.34:1
+     against #0D5866); the gradient stops are the implementation, so the
+     100% stop is capped at the load-bearing colour instead of lightening
+     past it -- the band now holds flat from 72% to 100% rather than
+     brightening further. */
+  --hero-ink: #ffffff;    /* hero title + score, the only text on --hero-grad
+                              that is not body copy. 8.06:1 on the load-
+                              bearing stop #0D5866 (ADR table). Not
+                              redeclared under dark theme: night's own
+                              lightest stop #0C5866 sits at the same ~0.080
+                              floor (see DARK_STOP_FLOOR_LUM), so this value
+                              clears it too. */
+  --hero-ink-2: #e8f7fa;  /* hero body text (the call paragraph). 7.34:1 on
+                              the same stop (ADR table); also clears night's
+                              #0C5866 floor with margin. */
 
   /* glass. Solid-fallback-first everywhere; only text using --ink may sit on
      glass (worst-case composite ratios in the design doc, all AAA) */
-  --glass: rgba(255, 255, 255, 0.88);
-  --glass-blur: blur(12px) saturate(140%);
+  --glass: rgba(255, 255, 255, 0.15);
+  --glass-line: rgba(255, 255, 255, 0.26);
+  --glass-blur: blur(14px) saturate(150%);
 
   /* elevation. Sunlight kills subtle shadows: edges come from borders and
      surface steps, shadows are secondary */
@@ -75,22 +105,38 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --ink: #edf1f4;      /* 16.26:1 on --bg */
-    --ink-2: #aab4be;    /* 8.78:1 on --bg */
-    --bg: #10141a;
-    --surface: #1a2029;
-    --sunken: #161c24;
-    --hairline: #2a323c;
-    --ctrl: #8a949e;     /* 5.99:1 non-text */
-    --go: #57c785;
-    --on-go: #10141a;    /* 8.72:1 on --go */
-    --go-tint: rgba(87, 199, 133, 0.12);
-    --warn: #e3a83b;     /* 8.73:1 on --bg */
+    /* colour — night. Values from adr-blue-tropical-glass-palette.md
+       (Accepted 2026-08-09), reproduced verbatim. The ADR's ten computed
+       pairs are day-theme only; ratios below are self-computed to fill
+       that gap. */
+    --ink: #e4f2f5;      /* body text, ~7.04:1 on the gradient's lightest
+                             stop #0C5866 (self-computed; clears 7:1 by a
+                             thin margin) */
+    --ink-2: #9dbac2;
+    --bg: #061a21;
+    --surface: #0c2830;
+    --sunken: #123039;
+    --hairline: #1b424d;
+    --ctrl: #8a949e;     /* form control borders, unchanged value; ~5.78:1
+                             non-text on the new --bg (self-computed) */
+    --go: #6ed694;
+    --on-go: #04240f;
+    --go-tint: rgba(87, 199, 133, 0.12); /* unchanged -- still the alpha tint
+                                             of the OLD dark --go (#57c785);
+                                             now visibly off from the new
+                                             --go (#6ED694). Flagged, not
+                                             recoloured: not an ADR value */
+    --warn: #e3a85f;
     --warn-bg: #2b2412;
-    --danger: #f2707a;   /* 6.49:1 on --bg */
-    --accent: #8ab4f8;   /* 8.76:1 on --bg */
-    --hero-grad: linear-gradient(180deg, #1a2029, #1e2a36); /* pre-dawn; worst stop #1E2A36 */
-    --glass: rgba(16, 20, 26, 0.84);
+    --danger: #f2848d;
+    --accent: #6fcfdd;   /* links, focus ring. ~4.47:1 on the gradient's
+                             lightest stop #0C5866 (self-computed; the hero
+                             title is large/bold so it clears the 3:1
+                             non-text bar there, but is under the 4.5:1
+                             all-text bar) */
+    --hero-grad: linear-gradient(158deg, #04222b 0%, #093f4c 74%, #0c5866 100%);
+    --glass: rgba(255, 255, 255, 0.09);
+    --glass-line: rgba(255, 255, 255, 0.16);
     --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-2: 0 4px 16px rgba(0, 0, 0, 0.5);
   }
