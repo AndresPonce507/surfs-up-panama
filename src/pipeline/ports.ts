@@ -21,7 +21,7 @@ import type { SpotSeed, SwellTrain, WindObs } from '../scoring/engine';
 
 export interface IngestStore {
   /** Archive a verbatim provider response in the raw forensic prefix. */
-  putRaw(key: string, body: string): Promise<void>;
+  putRaw(key: string, body: RawProviderPayload): Promise<void>;
   /** S3 conditional PUT (If-None-Match:*): first prediction write wins. */
   putPredictionIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'>;
 }
@@ -45,8 +45,12 @@ export interface Clock {
 
 export type SourceFailure = 'error' | 'malformed' | 'stale' | 'dark';
 
+/** A forensic raw archive preserves either a text API response or binary
+ * provider bytes. Normalized data is separate and always crosses the port. */
+export type RawProviderPayload = string | Uint8Array;
+
 export type SourceResult<T> =
-  | { ok: true; verbatim: string; data: T }
+  | { ok: true; verbatim: RawProviderPayload; data: T }
   | { ok: false; reason: SourceFailure };
 
 /** One normalized hour of one wave member. land_masked per domain-model section 17. */

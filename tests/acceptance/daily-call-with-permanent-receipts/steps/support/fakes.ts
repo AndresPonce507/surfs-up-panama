@@ -9,6 +9,7 @@ import type {
   ForecastSource,
   IngestStore,
   MemberSeries,
+  RawProviderPayload,
   SourceFailure,
   SourceResult,
   TideHour,
@@ -25,6 +26,7 @@ import {
 
 export class InMemoryStore implements IngestStore, BuildStore {
   readonly objects = new Map<string, string>();
+  readonly rawObjects = new Map<string, RawProviderPayload>();
 
   async putIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
     // S3 If-None-Match:* semantics: first write wins, the duplicate never
@@ -43,11 +45,11 @@ export class InMemoryStore implements IngestStore, BuildStore {
   }
 
   async list(prefix: string): Promise<string[]> {
-    return [...this.objects.keys()].filter((k) => k.startsWith(prefix)).sort();
+    return [...new Set([...this.objects.keys(), ...this.rawObjects.keys()])].filter((k) => k.startsWith(prefix)).sort();
   }
 
-  async putRaw(key: string, body: string): Promise<void> {
-    return this.put(key, body);
+  async putRaw(key: string, body: RawProviderPayload): Promise<void> {
+    this.rawObjects.set(key, body);
   }
 
   async putPredictionIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {

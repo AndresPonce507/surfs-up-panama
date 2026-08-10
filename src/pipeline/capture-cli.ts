@@ -22,15 +22,17 @@ import { resolve } from 'node:path';
 import { runIngestOnce } from './ingest';
 import { FilesystemStore } from './adapters/filesystem-store';
 import { OpenMeteoForecastSource } from './adapters/open-meteo-source';
+import { NoaaGfswaveForecastSource } from './adapters/noaa-gfswave-grib2';
 import { loadLaunchSpotCoordinates } from './adapters/spot-coordinates';
 import { loadLaunchSpotSeeds } from '../data/launch-spots';
-import type { Clock, ForecastSource, IngestOutcome } from './ports';
+import type { Clock, ForecastSource, ForecastSourceRegistration, IngestOutcome } from './ports';
 import type { SpotSeed } from '../scoring/engine';
 
 const DEFAULT_SNAPSHOT_ROOT = 'data/predictions-capture';
 
 export type CaptureOverrides = {
   readonly source?: ForecastSource;
+  readonly sources?: readonly ForecastSourceRegistration[];
   readonly spots?: readonly SpotSeed[];
   readonly clock?: Clock;
 };
@@ -45,10 +47,14 @@ export async function runCapture(argv: readonly string[], overrides: CaptureOver
   const clock = overrides.clock ?? { now: () => new Date() };
   const spots = overrides.spots ?? loadLaunchSpotSeeds();
   const source = overrides.source ?? defaultSource(spots, clock);
+  const sources = overrides.sources ?? (overrides.source === undefined ? defaultSourceRegistry(spots, clock, source) : undefined);
   const store = new FilesystemStore(root);
 
   const startedAt = clock.now().toISOString();
-  const outcome = await runIngestOnce({ source, store, clock, spots: [...spots] });
+  const ingestDeps = sources === undefined
+    ? { source, store, clock, spots: [...spots] }
+    : { source, sources, store, clock, spots: [...spots] };
+  const outcome = await runIngestOnce(ingestDeps);
   const coverage = await summarizeCoverage(store);
 
   const provenancePath = resolve(root, 'PROVENANCE.json');
@@ -79,6 +85,24 @@ export async function runCapture(argv: readonly string[], overrides: CaptureOver
 }
 
 function defaultSource(spots: readonly SpotSeed[], clock: Clock): ForecastSource {
+  const coordinates = requiredCoordinates(spots);
+  return new OpenMeteoForecastSource(new Map(coordinates.map((coordinate) => [coordinate.spot_id, coordinate])), clock);
+}
+
+function defaultSourceRegistry(
+  spots: readonly SpotSeed[],
+  clock: Clock,
+  primary: ForecastSource,
+): readonly ForecastSourceRegistration[] {
+  const coordinates = requiredCoordinates(spots);
+  const bySpotId = new Map(coordinates.map((coordinate) => [coordinate.spot_id, coordinate]));
+  return [
+    { provider_id: 'open-meteo-marine', source: primary },
+    { provider_id: 'noaa-gfswave-grib2', source: new NoaaGfswaveForecastSource(bySpotId, clock) },
+  ];
+}
+
+function requiredCoordinates(spots: readonly SpotSeed[]) {
   const coordinates = loadLaunchSpotCoordinates();
   const bySpotId = new Map(coordinates.map((coordinate) => [coordinate.spot_id, coordinate]));
   for (const spot of spots) {
@@ -86,7 +110,7 @@ function defaultSource(spots: readonly SpotSeed[], clock: Clock): ForecastSource
       throw new Error(`pipeline:capture refused: WHAT ${spot.spot_id} has no registered coordinate; WHY the forecast source needs a real lat/lon per spot; HOW add it to data/spots/pa-pacific.yaml or pass an explicit source override.`);
     }
   }
-  return new OpenMeteoForecastSource(bySpotId, clock);
+  return coordinates;
 }
 
 async function summarizeCoverage(store: FilesystemStore): Promise<{ readonly date: string; readonly sources_present: string[] }[]> {

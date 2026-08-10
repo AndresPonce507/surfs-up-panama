@@ -48,9 +48,9 @@ export async function runIngestOnce(deps: IngestDeps): Promise<IngestOutcome> {
   const sources = sourceRegistry(deps);
   for (const spot of spots) {
     const wind = await deps.source.fetchWind(spot.spot_id);
-    if (wind.ok) await deps.store.putRaw(rawKey('open-meteo-wind', deps.clock.now()), wind.verbatim);
+    if (wind.ok) await deps.store.putRaw(rawKey('open-meteo-wind', deps.clock.now(), wind.verbatim), wind.verbatim);
     const tide = await deps.source.fetchTide(spot.spot_id);
-    if (tide.ok) await deps.store.putRaw(rawKey('coops', deps.clock.now()), tide.verbatim);
+    if (tide.ok) await deps.store.putRaw(rawKey('coops', deps.clock.now(), tide.verbatim), tide.verbatim);
 
     for (const registration of sources) {
       const waves = await registration.source.fetchWaveMembers(spot.spot_id);
@@ -58,7 +58,7 @@ export async function runIngestOnce(deps: IngestDeps): Promise<IngestOutcome> {
         events.push({ type: 'wave_source_unavailable', detail: `${registration.provider_id}:${waves.reason}` });
         continue;
       }
-      await deps.store.putRaw(rawKey(registration.provider_id, deps.clock.now()), waves.verbatim);
+      await deps.store.putRaw(rawKey(registration.provider_id, deps.clock.now(), waves.verbatim), waves.verbatim);
       for (const member of waves.data) {
         addMemberRows(recordsByKey, member, spot.spot_id, deps.clock.now(), wind.ok ? wind.data : [], tide.ok ? tide.data : []);
       }
@@ -136,8 +136,9 @@ function differenceInHours(validTimestamp: string, runTimestamp: string): number
   return Math.round((Date.parse(validTimestamp) - Date.parse(runTimestamp)) / 3_600_000);
 }
 
-function rawKey(provider: string, now: Date): string {
+function rawKey(provider: string, now: Date, body: string | Uint8Array): string {
   const date = now.toISOString().slice(0, 10);
   const hour = now.toISOString().slice(11, 13);
-  return `raw/${provider}/dt=${date}/${hour}/payload.json`;
+  const extension = body instanceof Uint8Array ? 'grib2' : 'json';
+  return `raw/${provider}/dt=${date}/${hour}/payload.${extension}`;
 }

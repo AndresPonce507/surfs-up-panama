@@ -13,12 +13,12 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
 
-import type { BuildStore, IngestStore } from '../ports';
+import type { BuildStore, IngestStore, RawProviderPayload } from '../ports';
 
 export class FilesystemStore implements IngestStore, BuildStore {
   constructor(private readonly root: string) {}
 
-  async putRaw(key: string, body: string): Promise<void> {
+  async putRaw(key: string, body: RawProviderPayload): Promise<void> {
     await this.write(key, body);
   }
 
@@ -54,7 +54,7 @@ export class FilesystemStore implements IngestStore, BuildStore {
     return join(this.root, key);
   }
 
-  private async write(key: string, body: string): Promise<void> {
+  private async write(key: string, body: string | Uint8Array): Promise<void> {
     const target = this.targetPath(key);
     await mkdir(dirname(target), { recursive: true });
     await writeFile(target, body);

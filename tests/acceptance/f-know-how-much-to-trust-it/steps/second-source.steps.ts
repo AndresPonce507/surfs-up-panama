@@ -24,7 +24,9 @@
 
 import { Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
-import { existsSync, readdirSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import type { PipelineWorld } from '../../daily-call-with-permanent-receipts/steps/support/world';
@@ -252,6 +254,8 @@ Then('ninguna playa pasa de confianza baja', function (this: PipelineWorld) {
 
 const ADAPTER_FIXTURE_DIR = fileURLToPath(new URL('../fixtures/noaa-gfswave-grib2/', import.meta.url));
 const ADAPTER_MODULE = '../../../../src/pipeline/adapters/noaa-gfswave-grib2';
+const ADAPTER_CAPTURE = 'gfswave.t00z.epacif.0p16.f000.20260808.grib2';
+const ADAPTER_RECEIPT = 'capture-receipt.json';
 
 Given('una respuesta real de la fuente independiente capturada tal cual llegó', function (this: PipelineWorld) {
   // Existence is asserted in the Then with the rest of the outcome, so a
@@ -275,11 +279,7 @@ When('esa respuesta se traduce al idioma de los miembros', { timeout: 60_000 }, 
       world.adapterOutcome = { failure: `el adaptador existe pero no expone parseGfswaveGrib2` };
       return;
     }
-    const { readFileSync } = await import('node:fs');
-    const { join } = await import('node:path');
-    const first = readdirSync(ADAPTER_FIXTURE_DIR)[0];
-    assert.ok(first !== undefined, 'unreachable: emptiness handled above');
-    const bytes = readFileSync(join(ADAPTER_FIXTURE_DIR, first));
+    const bytes = readFileSync(join(ADAPTER_FIXTURE_DIR, ADAPTER_CAPTURE));
     world.adapterOutcome = { members: (parse as (b: Uint8Array) => unknown)(bytes) };
   } catch (error) {
     world.adapterOutcome = {
@@ -311,6 +311,30 @@ Then('salen miembros con su corrida atribuida y sus horas en el idioma de la cas
         if (!Array.isArray(hours) || hours.length === 0) {
           findings.push(`el miembro "${String(member.source)}" salió sin horas`);
         }
+      }
+      const receipt = JSON.parse(readFileSync(join(ADAPTER_FIXTURE_DIR, ADAPTER_RECEIPT), 'utf8')) as {
+        request: { url: string };
+        response: { body_file: string; byte_count: number; sha256: string };
+      };
+      const captured = readFileSync(join(ADAPTER_FIXTURE_DIR, receipt.response.body_file));
+      if (!receipt.request.url.includes('filter_gfswave.pl') || receipt.response.body_file !== ADAPTER_CAPTURE) {
+        findings.push('el recibo de captura no identifica la petición NOAA ni el archivo GRIB2 que el adaptador leyó');
+      }
+      if (captured.byteLength !== receipt.response.byte_count) {
+        findings.push(`la captura tiene ${captured.byteLength} bytes, no los ${receipt.response.byte_count} asentados en el recibo`);
+      }
+      if (createHash('sha256').update(captured).digest('hex') !== receipt.response.sha256) {
+        findings.push('la huella SHA-256 de la captura no coincide con su recibo de NOAA');
+      }
+      const first = (members as { source?: unknown; run_ts?: unknown; hours?: unknown }[])[0];
+      const hour = Array.isArray(first?.hours) ? first.hours[0] as { valid_ts?: unknown; swell?: unknown; land_masked?: unknown } | undefined : undefined;
+      const swell = hour?.swell as { h_m?: unknown; t_s?: unknown; dir_deg?: unknown } | undefined;
+      if (first?.source !== 'ncep_gfswave016' || first.run_ts !== '2026-08-08T00:00:00.000Z') {
+        findings.push('la captura NOAA no conserva el miembro ncep_gfswave016 ni su corrida 2026-08-08T00:00:00.000Z');
+      }
+      if (hour?.valid_ts !== '2026-08-08T00:00:00.000Z' || hour?.land_masked !== false
+        || swell?.h_m !== 3.31 || swell.t_s !== 8.5 || swell.dir_deg !== 146.63) {
+        findings.push('la captura NOAA no conserva la hora, unidades normalizadas o decisión de máscara asentadas independientemente');
       }
     }
   }

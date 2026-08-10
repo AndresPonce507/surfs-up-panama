@@ -5,12 +5,14 @@
 // narrow: this adapter proves the captured NOAA P2 shape, rather than
 // pretending every GRIB2 product has the same packing.
 
-import type { MemberHour, MemberSeries } from '../ports';
+import type { Clock, ForecastSource, MemberHour, MemberSeries, SourceResult, TideHour, WindHour } from '../ports';
+import type { SpotCoordinate } from './spot-coordinates';
 
 const GRIB_MAGIC = 'GRIB';
 const GRIB_END = '7777';
 const GRIB2_EDITION = 2;
 const NOAA_GFSWAVE_MEMBER = 'ncep_gfswave016';
+const NOAA_FILTER_ENDPOINT = 'https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl';
 
 type WaveField = 'height' | 'period' | 'direction';
 
@@ -28,6 +30,62 @@ type DecodedHour = {
 
 type SectionIndex = ReadonlyMap<number, number>;
 type IndexedMessage = { readonly bytes: Uint8Array; readonly sections: SectionIndex };
+
+/**
+ * NOAA's public GFS-Wave grib_filter adapter. It is a real ForecastSource,
+ * not a parser reachable only from tests: fetchWaveMembers preserves the
+ * binary response byte-for-byte for the raw archive, then crosses the port
+ * with normalized member data. Wind and tide stay with their dedicated
+ * providers in the composition root.
+ */
+export class NoaaGfswaveForecastSource implements ForecastSource {
+  constructor(
+    private readonly spotsById: ReadonlyMap<string, SpotCoordinate>,
+    private readonly clock: Clock,
+    private readonly fetchImpl: typeof fetch = fetch,
+  ) {}
+
+  async fetchWaveMembers(spot_id: string): Promise<SourceResult<MemberSeries[]>> {
+    const spot = this.requireSpot(spot_id);
+    try {
+      const response = await this.fetchImpl(noaaFilterUrl(spot, this.clock.now()));
+      if (!response.ok) return { ok: false, reason: 'error' };
+      const verbatim = new Uint8Array(await response.arrayBuffer());
+      const data = parseGfswaveGrib2(verbatim);
+      return { ok: true, verbatim, data };
+    } catch {
+      return { ok: false, reason: 'error' };
+    }
+  }
+
+  fetchWind(_spot_id: string): Promise<SourceResult<WindHour[]>> {
+    return Promise.resolve({ ok: false, reason: 'dark' });
+  }
+
+  fetchTide(_spot_id: string): Promise<SourceResult<TideHour[]>> {
+    return Promise.resolve({ ok: false, reason: 'dark' });
+  }
+
+  private requireSpot(spot_id: string): SpotCoordinate {
+    const spot = this.spotsById.get(spot_id);
+    if (spot === undefined) throw new Error(`NoaaGfswaveForecastSource: no coordinate registered for ${spot_id}`);
+    return spot;
+  }
+}
+
+function noaaFilterUrl(spot: SpotCoordinate, now: Date): string {
+  const runDate = now.toISOString().slice(0, 10).replaceAll('-', '');
+  const leftlon = coordinateText(spot.lon - 2);
+  const rightlon = coordinateText(spot.lon + 2);
+  const toplat = coordinateText(spot.lat + 2);
+  const bottomlat = coordinateText(spot.lat - 2);
+  const directory = `/gfs.${runDate}/00/wave/gridded`;
+  return `${NOAA_FILTER_ENDPOINT}?file=gfswave.t00z.epacif.0p16.f000.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=${leftlon}&rightlon=${rightlon}&toplat=${toplat}&bottomlat=${bottomlat}&dir=${encodeURIComponent(directory)}`;
+}
+
+function coordinateText(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
+}
 
 /**
  * Decodes the real NOAA gfswave grib_filter response used by the independent

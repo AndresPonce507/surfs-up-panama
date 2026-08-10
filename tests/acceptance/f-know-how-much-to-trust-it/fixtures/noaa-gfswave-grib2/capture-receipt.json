@@ -1,0 +1,36 @@
+{
+  "capture_kind": "reproducible-public-provider-response",
+  "provider": "NOAA NCEP NOMADS",
+  "retrieved_at": "2026-08-10T21:16:53Z",
+  "request": {
+    "method": "GET",
+    "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.epacif.0p16.f000.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=-83&rightlon=-79&toplat=10&bottomlat=6&dir=%2Fgfs.20260808%2F00%2Fwave%2Fgridded",
+    "parameters": {
+      "file": "gfswave.t00z.epacif.0p16.f000.grib2",
+      "all_lev": "on",
+      "var_HTSGW": "on",
+      "var_PERPW": "on",
+      "var_DIRPW": "on",
+      "subregion": "",
+      "leftlon": "-83",
+      "rightlon": "-79",
+      "toplat": "10",
+      "bottomlat": "6",
+      "dir": "/gfs.20260808/00/wave/gridded"
+    }
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "content-type": "application/octet-stream",
+      "content-description": "grib2 file",
+      "content-disposition": "attachment; filename=\"gfswave.t00z.epacif.0p16.f000.grib2\"",
+      "content-transfer-encoding": "binary",
+      "date": "Mon, 10 Aug 2026 21:16:53 GMT"
+    },
+    "body_file": "gfswave.t00z.epacif.0p16.f000.20260808.grib2",
+    "byte_count": 91681,
+    "sha256": "4d604d95076bf4666d42ff109d26504e001203895679bc4983a21d31ea10f134"
+  },
+  "reproduction": "curl --fail --silent --show-error --location --dump-header headers.txt --output gfswave.t00z.epacif.0p16.f000.20260808.grib2 '<request.url>'"
+}
