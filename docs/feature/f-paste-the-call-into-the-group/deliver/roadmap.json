@@ -221,10 +221,10 @@
             "A configured-site change changes preview addresses."
           ],
           "test_file": "tests/acceptance/f-paste-the-call-into-the-group/link-preview-names-the-spot.feature",
-          "scenario_name": "El anuncio cuenta la misma historia que el mensaje pegado, sin texto técnico",
+          "scenario_name": "El anuncio escrito cuenta completo el llamado del día",
           "scenario_mappings": [
-            {"scenario_name": "El anuncio cuenta la misma historia que el mensaje pegado, sin texto técnico"},
-            {"scenario_name": "La dirección del anuncio deriva del sitio configurado, nunca de un nombre fijo"}
+            {"scenario_name": "El anuncio escrito cuenta completo el llamado del día"},
+            {"scenario_name": "El anuncio escrito cambia de dirección cuando cambia el sitio"}
           ],
           "slice_id": "slice-03",
           "surface_classification": "non-visual",
@@ -245,9 +245,10 @@
             "Pages without a call keep their existing head."
           ],
           "test_file": "tests/acceptance/f-paste-the-call-into-the-group/link-preview-names-the-spot.feature",
-          "scenario_name": "La dirección permanente de la página no carga el sello del build",
+          "scenario_name": "La página base publica el anuncio preparado",
           "scenario_mappings": [
-            {"scenario_name": "La dirección permanente de la página no carga el sello del build"}
+            {"scenario_name": "La página base publica el anuncio preparado"},
+            {"scenario_name": "La página base sin anuncio conserva su cabecera"}
           ],
           "slice_id": "slice-03",
           "surface_classification": "non-visual",
@@ -271,6 +272,9 @@
           "scenario_name": "El anuncio del enlace nombra el mejor spot del día y trae su puntaje",
           "scenario_mappings": [
             {"scenario_name": "El anuncio del enlace nombra el mejor spot del día y trae su puntaje"},
+            {"scenario_name": "El anuncio cuenta la misma historia que el mensaje pegado, sin texto técnico"},
+            {"scenario_name": "La dirección del anuncio deriva del sitio configurado, nunca de un nombre fijo"},
+            {"scenario_name": "La dirección permanente de la página no carga el sello del build"},
             {"scenario_name": "El anuncio no engorda el primer vuelo"}
           ],
           "slice_id": "slice-03",

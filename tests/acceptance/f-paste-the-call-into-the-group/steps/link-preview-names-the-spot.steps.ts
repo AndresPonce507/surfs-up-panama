@@ -3,12 +3,15 @@
 // off the published page itself, served over HTTP. The Givens and Whens are
 // slice-01's steps, reused; only the announcement oracles are new.
 
-import { Then } from '@cucumber/cucumber';
+import { Before, Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 
 import {
   requiredExpected,
   requiredHome,
+  requiredRoot,
   stash,
   type PasteWorld,
   type Stash,
@@ -23,6 +26,7 @@ import {
   allAnnouncements,
   announcedContent,
   permanentAddress,
+  publishSurface,
 } from './support/preview-surface';
 
 const MISSING_ANNOUNCEMENT =
@@ -30,6 +34,180 @@ const MISSING_ANNOUNCEMENT =
 
 const HOW_ANNOUNCE =
   'anunciar el enlace en la propia página publicada: título con el mejor spot, descripción con su puntaje, dirección absoluta del sitio configurado y es_PA declarado (sección 13).';
+
+type PreparedAnnouncement = {
+  readonly title: string;
+  readonly description: string;
+  readonly url: string;
+  readonly locale: string;
+};
+
+const BASE_PROBE_PATH = 'index.html';
+
+// Slice-03 is authored ahead of its implementation. Loading the owned public
+// boundary inside the When keeps the intended RED an assertion failure, not a
+// Cucumber collection failure while link-announcement.ts is still absent.
+async function composeAnnouncement(input: { readonly spotName: string; readonly score: number; readonly site: string }): Promise<PreparedAnnouncement> {
+  let boundary: Record<string, unknown>;
+  try {
+    boundary = await import(new URL('../../../../src/share/link-announcement.ts', import.meta.url).href) as Record<string, unknown>;
+  } catch {
+    assert.fail('falta el anuncio escrito del enlace: crear la frontera pública composeLinkAnnouncement en src/share/link-announcement.ts');
+  }
+  const compose = boundary?.composeLinkAnnouncement;
+  assert.equal(
+    typeof compose,
+    'function',
+    'el anuncio escrito debe ofrecer composeLinkAnnouncement para que la página y el mensaje compartan una sola historia',
+  );
+  const announced = await (compose as (value: typeof input) => PreparedAnnouncement | Promise<PreparedAnnouncement>)(input);
+  return announced;
+}
+
+function contentOf(html: string, property: string): string | null {
+  for (const tag of html.match(/<meta\b[^>]*>/gi) ?? []) {
+    const name = /\b(?:property|name)=(['"])(.*?)\1/i.exec(tag)?.[2];
+    if (name !== property) continue;
+    return /\bcontent=(['"])(.*?)\1/i.exec(tag)?.[2] ?? null;
+  }
+  return null;
+}
+
+function buildBaseProbe(root: string, announcement: PreparedAnnouncement | undefined): string {
+  const prepared = announcement === undefined
+    ? "const baseProps = { locale: 'es', title: 'La mañana publicada', currentPath: '/' };"
+    : `const baseProps = { locale: 'es', title: 'La mañana publicada', currentPath: '/', announcement: ${JSON.stringify(announcement)} };`;
+  writeFileSync(
+    join(root, 'src/pages/index.astro'),
+    `---\nimport Base from '../layouts/Base.astro';\n${prepared}\n---\n<Base {...(baseProps as any)}><main>La mañana publicada</main></Base>\n`,
+  );
+  const published = publishSurface(root);
+  assert.equal(
+    published.status,
+    0,
+    `la prueba no pudo publicar la página base antes de alcanzar su oráculo:\n${published.output}`,
+  );
+  return readFileSync(join(root, 'dist', BASE_PROBE_PATH), 'utf8');
+}
+
+// DISTILL scenarios stay present but dormant until DELIVER deliberately opens
+// one named step. This keeps the normal acceptance command free of future
+// REDs while allowing PASTE_JIT=1 plus one @jit-03-NN tag to prove its RED.
+Before({ tags: '@jit' }, function () {
+  if (process.env.PASTE_JIT === '1') return;
+  return 'skipped';
+});
+
+// ---------- 03-01: pure link-announcement boundary ----------
+
+Given(
+  'un llamado listo para anunciar nombra {string} con {int} puntos',
+  function (this: PasteWorld, spotName: string, score: number) {
+    stash(this).announcementInput = { spotName, score, site: '' };
+  },
+);
+
+When('se prepara el anuncio para el sitio {string}', async function (this: PasteWorld, site: string) {
+  const state = stash(this);
+  const input = state.announcementInput;
+  assert.ok(input !== undefined, 'test fixture error: el llamado listo para anunciar es requerido');
+  state.announcementInput = { ...input, site };
+  state.announcement = await composeAnnouncement(state.announcementInput);
+});
+
+Then(
+  'el anuncio nombra {string} y sus {int} puntos en el título y la descripción',
+  function (this: PasteWorld, spotName: string, score: number) {
+    const announced = stash(this).announcement;
+    assert.ok(announced !== undefined, 'test fixture error: el anuncio preparado es requerido');
+    const findings: string[] = [];
+    for (const [place, words] of [['título', announced.title], ['descripción', announced.description]] as const) {
+      if (!words.toLocaleLowerCase('es-PA').includes(spotName.toLocaleLowerCase('es-PA'))) {
+        findings.push(`el ${place} no nombra ${spotName}: dice "${words}"`);
+      }
+      if (!new RegExp(`\\b${score}\\b`).test(words)) {
+        findings.push(`el ${place} no trae los ${score} puntos: dice "${words}"`);
+      }
+    }
+    assertBehavior(findings, 'componer título y descripción desde el mismo llamado, sin dos historias que puedan divergir.');
+  },
+);
+
+Then('el anuncio habla en español claro, sin texto técnico', function (this: PasteWorld) {
+  const announced = stash(this).announcement;
+  assert.ok(announced !== undefined, 'test fixture error: el anuncio preparado es requerido');
+  assertBehavior(
+    messagePurityFindings(`${announced.title}\n${announced.description}`),
+    'usar español de a pie para el título y la descripción, igual que el mensaje que se pega.',
+  );
+});
+
+Then('la dirección del anuncio usa el sitio {string}', function (this: PasteWorld, site: string) {
+  const announced = stash(this).announcement;
+  assert.ok(announced !== undefined, 'test fixture error: el anuncio preparado es requerido');
+  const findings: string[] = [];
+  try {
+    if (new URL(announced.url).origin !== new URL(site).origin) {
+      findings.push(`la dirección anuncia ${announced.url}, no el sitio configurado ${site}`);
+    }
+  } catch {
+    findings.push(`la dirección del anuncio no es completa: "${announced.url}"`);
+  }
+  assertBehavior(findings, 'derivar la dirección del anuncio del sitio configurado, nunca de un nombre fijo.');
+});
+
+// ---------- 03-02: Base.astro publication boundary ----------
+
+Given(
+  'un anuncio listo para publicar sobre {string} con {int} puntos',
+  function (this: PasteWorld, spotName: string, score: number) {
+    stash(this).announcement = {
+      title: `${spotName}: ${score} puntos`,
+      description: `${spotName} tiene ${score} puntos para hoy.`,
+      url: 'https://olas-registradas.example/',
+      locale: 'es_PA',
+    };
+  },
+);
+
+When('la página base publica ese anuncio', function (this: PasteWorld) {
+  const state = stash(this);
+  const announced = state.announcement;
+  assert.ok(announced !== undefined, 'test fixture error: el anuncio listo para publicar es requerido');
+  state.announcementProbeHtml = buildBaseProbe(requiredRoot(state), announced);
+});
+
+Then('la publicación lleva el título, la descripción, la dirección y el idioma del anuncio', function (this: PasteWorld) {
+  const state = stash(this);
+  const announced = state.announcement;
+  const html = state.announcementProbeHtml;
+  assert.ok(announced !== undefined && html !== undefined, 'test fixture error: la publicación del anuncio es requerida');
+  const findings: string[] = [];
+  for (const [property, expected] of [
+    ['og:title', announced.title],
+    ['og:description', announced.description],
+    ['og:url', announced.url],
+    ['og:locale', announced.locale],
+  ] as const) {
+    if (contentOf(html, property) !== expected) findings.push(`${property} no publica el anuncio preparado`);
+  }
+  assertBehavior(findings, 'Base.astro publica los cuatro datos del anuncio cuando una página se los entrega.');
+});
+
+When('la página base publica una página sin anuncio', function (this: PasteWorld) {
+  stash(this).bareProbeHtml = buildBaseProbe(requiredRoot(stash(this)), undefined);
+});
+
+Then('la publicación conserva su título y no inventa un anuncio', function (this: PasteWorld) {
+  const html = stash(this).bareProbeHtml;
+  assert.ok(html !== undefined, 'test fixture error: la publicación sin anuncio es requerida');
+  const findings: string[] = [];
+  if (!html.includes('<title>La mañana publicada</title>')) findings.push('la página sin anuncio perdió su título existente');
+  for (const property of ['og:title', 'og:description', 'og:url', 'og:locale']) {
+    if (contentOf(html, property) !== null) findings.push(`la página sin anuncio inventa ${property}`);
+  }
+  assertBehavior(findings, 'conservar la cabecera existente cuando una página no entrega un anuncio.');
+});
 
 async function anchorMessage(state: Stash): Promise<string> {
   const actions = await whatsappActionsInTopCard(requiredHome(state).page);

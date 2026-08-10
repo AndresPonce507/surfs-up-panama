@@ -52,6 +52,11 @@ export type Stash = {
   spotExpected?: ExpectedShare;
   spotPagePath?: string;
   previewDaemonPid?: number;
+  // Slice-03: the pure announcement and the two disposable Base-layout probes.
+  announcementInput?: { readonly spotName: string; readonly score: number; readonly site: string };
+  announcement?: { readonly title: string; readonly description: string; readonly url: string; readonly locale: string };
+  announcementProbeHtml?: string;
+  bareProbeHtml?: string;
 };
 
 const stashes = new WeakMap<PasteWorld, Stash>();
