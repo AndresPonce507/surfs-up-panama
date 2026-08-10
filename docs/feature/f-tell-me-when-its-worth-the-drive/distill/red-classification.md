@@ -314,3 +314,57 @@ AT-review verdict is not recorded here, the slice charter under
 `docs/product/expectations/f-tell-me-when-its-worth-the-drive/` is owed and outside this
 lane's write grant, and Pre-requisites 1, 4(a), 8 and 9 are open in ways that touch this
 slice's copy, its seam and the paperwork its scenarios lean on.
+
+---
+
+# Slice-02 RED classification
+
+Observed 2026-08-10 on `recover/push-maps`, base `0286ad7`.
+
+## Reconciliation
+
+Reconciliation passed, 0 contradictions among the available project truth. This feature has no
+per-wave `discuss/`, `design/`, or `devops/` decision files; its unified feature delta and the
+accepted architecture are the applicable sources. The subscriber threshold remains deliberately
+unratified and no slice-02 requirement names a value. The only open delivery boundary is
+Pre-requisite 4(b): both Push and SIGNAL claim the same A2HS disclosure. The contract is not
+ambiguous about the user outcome, only its physical owner. The roadmap blocks implementation until
+one owner is recorded and forbids duplicate markup.
+
+## Commands observed
+
+```sh
+node --input-type=module -e "JSON.parse(...)"
+npm run typecheck
+npm run test:at -- --dry-run --tags "@feature-f-tell-me-when-its-worth-the-drive and @slice-02"
+npm run test:at -- --dry-run --tags "@feature-f-tell-me-when-its-worth-the-drive and @slice-99"
+npm run test:at -- --tags "@feature-f-tell-me-when-its-worth-the-drive and @slice-02"
+```
+
+The dry run collected 5 scenarios and 57 steps with zero undefined or ambiguous steps. The
+slice-99 control selected zero scenarios, so the quoted tag expression is known to reach Cucumber
+as one expression. Typecheck passed.
+
+The live run reached the production build entry, then every scenario stopped in the shared
+production build guard before a browser page existed:
+
+```
+publish-surface refused: WHAT static surface is for 2026-08-09,
+not Panama's 2026-08-10; HOW publish the completed current bundle.
+```
+
+## Classification
+
+| Scenario | Classification | Why |
+|---|---|---|
+| Safari explica cómo llegar a los avisos sin ofrecer un botón muerto | BROKEN | The real build refused stale published input before its Safari-path oracle could run. |
+| El surfista que abre el icono instalado encuentra la misma entrada de avisos | BROKEN | Same stale-surface build guard, before the installed-entry oracle. |
+| El icono instalado no finge que los avisos ya están encendidos | BROKEN | Same stale-surface build guard, before the no-phantom-state oracle. |
+| Desde el icono instalado el surfista ve listo solo después de guardar los avisos | BROKEN | Same stale-surface build guard, before the deploy-blocked acknowledgement oracle. |
+| El camino de iPhone se ve terminado a 390 px en los dos temas | BROKEN | Same stale-surface build guard, before U1-U7 observation. |
+
+**Result: 0 RED, 5 BROKEN, 0 standing guards.** This is an honest failed pre-DELIVER gate, not a
+missing-feature result. The suite may not enter DELIVER until a fresh two-day published surface is
+available to the isolated build. The test lane did not generate or publish one because its scope
+forbids touching generated data. Once that prerequisite is supplied, rerun the same focused command
+and require each scenario to reach its own `Then` oracle as `MISSING_FUNCTIONALITY`.

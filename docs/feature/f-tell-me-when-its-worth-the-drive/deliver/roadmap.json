@@ -2,7 +2,7 @@
   "roadmap": {
     "project_id": "f-tell-me-when-its-worth-the-drive",
     "created_at": "2026-08-09T00:00:00Z",
-    "total_steps": 27,
+    "total_steps": 32,
     "quality_contract_version": 1
   },
   "phases": [
@@ -716,6 +716,176 @@
             "tests/unit/push-island.test.ts"
           ],
           "implementation_notes": "THE UI BAR IS A GATE INSIDE THIS SLICE, NOT A POLISH PASS. This is the only scenario carrying the @ui-u1 through @ui-u7 tags, which is what makes the seven ui_checks commands on every visible step in this phase resolve to a real run. RED reason, quoted so nobody mistakes it for a harness problem: 'U5: la página no tiene ningún control de avisos que examinar, así que ninguno de sus estados diseñados existe', and in dark theme additionally 'U1/U6: no hay ningún texto de avisos cuyo contraste ni cuya escala tipográfica se pueda medir contra el fondo real'. The checks were EXECUTED, not skipped, so they go green when the control exists in its designed states and is genuinely finished. CONTRAST IS MEASURED AGAINST THE REAL BACKDROP, both themes, not against white. Reduced motion means nothing animates, not that animation is merely shortened. 44 px touch targets, no horizontal scroll at 390 px, and the designed states include the idle affordance, the refused-permission state (01-21) and the no-avisos return state (01-22), which is why this step depends on all three. THE MANDATES APPLY TO STATES THAT EXIST: the deploy-blocked listo and retry states (01-23, 01-24) cannot be examined here, and no crafter may fabricate them to satisfy a check. AFTER GREEN the orchestrator runs des-verify-ui and then dispatches the source-blind examiner with only the charter and its start recipe; COMMIT is refused until both records pass. Run npm run build and inspect the rendered dist spot document afterwards: green tests do not mean it works, and this project has shipped a bug that passed all ten CI jobs."
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "name": "Slice-02: honest iPhone route from Safari to the installed icon",
+      "description": "A visible dependent slice. Start only after slice-01 and the SIGNAL manifest/service-worker seam. The iPhone words are settled, but one physical owner must be assigned before implementation. The subscriber threshold remains subscriber-supplied; this slice never chooses a product default.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "02-01",
+          "name": "Safari shows the honest no-push state",
+          "criteria": [
+            "In an open iPhone Safari context that cannot request push, Playa Venao offers no action that claims to turn avisos on.",
+            "The same emitted spot page offers the avisos action in a context that can request push, so absence in Safari cannot pass because avisos are absent everywhere.",
+            "The no-push state says neither listo nor any other active-subscription claim."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/avisos-en-el-iphone.feature",
+          "scenario_name": "Safari explica cómo llegar a los avisos sin ofrecer un botón muerto",
+          "slice_id": "slice-02",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/un-surfista-abre-playa-venao-en-safari-y-encuentra-el-camino-honesto-a-avisos-en-el-icono-instalado.md",
+          "u8_observation": "At 390 px in both themes, the iPhone route reads as one calm, deliberate instruction and never disguises an unavailable capability as an action.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u7"]
+          },
+          "deps": ["01-20", "01-21", "01-22", "01-27"],
+          "files_to_modify": [
+            "src/components/PushSettings.astro",
+            "src/push/island.ts",
+            "tests/unit/push-island.test.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: real-browser capability comparison; compensate with property-based capability predicates in tests/unit/push-island.test.ts. Drive the real emitted spot document at 390 px. The Safari-side absence is valid only after the same emitted document has shown an avisos action in the capable comparison context. Never solve this by hiding avisos for everyone, by persisting a client flag, or by inventing a threshold. This is serial with the SpotDetail and PushSettings seams from slice-01."
+        },
+        {
+          "id": "02-02",
+          "name": "The zero-JS iPhone disclosure says the settled words",
+          "criteria": [
+            "The iPhone route is a semantic details disclosure on the spot page and home footer, rendered without JavaScript.",
+            "Its Spanish text is exactly the settled section-10 wording, with no paraphrase, technical wording, English, status code, or em dash.",
+            "Exactly one lane owns the disclosure: SIGNAL's emitted surface is consumed, or Push writes only an explicit granted seam."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/avisos-en-el-iphone.feature",
+          "scenario_name": "Safari explica cómo llegar a los avisos sin ofrecer un botón muerto",
+          "slice_id": "slice-02",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/un-surfista-abre-playa-venao-en-safari-y-encuentra-el-camino-honesto-a-avisos-en-el-icono-instalado.md",
+          "u8_observation": "The exact iPhone explanation fits the page’s hierarchy as useful guidance, not as a warning box or decorative ornament.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u7"]
+          },
+          "deps": ["02-01"],
+          "files_to_modify": [
+            "src/components/SpotDetail.astro",
+            "src/components/PushSettings.astro",
+            "tests/unit/push-island.test.ts"
+          ],
+          "implementation_notes": "BLOCKED UNTIL PRE-REQUISITE 4(b) HAS ONE RECORDED OWNER. The architectural recommendation is SIGNAL, because that lane owns the manifest, install surface, service-worker registration and home-footer surface. When SIGNAL owns it, this Push step is an emitted-surface contract check only: do not duplicate its details markup. When Push owns it, obtain the explicit boundary grant before touching the home footer or any SIGNAL path. The disclosure is zero JS, so never put this copy in the lazy subscribe island."
+        },
+        {
+          "id": "02-03",
+          "name": "Installed PWA context exposes the existing avisos entry",
+          "criteria": [
+            "The standalone installed context has the manifest and service-worker registration supplied by F-WORKS-WITH-NO-SIGNAL, then exposes the same meaningful avisos entry as the capable Android path.",
+            "The installed context does not call avisos active merely because the app is installed or because storage remembers an earlier visit.",
+            "No Background Sync or service-worker storage survival is required for this result."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/avisos-en-el-iphone.feature",
+          "scenario_name": "El surfista que abre el icono instalado encuentra la misma entrada de avisos",
+          "slice_id": "slice-02",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/un-surfista-abre-playa-venao-en-safari-y-encuentra-el-camino-honesto-a-avisos-en-el-icono-instalado.md",
+          "u8_observation": "Opening the installed icon feels like the same trustworthy surf page, with one clear avisos entry and no phantom active state.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u7"]
+          },
+          "deps": ["02-01", "02-02"],
+          "files_to_modify": [
+            "src/components/PushSettings.astro",
+            "src/push/island.ts",
+            "tests/unit/push-island.test.ts"
+          ],
+          "implementation_notes": "SEAM-BLOCKED on SIGNAL slice-01 and slice-05: this lane consumes public/manifest, service-worker registration and the service worker but never edits them. The browser test may emulate standalone display mode only to prove the page wiring; it is not evidence of real APNs delivery. The source of truth for active state remains PushManager.getSubscription() plus stored server state, never localStorage."
+        },
+        {
+          "id": "02-04",
+          "name": "Installed icon preserves the ack-gated subscription journey",
+          "criteria": [
+            "From the installed icon, granting permission and asking for avisos reaches listo only after the deployed server records the subscription.",
+            "The installed path reuses the slice-01 subscribe contract; it does not create a second endpoint, an iPhone-specific store, or a different threshold default.",
+            "A real iPhone plus Android delivery smoke remains a launch-checklist proof for FCM/APNs interoperability, not a substitute local test."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/avisos-en-el-iphone.feature",
+          "scenario_name": "Desde el icono instalado el surfista ve listo solo después de guardar los avisos",
+          "slice_id": "slice-02",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/un-surfista-abre-playa-venao-en-safari-y-encuentra-el-camino-honesto-a-avisos-en-el-icono-instalado.md",
+          "u8_observation": "The installed path keeps the same calm truthfulness as the ordinary avisos journey: no optimistic listo state and no unexplained failure.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u7"]
+          },
+          "deps": ["02-03", "01-23"],
+          "files_to_modify": [
+            "src/push/island.ts",
+            "src/push/subscribe-client.ts",
+            "src/components/PushSettings.astro",
+            "tests/unit/push-island.test.ts"
+          ],
+          "implementation_notes": "DEPLOY-BLOCKED on Pre-requisites 2, 3, 5 and 6. Do not stand up a local endpoint to green this. Reuse the existing production subscribe client and server acknowledgement, and preserve subscriber-supplied threshold_score untouched. A second iOS wire contract or a cached on-state is an integration defect, not a shortcut."
+        },
+        {
+          "id": "02-05",
+          "name": "iPhone route passes U1-U7 and Vera",
+          "criteria": [
+            "At 390 px, light and dark themes show the exact iPhone wording without clipping or horizontal scroll and against the real backdrop.",
+            "The available, unavailable and not-yet-subscribed states are intentional; 44 px targets, reduced motion and named tokens pass through the built surface.",
+            "After GREEN, every U1-U7 command passes and a fresh source-blind Vera PASS is sealed against the slice-02 charter before COMMIT."
+          ],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/avisos-en-el-iphone.feature",
+          "scenario_name": "El camino de iPhone se ve terminado a 390 px en los dos temas",
+          "slice_id": "slice-02",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/un-surfista-abre-playa-venao-en-safari-y-encuentra-el-camino-honesto-a-avisos-en-el-icono-instalado.md",
+          "u8_observation": "At 390 px in both themes, the iPhone route reads as one calm, deliberate instruction and never disguises an unavailable capability as an action.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-02 and @ui-u7"]
+          },
+          "deps": ["02-01", "02-02", "02-03", "02-04"],
+          "files_to_modify": [
+            "src/components/PushSettings.astro",
+            "src/push/island.ts",
+            "tests/unit/push-island.test.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: rendered visual journey; compensate with fast-check properties for capability-state rendering in the adjacent unit test. The one tagged UI scenario is the executable U1-U7 target for this whole visible phase. Contrast must use the real backdrop, no raw hex or unapproved spacing, and no animation may be shortened instead of removed under reduced motion. Vera receives only the charter and the running surface."
         }
       ]
     }

@@ -89,6 +89,13 @@ protocol framing only, never real FCM/APNs acceptance or aes128gcm interop.
 | R41 | On pushed days only, one afternoon follow-up between 14:00 and 17:00 spot-local asks "¿Cómo estuvo?" and deep links `/spots/{slug}/reportar?t=ps` | functional | slice-03 |
 | R42 | A report filed through that deep link is stored with `trigger: push_solicited`, satisfying the learning lane's one required field end to end | e2e | slice-03 |
 | R43 | A surfer raises their own bar for a spot with one choice, and from then on the push respects their number instead of the default; the displayed choice on a return visit renders from stored subscription state | functional | slice-04 |
+| R44 | U1: the exact iPhone route text clears WCAG AA against its real backdrop in both themes at 390 px | ui | slice-02 |
+| R45 | U2: the iPhone route has no horizontal scroll, clipping, or overlap at 390 px in either theme | ui | slice-02 |
+| R46 | U3: Safari offers no unusable avisos target, and the installed capable path keeps the real avisos target reachable for a thumb | ui | slice-02 |
+| R47 | U4: the iPhone route honours reduced motion and does not defer its essential instruction behind animation or delayed script | ui | slice-02 |
+| R48 | U5: the no-capability Safari state, the capable installed state, and the not-yet-subscribed return state are designed outcomes, not framework defaults | ui | slice-02 |
+| R49 | U6: the exact Spanish route survives 390 px in the declared type scale without truncation | ui | slice-02 |
+| R50 | U7: the iPhone disclosure and nearby avisos state use named colour, spacing, radius, elevation, and motion tokens | ui | slice-02 |
 
 ## Open questions that deliberately have no oracle
 
@@ -135,4 +142,5 @@ Slice-01 is the only slice in DISTILL. Coverage is by `@covers-Rn` Gherkin tags 
 | R36 | Not covered by an executable oracle in slice-01. The strings do not exist yet (Pre-requisite 8); the rule is enforced at authoring, and R35 catches the observable half | expected-uncovered, flagged |
 | R37 | Not covered by a slice-01 scenario. The island does not exist, so there are no bytes to measure; the keystone byte gate measures it the moment it ships | expected-uncovered by construction |
 | R38 | Not covered by a slice-01 acceptance scenario: key material is a human apply step, never agent-held, and there is no deployed path to observe. Verified at deploy against `adr-secrets-public-repo.md` | expected-uncovered, deploy-blocked |
-| R39 to R43 | Later slices, JIT | expected-uncovered by design |
+| R39, R40, R44 to R50 | `avisos-en-el-iphone.feature`, five slice-02 scenarios | RED, awaiting classification |
+| R41 to R43 | Later slices, JIT | expected-uncovered by design |
