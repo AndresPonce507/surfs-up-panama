@@ -309,6 +309,20 @@
       "s": "EXECUTED",
       "d": "PASS: verified only feature-local 01-11 execution evidence staged after all requested gates passed; no source, unit, or push-feature code was required.",
       "t": "2026-08-10T20:57:08Z"
+    },
+    {
+      "sid": "01-12",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: RED weight acceptance failed at emitted worker 4,744 B gz over 3,072 B. Syntax/whitespace minification of the single public worker reduced emitted /sw.js to 2,276 B gz; /sin-senal is 2,769 B gz and registration stays inside 0.2 KB. Exact size scenario 1/13 passed; full slice-01 tag run 12 scenarios/155 steps passed with direct captured exit 0; focused SW tests 11/11; full units 93/93; typecheck; build inspection; fast CI 8/8 passed, 0 skipped. UI N/A: byte ceilings only, existing 01-01 charter owns the rendered surface.",
+      "t": "2026-08-10T21:00:21Z"
+    },
+    {
+      "sid": "01-12",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: verified only minified public worker and feature-local execution evidence staged after the 3,072 B ceiling and all mapped behavior gates passed; no source-page change was needed.",
+      "t": "2026-08-10T21:00:21Z"
     }
   ]
 }
