@@ -43,6 +43,16 @@ export const G1_MIN_MORNINGS = 10;
  */
 export const TAU_SPOT_PRIOR = 6;
 
+/**
+ * Once eight gated spots make between-spot variation estimable, pooling may
+ * weaken from its launch prior but never disappear.  This is a permanent
+ * floor, not another launch-time prior (06 section 5.3).
+ */
+export const TAU_PERMANENT_FLOOR = 2;
+
+/** The smallest evidence set on which between-spot variation is identifiable. */
+export const TAU_ESTIMATION_MIN_GATED_SPOTS = 8;
+
 /** G5/G6, 06 section 7: the limits a correction's reader must enforce at apply/read time. This lane only states them. */
 export const CLAMP_MAX_ABS_HEIGHT_FRACTION = 0.4;
 export const CLAMP_MAX_ABS_SCORE_POINTS = 12;

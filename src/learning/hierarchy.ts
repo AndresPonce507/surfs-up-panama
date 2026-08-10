@@ -2,6 +2,13 @@
 // that can differ at launch is the basin: coast is a hard partition, so no
 // correction record may inherit evidence from another coast.
 
+import {
+  SIGMA_EFF,
+  TAU_ESTIMATION_MIN_GATED_SPOTS,
+  TAU_PERMANENT_FLOOR,
+  TAU_SPOT_PRIOR,
+} from './constants';
+
 export type PoolingSpot = {
   spot_id: string;
   region_id: string;
@@ -10,6 +17,29 @@ export type PoolingSpot = {
 };
 
 type SpotInput = { spotId: string };
+
+/** One independently gated spot estimate at one height key. */
+export type GatedSpotEstimate = { readonly b: number; readonly se: number };
+
+/**
+ * The launch prior is necessary before there are enough independently gated
+ * spots to identify between-spot variation.  At eight, method-of-moments
+ * replaces it: tau = sigma_within^2 / (var(b_hat) - mean(se^2)).  A negative
+ * or zero denominator means the data has not earned weaker pooling, so the
+ * prior remains; a large denominator can only reduce tau to its permanent
+ * floor, never to raw per-spot estimates.
+ */
+export function estimatedSpotTau(gatedEstimates: readonly GatedSpotEstimate[]): number {
+  if (gatedEstimates.length < TAU_ESTIMATION_MIN_GATED_SPOTS) return TAU_SPOT_PRIOR;
+
+  const mean = gatedEstimates.reduce((sum, estimate) => sum + estimate.b, 0) / gatedEstimates.length;
+  const variance = gatedEstimates.reduce((sum, estimate) => sum + (estimate.b - mean) ** 2, 0) / gatedEstimates.length;
+  const meanSeSquared = gatedEstimates.reduce((sum, estimate) => sum + estimate.se ** 2, 0) / gatedEstimates.length;
+  const sigmaBetweenSquared = variance - meanSeSquared;
+  if (sigmaBetweenSquared <= 0) return TAU_SPOT_PRIOR;
+
+  return Math.max(TAU_PERMANENT_FLOOR, (SIGMA_EFF.height.value ** 2) / sigmaBetweenSquared);
+}
 
 /**
  * Splits one fit run into independent basin universes. Omitting seed metadata

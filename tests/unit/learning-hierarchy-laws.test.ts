@@ -7,7 +7,9 @@ import assert from 'node:assert/strict';
 import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
+import { TAU_PERMANENT_FLOOR, TAU_SPOT_PRIOR } from '../../src/learning/constants';
 import { runLearningFitOnce, type LearningFitDeps, type LearningStore } from '../../src/learning/fit';
+import { estimatedSpotTau } from '../../src/learning/hierarchy';
 import { OBSERVATION_LOG_PREFIX, PREDICTION_LOG_PREFIX } from '../../src/learning/inputs';
 
 const CARIBBEAN_ID = 'caribe-unit';
@@ -98,6 +100,49 @@ describe('pooling hierarchy: a basin is a hard wall', () => {
             withoutPacific.objects.get(CARIBBEAN_KEY),
             'a Pacific input may never change bytes stored for a Caribbean spot, however many mornings or what difference it claims',
           );
+        },
+      ),
+      { numRuns: 50 },
+    );
+  });
+});
+
+describe('pooling hierarchy: tau follows earned variation', () => {
+  it('keeps the hand-set prior until eight independently gated spots exist', () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.record({
+            b: fc.double({ min: -1.2, max: 1.2, noNaN: true, noDefaultInfinity: true }),
+            se: fc.double({ min: 0.01, max: 0.2, noNaN: true, noDefaultInfinity: true }),
+          }),
+          { minLength: 0, maxLength: 7 },
+        ),
+        (gatedEstimates) => {
+          assert.equal(
+            estimatedSpotTau(gatedEstimates),
+            TAU_SPOT_PRIOR,
+            'fewer than eight gated spots cannot identify between-spot variation, however much their estimates differ',
+          );
+        },
+      ),
+      { numRuns: 50 },
+    );
+  });
+
+  it('weakens pooling for eight divergent spots but never passes the permanent floor', () => {
+    fc.assert(
+      fc.property(
+        fc.double({ min: 0.4, max: 1.2, noNaN: true, noDefaultInfinity: true }),
+        fc.double({ min: 0.01, max: 0.1, noNaN: true, noDefaultInfinity: true }),
+        (difference, se) => {
+          const gatedEstimates = Array.from({ length: 8 }, (_value, index) => ({
+            b: index % 2 === 0 ? difference : -difference,
+            se,
+          }));
+          const tau = estimatedSpotTau(gatedEstimates);
+          assert.ok(tau < TAU_SPOT_PRIOR, 'wide, data-earned variation must weaken the launch prior');
+          assert.ok(tau >= TAU_PERMANENT_FLOOR, 'even maximal variation must leave the permanent pooling floor intact');
         },
       ),
       { numRuns: 50 },

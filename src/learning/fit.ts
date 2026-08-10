@@ -28,7 +28,7 @@ import {
   serializeCorrection,
   type StoredCorrection,
 } from './correction-file';
-import { activeSimilarityGroups, partitionByBasin, type PoolingSpot } from './hierarchy';
+import { activeSimilarityGroups, estimatedSpotTau, partitionByBasin, type PoolingSpot } from './hierarchy';
 import { readObservationLog, readPredictionLog, spotsReportedIn, type LearningInputStore } from './inputs';
 import { TRUST_GATE_KEY, eligibleTrustRecords, parseTrustGate } from './trust';
 
@@ -71,7 +71,7 @@ export async function runLearningFitOnce(deps: LearningFitDeps): Promise<Learnin
   }));
   const records = new Map<string, StoredCorrection>();
   for (const basinInputs of partitionByBasin(inputs, deps.spots)) {
-    const regionalRecords = buildCorrectionRecords(basinInputs, deps.clock);
+    const regionalRecords = recordsWithEstimatedTau(basinInputs, deps.clock);
     for (const [spotId, record] of regionalRecords) records.set(spotId, record);
 
     const gatedSpotIds = new Set(
@@ -80,7 +80,7 @@ export async function runLearningFitOnce(deps: LearningFitDeps): Promise<Learnin
         .map(([spotId]) => spotId),
     );
     for (const groupInputs of activeSimilarityGroups(basinInputs, deps.spots, gatedSpotIds)) {
-      for (const [spotId, record] of buildCorrectionRecords(groupInputs, deps.clock)) records.set(spotId, record);
+      for (const [spotId, record] of recordsWithEstimatedTau(groupInputs, deps.clock)) records.set(spotId, record);
     }
   }
 
@@ -98,6 +98,25 @@ export async function runLearningFitOnce(deps: LearningFitDeps): Promise<Learnin
     corrections_written: records.size,
     events,
   };
+}
+
+/**
+ * A first pass supplies only the independently gated spot estimates used by
+ * the method-of-moments calculation.  The second pass writes the same run's
+ * records using the earned tau, so no persisted estimate can influence its
+ * own pooling strength.
+ */
+function recordsWithEstimatedTau(inputs: Parameters<typeof buildCorrectionRecords>[0], clock: Clock): Map<string, StoredCorrection> {
+  const priorRecords = buildCorrectionRecords(inputs, clock);
+  const gatedEstimates = [...priorRecords.values()].flatMap((record) => {
+    for (const byLead of Object.values(record.bias.swell_h_m.per_source)) {
+      for (const key of Object.values(byLead)) {
+        if (key.applied) return [{ b: key.b, se: key.se }];
+      }
+    }
+    return [];
+  });
+  return buildCorrectionRecords(inputs, clock, estimatedSpotTau(gatedEstimates));
 }
 
 function hasAppliedHeight(record: StoredCorrection): boolean {
