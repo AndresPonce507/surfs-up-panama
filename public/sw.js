@@ -145,16 +145,25 @@ function networkFirst(request) {
   );
 }
 
-/** Cache-first: a hit answers immediately, a miss fetches and stores the response. */
+/** A document navigation may land on our plain offline page; an asset keeps its own failure. */
+function offlineDocumentForNavigation(cache, request, error) {
+  if (request.mode !== 'navigate') return Promise.reject(error);
+  return cache.match(OFFLINE_DOCUMENT).then((offline) => offline || Promise.reject(error));
+}
+
+/** Cache-first: a hit answers immediately, a miss fetches and stores the response.
+ * A failed document navigation alone falls back to the precached offline page. */
 function cacheFirst(request) {
   return self.caches.open(CACHE_VERSION).then((cache) =>
     cache.match(request).then(
       (cached) =>
         cached ||
-        self.fetch(request).then((response) => {
-          if (isTrustworthyResponse(response)) cache.put(request, response.clone());
-          return response;
-        }),
+        self.fetch(request)
+          .then((response) => {
+            if (isTrustworthyResponse(response)) cache.put(request, response.clone());
+            return response;
+          })
+          .catch((error) => offlineDocumentForNavigation(cache, request, error)),
     ),
   );
 }
