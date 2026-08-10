@@ -320,3 +320,91 @@ describe('decideSubscribe -- endpoint-allowlist reject (R12)', () => {
     );
   });
 });
+
+// -------------------------------------------- insecure transport (R12, 01-03)
+//
+// The law this step adds (implementation notes, step 01-03): transport is
+// checked INDEPENDENTLY of host membership. A host being on the allowlist
+// must never exempt its endpoint from also being reached over https --
+// which is exactly why 01-02's allowlist properties are not enough on
+// their own to prove this law: they only ever exercise https endpoints, so
+// an implementation that forgot the transport check entirely would still
+// pass every one of them.
+
+describe('decideSubscribe -- insecure transport reject (R12, step 01-03)', () => {
+  // covers: R12 (transport reject) -- the point of this step
+  it('never accepts a non-https destination, even one that looks secure at a glance: an uppercase HTTP scheme, a userinfo segment spelling "https", a scheme-relative URL, and plain http on an otherwise-allowlisted host', () => {
+    fc.assert(
+      fc.property(
+        knownHost,
+        dnsLabel,
+        fc.constantFrom('uppercase-scheme', 'userinfo-trick', 'scheme-relative', 'allowed-host-http'),
+        (allowedHost, token, shape) => {
+          const endpoint = ((): string => {
+            switch (shape) {
+              case 'uppercase-scheme':
+                // defeats a naive case-sensitive `startsWith('http://')` guard
+                return `HTTP://${allowedHost}/push/${token}`;
+              case 'userinfo-trick':
+                // the string CONTAINS "https", but the scheme is still http
+                return `http://https@${allowedHost}/push/${token}`;
+              case 'scheme-relative':
+                // no scheme at all -- defeats a naive `!includes('http://')` guard
+                return `//${allowedHost}/push/${token}`;
+              default:
+                // the direct case: host IS allowlisted, transport is not
+                return `http://${allowedHost}/push/${token}`;
+            }
+          })();
+          const decision = decideSubscribe(requestWithEndpoint(endpoint, [allowedHost]));
+          assert.equal(
+            decision.outcome,
+            'rejected',
+            `a "${shape}" non-https destination must be rejected even when its host is allowlisted (endpoint: ${endpoint})`,
+          );
+          assert.deepEqual(decision.stored, [], `a rejected subscribe request must store nothing (shape: ${shape})`);
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  // covers: R12 (transport reject shape parity)
+  it('rejects an insecure destination in the same {what, why, how} shape as an off-allowlist rejection, naming the destination it refused', () => {
+    fc.assert(
+      fc.property(knownHost, dnsLabel, (allowedHost, token) => {
+        const insecureEndpoint = `http://${allowedHost}/push/${token}`;
+        const insecureDecision = decideSubscribe(requestWithEndpoint(insecureEndpoint, [allowedHost]));
+
+        const unknownEndpoint = `https://${token}-nunca-listado.test/push`;
+        const unknownDecision = decideSubscribe(requestWithEndpoint(unknownEndpoint, [allowedHost]));
+
+        assert.equal(insecureDecision.outcome, 'rejected', 'an insecure destination must be rejected');
+        assert.deepEqual(insecureDecision.stored, [], 'a rejected subscribe request must store nothing');
+
+        const insecureRejection = insecureDecision.rejection;
+        const unknownRejection = unknownDecision.rejection;
+        assert.ok(
+          insecureRejection !== null && unknownRejection !== null,
+          'both the insecure refusal and the off-allowlist refusal must carry a stated reason',
+        );
+        assert.deepEqual(
+          Object.keys(insecureRejection ?? {}).sort(),
+          Object.keys(unknownRejection ?? {}).sort(),
+          'the insecure refusal must carry the same {what, why, how} shape as the off-allowlist refusal',
+        );
+        for (const field of ['what', 'why', 'how'] as const) {
+          assert.ok(
+            (insecureRejection?.[field] ?? '').trim().length > 0,
+            `the insecure refusal must fill in ${field}, same as the off-allowlist refusal`,
+          );
+        }
+        assert.ok(
+          (insecureRejection?.what ?? '').includes(insecureEndpoint),
+          'the insecure refusal must name the destination the surfer actually supplied',
+        );
+      }),
+      { numRuns: 50 },
+    );
+  });
+});
