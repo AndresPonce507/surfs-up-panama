@@ -289,3 +289,70 @@ It declares ten placeholder Lambdas carrying **20** reserved executions and an u
 `RETAIN` bucket. Deploying it would push required quota to 33, strand a bucket, and prove
 nothing. Deploy by explicit stack ID, in the mandated order: site, ingest, observability,
 then write LAST.
+
+## 9. Re-probe, 2026-08-10 (read-only lane, zero writes)
+
+Every row below is an observed API response from this date. The probes were constructed so
+they cannot mutate even if authorized (a `CreateChangeSet` of type UPDATE against a stack
+that does not exist; a `CreateStack` whose template has no `Resources` member — IAM
+authorization is evaluated before either validation). Nothing was created, updated, deleted,
+bootstrapped or deployed by this lane, and the §3 escalation path was not touched.
+
+1. **The user-level CloudFormation denials still stand, verbatim and unchanged:**
+
+   ```
+   AccessDenied ... user/andres-cli is not authorized to perform:
+   cloudformation:CreateChangeSet ... because no identity-based policy allows
+   the cloudformation:CreateChangeSet action
+   AccessDenied ... user/andres-cli is not authorized to perform:
+   cloudformation:CreateStack ... because no identity-based policy allows
+   the cloudformation:CreateStack action
+   ```
+
+   As §1.1 established, these do not govern a deploy: they are user-level rows, and the
+   deploy path runs through the bootstrap exec roles.
+
+2. **The §1.1 grant is intact.** `sts:AssumeRole` on
+   `cdk-hnb659fds-lookup-role-602167897909-us-east-1` succeeded
+   (session `sup-slice04-reprobe`). All reads below went through that role.
+
+3. **The §1.2 quota blocker is CLEARED: `L-B99A9384` was raised 10 → 1000.**
+   `lambda:GetAccountSettings` returns `ConcurrentExecutions: 1000`,
+   `UnreservedConcurrentExecutions: 1000`; `servicequotas:GetServiceQuota` returns
+   `Value: 1000.0, Adjustable: true`. The full reservation sum of 13 is now settable with
+   987 unreserved remaining — above even the conventional 100 floor, so every arithmetic
+   row in §1.2 (≥ 14 / ≥ 19 / ≥ 23 / ≥ 113) is satisfied at once. Ingest-stack and
+   write-stack are deployable again; the `ROLLBACK_COMPLETE` shell `SurfsUpPanamaIngest`
+   must still be deleted before the retry (§7), and deploys remain human-only
+   (`08-devops.md` §4, §8).
+
+4. **The alarm topic now has a CONFIRMED email subscriber.**
+   `sns:ListSubscriptionsByTopic` on `surfs-up-panama-alarms` shows `andres@tradelyhq.com`
+   with a real subscription ARN (confirmed) and `andresponce0001@gmail.com` still
+   `PendingConfirmation`. Pre-requisite 5's substance — at least one confirmed subscriber so
+   alarm emails reach a human — is met; the gmail confirmation remains open but is no longer
+   load-bearing. The breaker topic still has zero subscribers (expected; write stack
+   undeployed).
+
+5. **§7's open dead-man's-switch question is answered: the switch WORKS.**
+   `surfs-up-panama-dead-mans-switch` transitioned `INSUFFICIENT_DATA → ALARM` at
+   2026-08-09T21:56:25-05:00, state reason verbatim: *"Threshold Crossed: no datapoints
+   were received for 2 periods and 2 missing datapoints were treated as [Breaching]."*
+   `treatMissingData: BREACHING` converted metric absence into ALARM on this account,
+   live — the §4 empty-namespace failure mode did NOT occur. Slice-02's load-bearing
+   property is now proven in production, and an ALARM notification went to the confirmed
+   subscriber. This satisfies R18's *observable*; R18's stated *procedure*
+   (disable a running schedule, then re-enable) still awaits an ingest deploy with real
+   pipeline code, per the distinction §7 already draws.
+
+6. **Stack states are unchanged from §7:** `SurfsUpPanamaSite` and
+   `SurfsUpPanamaObservability` `CREATE_COMPLETE`, `SurfsUpPanamaIngest`
+   `ROLLBACK_COMPLETE`, `CDKToolkit` `CREATE_COMPLETE`.
+
+What still stands between here and slice-04's drill, none of it buildable in this repo:
+delete the `SurfsUpPanamaIngest` shell and redeploy it (human, now unblocked), deploy
+`SurfsUpPanamaWrite` LAST (human, now unblocked), and wire real pipeline code into the
+ingest Lambdas so `ingest.success` exists to go missing — the placeholder deliberately
+never emits it, so today the switch sits in permanent truthful ALARM and the
+disable→ALARM→re-enable→OK cycle cannot be demonstrated (R19, and charter precondition 4
+of `EXP-f-bill-stays-zero-and-stays-up-4`).

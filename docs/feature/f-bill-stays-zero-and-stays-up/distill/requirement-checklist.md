@@ -86,6 +86,27 @@ Updated again 2026-08-09, after the first real deploy (`aws-permission-inventory
   slice-03 assert was green while the account could not actually set a single reserved
   concurrency. A green gate is necessary and not sufficient, exactly as CLAUDE.md warns.
 
+Updated 2026-08-10 (infra lane, read-only re-probe; full record in
+`aws-permission-inventory.md` §9):
+
+- **Two of slice-04's three blockers cleared.** The concurrency quota was raised 10 → 1000
+  (observed via `lambda:GetAccountSettings` and `L-B99A9384` through the lookup role), and
+  the alarm topic now carries a confirmed email subscriber. The remaining gaps are the human
+  redeploy (delete the `ROLLBACK_COMPLETE` ingest shell first, write stack LAST) and R19's
+  need for real pipeline code emitting `ingest.success`, owned by the ingest lane.
+- **Slice-02's load-bearing property is now proven live, not only declared.** The deployed
+  switch transitioned `INSUFFICIENT_DATA → ALARM` at 2026-08-09T21:56-05:00 with state
+  reason *"no datapoints were received for 2 periods and 2 missing datapoints were treated
+  as [Breaching]"* — BREACHING converted absence into failure on this account, answering
+  the open question `aws-permission-inventory.md` §7 posed. This satisfies R18's
+  *observable*; its stated *procedure* (disable, ALARM, re-enable, OK) still awaits the
+  redeploy and real ingest code, and the two remain distinct on purpose.
+- **The 13/113 arithmetic re-verified from the synthesized templates** (8 functions:
+  fetch 2, build 2, report 2, mint 1, push 1, photo-presign 1, resize 2, breaker 2), and
+  the sum-13 guardrail assert re-proven falsifiable by poison (declared sum drifted to 17;
+  the assert failed naming 13 vs 17; poison reverted, revert verified by an empty
+  `git diff`).
+
 Architectural note recorded here because it changes how future slices must be authored: the
 declaration checks for slices 01-03 do NOT live inside the pre-existing
 `evaluateInfrastructureDeclarations` function in `infra/guardrail-evaluator.mjs`. That function is

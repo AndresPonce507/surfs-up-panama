@@ -41,15 +41,22 @@ export const defaultReservedConcurrency = 2;
 //   "Specified ReservedConcurrentExecutions for function decreases account's
 //    UnreservedConcurrentExecution below its minimum value of [10]."
 //
-// So on this account today NO reservation of any size is settable, guardrail
-// 1 and control 0.2 do not exist, and the write stack cannot deploy: this is
-// exactly the stop signal of 07-write-path section 7.2 item 0.15, reached
-// far earlier than that item anticipated. The fix is a Service Quotas
-// increase on L-B99A9384 (Adjustable: true), which is Andres's to request.
-// Never strip the reservations to force a green deploy; they are the cost
-// control. See aws-permission-inventory.md section 1.2.
+// 2026-08-10 re-read through the same lookup role: the quota was RAISED.
+// lambda:GetAccountSettings now returns ConcurrentExecutions: 1000 /
+// UnreservedConcurrentExecutions: 1000, and L-B99A9384 reads 1000.0. The
+// 2026-08-09 paragraph above is history, kept so the rejection stays
+// traceable. At quota 1000 the full sum of 13 is settable: even against the
+// conventional 100-unreserved floor (the floor itself is only observable at
+// deploy time), 1000 - 13 = 987 unreserved remains. The stop signal of
+// 07-write-path section 7.2 item 0.15 no longer applies; the reservations
+// stay exactly as declared because they are the cost control.
+// See aws-permission-inventory.md sections 1.2 and 9.
 export const reservedConcurrencySum = 13;
 
-// Observed 2026-08-09, not assumed. Update only from a real API read.
-export const observedAccountConcurrencyQuota = 10;
+// Observed, never assumed. Update only from a real API read.
+// Quota re-read 2026-08-10 (lookup role). The floor was last OBSERVED as 10
+// on 2026-08-09 at quota 10 via the deploy rejection above; it cannot be
+// read credential-free and the conventional value at this quota is 100.
+// Either floor is satisfied by quota 1000 - sum 13.
+export const observedAccountConcurrencyQuota = 1000;
 export const observedMinimumUnreservedFloor = 10;
