@@ -1,0 +1,113 @@
+<!-- des-feature-context-bootstrap: {"feature_id":"f-looks-like-the-ocean-and-reads-in-the-sun","intent":"A surfer opens the site on the beach at 6am, in direct sun, and it looks like it belongs to the water it is describing, while every word stays readable.","inventory":[],"schema_version":"1","state":"OPEN"} -->
+# Feature context: f-looks-like-the-ocean-and-reads-in-the-sun
+
+Intent: A surfer opens the site on the beach at 6am, in direct sun, and it looks like it belongs to
+the water it is describing, while every word stays readable.
+
+Workspace opened 2026-08-09, after Andres approved the rendered proposal. This is a DOCS-ONLY
+workspace creation: no acceptance test and no production code exists for this feature yet.
+
+## Why this is a feature and not a polish pass
+
+The project's standing rule is that a user-facing surface ships world-class inside its slice, never
+in a deferred cleanup. This feature exists anyway, for one honest reason: **the visual identity
+changed after eleven features had already been planned and nine had begun asserting contrast against
+the old palette.** Repainting mid-flight would have broken nine lanes at once. So the repaint is
+carried as its own dependency-ordered work rather than smuggled into unrelated slices.
+
+It is also not only cosmetic. Body text at 7:1 against the real backdrop is the sunlight margin, a
+functional requirement for a product read on a beach at dawn. A saturated palette that loses that
+margin is a regression no matter how good it looks on a desk monitor.
+
+## The authority
+
+`docs/product/architecture/adr-blue-tropical-glass-palette.md` (Accepted 2026-08-09) carries the
+token values and the ten computed contrast pairs. **If this file and that ADR ever disagree, the ADR
+wins.** The rendered proposal at `~/Desktop/surfs-up-panama-ui-proposal.html` is provenance, not
+authority: it is a Desktop artifact and is not in the repo.
+
+## Wave: DISCUSS / [REF] Slice Plan
+
+| Slice | Value statement | Status | Annotation | Justification |
+|-------|-----------------|--------|------------|---------------|
+| slice-01 | A surfer opens the home page and it looks like deep tropical water instead of a grey list, and every word still clears the sunlight margin in both themes. | pending | @walking_skeleton, owns `src/styles/tokens.css` | Thinnest end-to-end vertical: one token file, one surface, both themes, proven by measurement rather than by eye. The tokens are already decided and the ten pairs already computed in the ADR, so this slice's real work is proving the computation holds against the *rendered* backdrop rather than against the hex values in isolation. It is the walking skeleton because every later slice consumes these tokens; if the palette cannot hold 7:1 on the real home page, nothing after it is worth building. Gated on Pre-requisite 1. |
+| slice-02 | The built report CTA tray reads as glass over water when supported, and as a deliberate solid card when it is not. | pending | depends-on slice-01 | `backdrop-filter: blur(12px) saturate(140%)` already ships at `src/styles/components.css:34` and `:266`; only the report CTA tray has landed markup today. Slice-01 gives it something to blur. This slice is therefore the *fallback*, not the effect: the tokens file already states the rule as "solid-fallback-first everywhere", and `backdrop-filter` carries a real GPU cost on the cheap Android phones this audience uses. The hero call card stays a solid gradient because `09-design-system.md` §4 explicitly refuses glass for the sunlight-read score. `.lang-toggle` remains CSS without built markup until F-READ-IT-IN-YOUR-LANGUAGE and is recorded, never fabricated, by this slice. |
+| slice-03 | Every other surface belongs to the same product: spot pages, mañana, ayer, the 404 and both report screens. | pending | depends-on slice-01 | Consistency is the difference between a themed home page and a designed product. Held behind slice-01 because a token change proven on one surface is cheap to extend and expensive to unpick. The report screens are the delicate ones: `application-architecture.md` section 8's leak paths forbid the capture route reaching the forecast layer, so this slice may change how those screens look and may not change what they import. |
+| slice-04 | The contrast table in the design system says what the code actually does, and CI refuses a build that drifts from it. | pending | depends-on slice-01 | `09-design-system.md` carries a contrast table with computed ratios for the OLD palette. Leaving it is worse than having none: a future reader would tune against numbers that no longer describe anything. The `ui` job in `ci:local` already walks built HTML; this slice points it at the new pairs so a palette drift fails loudly instead of silently costing the sunlight margin. This is the slice that makes the whole feature durable rather than a one-time repaint. |
+| slice-05 | A surfer reads the ranking at a glance: 84 and 6 look different, and confidence is legible without relying on colour. | pending | depends-on slice-01 | The live page renders every score in identical black type, so twenty rows read as one undifferentiated list and rank is carried only by position. A score bar restores the glance. Confidence gets shape as well as colour, per `09-design-system.md` line 237's existing rule that the callout is never carried by colour alone: circle, square and triangle for alta, media and baja, so a colour-blind surfer and a washed-out screen in direct sun read the same information. Byte cost measured in the proposal at roughly 230 B gz for both. |
+
+Notes on the plan:
+
+- Row order is dependency order, backward only. Slices 02 through 05 are parallel-safe once slice-01
+  lands.
+- **Nothing here changes a number, a word, or a behaviour.** This feature is tokens, one style block,
+  and two presentation elements. If a slice finds itself editing `src/pipeline/`, `src/scoring/` or
+  any copy string, it has left its scope.
+- **The byte budget is unchanged and unforgiving.** 14 KB gz per document, 100 KB per route first
+  visit. The full repaint measured about 400 B gz in the proposal, so this fits comfortably, but the
+  page-weight gate runs inside `npm run build` and a regression fails the build.
+- Every slice here is user-visible by definition. There is no non-visual slice in this feature, and a
+  slice that claims to be non-visual has been mis-scoped.
+
+## Wave: DISCUSS / [REF] Slice classification
+
+| Slice | Classification | Note |
+|---|---|---|
+| slice-01 | user-visible | The whole slice is what the home page looks like. U1-U7 plus a U8 charter observation, at 390 px, both themes |
+| slice-02 | user-visible | Both states are observable: glass rendered, and the solid fallback with the filter disabled |
+| slice-03 | user-visible | Six surfaces, each with its own designed states |
+| slice-04 | user-visible | The gate is machinery, but its subject is contrast on rendered pages; the observation is that a drifted palette fails the build |
+| slice-05 | user-visible | Score bar and confidence shape are pixels on the ranked list |
+
+## Wave: DISCUSS / [REF] Definition of Done
+
+| # | Done means |
+|---|---|
+| 1 | `src/styles/tokens.css` carries the ADR's token values exactly, for both themes, and no surface hardcodes a colour outside `src/styles/`. |
+| 2 | Every pair in the ADR's table is re-measured against the REAL rendered backdrop, including the gradient's lightest stop, in both themes. Body text clears 7:1. All text clears 4.5:1. Non-text UI clears 3:1. |
+| 3 | The gradient's lightest stop is `#0D5866` or darker. `#0E5E70` put body text at 6.70 and failed the sunlight margin; that value is recorded so nobody lightens it back. |
+| 4 | Glass is proven legible with `backdrop-filter` disabled, which is what a low-end device renders. The solid fallback is the load-bearing layer. |
+| 5 | `09-design-system.md`'s contrast table describes the shipped palette, and the `ui` job fails a build whose rendered contrast drifts from it. |
+| 6 | Confidence and the weakest-link callout are carried by shape plus word, never by colour alone. |
+| 7 | No horizontal scroll or clipping at 390 px or 320 px, with the longest Spanish spot name present. Touch targets stay at or above 44 px. `prefers-reduced-motion` is honoured; nothing added here animates. |
+| 8 | Page-weight gate green: 14 KB gz per document, 100 KB per route first visit. |
+| 9 | Zero behaviour change. No number, no word and no route differs from before this feature. |
+| 10 | Every Slice Plan row above is flipped `shipped`. |
+
+## Wave: DISCUSS / [REF] Out-of-scope
+
+| Out | Lands in |
+|---|---|
+| Any copy change, any Spanish wording | The features that own those strings; this feature moves no words |
+| The English tree and its styling | F-READ-IT-IN-YOUR-LANGUAGE |
+| A manual light/dark toggle | Never at launch. `prefers-color-scheme` only, 0 KB JS (`application-architecture.md` section 11) |
+| Webfonts | Never. System stack only, 0 bytes. The type hierarchy comes from weight, size and tracking |
+| Spot photography, maps, illustration | Not planned. The byte budget and the request-count guardrail both forbid it at launch |
+| Animation or transitions | Deliberately none. `prefers-reduced-motion` is honoured by having nothing to reduce |
+| The OG share card's visual design | F-PASTE-THE-CALL-INTO-THE-GROUP slice-04 owns it; it may consume these tokens once they land |
+
+## Wave: DISCUSS / [REF] Pre-requisites
+
+| # | Pre-requisite | Blocks | Owner | Status |
+|---|---|---|---|---|
+| 1 | **The current DELIVER wave lands first.** Nine lanes are authoring UI right now and their U1-U7 acceptance checks assert contrast against the OLD palette. Repainting while they run reds all nine at once, for a reason that has nothing to do with their code. | every slice | this feature's lane | open, and it is a hard gate, not a preference |
+| 2 | The palette ADR is Accepted | slice-01 | Andres | ANSWERED 2026-08-09. `adr-blue-tropical-glass-palette.md` is Accepted, with the token values and the ten computed pairs |
+| 3 | Confirmation that `backdrop-filter` is acceptable on the target device class, or an explicit decision to ship the solid fallback as the only layer | slice-02's effect, not its fallback | Andres | open. Recommendation: ship the effect as enhancement and treat the fallback as the real design, which is what the tokens file already says |
+| 4 | Whether the score bar's fill encodes score by colour as well as length | slice-05 | Andres | open. Recommendation: length only, with colour reserved for the weakest-link callout, so the ranked list has exactly one colour that means something |
+
+## Reuse Analysis
+
+| Existing component | File | Overlap | Decision | Justification |
+|---|---|---|---|---|
+| Design tokens | `src/styles/tokens.css` | **bounded-change**: every value is replaced, the structure and the token names are not | EXTEND | The token names are already consumed correctly everywhere. This feature exists precisely because swapping values is all that should be needed |
+| Component styles | `src/styles/components.css` | **bounded-change**: the glass rules at lines 34 and 266 already exist and already reference the right tokens | EXTEND | The machinery is shipped. It renders nothing only because the surfaces behind it are near-white |
+| Base layout | `src/layouts/Base.astro` | none: it raw-imports and inlines the CSS, and that mechanism does not change | REUSE | Nothing to change |
+| Ranked list | `src/components/RankedList.astro` | **bounded-change** in slice-05 only: the score bar and the confidence shape are new elements inside the existing markup | EXTEND | Rebuilding it would discard the top-card special-casing and the WhatsApp slot another feature just added |
+| UI quality gate | `scripts/check-ui-quality.mjs` | **bounded-change** in slice-04: the pairs it checks are repointed | EXTEND | The walker over built HTML is production-owned and shipped |
+
+## Prefactoring Assessment
+
+**NONE, justified.** The tokens are already the single source of colour, every consumer already reads
+them by name, and the glass rules already exist. That is exactly the shape that makes a repaint a
+value swap. No component needs a flag, a second path or a special case to receive this work. If one
+turns out to, that is a finding worth reporting rather than working around.
