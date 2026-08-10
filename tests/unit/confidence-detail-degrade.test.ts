@@ -108,6 +108,19 @@ function detailsBlock(caseHtml: string): string {
   return match[0];
 }
 
+/**
+ * Everything after `</summary>` and before `</details>`, trimmed. Structural
+ * rather than tag-specific on purpose: the criterion is "no non-summary child
+ * at all" and "the reason as the single non-summary child", not "no `<div>`
+ * tag". A degrade that swapped `<div>` for `<p>`, or padded an absent reason
+ * with a stray space or `&nbsp;`, must still fail here.
+ */
+function nonSummaryContent(block: string): string {
+  const match = /<\/summary>([\s\S]*)<\/details>$/.exec(block);
+  assert.ok(match, `no content found after </summary> in: ${block}`);
+  return match[1]!.trim();
+}
+
 afterAll(() => {
   if (harness) {
     rmSync(harness.outDir, { recursive: true, force: true });
@@ -119,25 +132,30 @@ describe('ConfidenceDetail degrades a reasonless row without an empty box', () =
   it('shows the level word and offers no disclosure body when reason is absent', () => {
     const block = detailsBlock(harnessCases()[0]!);
     assert.match(block, /<summary>Confianza baja<\/summary>/, `the level word must always render: ${block}`);
-    assert.doesNotMatch(block, /<div>/, `no reason was published, so no non-summary child may render: ${block}`);
+    assert.equal(
+      nonSummaryContent(block),
+      '',
+      `no reason was published, so no non-summary child may render at all: ${block}`,
+    );
   });
 
   it('shows the level word and offers no disclosure body when reason is an empty string, never a silent empty box', () => {
     const block = detailsBlock(harnessCases()[1]!);
     assert.match(block, /<summary>Confianza baja<\/summary>/, `the level word must always render: ${block}`);
-    assert.doesNotMatch(
-      block,
-      /<div>\s*<\/div>/,
-      `an empty reason must degrade exactly like an absent one -- no empty box a surfer taps and finds blank: ${block}`,
+    assert.equal(
+      nonSummaryContent(block),
+      '',
+      `an empty reason must degrade exactly like an absent one -- no empty box a surfer taps and finds blank, whatever tag or padding it might be wrapped in: ${block}`,
     );
   });
 
   it('shows the level word and the published reason verbatim when a reason exists', () => {
     const block = detailsBlock(harnessCases()[2]!);
     assert.match(block, /<summary>Confianza baja<\/summary>/, `the level word must always render: ${block}`);
-    assert.ok(
-      block.includes(`<div>${REAL_REASON}</div>`),
-      `the published reason must render verbatim as the single non-summary child: ${block}`,
+    assert.equal(
+      nonSummaryContent(block),
+      `<div>${REAL_REASON}</div>`,
+      `the published reason must render verbatim as the single non-summary child, nothing added or trimmed: ${block}`,
     );
   });
 }, 60_000);
