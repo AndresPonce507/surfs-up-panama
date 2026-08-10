@@ -304,7 +304,7 @@ describe('composeConfidenceReasonEs', () => {
     );
   });
 
-  it('removes a disabled spread factor from the level cause and the published reason', () => {
+  it('removes a disabled spread factor while keeping named missing-input caps ahead of no-signal copy', () => {
     fc.assert(
       fc.property(members, spreadInput, trackInput, freshnessInput, missingInputs, sentinelVocab,
         (rows, spread, track, fresh, missing, vocab) => {
@@ -319,6 +319,13 @@ describe('composeConfidenceReasonEs', () => {
               && !CLAIMS_MODEL_DISAGREEMENT.test(reason),
             `la razón nombra desacuerdo o un término apagado: "${reason}"`,
           );
+          for (const input of ['wind', 'tide'] as const) {
+            assert.equal(
+              reason.includes(vocab[input]),
+              missing.includes(input),
+              `con spread apagado y missing=[${missing.join(', ')}], la razón ${missing.includes(input) ? 'debe' : 'no debe'} nombrar "${vocab[input]}"`,
+            );
+          }
           const hasNoSurvivingSignal = track === null && fresh === null && missing.length === 0;
           assert.equal(
             /se[ñn]al/iu.test(reason),
@@ -330,6 +337,7 @@ describe('composeConfidenceReasonEs', () => {
             assert.match(reason, /se[ñn]al/iu, `sin una señal sobreviviente la razón debe admitirlo: "${reason}"`);
           }
         }),
+      { examples: [[[], { kind: 'absolute' }, null, null, ['tide'], FACTOR_VOCAB_ES]] },
     );
   });
 
