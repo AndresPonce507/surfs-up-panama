@@ -113,8 +113,12 @@ describe('page-weight gate laws', () => {
   it('measures the document that was actually emitted: more bytes in, more bytes reported', async () => {
     await fc.assert(
       fc.asyncProperty(
+        // The two ranges must not touch. They used to be 0-4,000 and 4,001-20,000,
+        // so the generator could pick 4,000 against 4,001: one byte apart, and gzip
+        // reports both as the same number. The law is about a materially heavier
+        // document, not a one-byte one, so leave a gap wider than gzip's noise.
         fc.integer({ min: 0, max: 4_000 }),
-        fc.integer({ min: 4_001, max: 20_000 }),
+        fc.integer({ min: 8_000, max: 20_000 }),
         async (small, large) => {
           const lighter = await measure([{ path: 'index.html', filler: small }]);
           const heavier = await measure([{ path: 'index.html', filler: large }]);
