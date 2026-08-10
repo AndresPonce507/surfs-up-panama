@@ -17,7 +17,7 @@ const playaVenao = {
   timezone: 'America/Panama',
 };
 
-function subscriptionWithBar(bar: number): StoredSub {
+function subscriptionWithBar(bar: number, overrides: Partial<StoredSub> = {}): StoredSub {
   return {
     spot_id: playaVenao.spot_id,
     endpoint_hash: 'suscriptor-de-prueba',
@@ -26,6 +26,7 @@ function subscriptionWithBar(bar: number): StoredSub {
     last_notified_date: null,
     followup_date: null,
     device_id: 'dispositivo-de-prueba',
+    ...overrides,
   };
 }
 
@@ -109,6 +110,48 @@ describe('planNotifications', () => {
             seed.utcHoursInMorning.some((morningUtcHour) => morningUtcHour === utcHour) ? 1 : 0,
             'solo las 06:25, 07:25 y 08:25 locales del huso declarado por el spot permiten un aviso',
           );
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  it('reports at most one dated write and send for a subscriber across arbitrary runs in one spot-local day', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...spotTimezones),
+        fc.array(fc.constantFrom(0, 1, 2), { minLength: 1, maxLength: 30 }),
+        (seed, runOffsets) => {
+          const spot = { ...playaVenao, timezone: seed.timezone };
+          const original = subscriptionWithBar(0);
+          let subscriptions = [original];
+          let sends = 0;
+          let writes = 0;
+
+          for (const offset of runOffsets) {
+            const now = utcClockAtMinute25(seed.utcHoursInMorning[offset]!);
+            const plan = planNotifications({
+              now,
+              spots: [spot],
+              scores: { [spot.spot_id]: 100 },
+              subscriptions,
+              run_cap: 10_000,
+            });
+
+            assert.ok(plan && typeof plan === 'object', 'every run returns a plan, including a deduplicated run');
+            sends += plan.sends.length;
+            writes += plan.writes.length;
+            subscriptions = subscriptions.map((subscription) => {
+              const write = plan.writes.find(
+                (candidate) => candidate.spot_id === subscription.spot_id && candidate.endpoint_hash === subscription.endpoint_hash,
+              );
+              return write === undefined ? subscription : { ...subscription, last_notified_date: write.last_notified_date };
+            });
+          }
+
+          assert.equal(sends, 1, 'at most one morning send reaches a subscriber for the same spot-local day');
+          assert.equal(writes, 1, 'the plan reports one date write for that one send');
+          assert.equal(original.last_notified_date, null, 'planning is pure and does not mutate the supplied subscription state');
         },
       ),
       { numRuns: 100 },
