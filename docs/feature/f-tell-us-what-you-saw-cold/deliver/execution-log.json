@@ -281,6 +281,27 @@
       "s": "SKIPPED",
       "d": "CHECKPOINT_PENDING: surface_classification is user-visible (charter shared with 01-03: docs/product/expectations/f-tell-us-what-you-saw-cold/a-surfer-walking-off-playa-venao-...md). That charter's session log's only entry is Vera FAIL from before the reportado cold-load fix -- no current PASS is sealed to it yet, so U1-U7 plus a fresh source-blind examine are owed before this step's feature work can be called closed, per the quality gate. No feature code changed in this step regardless (GREEN was pre-satisfied), so there is nothing at risk of shipping unexamined; committing only this step's log entries as the durable record of the RED/GREEN proof. Orchestrator: dispatch des-verify-ui + nw-user-examiner against the charter (covering both 01-03's and 01-04's expected observations, since they share one charter) before treating either step's user-visible surface as sealed.",
       "t": "2026-08-10T17:52:40Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:56:23Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:56:25Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:56:28Z"
     }
   ]
 }
