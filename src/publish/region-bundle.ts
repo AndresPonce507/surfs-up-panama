@@ -44,6 +44,11 @@ export type BundleDaySummary = {
   /** Integer 0 to 100, published verbatim, never rescaled. */
   readonly score_q: number;
   readonly conf_level: ConfLevel;
+  /** Why this day's confidence is what it is, for this spot. Optional because
+   * P1's degrade for a missing reason is the details block omitted, while a
+   * missing `conf_level` is a publication failure. es-only until
+   * F-READ-IT-IN-YOUR-LANGUAGE ships the other half of P1's `{es,en}`. */
+  readonly confidence_reason?: { readonly es: string };
   readonly call: { readonly es: string };
   readonly size_band: SizeBandToken;
   readonly size_range_m: SizeRangeM;

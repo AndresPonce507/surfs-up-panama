@@ -1,0 +1,52 @@
+{
+  "_note": [
+    "Slice-01 planting profiles for f-know-how-much-to-trust-it.",
+    "These strings stand in for values the PRODUCER owes per (spot_id, day):",
+    "the render scenarios prove the page shows THIS row's published reason",
+    "instead of a level-keyed generic one. They never prove the composition",
+    "rules -- those are asserted against real engine output by the",
+    "@in-memory producer scenarios, so no planted sentence can satisfy an",
+    "oracle the composer owes. Every reason here is <= 160 characters",
+    "(application-architecture.md section 7, P1), carries no em dash and no",
+    "technical text. Illustrative Spanish, not settled copy: Pre-requisite 1",
+    "is open, so no scenario pins any of these strings word for word."
+  ],
+  "default_profile": "capped_by_tide",
+  "by_spot": {
+    "playa-venao": { "today": "capped_by_tide", "tomorrow": "period_split" },
+    "playa-guanico": { "today": "period_split", "tomorrow": "capped_by_tide" },
+    "playa-cambutal": { "today": "no_track_record", "tomorrow": "no_track_record" },
+    "playa-reina": { "today": "one_model", "tomorrow": "one_model" },
+    "punta-brava": { "today": "no_reason", "tomorrow": "no_reason" },
+    "santa-catalina-la-punta": { "today": "longest", "tomorrow": "longest" }
+  },
+  "profiles": {
+    "capped_by_tide": {
+      "conf_level": "medium",
+      "reason_es": "Hoy no tenemos el dato de la marea, así que el nivel no sube de media. Los modelos se parecen bastante entre ellos. Nadie ha reportado desde la playa."
+    },
+    "period_split": {
+      "conf_level": "low",
+      "reason_es": "Los modelos se parten en el período: unos ven trece segundos y otros nueve. En el tamaño sí coinciden. Nadie ha reportado desde la playa todavía."
+    },
+    "one_model": {
+      "conf_level": "low",
+      "reason_es": "Hoy respondió un solo modelo, así que no hay con qué compararlo. Tampoco tenemos el dato de la marea. Nadie ha reportado desde la playa."
+    },
+    "no_track_record": {
+      "conf_level": "low",
+      "reason_es": "Todavía no hay historial verificado de este spot y nadie ha reportado desde la playa. El nivel solo dice cuánto se parecen los modelos hoy."
+    },
+    "longest": {
+      "conf_level": "medium",
+      "reason_es": "Hoy no tenemos el dato de la marea en esta punta, así que el nivel se queda en media aunque los modelos se parezcan mucho. Nadie ha reportado de la playa."
+    },
+    "no_reason": {
+      "conf_level": "low",
+      "reason_es": null
+    }
+  },
+  "spot_page_spot_id": "playa-venao",
+  "degraded_spot_id": "punta-brava",
+  "longest_spot_id": "santa-catalina-la-punta"
+}
