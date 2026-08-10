@@ -5,6 +5,7 @@ type NotificationPayload = {
   title: string;
   body: string;
   url: string;
+  /** The notify planner supplies the spot_id here, never a message id. */
   tag: string;
 };
 
@@ -38,6 +39,9 @@ function notificationOptions(payload: NotificationPayload): NotificationOptions 
 
 /**
  * Shows exactly the content the notify job encrypted into the received push.
+ * In particular, the payload's spot tag reaches the browser unchanged: the
+ * browser replaces a prior same-spot notification, while this handler still
+ * shows every received push.
  * The caller owns the service-worker global, so this handler never reaches for
  * ambient `self`, network, storage, cache, or background-sync state.
  */

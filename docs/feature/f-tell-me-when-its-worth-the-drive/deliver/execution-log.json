@@ -1,0 +1,426 @@
+{
+  "schema_version": "3.0",
+  "feature_id": "f-tell-me-when-its-worth-the-drive",
+  "events": [
+    {
+      "sid": "01-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:48:03Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:54:26Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:55:27Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:57:14Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:57:50Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:29:10Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:29:31Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:39:31Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:39:31Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:41:36Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T14:14:52Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T14:14:58Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T14:17:29Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T14:18:00Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T14:19:16Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T15:12:16Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T15:12:16Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T15:13:33Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T15:14:26Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T16:07:43Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T16:09:17Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:45:35Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:45:40Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:46:14Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:50:03Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:54:06Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T19:46:13Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T19:46:13Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T19:46:13Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T19:46:51Z"
+    },
+    {
+      "sid": "01-07",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: the activated scenario was already green from 01-06, with 3/3 outline cases passing; no test assertion was changed.",
+      "t": "2026-08-10T19:50:58Z"
+    },
+    {
+      "sid": "01-07",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: fast-check property now proves a send iff score >= subscriber-supplied bar over 0..100, and proves an empty result is still a plan object.",
+      "t": "2026-08-10T19:51:01Z"
+    },
+    {
+      "sid": "01-07",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: targeted unit and acceptance, typecheck, full unit suite 93/93, and ci:local:fast 8/8 all passed. UI N/A: pure plan decision with no rendered surface.",
+      "t": "2026-08-10T19:51:04Z"
+    },
+    {
+      "sid": "01-07",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: committed 803bc47 with Step-ID: 01-07 after the threshold law and all requested gates passed.",
+      "t": "2026-08-10T19:51:19Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T20:04:32Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T20:04:32Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T20:04:32Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T20:04:32Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T20:04:51Z"
+    },
+    {
+      "sid": "01-12",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: inspected the assigned planner, pre-authored scenario, project truth, and current evidence; classified as non-visual pure planning",
+      "t": "2026-08-10T20:08:52Z"
+    },
+    {
+      "sid": "01-12",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: pre-authored cap scenario was already active and passed at 44f87cd; no skip marker existed to remove",
+      "t": "2026-08-10T20:08:57Z"
+    },
+    {
+      "sid": "01-12",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: added and executed fast-check cap/population property with declared run_cap and no 10000 cap oracle/default",
+      "t": "2026-08-10T20:09:00Z"
+    },
+    {
+      "sid": "01-12",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: focused property and pre-authored acceptance passed; 98 unit tests, typecheck, and 8-job fast local CI passed; UI N/A because this is a pure planner",
+      "t": "2026-08-10T20:09:29Z"
+    },
+    {
+      "sid": "01-12",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 07fb0bf committed with Step-ID 01-12 after focused property and acceptance, full units, typecheck, and fast CI all passed",
+      "t": "2026-08-10T20:09:49Z"
+    },
+    {
+      "sid": "01-12",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: amended final commit e1c1cc2 retains Step-ID 01-12 trailer after all declared gates passed",
+      "t": "2026-08-10T20:10:04Z"
+    },
+    {
+      "sid": "01-13",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T20:12:50Z"
+    },
+    {
+      "sid": "01-13",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T20:13:25Z"
+    },
+    {
+      "sid": "01-13",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T20:13:25Z"
+    },
+    {
+      "sid": "01-13",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: e2463a3 committed after focused fast-check property and 3-example acceptance, 99 unit tests, typecheck, and 8-job fast CI passed; UI N/A because this is a pure push-reaction planner",
+      "t": "2026-08-10T20:14:14Z"
+    },
+    {
+      "sid": "01-14",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: focused 503 acceptance, 100 unit tests, typecheck, and 8-job fast CI passed. UI N/A: pure reaction decision has no rendered surface.",
+      "t": "2026-08-10T20:19:32Z"
+    },
+    {
+      "sid": "01-14",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: inspected the assigned pure reaction planner, active 503 oracle, project truth, and prior-slice evidence; classified non-visual.",
+      "t": "2026-08-10T20:19:40Z"
+    },
+    {
+      "sid": "01-14",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: the pre-authored 503 scenario was already active and passed through planSendReactions; it asserts a reaction exists before asserting zero deletions.",
+      "t": "2026-08-10T20:19:41Z"
+    },
+    {
+      "sid": "01-14",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: added and ran a fast-check property over HTTP status partition: only 403, 404, and 410 prune; all others, including 503, preserve.",
+      "t": "2026-08-10T20:19:41Z"
+    },
+    {
+      "sid": "01-14",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: ce6918e committed with Step-ID 01-14. Falsification passed: widening pruning to all non-2xx kept 01-13's 3 gone cases green and made the 503 scenario fail with one deletion; production predicate restored and diff-clean.",
+      "t": "2026-08-10T20:20:06Z"
+    },
+    {
+      "sid": "01-14",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: amended final commit 05f8cf7 retains Step-ID 01-14 after all declared gates and the required falsification passed.",
+      "t": "2026-08-10T20:20:17Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: inspected the active R25 scenario, notification-seat contract, payload provenance, and prior 01-15 evidence; classified as non-visual service-worker wiring, observable on a real device only at Pre-requisite 10.",
+      "t": "2026-08-10T20:26:39Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: the pre-authored same-spot scenario was already active and passed through handlePush, proving two show calls carry the shared spot tag.",
+      "t": "2026-08-10T20:26:39Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: added and ran the focused two-delivery browser-port oracle. It requires both deliveries to be shown, retaining the common payload spot_id tag so browser replacement is not confused with handler suppression.",
+      "t": "2026-08-10T20:26:39Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: focused unit and exact acceptance passed; full units 102/102, typecheck, and 8-job fast local CI passed. UI N/A: notification-tray grouping is an operating-system surface pending the real-device smoke.",
+      "t": "2026-08-10T20:26:39Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: eee3a0b committed with Step-ID: 01-16. Test budget: 1 browser-port behavior × 2 = 2; one focused test added. The broad slice tag sweep reached future UI/click work and a sandbox IPC restriction, so this slice records only its exact active scenario.",
+      "t": "2026-08-10T20:27:09Z"
+    }
+  ]
+}
