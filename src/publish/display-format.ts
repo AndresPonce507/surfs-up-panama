@@ -11,10 +11,50 @@
 // and is a contract violation, not a style preference.
 
 import { OPEN_ENDED_SIZE_BAND, sizeBands, type SizeBandToken } from '../data/size-bands';
+import { factorWord, type FactorWord } from './factor-vocab';
 import type { BestWindow } from './static-surface';
+import type { WeakestLinkReading } from './weakest-link';
 
 const APPROXIMATELY = '≈';
 const RANGE_DASH = '–';
+
+/**
+ * The one place this wording lives, so the pending copy settlement (Andres,
+ * through the cousin's crew channel) is a one-line swap here, never an edit
+ * scattered across components. `named` composes the settled Pre-requisite 3
+ * sentence from the shared factor-vocab.ts word -- article and noun both
+ * come from that module, never hardcoded here, so the phrase is correct for
+ * every one of the four factors and not just the ones that happen to take
+ * "el".
+ *
+ * `clean` and `unknown` are two different honest sentences, not one. A day
+ * the pipeline scored perfectly and a day published on an older surface that
+ * never carried this field are different facts (static-surface.ts,
+ * `SurfaceCall.weakest_link`); collapsing them into the same wording -- or
+ * into silence that reads as "all clear" -- is the dishonesty this product
+ * refuses. Whether either sentence ever reaches a page is a mounting
+ * decision this module does not make.
+ *
+ * STRINGS BOUNDARY, FLAGGED NOT FIXED: application-architecture.md and the
+ * feature plan both put UI strings in src/i18n/strings.ts; that lane is
+ * forbidden to this step. This constant is a cross-lane follow-up owed to
+ * the i18n owner once that lane opens.
+ */
+export const WEAKEST_LINK_SENTENCE_ES = {
+  named: (word: FactorWord): string => `Lo que lo tumba: ${word.article} ${word.noun}.`,
+  clean: 'Este día no tuvo ningún punto débil: nada le bajó el puntaje.',
+  unknown: 'Esta mañana no trajo ese dato: no sabemos qué lo habría tumbado.',
+} as const;
+
+/**
+ * Turns one published weakest-link reading into the settled Spanish
+ * sentence. Total over the three honest outcomes a spot-day can carry
+ * (weakest-link.ts, `WeakestLinkReading`): a page or component calls this
+ * and never composes the wording inline.
+ */
+export function formatWeakestLinkEs(reading: WeakestLinkReading): string {
+  return reading.kind === 'named' ? WEAKEST_LINK_SENTENCE_ES.named(factorWord(reading.factor)) : WEAKEST_LINK_SENTENCE_ES[reading.kind];
+}
 
 /**
  * `Cintura a pecho ≈0.7–1.1 m`. Renders the published `size_band` word and the
