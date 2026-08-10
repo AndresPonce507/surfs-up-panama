@@ -2,7 +2,7 @@
   "roadmap": {
     "project_id": "f-see-what-killed-it",
     "created_at": "2026-08-09T23:50:00Z",
-    "total_steps": 10,
+    "total_steps": 15,
     "quality_contract_version": 1
   },
   "phases": [
@@ -297,6 +297,153 @@
           "implementation_notes": "EXEMPT FROM PARADIGM: measured UI quality over built artifacts; the browser oracle and the repository gate are the instruments. ONE SCENARIO OUTLINE, TWO EXAMPLE ROWS, BOTH OWNED BY THIS STEP: | claro | normal | and | oscuro | reducido |. Both must pass; the dark row also carries prefers-reduced-motion. CONTRAST IS MEASURED AGAINST THE REAL BACKDROP, not white: the audit walks up from the callout to the nearest ancestor whose computed background is not transparent, so a token that only clears AA on paper will fail on a card. Both themes, so pick tokens that hold in both. THE COUNT GUARD FIRES FIRST: the audit compares the number of callout elements found against the number the published plan expects (two for this beach, which publishes size today and wind tomorrow), and reports 'nothing to measure' before any contrast maths runs - so a missing render can never read as 'AA is fine'. U3 has TWO halves: any interactive element the callout adds must measure 44 px, and the existing thumb-zone report call to action (a.cta) must still measure 44 by 44 and not be displaced or occluded. THE SIMPLEST WAY TO HOLD BOTH: ship no interactive element inside the callout at all - slice-01 promises a sentence, not a control, and the 'por qué' reason tap is explicitly F-KNOW-HOW-MUCH-TO-TRUST-IT's. U7 forbids raw colour in the element's own style attribute, and the repository gate scripts/check-ui-quality.mjs owns the no-raw-hex-outside-src/styles rule and must exit 0 for the built surface; scripts/** is a FORBIDDEN WRITE LANE, so the gate is run, never edited. U2 uses the longest Spanish spot name, Santa Catalina - La Punta: let the sentence wrap rather than forcing it onto one line. GATE DISCIPLINE, this repo has committed over a red gate through a pipeline before: run npm run test:at -- --tags \"@feature-f-see-what-killed-it and @slice-01\" with output redirected to a file, capture $? on its own line, then read the file; never pipe a gate into tail, head or grep. Expect 11 scenarios, 0 failed, real exit 0 - except that scenario 5 stays red until the serialized cross-lane build.ts line lands (see 01-02), which is a BLOCK to report, not a reason to edit a forbidden file. Then run npm run test:at -- --tags \"not @feature-f-see-what-killed-it\" and confirm the other 78 scenarios still pass. AFTER GREEN: npm run build and INSPECT what actually renders in dist (project rule: green tests do not mean it works; the conf_level bug shipped green on all ten jobs). COMMIT IS BLOCKED until the slice charter exists - see the charter gap recorded in this roadmap - because the source-blind examiner is dispatched with the charter and its U8 observation and nothing else."
         }
       ]
+    },
+    {
+      "id": "02",
+      "name": "Slice-02: the named factor carries its published raw value",
+      "description": "One scalar follows the already-published weakest-link label from the producer to the existing callout. The page formats it but never chooses, derives, rescales or fetches it. Full sub-score disclosure remains Slice-04.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "02-01",
+          "name": "Optional published culprit-score field is typed and guarded",
+          "criteria": [
+            "SurfaceCall adds optional weakest_link_subscore only for a named weakest_link: finite 0 through 1, while legacy named rows without it remain valid.",
+            "A present scalar never changes any existing reading-surface field, two-day validation, rank order or retained-dawn behavior.",
+            "Property: valid named scalars survive unchanged; null or missing weakest links, NaN, infinity and out-of-range values are rejected when paired with the scalar.",
+            "The field is documented as the raw score for the already-published weakest_link, not a second factor choice and not the Slice-04 four-factor record."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "La playa lee el valor publicado de la misma cosa que la tumbó",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "This is the backward-compatible reading-surface wire type. Pixels first change in 02-04, which owns the charter and all U1 to U7 checks.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/publish/static-surface.ts",
+            "tests/unit/weakest-link-surface-contract.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM: use fast-check property tests at the pure strict-validator boundary with a state-delta universe covering the supplied call, day ordering and validation result. Do not import scoring internals into the static-surface type. The schema owner must accept X7 before this step turns green; this step is the consumer-side type and validation half only."
+        },
+        {
+          "id": "02-02",
+          "name": "Producer carries the raw value beside its named factor",
+          "criteria": [
+            "Every freshly built named weakest-link row carries weakest_link_subscore selected from CallRow.sub with the same factor key; no page computes or selects this value.",
+            "A null weakest_link carries no scalar, while a named weakest_link with null, non-finite or out-of-range matching sub-score refuses publication before the reading surface changes.",
+            "Property: changing any unselected factor score does not change the carried scalar; changing the named factor score changes only that scalar.",
+            "The committed newly built surface proves every named spot-day has the scalar and every clean spot-day omits it."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "El número sale de la misma mañana que nombró el culpable",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A producer projection and publication invariant; the number becomes visible only through 02-04.",
+          "ui_checks": {},
+          "deps": ["02-01"],
+          "files_to_modify": [
+            "src/pipeline/build.ts",
+            "tests/unit/published-surface-fields.test.ts",
+            "tests/unit/run-build-cli.test.ts"
+          ],
+          "implementation_notes": "SERIALIZED CROSS-LANE STEP: build.ts and the committed surface belong to the producer/schema owner. Select call.sub[call.weakest_link] only while both values are in the pipeline record; that selection is a published-data projection, not frontend derivation. Do not carry the complete sub object, add an hourly lookup, or change the ranked row selection."
+        },
+        {
+          "id": "02-03",
+          "name": "Reader preserves the one row and one day pairing",
+          "criteria": [
+            "The publish-side reader returns a named factor with its own raw scalar only when both arrive on the same selected spot-day row.",
+            "Today continues to read current.calls and tomorrow current.days[1].spots, matching forecast.ts exactly.",
+            "Property: another factor's lower score never replaces the named scalar; an absent scalar omits the numeric suffix, never guesses a value.",
+            "Clean and unknown weakest-link states retain their existing semantics and cannot acquire a number."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "El número acompaña al factor publicado, no al más bajo",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure reader law. The visible number is owned by 02-04.",
+          "ui_checks": {},
+          "deps": ["02-01", "02-02"],
+          "files_to_modify": [
+            "src/publish/weakest-link.ts",
+            "tests/unit/weakest-link-surface-contract.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM: fast-check over independently varied day rows and factors. Preserve the tagged clean and unknown states instead of introducing a nullable primitive. The implementation must read one row once, not call a separate factor selector or inspect spot_detail hourly data."
+        },
+        {
+          "id": "02-04",
+          "name": "One formatter extends the existing callout sentence",
+          "criteria": [
+            "The house formatter appends the selected raw score as ', a 0.18' to the named Spanish sentence, using exactly two decimal places and no inline page formatting.",
+            "The existing one callout element changes text only; it gains no new mount, control, JavaScript, client fetch, route change or extra element.",
+            "A legacy named row without the scalar keeps a complete Spanish factor sentence with no dangling punctuation, code token, English, null or undefined.",
+            "Property: values 0 through 1 render as two-place decimals and the formatter never substitutes another factor's value."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "El surfista ve el valor de la misma cosa que la tumbó",
+          "slice_id": "slice-02",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-see-what-killed-it/a-surfer-taps-una-playa-y-lee-el-factor-publicado-con-su-valor.md",
+          "u8_observation": "El número vive dentro de una sola frase clara en español. Se lee como una razón para surfear o no, no como telemetría ni una nota de programador.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-02 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-02 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-02 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-02 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-02 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-02 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-02 and @ui-u7"]
+          },
+          "deps": ["02-03"],
+          "files_to_modify": [
+            "src/publish/display-format.ts",
+            "src/components/WeakestLink.astro",
+            "tests/unit/published-display-format.test.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM for the markup edit: the existing component is publish-time static composition; compensate with properties in the formatter and reader plus future built-surface acceptance checks. Create the stated expectation charter only when Slice-02 enters JIT DISTILL, then run U1-U7 and a fresh U8 examiner before COMMIT. Do not change SpotDetail.astro: Slice-01 already owns the sole mount."
+        },
+        {
+          "id": "02-05",
+          "name": "Built surface proves the raw value and its honest degrades",
+          "criteria": [
+            "The future acceptance run proves today and tomorrow render distinct named-factor values from their own published rows at 390 px.",
+            "A fixture where tide is numerically lower but wind is the published weakest link proves the page shows wind's raw value, not a frontend minimum.",
+            "Legacy named rows omit only the numeric suffix; perfect and unknown days remain element-free as Slice-01 already promises.",
+            "The two-theme, reduced-motion, overflow, type, target and token checks pass with the longer number-bearing sentence, and the route adds zero JavaScript."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "La playa muestra el valor publicado sin inventar uno",
+          "slice_id": "slice-02",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-see-what-killed-it/a-surfer-taps-una-playa-y-lee-el-factor-publicado-con-su-valor.md",
+          "u8_observation": "En un teléfono leo qué tumbó la playa y su valor en la misma frase. Cuando ese valor no llegó en una mañana vieja, la frase sigue completa sin un hueco extraño ni una cifra inventada.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-02 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-02 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-02 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-02 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-02 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-02 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-02 and @ui-u7"]
+          },
+          "deps": ["02-04"],
+          "files_to_modify": [
+            "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+            "tests/acceptance/f-see-what-killed-it/steps/weakest-link-callout.steps.ts",
+            "tests/acceptance/f-see-what-killed-it/fixtures/slice-02-weakest-link-subscores.json"
+          ],
+          "implementation_notes": "JIT DISTILL ONLY: do not author these test files while mapping. On legal entry, add five example-based real-I/O scenarios from slice-02-contract.md, run the explicit RED classification, and leave every Slice-01 test and evidence unchanged. The two browser negative cases make the missing field and false-minimum failures falsifiable."
+        }
+      ]
     }
   ],
   "implementation_scope": {
@@ -389,6 +536,17 @@
       "blocks_scenario": "none directly; it blocks the source-blind examination and therefore COMMIT",
       "owner": "slice DISTILL owner",
       "serialized": true
+    },
+    {
+      "id": "X7",
+      "what": "Schema-authorized scalar projection of the named weakest-link raw sub-score",
+      "exact_change": "Accept optional SurfaceCall.weakest_link_subscore: number, present only for a named weakest_link; update the authoritative reading-surface schema record and have surfaceCall() project call.sub[call.weakest_link] while both fields are in the producer record.",
+      "why_not_here": "The accepted domain-model day-summary list is explicit and does not yet include sub-scores. This feature cannot silently enlarge that contract, and src/pipeline/build.ts is the serialized producer lane. Carrying full sub would pre-build Slice-04; a scalar is the minimum Slice-02 projection.",
+      "blocks": ["02-01", "02-02", "02-03", "02-04", "02-05"],
+      "blocks_scenario": "every Slice-02 scenario that requires a newly published numeric suffix; JIT authoring itself remains blocked until Slice-01 is sealed",
+      "owner": "schema authority and keystone / producer lane",
+      "serialized": true,
+      "decision_record": "docs/feature/f-see-what-killed-it/deliver/slice-02-contract.md"
     }
   ],
   "validation": {
