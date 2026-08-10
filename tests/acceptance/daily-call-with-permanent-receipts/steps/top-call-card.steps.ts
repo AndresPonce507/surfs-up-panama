@@ -491,11 +491,21 @@ Then('el llamado cumple las siete comprobaciones visuales de la superficie publi
   const expectedHeadline = `VE A ${expected.spotName.toLocaleUpperCase('es-PA')}`;
   const audit = await page.evaluate(`(() => {
     const expectedHeadline = ${JSON.stringify(expectedHeadline)};
+    // Keeps ALPHA. An earlier version sliced to three channels, which turned
+    // rgba(0,0,0,0) — a fully TRANSPARENT background — into [0,0,0], identical
+    // to opaque black. Every element then measured its text against black, and
+    // in light theme #14181d on black is exactly 1.17:1, which is the number
+    // this check reported for three different elements at once. Three identical
+    // ratios for three different tags was the tell: they were not measuring
+    // three things, they were measuring one wrong thing.
     const parse = (value) => {
       const match = value.match(/rgba?\\(([^)]+)\\)/i);
       if (!match || match[1] === undefined) return null;
-      const channels = match[1].split(',').slice(0, 3).map((part) => Number(part.trim()));
-      return channels.length === 3 && channels.every(Number.isFinite) ? channels : null;
+      const parts = match[1].split(',').map((part) => Number(part.trim()));
+      const [r, g, b] = parts;
+      const alpha = parts.length >= 4 ? parts[3] : 1;
+      if (![r, g, b, alpha].every(Number.isFinite)) return null;
+      return [r, g, b, alpha];
     };
     const luminance = ([r, g, b]) => {
       const channel = (value) => {
@@ -538,9 +548,11 @@ Then('el llamado cumple las siete comprobaciones visuales de la superficie publi
       let node = element;
       while (node !== null && node !== hero) {
         const own = parse(getComputedStyle(node).backgroundColor);
-        // parse() yields null for fully transparent; a 4th channel below 1 is
-        // translucent and deliberately does NOT count as a backdrop.
-        if (own !== null && (own.length < 4 || own[3] >= 1)) return own;
+        // Only a FULLY opaque surface hides the gradient. Anything translucent,
+        // transparent included, lets the gradient through and therefore still
+        // owes the gradient its 4.5:1 — which is the rule that keeps a future
+        // glass element honest.
+        if (own !== null && own[3] >= 1) return own;
         node = node.parentElement;
       }
       return null;
