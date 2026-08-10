@@ -30,6 +30,28 @@ const CASE_BOUNDARY = /<hr[^>]*data-sep="case-boundary"[^>]*>/g;
 
 const REAL_REASON = 'Hoy no tenemos el dato de la marea, así que el nivel no sube de media.';
 
+/**
+ * Step 01-10 boundary exception, recorded loudly rather than done quietly:
+ * this file is not in step 01-10's files_to_modify, but 01-10 adds a
+ * non-colour shape indicator span inside <summary> (09-design-system.md
+ * section 9's confidence-indicator recipe), which is required to sit inside
+ * <summary> so the acceptance oracle's `summary.innerText()` sees it. That
+ * necessarily changes every compiled <summary> element's markup, so the
+ * exact-literal `/<summary>Confianza baja<\/summary>/` this file used before
+ * 01-10 fails on ANY summary content -- not on a behaviour regression. The
+ * behavioural contract these three assertions guard, per their own failure
+ * message, is "the level word must always render" -- not "the summary's
+ * total markup is frozen forever". This pattern preserves that contract
+ * (still requires "Confianza baja" as the summary's own leading text, still
+ * fails if the word were removed, renamed or moved) while tolerating
+ * additional trailing content inside the same <summary>, such as 01-10's
+ * shape span. It does not touch `nonSummaryContent(...)`, which is the
+ * assertion that actually enforces this file's degrade contract (no
+ * non-summary child rendered) and is unaffected by 01-10's change because
+ * the shape span lives inside <summary>, before `</summary>`.
+ */
+const SUMMARY_OPENS_WITH_LEVEL_WORD = /<summary>Confianza baja[\s\S]*<\/summary>/;
+
 function buildIsolatedHarness(): { outDir: string; root: string } {
   const root = mkdtempSync(join(tmpdir(), 'surfs-up-confidence-detail-'));
   const outDir = mkdtempSync(join(tmpdir(), 'surfs-up-confidence-detail-out-'));
@@ -131,7 +153,7 @@ afterAll(() => {
 describe('ConfidenceDetail degrades a reasonless row without an empty box', () => {
   it('shows the level word and offers no disclosure body when reason is absent', () => {
     const block = detailsBlock(harnessCases()[0]!);
-    assert.match(block, /<summary>Confianza baja<\/summary>/, `the level word must always render: ${block}`);
+    assert.match(block, SUMMARY_OPENS_WITH_LEVEL_WORD, `the level word must always render: ${block}`);
     assert.equal(
       nonSummaryContent(block),
       '',
@@ -141,7 +163,7 @@ describe('ConfidenceDetail degrades a reasonless row without an empty box', () =
 
   it('shows the level word and offers no disclosure body when reason is an empty string, never a silent empty box', () => {
     const block = detailsBlock(harnessCases()[1]!);
-    assert.match(block, /<summary>Confianza baja<\/summary>/, `the level word must always render: ${block}`);
+    assert.match(block, SUMMARY_OPENS_WITH_LEVEL_WORD, `the level word must always render: ${block}`);
     assert.equal(
       nonSummaryContent(block),
       '',
@@ -151,7 +173,7 @@ describe('ConfidenceDetail degrades a reasonless row without an empty box', () =
 
   it('shows the level word and the published reason verbatim when a reason exists', () => {
     const block = detailsBlock(harnessCases()[2]!);
-    assert.match(block, /<summary>Confianza baja<\/summary>/, `the level word must always render: ${block}`);
+    assert.match(block, SUMMARY_OPENS_WITH_LEVEL_WORD, `the level word must always render: ${block}`);
     assert.equal(
       nonSummaryContent(block),
       `<div>${REAL_REASON}</div>`,
