@@ -8,10 +8,16 @@ import { deriveWindows, type WindowStat } from './windows';
 export type ProjectionInput = {
   readonly predictions: readonly PredictionSnapshot[];
   readonly reports: readonly SurfReport[];
+  readonly fromAccumulator?: ScorecardAccumulator | null;
   readonly variables?: readonly string[];
   readonly trustConfig: TrustGateConfig | null;
   readonly resolveReporter: (deviceId: string) => string;
   readonly asOf: string;
+};
+
+/** The immutable report-log prefix accumulated by the incremental fold. */
+export type ScorecardAccumulator = {
+  readonly reports: readonly SurfReport[];
 };
 
 export type ScorecardProjection = {
@@ -50,8 +56,9 @@ const blocksFrom = (keys: readonly WindowStat[]): Readonly<Record<string, Scorec
 export const projectScorecard = (input: ProjectionInput): ScorecardProjection => {
   validateVariables(input.variables);
   const selected = new Set<ScorecardVariable>((input.variables ?? allowedVariables) as readonly ScorecardVariable[]);
-  const residuals = pairResiduals(input).filter((residual) => selected.has(residual.variable));
-  const gatedReports = eligibleReports(input.reports, input.trustConfig, input.resolveReporter);
+  const reports = input.fromAccumulator?.reports ?? input.reports;
+  const residuals = pairResiduals({ predictions: input.predictions, reports }).filter((residual) => selected.has(residual.variable));
+  const gatedReports = eligibleReports(reports, input.trustConfig, input.resolveReporter);
   const gatedResiduals = pairResiduals({ predictions: input.predictions, reports: gatedReports }).filter((residual) =>
     selected.has(residual.variable),
   );
@@ -64,3 +71,10 @@ export const projectScorecard = (input: ProjectionInput): ScorecardProjection =>
     blocks: blocksFrom(keys),
   };
 };
+
+/** Appends one immutable report-log item for the eventual single-writer updater. */
+export const applyReport = (
+  accumulator: ScorecardAccumulator | null,
+  report: SurfReport,
+  _input: ProjectionInput,
+): ScorecardAccumulator => ({ reports: [...(accumulator?.reports ?? []), report] });

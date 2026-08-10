@@ -26,7 +26,7 @@ Feature: La aritmética del historial existe como leyes que se niegan a publicar
     And el signo de cada residuo es pronóstico menos observado
     And las filas de pronóstico marcadas como tierra no forman ningún par
 
-  @slice-02 @pending @driving_port @in-memory @negative @error @covers-R17
+  @slice-02 @driving_port @in-memory @negative @error @covers-R17
   Scenario: El viento no entra al historial por ninguna puerta
     Given datos de prueba que intentan colar una variable de viento en el historial
     When la proyección del historial procesa esos datos
@@ -39,13 +39,13 @@ Feature: La aritmética del historial existe como leyes que se niegan a publicar
     When la proyección procesa el conjunto en dos órdenes distintos
     Then las cuentas diarias y las ventanas quedan idénticas en ambos órdenes
 
-  @slice-02 @pending @driving_port @in-memory @property @covers-R15
+  @slice-02 @driving_port @in-memory @property @covers-R15
   Scenario: Sumar un reporte nuevo no reescribe ningún día ya contado
     Given una cuenta construida con reportes de prueba de varios días
     When la proyección suma un reporte nuevo
     Then el día del reporte nuevo es el único cuya cuenta cambia
 
-  @slice-02 @pending @driving_port @in-memory @property @covers-R16
+  @slice-02 @driving_port @in-memory @property @covers-R16
   Scenario: Las ventanas de 30 y 90 días derivan el sesgo y el error con las fórmulas asentadas
     Given una cuenta con reportes de prueba repartidos en más de noventa días
     When la proyección deriva las ventanas de 30 y 90 días
@@ -87,14 +87,14 @@ Feature: La aritmética del historial existe como leyes que se niegan a publicar
     Then el contador del bloque son sus propios dos enteros unidos con la barra
     And el umbral treinta viene de su única casa exportada
 
-  @slice-02 @pending @driving_port @in-memory @covers-R18
+  @slice-02 @driving_port @in-memory @covers-R18
   Scenario: Los anclajes de calidad tienen una sola casa y el puntaje los cita tal cual
     Given un reporte de prueba con cada etiqueta de calidad
     When la proyección forma el residuo de puntaje de cada uno
     Then cada residuo usa el ancla asentada de su etiqueta desde la única casa de constantes
     And el piso de ruido del puntaje es un paso de ancla, veinticinco puntos
 
-  @slice-02 @pending @driving_port @in-memory @property @covers-R20
+  @slice-02 @driving_port @in-memory @property @covers-R20
   Scenario: Todo el historial se reconstruye idéntico desde los dos registros inmutables
     Given cualquier conjunto de reportes de prueba acumulado reporte por reporte
     When la proyección recalcula todo desde cero con los mismos registros
