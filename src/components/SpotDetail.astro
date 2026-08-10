@@ -15,7 +15,7 @@ import { forecast, type DaySummary } from '../data/forecast';
 import { spotById } from '../data/region';
 import { strings, type Locale } from '../i18n/strings';
 import { paths } from '../i18n/routes';
-import { formatBestWindowEs, formatSizeEs } from '../publish/display-format';
+import { formatBestWindowEs, formatSizeEs, formatUpdatedAtEs } from '../publish/display-format';
 
 interface Props {
   locale: Locale;
@@ -58,7 +58,7 @@ const tomorrow = summaryFor(1);
   currentPath={paths.spot(locale, spotId)}
 >
   <h1>{spot.name}</h1>
-  <p>{t.home.updatedPrefix} {forecast.published_at}</p>
+  <p>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</p>
   <nav>
     <a data-field="back-to-list" href={paths.home(locale)}>Volver a la lista</a>
   </nav>

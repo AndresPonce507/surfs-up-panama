@@ -10,6 +10,7 @@ import { forecast } from '../data/forecast';
 import { spotById } from '../data/region';
 import { strings, type Locale } from '../i18n/strings';
 import { paths } from '../i18n/routes';
+import { formatUpdatedAtEs } from '../publish/display-format';
 
 interface Props {
   locale: Locale;
@@ -64,7 +65,7 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
   currentPath={currentPath}
 >
   <h1>{t.home.header}</h1>
-  <p>{t.home.updatedPrefix} {forecast.published_at}</p>
+  <p>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</p>
   <nav>
     <a href={paths.home(locale)} aria-current={day === 0 ? 'page' : undefined}>
       {t.home.tabToday}
