@@ -2,7 +2,7 @@
   "roadmap": {
     "project_id": "f-show-our-track-record",
     "created_at": "2026-08-09T23:55:00Z",
-    "total_steps": 8,
+    "total_steps": 30,
     "quality_contract_version": 1
   },
   "phases": [
@@ -401,6 +401,852 @@
             "src/components/SpotDetail.astro"
           ],
           "implementation_notes": "EXEMPT FROM PARADIGM: end-to-end verification; E2E verifies wiring, not invariants. GATE DISCIPLINE, non-negotiable: run npm run test:at -- --tags \"@feature-f-show-our-track-record and @slice-01\" with output redirected to a file, capture the status on the next statement, then read the file. Never pipe a gate into tail, head or grep: a pipeline returns the last command's status and this repository has committed over a red gate exactly that way. Expected 8 scenarios, 0 failed, real exit 0; the pre-delivery RED run recorded 8 scenarios, 8 failed, at three distinct behaviour oracles (red-classification.md). Then run the untagged suite: at RED it was 86 scenarios, 78 passed and 8 failed, so GREEN means 86 passing and no sibling regression. Then npm run build and READ the emitted dist spot documents. That last step is the project's own hard-won rule: the worst bug this project shipped passed all ten CI jobs. NOTE ON THE SCENARIO COLUMN: this step re-drives the walking-skeleton scenario as the whole-journey proof; every scenario in the feature file is already owned by 01-01 through 01-07, so nothing here is an orphan. WHAT THIS STEP MAY NOT DO: it may not reach for a number. Zero surf reports have ever been filed, the counter reads 0 because 0 is what the source reports, and nothing in this slice may seed, demo-fill or fabricate a report to make a richer state visible. AFTER GREEN the orchestrator runs des-verify-ui, then dispatches the source-blind examiner with only the charter; COMMIT is refused until both records pass, and the charter itself is still owed (see 01-04)."
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "name": "Slice-02: the arithmetic exists as refusal laws",
+      "description": "The projection arithmetic as law-proven pure functions over fixture logs: pairing, daily aggregates, 30/90-day windows, trust eligibility, the three-clause claim gate, block assembly, and the rebuild law. Zero AWS, zero pages; the refusal laws are the product and each is proven falsifiable.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "depends_on": [
+        "01"
+      ],
+      "steps": [
+        {
+          "id": "02-01",
+          "name": "Pairing forms residuals at the settled grain",
+          "criteria": [
+            "Residuals form only at (spot, floored observation hour) against prediction rows per source and lead bucket; the sign is forecast minus observed everywhere.",
+            "Land-masked prediction rows form no pair; a report whose hour has no prediction row is counted unpaired, never guessed against a neighbouring hour.",
+            "A wind variable is refused loudly, naming wind; no wind residual can appear in any count.",
+            "Property: pairing is total over generated report and log fixtures; no input throws."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/scorecard-refusal-laws.feature",
+          "scenario_name": "Cada reporte se empareja solo con la hora y la playa que el sitio de verdad pronosticó",
+          "slice_id": "slice-02",
+          "deps": [
+            "01-08"
+          ],
+          "files_to_modify": [
+            "src/scorecard/projection.ts",
+            "src/scorecard/pairing.ts",
+            "tests/unit/scorecard-pairing.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): fast-check properties, house style tests/unit/scoring-laws.test.ts. THE DRIVING PORT, named by DISTILL and already imported by the acceptance steps (tests/acceptance/f-show-our-track-record/steps/scorecard-refusal-laws.steps.ts): src/scorecard/projection exporting projectScorecard({ predictions, reports, trustConfig, resolveReporter, asOf, variables? }) returning { residuals, daily, keys, blocks } — residuals expose per-pair observables (spot_id, source, lead_bucket, variable, paired_valid_ts, err, device_id, quality), daily exposes the per-day aggregate items, keys the per-window stats (n, bias, mae, se_sample, se_gate, distinct_reporters, window '30d'|'90d'), blocks the P5 record per spot. ALL acceptance entry is through this one port; pairing.ts is the crafter's internal, driven by unit tests. SETTLED ARITHMETIC, copied not invented: join key (spot_id, floor_utc_hour(observed_at)) = (spot_id, valid_ts), per source and lead bucket, land_masked excluded (domain-model.md section 5); sign forecast-minus-observed stated once (06 section 4); lead buckets left-inclusive right-exclusive (adr-scorecard-incremental decision 1). WIND REFUSAL SHAPE: the acceptance scenario passes variables: ['swell_h','score','wind'] and expects a loud rejection naming wind; wind was dropped from the grain 2026-08-08 and a wind row is a defect, not an extra (domain-model.md section 9). SCORE RESIDUAL INTERPRETATION, recorded as an interpretation not a settled fact: the forecast side of the score residual is the report's own server-captured predicted.score_q (domain-model.md section 7.3 consumer table routes quality -> score residual via 06 section 5.1; score_q is not a per-source fact, section 5.1 deviation note). This keeps the recovery story two-logs-only (adr decision 6). If the domain lane pins differently at round 3, adjust the pairing internals; the observable law (anchors from one home, sign convention) is unchanged. FLAG, do not resolve here: whether variable='score' keys carry source='published' or mirror the per-source grain is undecided in the corpus — pick the narrowest reading (one published-score key per spot/lead) and record it in the step's commit message for the domain lane to confirm.",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Pure arithmetic over fixture logs; nothing renders and no pixel exists. The user-visible consequence of these laws is the box that slices 01, 03 and 04 charter.",
+          "ui_checks": {}
+        },
+        {
+          "id": "02-02",
+          "name": "Daily aggregate is additive and order-free",
+          "criteria": [
+            "Each verified pair lands as one addition on its day's aggregate carrying n, error sums and raw reporter identities.",
+            "Property: any permutation of the same report set yields identical daily aggregates and window stats.",
+            "Property: appending a pair never changes any previously written day's aggregate.",
+            "Raw device identities are stored; distinct reporters resolve through the identity at read time, never stored resolved."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/scorecard-refusal-laws.feature",
+          "scenario_name": "El orden en que lleguen los reportes jamás cambia la cuenta",
+          "slice_id": "slice-02",
+          "deps": [
+            "02-01"
+          ],
+          "files_to_modify": [
+            "src/scorecard/daily-aggregate.ts",
+            "tests/unit/scorecard-daily-aggregate.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): fast-check properties. THE AGGREGATE SHAPE is settled: {n, sum_err, sum_abs_err, sum_sq_err, device_ids[]} per (spot, source, lead_bucket, variable, day) — adr-scorecard-incremental decision 2, domain-model.md section 9. THE TWO LAWS this step owns are the ScorecardDay complement invariant (domain-model.md section 10: appending pairs never mutates any previously written item) and order-freedom (sums are commutative; permutation invariance is what makes the eventual atomic-ADD updater of slice-03 safe). The acceptance oracle diffs the daily array across a permuted run and across an append, keyed by (spot|source|lead|variable|day), so the aggregate items must be exposed at the port. RAW DEVICE IDS, not resolved counts: resolution through C5 happens at read time so an identity merge yesterday changes today's aggregates correctly with zero migration (adr decision 4, domain-model.md section 8). Storing a resolved count is the rejected alternative in the ADR — do not drift into it for convenience.",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Pure arithmetic over fixture logs; nothing renders. The visible consequence ships with slices 03 and 04.",
+          "ui_checks": {}
+        },
+        {
+          "id": "02-03",
+          "name": "Windows derive bias, mae and the floored error",
+          "criteria": [
+            "Thirty and ninety day windows sum at most ninety daily items per key into bias, mae and sample error.",
+            "The gate error is the larger of the sample error and half the noise floor over root n.",
+            "The stored and exposed se field carries the floored value, never raw sample error.",
+            "Property: zero-variance samples never publish earlier than honest-variance samples of equal size and bias."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/scorecard-refusal-laws.feature",
+          "scenario_name": "Reportes coordinados que están demasiado de acuerdo nunca aflojan la reja",
+          "slice_id": "slice-02",
+          "deps": [
+            "02-02"
+          ],
+          "files_to_modify": [
+            "src/scorecard/windows.ts",
+            "tests/unit/scorecard-windows.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): fast-check properties. FORMULAS, copied not invented (06-learning-layer.md sections 4 and 7 G3; domain-model.md section 9): bias = sum_err/n, mae = sum_abs_err/n, se_sample = weighted sample sd / sqrt(n) (the settled bias_se), se_gate = max(se_sample, 0.5 * sigma_eff / sqrt(n)). SIGMA_EFF HAS ONE HOME: height 0.48 m, score 25 points (06 section 8); the acceptance steps carry them as cited oracle constants and production must carry its own single home — a second retyped sigma is a defect. WHY THE FLOOR, so the crafter never optimises it away: fabricated reports agree with each other, agreement shrinks se_sample, so the unfloored 2*se test gets EASIER to pass the more coordinated the lie; the floor removes the consistency discount (research 15 section 15.1; 06 section 7 G3 'why 0.5'). NOT a launch no-op: the floor binds whenever sample sd < 0.5*sigma_eff — roughly 1% of honest keys at n=10 and every zero-variance fabrication, and that suppression is the point. THE SE FIELD SEMANTICS ARE PINNED: whatever field the port exposes as se carries se_gate, never raw se_sample, so no downstream surface can ever print an impossible precision (Definition of Done row 4). distinct_reporters = |resolveReporter(device_ids)| computed at read time (adr decision 4).",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Pure arithmetic over fixture logs; nothing renders. The floored margin becomes visible only in slice-04's headline, which is chartered there.",
+          "ui_checks": {}
+        },
+        {
+          "id": "02-04",
+          "name": "Trust eligibility demonstrated firing on a nonzero config",
+          "criteria": [
+            "Eligibility evaluates the two settled clauses, credential age at receipt and prior history spanning prior spots, from each record's own fields.",
+            "At the shipped all-zero config the eligible set equals the full set bit-identically.",
+            "Against a nonzero fixture config a young credential's samples drop out of every gated count.",
+            "Ineligibility touches gated counts only; the display-instantly counter still counts every stored report."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/scorecard-refusal-laws.feature",
+          "scenario_name": "El filtro de confianza se ve disparar: una credencial joven pierde sus muestras",
+          "slice_id": "slice-02",
+          "deps": [
+            "02-01"
+          ],
+          "files_to_modify": [
+            "src/scorecard/trust-eligibility.ts",
+            "tests/unit/scorecard-trust-eligibility.test.ts"
+          ],
+          "implementation_notes": "THE G2 PREDICATE, copied not invented (06-learning-layer.md section 7 G2): a sample's reporter is trust-eligible iff received_at - credential_issued_at >= min_credential_age_days (age frozen at receipt, side taken deliberately over age-at-aggregation: eligibility stays a pure function of log + config, recompute-deterministic, no wall clock) AND at received_at the reporter has >= min_prior_reports earlier stored reports spanning >= min_prior_spots distinct spots. The spots clause qualifies the history clause, so at min_prior_reports=0 it is vacuous — which is why the shipped config {min_credential_age_days: 0, min_prior_reports: 0, min_prior_spots: 2} is a proven launch no-op. CONFIG HOME: data/config/trust-gate.json is OWNED BY THE WRITE-PATH LANE (07 section 7.3) and does not exist on disk yet; this slice consumes the config as an input VALUE and must not create that file. THE UNFIRED-IS-NOT-EVIDENCE CLAUSE is the whole reason this is its own step (06 section 7, clause check:unfired-is-not-evidence; Definition of Done row 3): one acceptance scenario runs a NONZERO fixture config and watches a young credential's samples drop out of every gated count, and the zero-config run must be bit-identical to not filtering at all. SEPARATION KEPT: ineligible samples still appear in every display-instantly surface — the counter counts stored reports (decisions 4/11/19: a count is not a claim); eligibility gates only n, distinctness and the fitted values.",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Pure predicate arithmetic over fixture records; nothing renders. Its visible consequence is only ever the absence of an unearned claim, chartered with slice-04.",
+          "ui_checks": {}
+        },
+        {
+          "id": "02-05",
+          "name": "Claim gate computes the bias clause, keeps every refusal",
+          "criteria": [
+            "The bias clause flips from unavailable to computed; every slice-01 refusal property still passes unchanged.",
+            "Property: fewer than five distinct trust-eligible reporters never publishes, whatever the other numbers say.",
+            "Property: fewer than ten paired observations never publishes, regardless of every other value.",
+            "A claim publishes only when all three clauses are satisfied on computed values; unavailable still refuses.",
+            "Each refusal law is watched failing against a deliberately broken gate, then reverted, verified by git diff."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/scorecard-refusal-laws.feature",
+          "scenario_name": "Con menos de cinco personas de verdad nunca se publica una cifra",
+          "slice_id": "slice-02",
+          "deps": [
+            "02-03",
+            "02-04"
+          ],
+          "files_to_modify": [
+            "src/scorecard/publish-gate.ts",
+            "tests/unit/scorecard-publish-gate.test.ts"
+          ],
+          "implementation_notes": "THIS STEP EXTENDS 01-02, IT DOES NOT REWRITE IT: slice-01 shipped the decision as a total function whose bias clause evaluates unavailable-by-construction, and its notes promised that slice-02 flips that clause to computed and inherits every refusal property unchanged. Honour that promise literally — the 01-02 unit tests must pass without edits. GATE, copied not invented: n >= 10 AND distinct trust-eligible reporter_key >= 5 AND |bias| > 2 * se_gate (domain-model.md section 9; 06 section 7 G1-G3). The n>=10 and k>=5 refusal laws are properties over generated window stats where the OTHER numbers are adversarially large: huge bias, huge n against small k, and vice versa — the point is that no combination buys past a failed clause. FAIL-CLOSED STAYS: a clause whose input is missing evaluates unavailable and unavailable is refused, because the single worst outcome this feature can produce is a claim from nothing. FALSIFIABILITY IS REQUIRED, NOT OPTIONAL (project CLAUDE.md: prove every negative falsifiable; requirement R19): break each clause deliberately once (>= to >, 5 to 4, drop the floor), watch the matching property fail for the right reason, revert, verify the revert with git diff, and record the three break-watch-revert passes in the DES phase log. This repository has two tests that passed for accidental reasons; a refusal law nobody has watched refuse would be the third.",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Pure decision logic; nothing renders. The user-visible consequence — a box that never claims below the gate — is chartered by slices 01 and 04.",
+          "ui_checks": {}
+        },
+        {
+          "id": "02-06",
+          "name": "Block assembly: counter and threshold from one home",
+          "criteria": [
+            "Property: for any store state the block's counter is its own two integers joined as N slash threshold.",
+            "The threshold integer travels beside the counter string; nothing parses numbers out of display strings.",
+            "Score residual anchors import only from the one shipped constants home, with the twenty-five point floor cited as an unfit prior.",
+            "The day-one store-absent outcome still assembles the zero block, counter zero of thirty."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/scorecard-refusal-laws.feature",
+          "scenario_name": "El contador sale de los dos enteros del bloque y con su forma exacta",
+          "slice_id": "slice-02",
+          "deps": [
+            "02-05"
+          ],
+          "files_to_modify": [
+            "src/scorecard/scorecard-block.ts",
+            "tests/unit/scorecard-block.test.ts"
+          ],
+          "implementation_notes": "EXTENDS the 01-02/01-03 block assembly with the computed path: the block {n_obs, n_reporters, threshold, counter, claim_ok, headline} now derives from real window stats instead of only the store-absent outcome, and BOTH paths must produce the same shape (P5, domain-model.md section 13). COUNTER SHAPE LAW: counter === `${n_obs} / ${THRESHOLD}` for ANY n_obs — this is requirement R5's producer half, which slice-01 REFUSED because no producer existed; it becomes assertable here at the block producer, while the build-LOUD half on the wire stays with slice-03 (requirement-checklist.md R5 disposition). THRESHOLD from src/scorecard/threshold only (requirement R6's code-home half — 01-01 shipped the home, this step proves the producer consumes it); domain-model.md section 13 put threshold as an integer BESIDE the counter string precisely so nobody parses a display string. ANCHORS: QUALITY_OBSERVED_SCORE from src/data/report-vocab.ts is the only legal import for q_obs (requirement R18); sigma_eff_score = 25 points is one anchor step and an unfit prior (06 sections 8 and 14) — cite it, never tune it here. The store-absent regression keeps slice-01 honest: with the day-one source the assembled block is still the zero block.",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Pure assembly logic; nothing renders. The rendered counter is slice-01's chartered surface and slice-03's counting state.",
+          "ui_checks": {}
+        },
+        {
+          "id": "02-07",
+          "name": "Projection rebuilds identical, slice green",
+          "criteria": [
+            "Property: the incremental fold, one report at a time, equals the from-scratch recompute exactly.",
+            "The recompute is deterministic: same logs, same config, identical outcome.",
+            "The full slice-02 tag run passes with real exit zero, captured by redirect and status read, never a pipeline.",
+            "The untagged acceptance run shows no sibling scenario regressed; the falsifiability inventory is complete and recorded."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/scorecard-refusal-laws.feature",
+          "scenario_name": "Todo el historial se reconstruye idéntico desde los dos registros inmutables",
+          "slice_id": "slice-02",
+          "deps": [
+            "02-06"
+          ],
+          "files_to_modify": [
+            "src/scorecard/projection.ts",
+            "tests/unit/scorecard-projection.test.ts"
+          ],
+          "implementation_notes": "THE REBUILD LAW is what adr-scorecard-incremental decision 6 bought on purpose: the scorecard is a projection of the two immutable logs and a defective updater loses no data. At this slice the law is pure: applyReport (the incremental fold the slice-03 updater will deploy) folded one report at a time must equal projectScorecard from scratch, for ANY generated report set. The acceptance step imports BOTH port names — projectScorecard and applyReport — so the fold entry must exist even though nothing schedules it yet; that is the contract the slice-03 updater inherits instead of inventing. GATE DISCIPLINE for the green run, non-negotiable and identical to 01-08: redirect to a file, capture status on the next statement, read the file; never pipe a gate into tail/head/grep (this repository has committed over a red gate exactly that way). EXPECTED SHAPE AT GREEN: the slice-02 selection runs 12 scenarios, 0 failed; the untagged run keeps every sibling green — the 21 skipped scenarios of slices 03-05 stay skipped (they are @blocked-on-real-reports gated, and that is correct, not a gap). Then re-read distill/red-classification.md's slice-02 entry and confirm every scenario listed there flipped for the reason its oracle names. NO DIST INSPECTION owed here: this slice ships no page bytes — asserting dist/ would be fabricating a visual obligation for a non-visual slice.",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Pure verification of the arithmetic and the runs; nothing renders and no page bytes change in this slice.",
+          "ui_checks": {}
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "name": "Slice-03: the counter counts real reports",
+      "description": "BLOCKED, and the block is real: zero surf reports exist and no write store is deployed. Authored now so the slice is ready the moment reports arrive. The updater pairs exactly-once, the builder reads real aggregates, the counter renders real counts, and an unreadable source fails the publish LOUD.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "depends_on": [
+        "02"
+      ],
+      "steps": [
+        {
+          "id": "03-01",
+          "name": "Updater pairs each new report exactly once",
+          "criteria": [
+            "Replaying the same report through the updater never double-adds; the cursor advances conditionally, exactly-once.",
+            "Exactly one updater instance is declared to run at a time, written where deploy reads it.",
+            "Each residual sample lands as one atomic addition on its daily aggregate item.",
+            "No day already written changes when a new report arrives."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/counter-counts-real-reports.feature",
+          "scenario_name": "Repetir el mismo reporte jamás lo cuenta dos veces",
+          "slice_id": "slice-03",
+          "deps": [
+            "02-07"
+          ],
+          "files_to_modify": [
+            "src/scorecard/updater.ts",
+            "tests/unit/scorecard-updater.test.ts"
+          ],
+          "implementation_notes": "HARD BLOCK, restated so no crafter starts early: zero surf reports have ever been filed, no write store is deployed, and nothing may be seeded, demo-filled or fabricated to unblock this phase (feature-delta.md Slice Plan; red-classification.md contract row 4). Every slice-03 scenario carries @blocked-on-real-reports and is skipped whole by the gate hook in tests/acceptance/f-show-our-track-record/steps/blocked-gate.steps.ts. UNBLOCK PROTOCOL: when F-TELL-US-WHAT-YOU-SAW-COLD slice-03 is shipped and receiving real reports, AND the updater's stack home plus reserved-concurrency budget are assigned (Pre-requisites 5 and 6, both open), the slice re-enters DISTILL: remove the tag scenario by scenario, complete the fail-loud step bodies marked 'completed at DISTILL re-entry', record the RED run in distill/red-classification.md, and only then dispatch DELIVER. The roadmap's implementation_scope was cut for slices 01-02 and must be re-cut at unblock: src/pipeline/**, src/publish/** and infra/** are excluded today to protect the keystone seam, and slice-03 legitimately edits the first two once the seam order is settled (Pre-requisite 2). THIS STEP: the hourly updater deploys the applyReport fold 02-07 proved, under a JobCursor advanced by conditional update so ADD is never applied twice to the same report (adr-scorecard-incremental decisions 2-3). The single-writer constraint is a DEPLOYMENT constraint (domain-model.md section 9): exactly one updater instance at a time — the cursor gives exactly-once only under single-writer; if throughput ever demands parallelism the ADR's per-(report,key) idempotency-marker variant is the named escape hatch, not ad-hoc locking. The updater's stack home is named in NO stack today and its reserved concurrency is booked NOWHERE (Pre-requisites 5 and 6): DO NOT START until both are assigned. The acceptance scenario observes replay-stability at the page-facing counts; the unit tests drive the cursor conditional directly with a real local store double that validates inputs like the real adapter (a permissive double here would hide exactly the wiring bug class this repo has shipped).",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The updater is a deployed background job with no pixels; its visible consequence, the counter moving, is chartered on 03-04 and 03-05.",
+          "ui_checks": {}
+        },
+        {
+          "id": "03-02",
+          "name": "Builder reads the real aggregates, one query per spot",
+          "criteria": [
+            "The bundle's spot detail gains the P5 scorecard block emitted from the real read, replacing the slice-01 zero source.",
+            "Reports and scorecard rows share one partition, so the builder issues one query per spot.",
+            "The counter shape law now fails the build loudly on any mismatch, never a silent page.",
+            "The third hop, bundle to page surface, is designed with the wire's owner, not invented here."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/counter-counts-real-reports.feature",
+          "scenario_name": "La primera playa con reportes de verdad ve moverse su contador",
+          "slice_id": "slice-03",
+          "deps": [
+            "03-01"
+          ],
+          "files_to_modify": [
+            "src/publish/region-bundle.ts",
+            "src/pipeline/build.ts",
+            "src/scorecard/observation-source.ts"
+          ],
+          "implementation_notes": "HARD BLOCK, restated so no crafter starts early: zero surf reports have ever been filed, no write store is deployed, and nothing may be seeded, demo-filled or fabricated to unblock this phase (feature-delta.md Slice Plan; red-classification.md contract row 4). Every slice-03 scenario carries @blocked-on-real-reports and is skipped whole by the gate hook in tests/acceptance/f-show-our-track-record/steps/blocked-gate.steps.ts. UNBLOCK PROTOCOL: when F-TELL-US-WHAT-YOU-SAW-COLD slice-03 is shipped and receiving real reports, AND the updater's stack home plus reserved-concurrency budget are assigned (Pre-requisites 5 and 6, both open), the slice re-enters DISTILL: remove the tag scenario by scenario, complete the fail-loud step bodies marked 'completed at DISTILL re-entry', record the RED run in distill/red-classification.md, and only then dispatch DELIVER. The roadmap's implementation_scope was cut for slices 01-02 and must be re-cut at unblock: src/pipeline/**, src/publish/** and infra/** are excluded today to protect the keystone seam, and slice-03 legitimately edits the first two once the seam order is settled (Pre-requisite 2). THIS STEP LANDS THE WIRE 01-04 RECORDED BUT DID NOT PERFORM: (1) BundleSpotDetail gains the optional scorecard member (exact diff written in 01-04's notes, schema authority domain-model.md section 13); (2) build.ts emits the block per spot through the injected observation source, which flips from the day-one store-absent answer to the real read (AP10: all scorecard rows for a spot; AP2+AP10 share PK=SPOT# so one query per spot, domain-model.md section 12); (3) THE THIRD HOP IS STILL DESIGNED NOWHERE — the spot page reads src/data/forecast which reads data/published-surface.json, and the bundle's spot_detail reaches that surface through no path in the corpus; whoever lands this step designs that promotion WITH the keystone lane, never alone (Pre-requisite 2, HANDOFF section 7 seam rule). R5's build-LOUD half lands here: a counter whose shape mismatches its integers refuses the build. These are keystone-lane files: settle serial order before dispatch. R3 becomes falsifiable here too: file one more real report, rebuild, watch the counter move — the input variation slice-01 refused to fake.",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A build-time producer and a payload wire; no pixel of its own. The rendered counter it feeds is chartered on 03-04 and 03-05.",
+          "ui_checks": {}
+        },
+        {
+          "id": "03-03",
+          "name": "Unreadable historial fails the publish loud",
+          "criteria": [
+            "From the day the store exists, an unreadable scorecard source refuses the publish, naming the source.",
+            "The prior build's page stands, visibly dated, like the keystone's refused-build behaviour.",
+            "No fabricated zero can render over real reports through any degrade path.",
+            "The degrade-row amendment is signed off by the domain and frontend lanes before this ships."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/counter-counts-real-reports.feature",
+          "scenario_name": "Si el historial no se puede leer, no se publica: la página anterior queda en pie",
+          "slice_id": "slice-03",
+          "deps": [
+            "03-02"
+          ],
+          "files_to_modify": [
+            "src/scorecard/observation-source.ts",
+            "src/pipeline/build.ts"
+          ],
+          "implementation_notes": "HARD BLOCK, restated so no crafter starts early: zero surf reports have ever been filed, no write store is deployed, and nothing may be seeded, demo-filled or fabricated to unblock this phase (feature-delta.md Slice Plan; red-classification.md contract row 4). Every slice-03 scenario carries @blocked-on-real-reports and is skipped whole by the gate hook in tests/acceptance/f-show-our-track-record/steps/blocked-gate.steps.ts. UNBLOCK PROTOCOL: when F-TELL-US-WHAT-YOU-SAW-COLD slice-03 is shipped and receiving real reports, AND the updater's stack home plus reserved-concurrency budget are assigned (Pre-requisites 5 and 6, both open), the slice re-enters DISTILL: remove the tag scenario by scenario, complete the fail-loud step bodies marked 'completed at DISTILL re-entry', record the RED run in distill/red-classification.md, and only then dispatch DELIVER. The roadmap's implementation_scope was cut for slices 01-02 and must be re-cut at unblock: src/pipeline/**, src/publish/** and infra/** are excluded today to protect the keystone seam, and slice-03 legitimately edits the first two once the seam order is settled (Pre-requisite 2). THIS STEP RESOLVES Pre-requisite 7, WHICH IS AN AMENDMENT, NOT JUST CODE: the P1 degrade row as written ('scorecard absent -> day-one empty state') predates the store existing, and from the first real report a silent 0 UNDERSTATES reality — the exact dishonesty inversion of inventing a number. The recorded recommendation: an unreadable scorecard source fails the publish LOUD like a load-bearing P1 field and the prior page stands (the keystone's refused-build behaviour). That amends a settled P1 row, so DOMAIN AND FRONTEND LANE SIGN-OFF COMES FIRST; building it without the amendment would put a design decision in a test. The 01-01 union + probe pre-wired this shape on purpose: the probe refusing already fails the build naming the source, so the work here is wiring the real read's failure modes (unreachable store, partial read, permission refusal) into that same loud path and proving the prior-page-stands behaviour end to end. The slice-01 zero-from-absence emission becomes ILLEGAL in the same commit — the day-one source is deleted or demoted to a test double, never left reachable from production wiring.",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A publish-refusal path; its observable is a refused build and a standing prior page, not a new pixel. The surviving page is chartered on 03-04 and 03-05.",
+          "ui_checks": {}
+        },
+        {
+          "id": "03-04",
+          "name": "Counter renders real counts on every spot page",
+          "criteria": [
+            "A spot with N real reports reads the settled sentence with N; a spot with none reads the counted zero.",
+            "The zero now comes from reading the store; emitting zero from absence is illegal in this build.",
+            "The spot-page counter and the reveal counter obey the settled semantics pin and never contradict.",
+            "The counting box keeps the recipes, tabular numerals and calm not-yet treatment at 390 px, both themes."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/counter-counts-real-reports.feature",
+          "scenario_name": "El recuadro contando se lee igual de bien en el teléfono, en los dos temas y sin movimiento",
+          "slice_id": "slice-03",
+          "deps": [
+            "03-02",
+            "03-03"
+          ],
+          "files_to_modify": [
+            "src/components/TrackRecordBox.astro",
+            "src/components/SpotDetail.astro"
+          ],
+          "implementation_notes": "HARD BLOCK, restated so no crafter starts early: zero surf reports have ever been filed, no write store is deployed, and nothing may be seeded, demo-filled or fabricated to unblock this phase (feature-delta.md Slice Plan; red-classification.md contract row 4). Every slice-03 scenario carries @blocked-on-real-reports and is skipped whole by the gate hook in tests/acceptance/f-show-our-track-record/steps/blocked-gate.steps.ts. UNBLOCK PROTOCOL: when F-TELL-US-WHAT-YOU-SAW-COLD slice-03 is shipped and receiving real reports, AND the updater's stack home plus reserved-concurrency budget are assigned (Pre-requisites 5 and 6, both open), the slice re-enters DISTILL: remove the tag scenario by scenario, complete the fail-loud step bodies marked 'completed at DISTILL re-entry', record the RED run in distill/red-classification.md, and only then dispatch DELIVER. The roadmap's implementation_scope was cut for slices 01-02 and must be re-cut at unblock: src/pipeline/**, src/publish/** and infra/** are excluded today to protect the keystone seam, and slice-03 legitimately edits the first two once the seam order is settled (Pre-requisite 2). SEMANTICS PIN REQUIRED FIRST (Pre-requisite 4a): what the spot-page counter counts — stored reports vs verified pairs at spot grain — is a domain-lane call this plan does not invent; the recorded recommendation is stored reports, because decision 19's sentence says 'reportes' and a surfer counts reports, not statistical pairs. A report accepted in a builder-down hour is exactly the case that makes the two sentences drift, and the coherence scenario asserts non-contradiction, which holds under either pin. STYLES, per the live 2026-08-10 finding: src/styles/recipes.css is NOT imported anywhere by design (its header: each block moves into components.css in the same commit as its markup), and slice-01 ALREADY moved .scorecard, .scorecard .counter and .state-empty into components.css — the counting state consumes those as shipped and NO recipe move is owed on current disk state. If any later recipe lands for a counting variant, it moves in the same commit as its markup; never assume recipes.css applies. The counting state keeps the dashed not-yet voice: counting is still 'not yet', only the claim state (slice-04) sheds it. U3 stays N/A — nothing in the counting box is tappable — so the U3 slot runs the whole slice-03 selection; read it as 'no touch target exists', never as 'targets measured'. RELEASE SEQUENCING: this lands with or before F-TELL slice-04's reveal counter so the two surfaces cannot contradict about one spot in one week (feature-delta slice-03 obligation b).",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-show-our-track-record/from-the-first-real-report-onward-the-spot-page-counter-tells-the-truth-about-how-many-have.md",
+          "u8_observation": "Abro la página de una playa que ya tiene reportes de verdad y el recuadro dice cuántos van, por ejemplo que van 3 reportes de los 30 que hacen falta, con el mismo tono tranquilo de siempre; en las playas donde todavía no hay nada sigue el cero honesto, y en ninguna parte aparece un porcentaje ni una cifra de acierto.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-03 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-03 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-03"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-03 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-03 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-03 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-03 and @ui-u7"
+            ]
+          }
+        },
+        {
+          "id": "03-05",
+          "name": "Slice green on real reports, dist inspected",
+          "criteria": [
+            "The full slice-03 tag run passes with real exit zero, captured by redirect, never a pipeline.",
+            "After green the site is built and emitted spot documents are read against the operator's real counts.",
+            "The release lands with or before the reveal counter, so the two surfaces cannot contradict.",
+            "No accuracy number, percentage or margin appears anywhere; counting is not claiming."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/counter-counts-real-reports.feature",
+          "scenario_name": "La primera playa con reportes de verdad ve moverse su contador",
+          "slice_id": "slice-03",
+          "deps": [
+            "03-01",
+            "03-04"
+          ],
+          "files_to_modify": [
+            "src/components/TrackRecordBox.astro",
+            "src/scorecard/observation-source.ts"
+          ],
+          "implementation_notes": "HARD BLOCK, restated so no crafter starts early: zero surf reports have ever been filed, no write store is deployed, and nothing may be seeded, demo-filled or fabricated to unblock this phase (feature-delta.md Slice Plan; red-classification.md contract row 4). Every slice-03 scenario carries @blocked-on-real-reports and is skipped whole by the gate hook in tests/acceptance/f-show-our-track-record/steps/blocked-gate.steps.ts. UNBLOCK PROTOCOL: when F-TELL-US-WHAT-YOU-SAW-COLD slice-03 is shipped and receiving real reports, AND the updater's stack home plus reserved-concurrency budget are assigned (Pre-requisites 5 and 6, both open), the slice re-enters DISTILL: remove the tag scenario by scenario, complete the fail-loud step bodies marked 'completed at DISTILL re-entry', record the RED run in distill/red-classification.md, and only then dispatch DELIVER. The roadmap's implementation_scope was cut for slices 01-02 and must be re-cut at unblock: src/pipeline/**, src/publish/** and infra/** are excluded today to protect the keystone seam, and slice-03 legitimately edits the first two once the seam order is settled (Pre-requisite 2). WHOLE-JOURNEY PROOF, same discipline as 01-08: run the slice-03 selection redirected with status captured, then the untagged suite, then npm run build and READ the emitted spot documents against the operator's real per-spot counts — green tests did not save this repo from the 19-of-20 published-surface bug and they will not save this step either. The examiner walks the slice-03 charter (from-the-first-real-report-onward...) on the real store's state; a verdict against seeded data is not a verdict. WHAT THIS STEP MAY NOT DO: request, seed or wait-for-convenience reports; the real count is whatever real surfers filed, including small awkward numbers like 1, and the box must be honest at every one of them.",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-show-our-track-record/from-the-first-real-report-onward-the-spot-page-counter-tells-the-truth-about-how-many-have.md",
+          "u8_observation": "Recorro varias playas en el teléfono: cada recuadro cuenta exactamente los reportes que esa playa lleva, el número nunca se inventa ni se queda pegado, y si mando un reporte y vuelvo más tarde el contador de la playa y el mensaje de gracias del reporte cuentan la misma historia.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-03 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-03 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-03"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-03 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-03 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-03 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-03 and @ui-u7"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "name": "Slice-04: the earned claim replaces the counter",
+      "description": "BLOCKED twice, both real: no spot can pass the gate for months, and the claim copy is not settled and needs Andres via the cousin's crew. The gated headline replacing the counter is the most consequential surface this feature produces; nothing here may be rushed or faked.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "depends_on": [
+        "03"
+      ],
+      "steps": [
+        {
+          "id": "04-01",
+          "name": "Headline composed from settled copy and floored margin",
+          "criteria": [
+            "The headline is the settled Spanish verbatim with the key's numbers in place; no test or step invents copy.",
+            "The printed plus-minus is the floored gate error, never raw sample error, on every surface.",
+            "Property: composed copy carries no em dash, no English, no technical text, no unreplaced placeholder.",
+            "The headline is display-ready, composed producer-side; the page renders and never computes."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/earned-claim-headline.feature",
+          "scenario_name": "El más-menos impreso es el margen con piso, nunca el error crudo",
+          "slice_id": "slice-04",
+          "deps": [
+            "03-05"
+          ],
+          "files_to_modify": [
+            "src/scorecard/claim-copy.ts",
+            "tests/unit/scorecard-claim-copy.test.ts"
+          ],
+          "implementation_notes": "HARD BLOCK, twice, restated so nobody softens it: (1) DATA — no spot can pass the gate for months; both claim ladders fail everywhere at launch by construction (06-learning-layer.md section 10) and the hard research rule bars displaying any bias claim smaller than twice its standard error (research 09 section 13.3). (2) COPY — the Spanish claim sentence is NOT settled and NEEDS ANDRES: the 06 section 11 sentence is a worked example inside a design document, 06 section 14 item 6 records the caveat copy nobody has designed, and both route through the cousin's crew channel (feature-delta.md Pre-requisite 1b). Every slice-04 scenario carries @blocked-on-real-reports and is skipped whole. UNBLOCK PROTOCOL: copy settled by Andres + key-selection rule pinned by the domain lane (Pre-requisite 4b) -> DISTILL re-entry may fixture-prove the render path through the producer seam (proving the box can DRAW a claim is not pretending a spot EARNED one; no fixture touches the public surface or the real store) -> the REAL-data source-blind examination stays recorded as deferred until the first morning a real spot passes the gate. DO NOT START THIS STEP UNTIL PRE-REQUISITE 1B IS RESOLVED BY ANDRES. The claim copy does not exist: 06 section 11's 'corre chico aquí: 0.18 m de menos (n=22, 7 personas, ±0.09)' is a worked example inside a design document, not settled copy, and the fitted-mostly-on-good-days caveat sentence has never been designed (06 section 14 item 6). This is a HUMAN gate, not a crafter task — no amount of good implementation unblocks it. Once settled, the composer follows the 01-03 pattern exactly: parts separating prose from counter values so digits sit in their own carriers (the U6 oracle collects digit-bearing text nodes), a flat join reproducing the settled sentence byte for byte, and the copy-rule properties (no em dash, no English, no technical text, no placeholder) at any numbers. THE MARGIN IS se_gate ALWAYS: the stored se field already carries the floored value (02-03, 06 section 7 field semantics pinned), so the composer prints what it receives and never recomputes — a composer that recomputed a margin would reopen the exact hole the floor closed.",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure copy composer with no mount point; the rendered claim it produces is observed on the built page by 04-03 and 04-05, which carry the charter and the U checks.",
+          "ui_checks": {}
+        },
+        {
+          "id": "04-02",
+          "name": "One key's claim per spot, by the settled rule",
+          "criteria": [
+            "When several source and lead keys pass the gate, the spot shows the key the settled rule names.",
+            "The rule comes from the domain lane's pin; no test, step or crafter invents it.",
+            "Below the gate on every key, the block stays the counter state, headline null."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/earned-claim-headline.feature",
+          "scenario_name": "Cuando varias llaves pasan la reja, la playa muestra la que manda la regla asentada",
+          "slice_id": "slice-04",
+          "deps": [
+            "04-01"
+          ],
+          "files_to_modify": [
+            "src/scorecard/scorecard-block.ts",
+            "tests/unit/scorecard-key-selection.test.ts"
+          ],
+          "implementation_notes": "HARD BLOCK, twice, restated so nobody softens it: (1) DATA — no spot can pass the gate for months; both claim ladders fail everywhere at launch by construction (06-learning-layer.md section 10) and the hard research rule bars displaying any bias claim smaller than twice its standard error (research 09 section 13.3). (2) COPY — the Spanish claim sentence is NOT settled and NEEDS ANDRES: the 06 section 11 sentence is a worked example inside a design document, 06 section 14 item 6 records the caveat copy nobody has designed, and both route through the cousin's crew channel (feature-delta.md Pre-requisite 1b). Every slice-04 scenario carries @blocked-on-real-reports and is skipped whole. UNBLOCK PROTOCOL: copy settled by Andres + key-selection rule pinned by the domain lane (Pre-requisite 4b) -> DISTILL re-entry may fixture-prove the render path through the producer seam (proving the box can DRAW a claim is not pretending a spot EARNED one; no fixture touches the public surface or the real store) -> the REAL-data source-blind examination stays recorded as deferred until the first morning a real spot passes the gate. DO NOT START UNTIL PRE-REQUISITE 4B IS PINNED BY THE DOMAIN LANE: which (source, lead_bucket) key's claim a spot page shows when several gated keys pass is pinned NOWHERE in the corpus. The acceptance scenario asserts obedience to the pin, and one step exists solely to keep the refusal visible in the run ('ninguna prueba inventa esa regla por su cuenta'). Whatever the pin says, two invariants are already settled and testable the day this starts: exactly one of counter or claim per spot page (Definition of Done row 1), and headline null whenever claim_ok is false on the selected key (P5).",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Selection logic inside the block producer; nothing renders. The selected claim's rendering is chartered on 04-03 and 04-05.",
+          "ui_checks": {}
+        },
+        {
+          "id": "04-03",
+          "name": "The earned claim replaces the counter in the box",
+          "criteria": [
+            "With claim_ok true the box renders the headline in place of the counter; exactly one state, never both, never neither.",
+            "The claim wears the quiet card treatment, never the dashed not-yet state and never a danger colour.",
+            "Digits in the claim render tabular numerals; nothing truncates or overflows at 390 px, both themes.",
+            "Fixture blocks through the producer seam prove the render path; no fixture touches the public surface or the real store."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/earned-claim-headline.feature",
+          "scenario_name": "La afirmación se lee tan bien como el contador, en los dos temas y sin movimiento",
+          "slice_id": "slice-04",
+          "deps": [
+            "04-02"
+          ],
+          "files_to_modify": [
+            "src/components/TrackRecordBox.astro"
+          ],
+          "implementation_notes": "HARD BLOCK, twice, restated so nobody softens it: (1) DATA — no spot can pass the gate for months; both claim ladders fail everywhere at launch by construction (06-learning-layer.md section 10) and the hard research rule bars displaying any bias claim smaller than twice its standard error (research 09 section 13.3). (2) COPY — the Spanish claim sentence is NOT settled and NEEDS ANDRES: the 06 section 11 sentence is a worked example inside a design document, 06 section 14 item 6 records the caveat copy nobody has designed, and both route through the cousin's crew channel (feature-delta.md Pre-requisite 1b). Every slice-04 scenario carries @blocked-on-real-reports and is skipped whole. UNBLOCK PROTOCOL: copy settled by Andres + key-selection rule pinned by the domain lane (Pre-requisite 4b) -> DISTILL re-entry may fixture-prove the render path through the producer seam (proving the box can DRAW a claim is not pretending a spot EARNED one; no fixture touches the public surface or the real store) -> the REAL-data source-blind examination stays recorded as deferred until the first morning a real spot passes the gate. MARKUP CONTRACT for the claim state, cross-referenced against components.css (the recipes ALREADY live there — slice-01 moved .scorecard, .scorecard .counter and .state-empty across; recipes.css is NOT imported, by design, and holds NO claim recipe as of 2026-08-10): the claim box carries .scorecard WITHOUT .state-empty — the dashed border is the not-yet voice and R35 requires a claim never to read as a counter, so shedding .state-empty is the state distinction, at zero new CSS. If the design system later mints a dedicated claim recipe, it moves into components.css in the same commit as its markup (components.css line 2 rule); NEVER assume a recipe left in recipes.css applies — it ships zero bytes. Digits (the n, the people count, the margin) sit in .counter children for tabular-nums, same as 01-04. U3 stays N/A: the claim box has nothing tappable, the U3 slot runs the whole slice-04 selection, read it as 'no touch target exists'. FIXTURE-PROVING IS BOUNDED: inject gate-passing blocks only through the producer's injection seam in the TEST build; the real data/ input, the public surface and the store are untouched, and the scenario asserting real earned data (04-05) stays with the real store.",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-show-our-track-record/the-first-morning-a-spot-has-earned-it-the-same-box-stops-counting-and-starts-claiming.md",
+          "u8_observation": "La mañana que una playa se lo ha ganado, el recuadro ya no cuenta: afirma en una frase sencilla cuánto corre chico o grande el pronóstico aquí, dice cuántos reportes y cuántas personas la respaldan con su más-menos, y se lee tan tranquila y terminada como el contador de antes.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-04 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-04 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-04"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-04 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-04 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-04 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-04 and @ui-u7"
+            ]
+          }
+        },
+        {
+          "id": "04-04",
+          "name": "No sub-gate number leaks anywhere",
+          "criteria": [
+            "A sweep across every emitted spot page finds claim wording only on pages whose block passed the gate.",
+            "Sub-gate pages carry the counter state, and the no-invented-number oracle still holds on each.",
+            "The sweep reports how many pages it inspected; zero inspected is a failure."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/earned-claim-headline.feature",
+          "scenario_name": "Ningún número por debajo de la reja se asoma en ninguna página del sitio",
+          "slice_id": "slice-04",
+          "deps": [
+            "04-03"
+          ],
+          "files_to_modify": [
+            "src/components/TrackRecordBox.astro"
+          ],
+          "implementation_notes": "HARD BLOCK, twice, restated so nobody softens it: (1) DATA — no spot can pass the gate for months; both claim ladders fail everywhere at launch by construction (06-learning-layer.md section 10) and the hard research rule bars displaying any bias claim smaller than twice its standard error (research 09 section 13.3). (2) COPY — the Spanish claim sentence is NOT settled and NEEDS ANDRES: the 06 section 11 sentence is a worked example inside a design document, 06 section 14 item 6 records the caveat copy nobody has designed, and both route through the cousin's crew channel (feature-delta.md Pre-requisite 1b). Every slice-04 scenario carries @blocked-on-real-reports and is skipped whole. UNBLOCK PROTOCOL: copy settled by Andres + key-selection rule pinned by the domain lane (Pre-requisite 4b) -> DISTILL re-entry may fixture-prove the render path through the producer seam (proving the box can DRAW a claim is not pretending a spot EARNED one; no fixture touches the public surface or the real store) -> the REAL-data source-blind examination stays recorded as deferred until the first morning a real spot passes the gate. THE SWEEP IS 01-05'S DISCIPLINE ON A HARDER SURFACE: enumerate whatever spot documents the real build emitted, fetch each over HTTP, and hold BOTH oracles at once — gated pages legitimately carry their claim, every other page must still pass slice-01's no-percentage no-margin no-metres check. The mixed state is exactly where a conditional-render bug ships the 19-of-20 shape again: one wrong guard and a sub-gate spot claims, or a gated spot goes blank. Zero inspected pages fails; the sweep names offenders route by route. The Definition of Done row 1 exclusivity (exactly one state per page, never both, never neither) is asserted page by page here, not just at the producer.",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "An HTTP text sweep over emitted routes, no browser, no pixels of its own; the rendered states it polices are chartered on 04-03 and 04-05.",
+          "ui_checks": {}
+        },
+        {
+          "id": "04-05",
+          "name": "Slice green the morning it is earned",
+          "criteria": [
+            "The full slice-04 tag run passes with real exit zero, captured by redirect, never a pipeline.",
+            "After green the built pages are read; only genuinely gated spots claim, verified against the operator's records.",
+            "The real-data source-blind examination runs the first morning a real spot passes; until then the deferral is recorded, never pretended.",
+            "The two claim ladders stay separate: no product-level claim appears anywhere."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/earned-claim-headline.feature",
+          "scenario_name": "La afirmación ganada toma el lugar del contador en el mismo recuadro",
+          "slice_id": "slice-04",
+          "deps": [
+            "04-03",
+            "04-04"
+          ],
+          "files_to_modify": [
+            "src/components/TrackRecordBox.astro",
+            "src/components/SpotDetail.astro"
+          ],
+          "implementation_notes": "HARD BLOCK, twice, restated so nobody softens it: (1) DATA — no spot can pass the gate for months; both claim ladders fail everywhere at launch by construction (06-learning-layer.md section 10) and the hard research rule bars displaying any bias claim smaller than twice its standard error (research 09 section 13.3). (2) COPY — the Spanish claim sentence is NOT settled and NEEDS ANDRES: the 06 section 11 sentence is a worked example inside a design document, 06 section 14 item 6 records the caveat copy nobody has designed, and both route through the cousin's crew channel (feature-delta.md Pre-requisite 1b). Every slice-04 scenario carries @blocked-on-real-reports and is skipped whole. UNBLOCK PROTOCOL: copy settled by Andres + key-selection rule pinned by the domain lane (Pre-requisite 4b) -> DISTILL re-entry may fixture-prove the render path through the producer seam (proving the box can DRAW a claim is not pretending a spot EARNED one; no fixture touches the public surface or the real store) -> the REAL-data source-blind examination stays recorded as deferred until the first morning a real spot passes the gate. CHARTER HONESTY IS THE POINT OF THIS STEP: the slice's real-surface examination cannot happen before a real spot passes the gate. Fixture-proven render evidence (04-03) plus a recorded deferral is the honest completion state; dispatching the source-blind examiner against fixture-driven claim pages and calling it the real examination would be pretending, and the charter itself says a claim on a spot the operator's records do not show as gated is the worst possible failure of this feature. The examiner walks the charter (the-first-morning-a-spot-has-earned-it...) only when the operator's records show a genuinely gated spot. Until that morning, this step closes with: green fixture-proven runs, the deferral recorded in the DES log and the charter's session log, and the claim-ladder separation swept (no 'better than the raw model' anywhere, 06 section 10).",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-show-our-track-record/the-first-morning-a-spot-has-earned-it-the-same-box-stops-counting-and-starts-claiming.md",
+          "u8_observation": "Recorro el sitio completo: solo las playas que de verdad se lo ganaron muestran una afirmación, todas las demás siguen contando honestamente, ninguna página muestra las dos cosas a la vez ni se queda sin recuadro, y ningún número de acierto se asoma donde la reja no se ha pasado.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-04 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-04 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-04"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-04 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-04 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-04 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-04 and @ui-u7"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "05",
+      "name": "Slice-05: the monthly self-grading file",
+      "description": "BLOCKED: meaningless without report data, its observation-log input has no producer slice anywhere, and the baseline fields are missing from shipped rows. Operator-facing: the monthly metrics file and the kill-switch verdict; no public page renders it, by explicit scope.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "depends_on": [
+        "03"
+      ],
+      "steps": [
+        {
+          "id": "05-01",
+          "name": "Pairwise ranking accuracy with ties excluded",
+          "criteria": [
+            "Pairs form within one reporter, one local day, two or more spots rated; ties under one quality step are excluded.",
+            "Each pair is scored against the raw-model baseline ranking; the lift is what the file reports.",
+            "Progress toward the four-hundred-pair ladder is counted in the file, claimed nowhere."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/monthly-self-grading.feature",
+          "scenario_name": "Cada par compara dentro de la misma persona y los empates chicos no cuentan",
+          "slice_id": "slice-05",
+          "deps": [
+            "03-05"
+          ],
+          "files_to_modify": [
+            "src/scorecard/metrics-pairs.ts",
+            "tests/unit/scorecard-metrics-pairs.test.ts"
+          ],
+          "implementation_notes": "HARD BLOCK, three ways, restated: zero report data (a metrics file of zeros is not a verdict Andres can act on); the nightly observation export writing log/observations/v1 has NO owner slice in any plan anywhere (feature-delta.md Pre-requisite 8, ownership gap, Andres routes it); and the shipped PublishedCall writer emits neither baseline_rank_raw nor our_rank (Pre-requisite 3, flagged to the keystone/scoring lane 2026-08-09, log append-only, recompute debt grows monthly). Every slice-05 scenario carries @blocked-on-real-reports and is skipped whole. Operator-facing by classification: the deliverable is learned/metrics/v1/dt=<month>/metrics.json plus the kill-switch verdict; NO public page renders it and a public accuracy page is explicitly out of scope (feature-delta.md Out-of-scope). THE METRIC, copied not invented (06 section 10 row 1; research 09 section 10.2): same reporter_key, same local day, 2+ spots rated — did our ranking order the pair the way their quality labels did; ties under one quality step excluded; within-person by construction so personal constants cancel, which is also why decision 28's anti-anchoring cost never lands on this headline evaluation. BASELINE B1: baseline_rank_raw vs our_rank, settled on PublishedCall rows — and the shipped writer emits NEITHER (Pre-requisite 3, flagged 2026-08-09, log append-only). Until the keystone/scoring lane lands the two fields, the baseline is recomputed from the immutable predictions/ archive plus the blend rule, and our_rank from the rows' own score_q; every month of drift grows that recompute debt. The flag stays open and is NOT fixed from this lane. Driving port: gradeMonth in src/scorecard/metrics-job (already imported by the acceptance steps); pair formation is an internal driven through it. This slice is parallel-safe with slice-04 (both depend on 03-05, neither touches the other's files).",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Operator-facing arithmetic; no page renders it. The deliverable is rows inside the monthly metrics file, examined through the slice-05 charter.",
+          "ui_checks": {}
+        },
+        {
+          "id": "05-02",
+          "name": "Calibration, Brier and the remaining rows",
+          "criteria": [
+            "The file carries all six settled rows, each with its named baseline; good and epic are the Brier event.",
+            "The score-to-probability reading is naive and the file says so in its own words.",
+            "The error per key tracks convergence and is never the headline; ceiling, imbalance and shrinkage complete the table."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/monthly-self-grading.feature",
+          "scenario_name": "El archivo mensual trae las seis filas asentadas, comparadas contra sus líneas base",
+          "slice_id": "slice-05",
+          "deps": [
+            "05-01"
+          ],
+          "files_to_modify": [
+            "src/scorecard/metrics-calibration.ts",
+            "tests/unit/scorecard-metrics-calibration.test.ts"
+          ],
+          "implementation_notes": "HARD BLOCK, three ways, restated: zero report data (a metrics file of zeros is not a verdict Andres can act on); the nightly observation export writing log/observations/v1 has NO owner slice in any plan anywhere (feature-delta.md Pre-requisite 8, ownership gap, Andres routes it); and the shipped PublishedCall writer emits neither baseline_rank_raw nor our_rank (Pre-requisite 3, flagged to the keystone/scoring lane 2026-08-09, log append-only, recompute debt grows monthly). Every slice-05 scenario carries @blocked-on-real-reports and is skipped whole. Operator-facing by classification: the deliverable is learned/metrics/v1/dt=<month>/metrics.json plus the kill-switch verdict; NO public page renders it and a public accuracy page is explicitly out of scope (feature-delta.md Out-of-scope). THE SIX ROWS ARE FIXED (06 section 10 table, verbatim as the oracle): pairwise ranking accuracy vs B1 with the 400-pair progress; Brier + calibration curve with quality in {good, epic} as the event, score_q/100 as the naive v1 probability STATED AS NAIVE, binned by conf_level, vs B0 climatology per spot; MAE on height per key vs B0 and B2 persistence (only where yesterday had a report), never the headline; sigma_human ceiling (mean absolute disagreement between 2+ reporters, same spot, within 2 hours — the floor no model can beat, it tells us when to stop investing in fitting); selection imbalance (label mix, reports per published-score decile, solicited vs organic); shrinkage report per gated spot (a spot with 80 obs still 60% shrunk means a misconfiguration). A file missing a row, or carrying an extra unrequested metric, both fail: the table is the contract.",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Operator-facing arithmetic; no page renders it. The rows land in the monthly metrics file, examined through the slice-05 charter.",
+          "ui_checks": {}
+        },
+        {
+          "id": "05-03",
+          "name": "The kill switch records removal, not reweighting",
+          "criteria": [
+            "A calibration where high-confidence days are not more often right produces a recorded removal verdict.",
+            "The verdict names the offending term; the spread term is the first candidate.",
+            "Removal, never reweighting; nothing else couples to the term's existence."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/monthly-self-grading.feature",
+          "scenario_name": "Si los días de confianza alta no aciertan más, el término señalado se elimina, no se reajusta",
+          "slice_id": "slice-05",
+          "deps": [
+            "05-02"
+          ],
+          "files_to_modify": [
+            "src/scorecard/metrics-verdict.ts",
+            "tests/unit/scorecard-metrics-verdict.test.ts"
+          ],
+          "implementation_notes": "HARD BLOCK, three ways, restated: zero report data (a metrics file of zeros is not a verdict Andres can act on); the nightly observation export writing log/observations/v1 has NO owner slice in any plan anywhere (feature-delta.md Pre-requisite 8, ownership gap, Andres routes it); and the shipped PublishedCall writer emits neither baseline_rank_raw nor our_rank (Pre-requisite 3, flagged to the keystone/scoring lane 2026-08-09, log append-only, recompute debt grows monthly). Every slice-05 scenario carries @blocked-on-real-reports and is skipped whole. Operator-facing by classification: the deliverable is learned/metrics/v1/dt=<month>/metrics.json plus the kill-switch verdict; NO public page renders it and a public accuracy page is explicitly out of scope (feature-delta.md Out-of-scope). THE RULE IS REMOVAL, NOT REWEIGHTING (research 09 section 3.6 consequence 3, four cited studies; 06 section 10 owns the switch): if high-confidence days are not more often right, the offending confidence term is REMOVED, and C_spread is the first candidate to die — 09 contradicts itself on inter-model spread and the corpus takes 3.6's side. The confidence terms themselves belong to F-KNOW-HOW-MUCH-TO-TRUST-IT; this slice delivers only the VERDICT that can kill one, and 05's S4 clause ('scoring must not couple anything else to its existence') exists precisely so the switch can fire without collateral — the verdict is a recorded output in the file, never a direct mutation of another feature's code. At re-entry this step is fixture-provable: the kill-switch rule is arithmetic over a calibration table, and fixtures may exercise arithmetic; they may never stand in for a real month's verdict.",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A recorded verdict inside the metrics file; nothing renders. Examined through the slice-05 charter against the emitted file.",
+          "ui_checks": {}
+        },
+        {
+          "id": "05-04",
+          "name": "The monthly file writes where Andres reads it",
+          "criteria": [
+            "The job writes the monthly metrics file reading only the three logs and the identity resolution.",
+            "No write-store access is configured and the run still completes.",
+            "A zero-pairs month states its counts and its insufficiency; it never invents a verdict.",
+            "No public surface renders the file; a public accuracy page is out of scope."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/monthly-self-grading.feature",
+          "scenario_name": "Un mes sin pares dice que no alcanza, jamás inventa un veredicto",
+          "slice_id": "slice-05",
+          "deps": [
+            "05-03"
+          ],
+          "files_to_modify": [
+            "src/scorecard/metrics-job.ts",
+            "tests/unit/scorecard-metrics-job.test.ts"
+          ],
+          "implementation_notes": "HARD BLOCK, three ways, restated: zero report data (a metrics file of zeros is not a verdict Andres can act on); the nightly observation export writing log/observations/v1 has NO owner slice in any plan anywhere (feature-delta.md Pre-requisite 8, ownership gap, Andres routes it); and the shipped PublishedCall writer emits neither baseline_rank_raw nor our_rank (Pre-requisite 3, flagged to the keystone/scoring lane 2026-08-09, log append-only, recompute debt grows monthly). Every slice-05 scenario carries @blocked-on-real-reports and is skipped whole. Operator-facing by classification: the deliverable is learned/metrics/v1/dt=<month>/metrics.json plus the kill-switch verdict; NO public page renders it and a public accuracy page is explicitly out of scope (feature-delta.md Out-of-scope). THE PORT: gradeMonth in src/scorecard/metrics-job, writing learned/metrics/v1/dt=<month>/metrics.json. READ BOUNDARY IS A LAW, NOT A CONVENTION (06 section 2; requirement R30, category security): the evaluation reads predictions/, log/observations/, log/calls/ and the C5 resolution, and NEVER the write store — the acceptance scenario runs the grading with no write-store access configured at all and watches it finish, which also keeps the job inside the read-only credential model this account enforces. THE ZERO-PAIRS MONTH IS THE FIRST SCENARIO DELIVER LIGHTS UP at re-entry: it is the honest state of the very first monthly run — counts stated, insufficiency stated, no verdict invented. SCHEDULING AND STACK HOME ARE UNASSIGNED (the monthly job appears in no stack; the nightly export it reads has no owner slice, Pre-requisite 8): the pure gradeMonth is buildable the day data exists, but its deployment home is Andres's routing call, recorded not improvised. MODULE HOME NOTE: src/scorecard/ hosts these modules because src/learning/** belongs to F-FORECAST-LEARNS' lane (correction fitting, out of scope here); if the lanes later consolidate, that is an integrator move.",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Operator-facing job output: a file at learned/metrics/v1 and an exit code; no page renders it, by explicit out-of-scope. Examined through the slice-05 charter.",
+          "ui_checks": {}
+        },
+        {
+          "id": "05-05",
+          "name": "Slice green, verdict readable, claim nowhere",
+          "criteria": [
+            "The full slice-05 tag run passes with real exit zero, captured by redirect, never a pipeline.",
+            "The emitted metrics file is read whole, not trusted from the suite.",
+            "A sweep proves no public surface claims better-than-raw before the ladder is real."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/monthly-self-grading.feature",
+          "scenario_name": "El avance hacia los 400 pares se cuenta en el archivo y no se presume en ninguna página",
+          "slice_id": "slice-05",
+          "deps": [
+            "05-04"
+          ],
+          "files_to_modify": [
+            "src/scorecard/metrics-job.ts"
+          ],
+          "implementation_notes": "HARD BLOCK, three ways, restated: zero report data (a metrics file of zeros is not a verdict Andres can act on); the nightly observation export writing log/observations/v1 has NO owner slice in any plan anywhere (feature-delta.md Pre-requisite 8, ownership gap, Andres routes it); and the shipped PublishedCall writer emits neither baseline_rank_raw nor our_rank (Pre-requisite 3, flagged to the keystone/scoring lane 2026-08-09, log append-only, recompute debt grows monthly). Every slice-05 scenario carries @blocked-on-real-reports and is skipped whole. Operator-facing by classification: the deliverable is learned/metrics/v1/dt=<month>/metrics.json plus the kill-switch verdict; NO public page renders it and a public accuracy page is explicitly out of scope (feature-delta.md Out-of-scope). CLOSING DISCIPLINE, same as every slice: selection run redirected with status captured; untagged run for sibling health; then the artifact is READ — open the emitted metrics.json and read it whole, because green tests did not catch the 19-of-20 published-surface bug and a metrics file is exactly the artifact class where a missing field ships silently. THE TWO CLAIM LADDERS STAY SEPARATE FOREVER (06 section 10): the per-spot scorecard claim (slice-04's gate) and the product-level better-than-raw claim, which needs ~400 same-day multi-spot pairs with positive lift and which NO slice in this plan may claim early — the sweep greps the built public surface, the README and every copy string for the product-level claim and fails on any hit. The examiner then walks the slice-05 charter against the real file. Nothing user-facing changes in this slice, and that is the point: the product grades itself where the operator reads, not where the market does.",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Verification of runs and the emitted file; nothing renders and no public surface changes in this slice.",
+          "ui_checks": {}
         }
       ]
     }

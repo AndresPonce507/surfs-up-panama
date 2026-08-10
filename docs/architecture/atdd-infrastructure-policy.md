@@ -9,6 +9,8 @@ treatment for its port class.
 | Port | Mechanism | Note |
 |---|---|---|
 | Local CI protection command | Production-owned in-process `runLocalCi({ argv, repoRoot, output, commandRunner, environment, declarationInput })` export from `scripts/ci-local.mjs`, with a captured output port | Slice-02 drives the stable CI command semantics without a test-owned wrapper, fork, or `commandRunner`. The stable public command remains `scripts/ci-local.mjs` and delegates to this entry. `environment` is an explicit read-only input. `declarationInput: { root, mode: 'declaration-only' }` selects the same production evaluator without asking the supplied root to be a package or CDK app. |
+| Scorecard projection | Production-owned in-process `projectScorecard({ predictions, reports, trustConfig, resolveReporter, asOf })` plus `applyReport` from `src/scorecard/projection`; the two immutable logs enter as values, the identity resolution as a passed-in function | f-show-our-track-record slice-02. Pure-function port: no clock read (as-of passed in), no I/O, no fake needed. Pairing, aggregates, windows and the gate are internals driven only through it. |
+| Monthly self-grading job | Production-owned in-process `gradeMonth` from `src/scorecard/metrics-job`, reading only `predictions/`, `log/observations/`, `log/calls/` and the identity resolution | f-show-our-track-record slice-05, AUTHORED-BLOCKED until real reports exist. The read boundary is a law (06 §2, R30): the job runs with no write-store access configured at all. |
 
 ## Driven internal (real)
 

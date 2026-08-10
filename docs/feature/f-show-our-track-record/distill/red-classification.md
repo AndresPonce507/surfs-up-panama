@@ -1,8 +1,11 @@
 # RED classification history
 
 Feature: `f-show-our-track-record`
-Slices entered: slice-01 (JIT DISTILL opened 2026-08-09 on lane `build/f2-record`)
-Status: slice-01 authored and RED; slices 02 to 05 have not entered DISTILL
+Slices entered: slice-01 (JIT DISTILL opened 2026-08-09 on lane `build/f2-record`); slices 02-05
+(DISTILL opened 2026-08-10 on the same lane, by explicit dispatch — see that entry for the JIT
+override note)
+Status: slice-01 GREEN (DELIVER complete); slice-02 authored and RED; slices 03-05 authored and
+skip-gated behind `@blocked-on-real-reports` until their hard blocks clear
 
 ## Contract for every future entry
 
@@ -160,7 +163,7 @@ would have been a lie.
 | R10 to R20 (slice-02) | Withheld | Buildable today, but a different Slice Plan row. A slice-01-only dispatch does not license authoring them. |
 | R21 to R30 (slices 03 to 05) | Hard blocked | No report data exists, cannot be seeded, and only arrives after F-TELL-US-WHAT-YOU-SAW-COLD ships its write path and real surfers use it. |
 
-#### Notes carried forward
+#### Notes carried forward (slice-01)
 
 - The lane touched `tests/acceptance/f-show-our-track-record/**` and
   `docs/feature/f-show-our-track-record/**` only. No production code was written, and no
@@ -179,3 +182,105 @@ would have been a lie.
 - Pre-requisite 2 (the keystone lane owns `src/pipeline/build.ts`, `src/publish/region-bundle.ts`
   and `src/components/SpotDetail.astro`) is unchanged by this pass. Nothing here edits those files;
   DELIVER still has to settle the serial order before it does.
+
+### slice-02 (RED) and slices 03-05 (authored-blocked), 2026-08-10, `build/f2-record`
+
+Scope authored: slices 02 through 05, on an explicit dispatch from Andres that consciously
+overrides the JIT default of contract row 5 for slices 03-05. The stated purpose: every slice
+gets executable scenarios and a step-level roadmap NOW, so the blocked slices are ready the
+moment reports arrive. The override changes WHEN the tests were written; it changes nothing
+about what may run: slices 03-05 are skip-gated whole (below) and none of their oracles can be
+satisfied by fabricated data.
+
+Slice-01 had completed DELIVER on this lane before this pass (its 8 scenarios now run green in
+the untagged suite).
+
+#### Commands observed
+
+Selection gates first, per slice, because cucumber exits 0 on a tag expression selecting nothing.
+Every gate was redirected to a file with its status captured on the next statement; none was
+piped.
+
+```
+npm run test:at -- --dry-run --tags "@feature-f-show-our-track-record and @slice-02"  DRY=0  12 scenarios, 130 steps, 0 undefined, 0 ambiguous
+npm run test:at -- --dry-run --tags "@feature-f-show-our-track-record and @slice-03"  DRY=0   7 scenarios,  85 steps
+npm run test:at -- --dry-run --tags "@feature-f-show-our-track-record and @slice-04"  DRY=0   8 scenarios, 104 steps
+npm run test:at -- --dry-run --tags "@feature-f-show-our-track-record and @slice-05"  DRY=0   6 scenarios,  73 steps
+```
+
+Type gate: `npm run typecheck` exit 0.
+
+Slice-02 RED run:
+
+```
+npm run test:at -- --tags "@feature-f-show-our-track-record and @slice-02" > /tmp/record-red-s02.log 2>&1
+REAL_EXIT=1
+12 scenarios (12 failed)   130 steps (97 passed, 21 skipped, 12 failed)
+```
+
+All 12 failures are `AssertionError` at ONE existence oracle, uniform by design:
+`src/scorecard/projection does not exist yet` — the module that computes the projection
+(pairing, daily aggregates, windows, gate decision, block assembly) from the two immutable logs.
+Classification for all 12: **MISSING_FUNCTIONALITY**. Zero BROKEN: no import error (the dynamic
+import specifier is variable-held so a missing module reaches the assertion, not the module
+loader), no step-matching failure, no fixture failure. The Given fixtures all executed (97
+passing steps); the chained assertion bodies past the oracle are first exercised in DELIVER,
+same trap-3 defusal as slice-01.
+
+Slices 03-05 runs, proving the skip gate:
+
+```
+slice-03: exit 0, 7 scenarios (7 skipped)
+slice-04: exit 0, 8 scenarios (8 skipped)
+slice-05: exit 0, 6 scenarios (6 skipped)
+```
+
+Untagged regression run:
+
+```
+npm run test:at > /tmp/record-full-after.log 2>&1
+FULL_EXIT=1
+119 scenarios (86 passed, 21 skipped, 12 failed)   1385 steps (1239 passed, 134 skipped, 12 failed)
+```
+
+The 86 passing are every pre-existing scenario, including slice-01's 8 (now GREEN post-DELIVER).
+The 12 failed are exactly the slice-02 scenarios authored here — the correct RED state until
+slice-02's DELIVER. The 21 skipped are exactly slices 03-05. `pgrep -fl "astro preview"` after
+the untagged run: nothing.
+
+**Note for the slice-02 crafter's 02-07 close-out:** GREEN means 119 scenarios, 98 passing, 21
+skipped, 0 failed. The 21 skips are `@blocked-on-real-reports` and staying skipped is correct.
+
+#### The one driving port, and the RED shape
+
+Slice-02's 12 scenarios all enter through `projectScorecard` (plus `applyReport` for the rebuild
+law) in `src/scorecard/projection` — a port DISTILL names and the steps already import. Pairing,
+aggregates, windows, trust eligibility and block assembly are internals the crafter shapes
+freely; no acceptance step imports them. No RED scaffold module was written: the variable-held
+dynamic import turns module absence into an assertion at the behaviour oracle, which is RED
+without stubbing production paths.
+
+#### The skip gate for slices 03-05, and its unblock protocol
+
+Every slice-03/04/05 scenario carries `@blocked-on-real-reports`; one Before hook
+(`steps/blocked-gate.steps.ts`) returns `skipped` for that tag. The blocks are real and named in
+the feature files themselves: zero reports exist and cannot be seeded (03, 04, 05); the claim
+copy is unsettled and needs Andres via the cousin's crew (04, Pre-requisite 1b); the
+key-selection rule is pinned nowhere (04, Pre-requisite 4b); the observation export has no owner
+slice (05, Pre-requisite 8); the PublishedCall baseline fields are missing (05, Pre-requisite 3).
+
+Unblock protocol, single-path: at unblock the slice re-enters DISTILL, removes the tag scenario
+by scenario, completes the step bodies marked "completed at DISTILL re-entry", records the RED
+run HERE, and only then dispatches DELIVER. Removing the tag early lights nothing up: the Given
+steps behind the gate fail loudly naming the exact open pre-requisite — fail-closed by
+construction. DELIVER may not edit `.feature` files, so the tag removal is a DISTILL act.
+
+#### What was refused in this pass, and why
+
+| Item | Refused | Why |
+|---|---|---|
+| Any scenario satisfiable by seeded/demo report data | Not authored | Contract row 4. Slice-03/04 oracles read the real store's consequences; slice-04's fixture-proving is bounded to the producer seam in the TEST build and its real-data examination is recorded as deferred in roadmap step 04-05 and the charter. |
+| The slice-04 claim sentence | Not pinned anywhere | Pre-requisite 1b: the 06 §11 sentence is a worked example. The scenario asserting the verbatim sentence exists but its Given fails naming the block until Andres settles the copy. |
+| The key-to-spot selection rule | Not invented | Pre-requisite 4b. One Then step exists solely to keep the refusal visible in the run. |
+| R19's break-watch-revert as a scenario | Criteria, not Gherkin | Falsifiability is a DELIVER discipline recorded in roadmap criteria (02-05, 02-07), matching how slice-01 carried it. |
+| Wind re-entry via fixtures | Actively asserted against | Scenario "El viento no entra al historial por ninguna puerta" demands a loud refusal naming wind. |

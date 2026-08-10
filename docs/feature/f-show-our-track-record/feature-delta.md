@@ -184,26 +184,41 @@ Absent:
 | 06 §10 | Two claim ladders, never conflated; monthly metrics rows fixed; kill switch: calibration failure removes the offending confidence term, C_spread first. | n/a | slice-05 oracles come from the metrics table verbatim; one scenario proves the pairwise tie-exclusion rule (ties under one quality step excluded); the product-level claim appears in no copy. |
 | Project CLAUDE.md (functional paradigm, PBT default; green-is-not-working) | Laws proven as properties; after GREEN inspect `dist/`; negative tests proven falsifiable by breaking the code once. | n/a | The claim-gate refusal properties must each be shown failing against a deliberately broken gate before they count. |
 | `HANDOFF.md` §4 + nw-ui-quality-mandates | Slice classification at DISTILL open; visible slices carry U1-U7 rows and a U8 charter observation; non-visual slices an honest N/A. | n/a | Classification table above; charters owed under `docs/product/expectations/f-show-our-track-record/` at DISTILL open. |
-| `HANDOFF.md` §1 DISTILL row (JIT rule) | Each slice's acceptance tests are written when that slice legally enters DISTILL, never earlier. | n/a | slice-01 entered 2026-08-09 and its 8 scenarios are the only `.feature` content in this workspace; no scaffold was needed. slice-02 is the next legal entrant. DELIVER still owes the keystone seam order (Pre-requisite 2) before it edits the three contended files. |
+| `HANDOFF.md` §1 DISTILL row (JIT rule) | Each slice's acceptance tests are written when that slice legally enters DISTILL, never earlier. | n/a | slice-01 entered 2026-08-09; slices 02-05 entered 2026-08-10 under an explicit dispatch from Andres overriding the JIT default for the blocked slices (recorded in `distill/red-classification.md`). Slices 03-05 stay skip-gated behind `@blocked-on-real-reports` until their blocks clear; DELIVER still owes the keystone seam order (Pre-requisite 2) before touching the contended files. |
 
 ### [REF] JIT status
 
-slice-01 entered DISTILL 2026-08-09 on lane `build/f2-record`. Its acceptance tests live at
-`tests/acceptance/f-show-our-track-record/honest-track-record-box.feature` (8 scenarios, all
-tagged `@feature-f-show-our-track-record` at file level and `@slice-01` per scenario) with steps
-under `steps/`. All 8 are RED as `MISSING_FUNCTIONALITY`; the run, the three defused traps, and
-the requirements deliberately REFUSED rather than covered weakly (R3, R5, R33) are recorded in
-`distill/red-classification.md`. No production code and no RED scaffold was written: every
-scenario enters through a surface that already exists on disk.
+slice-01 entered DISTILL 2026-08-09 on lane `build/f2-record` (8 scenarios at
+`tests/acceptance/f-show-our-track-record/honest-track-record-box.feature`). Its DELIVER is in
+flight on this lane: steps 01-01 through 01-04 are committed through DES and all 8 scenarios
+already run GREEN in the untagged suite; steps 01-05 through 01-08 remain to close the slice.
 
-No test exists for any other slice, and that is correct, not a gap: the project's JIT rule
-(`HANDOFF.md` §1) keeps each slice's tests absent until that slice enters DISTILL. slice-02 is
-the next legal entrant, with zero AWS and zero data; it was buildable during the slice-01 pass
-and deliberately withheld because a slice-01-only dispatch does not license authoring another
-Slice Plan row. Slices 03-05 cannot enter DISTILL until their hard blocks clear, and no test for
-them may simulate report data into a claim: fixtures may exercise the arithmetic, never the
-public surface's honesty state. The requirement checklist and the RED-classification contract
-live under `docs/feature/f-show-our-track-record/distill/`.
+Slices 02-05 entered DISTILL 2026-08-10 on the same lane, by explicit dispatch from Andres that
+consciously overrides the JIT default for the blocked slices, so every Slice Plan row now has
+executable scenarios and a step-level roadmap phase, ready the moment its blocks clear. The
+override changes WHEN tests were written, never what may run:
+
+- **slice-02** (`scorecard-refusal-laws.feature`, 12 scenarios, 5 of them refusal/negative):
+  runnable RED now — all 12 fail as `MISSING_FUNCTIONALITY` at one existence oracle, the
+  `projectScorecard`/`applyReport` driving port in `src/scorecard/projection` that DELIVER
+  builds. Roadmap phase 02, steps 02-01 through 02-07.
+- **slices 03-05** (`counter-counts-real-reports.feature` 7, `earned-claim-headline.feature` 8,
+  `monthly-self-grading.feature` 6): AUTHORED-BLOCKED. Every scenario carries
+  `@blocked-on-real-reports` and is skipped whole by the gate hook
+  (`steps/blocked-gate.steps.ts`); unskipping early fails loudly naming the open pre-requisite.
+  Unblock = DISTILL re-entry: remove the tag, complete the marked step bodies, record the RED
+  run, then DELIVER. Roadmap phases 03-05.
+
+Untagged suite after this pass: 119 scenarios — 86 passing (all siblings plus slice-01), 21
+skipped (the blocked slices), 12 failing (slice-02's correct RED until its DELIVER). Runs,
+classifications, refusals and the skip-gate protocol are recorded in
+`distill/red-classification.md`; coverage rows in `distill/requirement-checklist.md`.
+
+Charters for all four slices are authored under
+`docs/product/expectations/f-show-our-track-record/` (slice-02 and slice-05 as operator-facing
+non-visual charters; slice-03 and slice-04 with single-line U8 observations matching the roadmap
+verbatim — the examine gate matches exact substrings, so U8 lines must never be re-wrapped).
+The blocked slices' charters state their blocks plainly and defer every verdict to real data.
 
 ## Reuse Analysis
 
