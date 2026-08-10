@@ -61,6 +61,37 @@ the correct JIT state, not a gap.
 
 ## Current DISTILL coverage
 
-| Current requirement | Active acceptance evidence | Status |
+Updated 2026-08-09 at slice-01 JIT DISTILL. Twelve acceptance scenarios exist across
+`tests/acceptance/f-works-with-no-signal/the-last-forecast-still-reads.feature` and
+`the-helper-keeps-its-discipline.feature`, all tagged `@feature-f-works-with-no-signal` at file
+level and `@slice-01` on every scenario. All twelve are observed RED with classification
+`MISSING_FUNCTIONALITY` (`distill/red-classification.md`). Rows belonging to slices that have not
+entered DISTILL stay expected-uncovered.
+
+| Requirement | Active acceptance evidence | Status |
 |---|---|---|
-| All rows R1 to R41 | none: no `.feature` file, step definition, scaffold or test module exists for this feature | Expected-uncovered under the JIT rule (HANDOFF §1). slice-01 rows R1 to R14 become coverable at slice-01 JIT DISTILL; no decision gates their authoring, and landing is sequenced behind feature-delta Pre-requisites 4 and 5 (serial file seams, not decisions). slice-02 rows R15 to R18 sit behind Pre-requisite 1 (the stamp BUGFIX lane). Rows R19 to R30 sit behind Pre-requisites 2 and 3 (f-tell slices 01, 03, 04); flush and backoff logic is authorable port-level without AWS, only the live send is deploy-blocked. Rows R31 to R33 are coverable immediately after slice-01. Rows R34 to R41 attach to every visible slice as it enters DISTILL. |
+| R1 | "A surfer parked at Venao with one bar still reads the last forecast that loaded"; "A whole morning's reading asks the site for ten things or fewer" | Covered, RED |
+| R2 | "A surfer parked at Venao..."; "A network that stalls gives up after three seconds and shows what we already had" | Covered, RED |
+| R3 | "With nothing saved for what they asked for, no signal lands on plain Spanish words"; "A report screen never opened before lands on the sin señal words, never an error" | Covered, RED |
+| R4 | "With nothing saved for what they asked for..." asserts the settled first sentence present and the second sentence ABSENT | Covered, RED, with one half deferred: the hour is asserted by shape (a plain clock after "de las "), not by equality with the home page's stamp, because that stamp still prints a raw ISO timestamp and its correction belongs to the BUGFIX lane (Pre-requisite 1). Equality becomes assertable at slice-02 |
+| R5 | "The report screen opens with no signal once it has been opened with signal"; "A report screen never opened before lands on the sin señal words, never an error" | Covered, RED. The extra explanatory line of §12 row 2 stays uncovered per Pre-requisite 6a: the Spanish string does not exist and inventing product copy is out of scope |
+| R6 | "The small parts the page draws itself with come from the phone when the signal is gone" | Partly covered, RED. The cache-first clause is covered through `/favicon.svg`, the one first-visit subresource the built site has. The failure clause ("page still renders on system fonts and inline critical CSS") is NOT claimed: `Base.astro` inlines every stylesheet as one `<style>` block, so it is structurally true today and a scenario asserting it would pass vacuously; the render-blocking-subresource refusal in the shipped page-weight gate is what holds it |
+| R7 | none | Uncovered at the browser, deliberately and with the reason recorded: the built site emits no static map and no photo thumbnail, so a scenario asserting either would fail at the locator on another lane's missing surface, which is BROKEN and not RED. The router row still ships in slice-01; its browser proof is owed the moment a map or a thumb exists (keystone slice-06/07 surface). No test carries `@covers-R7` |
+| R8 | "A report that got through is answered by the site and left nowhere on the phone"; "With the signal gone, a planted answer is never handed back as if the report went out" | Covered, RED. Both halves: network-only with nothing kept after a success, and never served from a copy on failure |
+| R9 | "With the signal gone, a planted answer is never handed back as if the report went out" | Half covered, RED. The poisoned fixture is real and on the real surface (an answer planted in the phone's own store under the write-path address) and the helper is watched being required to refuse it, which satisfies clause `check:unfired-is-not-evidence` at the acceptance layer. The §9 router-table UNIT test is owed by DELIVER's inner loop and is not an acceptance artefact; DoD row 2 is not satisfied by this scenario alone |
+| R10 | "A later alerts feature is added to the helper without touching a line of what it already does" | Covered, RED. The append is behavioural, not structural: the emitted helper is served amended from memory (never written into `dist/`) and the offline reading journey must still hold |
+| R11 | "Everything this slice adds stays inside the weight it was given" | Covered, RED. Measurements over the real gzipped `dist/` output, not estimates |
+| R12 | "A whole morning's reading asks the site for ten things or fewer" | Covered, RED. Guarded behind the helper actually being in charge, so the count cannot report a false green on a phone with no helper |
+| R13 | "The weight gate counts the sin señal page instead of calling it unbuilt" | Covered, RED. The scenario demands the post-slice behaviour; the three edits it implies are named in `red-classification.md` and are the crafter's to make, serialized with the keystone lane |
+| R14 | "A surfer parked at Venao with one bar still reads the last forecast that loaded" (the walking skeleton) | Covered, RED |
+| R38 | "A surfer parked at Venao..."; "With nothing saved for what they asked for..." | Covered for the two states slice-01 adds (offline-with-cache, offline-no-cache): each asserts its own words and that neither reads as a browser error. The remaining designed states arrive with slices 02, 03 and 04 |
+| R41 | "With nothing saved for what they asked for, no signal lands on plain Spanish words" | Covered for the surface slice-01 adds: no raw timestamp, no placeholder token, no machine word, no English on the sin señal page |
+| R34, R35, R36, R37, R39, R40 | the shipped `ui-quality` gate (`npm run test:ui`, `scripts/check-ui-quality.mjs`) | Covered by mechanism, not by a scenario, and deliberately not tagged. Verified 2026-08-09, both halves: the gate walks every built HTML document under `dist/` (`walk(DIST)` then an `.html` filter), so it starts covering `/sin-senal` the moment the page is built; and it is genuinely gated, as job `ui` of the ten in `scripts/ci-local-core.mjs:49` with `default: true`, running `npm run test:ui`, which builds first. Duplicating U1-U7 as browser scenarios would restate a shipped gate; a `@covers-Rn` tag on a test that does not check the thing would be worse. The U8 observation is the human examiner's against the slice charter |
+| R15 to R18 (slice-02) | none | Expected-uncovered. Authorable, but green needs the BUGFIX lane's corrected stamp (Pre-requisite 1) |
+| R19 to R30 (slices 03, 04) | none | Expected-uncovered. Blocked on f-tell slices 01, 03 and 04 (Pre-requisites 2 and 3); flush and backoff oracles are already fixed by `07-write-path.md` §5 |
+| R31 to R33 (slice-05) | none | Expected-uncovered. Unblocked the moment slice-01 lands |
+
+Note for slice-03's DISTILL opener: the scenario "With nothing saved for what they asked for, no
+signal lands on plain Spanish words" asserts that `"Los reportes que mandes quedan guardados."` is
+ABSENT (R4). That assertion becomes false the moment slice-03 makes the sentence true (R26).
+Amending that one step is slice-03's, and it is an amendment owed, not a test that broke.

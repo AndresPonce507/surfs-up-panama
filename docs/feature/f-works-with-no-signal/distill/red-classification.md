@@ -88,3 +88,89 @@ provide a queue (Pre-requisite 2); their port-level oracles are already fixed by
 is unblocked the moment slice-01 lands. No approval, examiner verdict or RED observation is
 recorded in this file yet; the first JIT DISTILL run appends its observed classification below
 this line.
+
+## Observed RED, slice-01 JIT DISTILL, 2026-08-09
+
+Command, run from `/Users/andres/psb-signal` on `build/f2-signal`:
+
+```
+npm run test:at -- --tags "@feature-f-works-with-no-signal and @slice-01" > /tmp/signal-red.log 2>&1; echo "REAL_EXIT=$?"
+```
+
+`REAL_EXIT=1`. Summary line: **12 scenarios (12 failed), 155 steps (122 passed, 21 skipped, 12
+failed)**, 1 hook passed, 1m 30s. The gate was redirected to a file and its status captured
+directly; it was never piped into `tail`, `head` or `grep` (project `CLAUDE.md`: a pipeline
+returns the last command's status, and this repository has committed over a red gate exactly
+that way). A `--dry-run` over the same tag expression reported 12 scenarios / 155 steps and
+**zero undefined steps** before the real run, which is what rules out a step-matching failure
+being mistaken for RED under `strict: true`. `npx tsc --noEmit` exits 0.
+
+Every scenario failed with `AssertionError [ERR_ASSERTION]` raised by its own behaviour oracle,
+after the real `npm run build` finished green, the emitted `dist/` was served over real HTTP and
+Chromium had loaded the page at 390 px. 122 of 155 steps executed and passed, which is the
+positive evidence that the harness itself is sound: no import error, no fixture construction
+failure, no browser startup failure, no undefined or ambiguous step anywhere in the run.
+
+Driving surface for all twelve: the production entry points only. The real `npm run build`
+(which runs `publish:surface --verify` and the page-weight gate, because the gate is wired into
+`astro.config.mjs` as an integration), the emitted `dist/` served over real HTTP with the
+static-host `build.format: 'file'` mapping, and real Chromium at 390 px. `astro preview` is
+deliberately not used: it resolves directory URLs itself and hides the class of hosting bug that
+once shipped twenty spot links returning 403. The signal is cut at the server rather than
+emulated in the browser: `blackout` destroys the socket on arrival (an unreachable origin as a
+phone experiences it) and `stall` accepts and never answers (the only condition under which a
+three-second timeout can be watched firing). Chromium's own offline emulation is not used,
+because its propagation to service-worker fetches is the thing under test. Every response carries
+`Cache-Control: no-store`, so the browser's own HTTP cache cannot impersonate the helper and turn
+"the same forecast is on the screen" green with nothing installed.
+
+| Slice | Scenario | Observable exercised | Classification | Evidence |
+| --- | --- | --- | --- | --- |
+| slice-01 | A surfer parked at Venao with one bar still reads the last forecast that loaded | `navigator.serviceWorker` registration on the built site in Chromium | MISSING_FUNCTIONALITY | `AssertionError`: the phone has no offline helper installed after reading the site with signal. No `sw` script exists and no registration snippet is in the built home page, so nothing can install. Failed at the behaviour oracle after the page loaded |
+| slice-01 | A network that stalls gives up after three seconds and shows what we already had | elapsed time of a navigation against a server that accepts and never answers | MISSING_FUNCTIONALITY | `AssertionError`: the stalled network kept the surfer waiting 8003 ms and the page never arrived. Nothing gives up at three seconds because there is no network-first router; the browser waited out the harness's own patience |
+| slice-01 | With nothing saved for what they asked for, no signal lands on plain Spanish words | visible text of an unvisited spot route with the origin unreachable | MISSING_FUNCTIONALITY | `AssertionError`: the screen does not carry `"Sin señal. Esto es lo último que vimos, de las "`. Captured context names the real navigation failure (`net::ERR_EMPTY_RESPONSE`), which is exactly the raw browser error this row exists to replace |
+| slice-01 | The report screen opens with no signal once it has been opened with signal | visible text of the report route, compared against the same route read with signal | MISSING_FUNCTIONALITY | `AssertionError`: the offline screen is empty where the online screen read the three settled questions. The expected/actual diff in the log carries the full online text, so the oracle is visibly a content comparison, not a fixture check |
+| slice-01 | A report screen never opened before lands on the sin señal words, never an error | visible text of an unvisited report route with the origin unreachable | MISSING_FUNCTIONALITY | `AssertionError`: same settled sentence absent; captured `net::ERR_EMPTY_RESPONSE` on `/spots/punta-chame/reportar` |
+| slice-01 | The small parts the page draws itself with come from the phone when the signal is gone | the origin's Cache Storage contents, plus a real `fetch` of `/favicon.svg` with the origin unreachable | MISSING_FUNCTIONALITY | `AssertionError`: the phone is holding nothing at all (`[]`), so the small parts every route asks for on first visit are not kept |
+| slice-01 | A whole morning's reading asks the site for ten things or fewer | helper registration, then the count of requests the harness server received | MISSING_FUNCTIONALITY | `AssertionError` on the helper being installed. The count is deliberately guarded behind that assertion: with no helper the count is trivially small and would report a false green |
+| slice-01 | A report that got through is answered by the site and left nowhere on the phone | a real `POST /api/report` from the page through the registered helper, then Cache Storage | MISSING_FUNCTIONALITY | `AssertionError` on the helper being installed. Same guard: with no helper, "nothing about the send is kept" is vacuously true, so the row is pinned to a helper actually being in charge |
+| slice-01 | With the signal gone, a planted answer is never handed back as if the report went out | a real `POST /api/report` with a poisoned answer planted in Cache Storage under the write-path address | MISSING_FUNCTIONALITY | `AssertionError` on the helper being installed. The plant itself succeeded (the step passed), so the poisoned fixture of §9 is real and present on the surface, waiting to be refused |
+| slice-01 | A later alerts feature is added to the helper without touching a line of what it already does | the emitted helper file, discovered from the built page's own registration snippet | MISSING_FUNCTIONALITY | `AssertionError`: the built site starts no offline helper, so there is nothing for the alerts lane to be added to. Captured context: "the built home page starts no offline helper" |
+| slice-01 | Everything this slice adds stays inside the weight it was given | gzipped bytes of the emitted helper, of `sin-senal.html`, and raw bytes of the inline registration snippet | MISSING_FUNCTIONALITY | `AssertionError`: no helper to weigh. Measurements, not estimates, over the real gzipped `dist/` output |
+| slice-01 | The weight gate counts the sin señal page instead of calling it unbuilt | the measurement the real build printed | MISSING_FUNCTIONALITY | `AssertionError`: the measurement never names `/sin-senal` as a route it measured, and still lists it among the routes this site does not build. This is the shipped-gate amendment of Pre-requisite 4 demanded as behaviour rather than performed by this lane |
+
+Zero scenarios classified `IMPORT_ERROR`, `FIXTURE_BROKEN`, `SETUP_FAILURE`, `WRONG_ASSERTION`
+or `OBSERVABLE_NOT_AT_PORT`. The gate result for slice-01 is genuine RED and DELIVER may take it.
+
+### What DELIVER owes on the two shipped gates (Pre-requisite 4, measured)
+
+Two files, three edits, all of them inside slice-01 and strictly serial with the keystone lane.
+The count is three, not two: the gate refuses an emitted document it has no declared ceiling for,
+and it runs inside `astro build`, so without the first edit `npm run build` fails outright the
+moment `src/pages/sin-senal.astro` exists and every scenario in this suite turns BROKEN.
+
+| # | File and line | Edit |
+| --- | --- | --- |
+| 1 | `scripts/page-weight-core.mjs`, the `DECLARED_ROUTES` array (ends line 62) | Add a `/sin-senal` row: `{ shape: '/sin-senal', pattern: /^sin-senal\.html$/, route: () => '/sin-senal', label: '3 KB', bytes: 3 * KB, reading: true }`. Without it the build refuses the emitted document as "emitted but no declared route ceiling covers it" |
+| 2 | `scripts/page-weight-core.mjs:68` | Drop `/sin-senal (3 KB), ` from `DECLARED_BUT_UNBUILT`. The sentence becomes false the moment the page is built, and a gate that states a falsehood about its own coverage is worse than one that fails |
+| 3 | `tests/acceptance/daily-call-with-permanent-receipts/steps/page-weight.steps.ts:88` | `DECLARED_BUT_UNBUILT_ROUTES` becomes `['/acerca'] as const`. Consumed at line 591, which asserts each named route appears in the measurement's unbuilt line; edit 2 breaks that assertion until this lands. Keystone-owned test surface: serialize with the keystone lane, same convention f-tell slice-02 declared for the F-BILL guardrail files |
+
+### One design tension the scenarios imply, named so it is not resolved by weakening a test
+
+R4 asks `/sin-senal` for the hour the phone last saw the forecast, and §4's route map gives that
+route 0 JS. Those are only in tension if the hour is read as something the document computes.
+The implementation they leave open is the helper composing the served body: the precached
+document plus the `published_at` of the forecast copy the phone is holding. §12's "the SW adds no
+header tricks: truth lives in the document" rules out signalling age through response headers; it
+does not rule out the helper filling `{hora}` in the body of the page it serves, which is still
+truth living in the document the surfer reads. The scenario asserts the outcome (a plain clock
+hour after "de las ") and never the mechanism, on purpose. The wrong resolution is a hour baked
+in at build time: that reports when the site was published, not when this phone last saw a
+forecast, which is a different and less honest claim.
+
+Checked and NOT owed: the emitted helper script and any later `manifest.webmanifest` are not
+`.html`, and the gate only matches documents against declared routes, so neither is refused as an
+undeclared document. The inline registration snippet is inline, so it is weighed inside the home
+document's own 14 KB rather than as a first-visit asset. A `<link rel="manifest">` in slice-05
+WILL be counted as a first-visit asset and must be emitted in the build output.
+
