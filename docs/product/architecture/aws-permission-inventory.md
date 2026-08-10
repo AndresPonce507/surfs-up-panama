@@ -71,10 +71,23 @@ What this costs, stated in two separate claims so neither hides the other:
    rejected by the same rule.
 
 The fix is Andres's and it is one request: raise `L-B99A9384`. It is marked `Adjustable:
-true`. The precondition to deploy `SurfsUpPanamaWrite` unchanged is **quota ≥ 13 + 10 = 23**;
-to also keep AWS's conventional 100-unreserved headroom it is **113**. Nothing in this repo
-should retry the write stack by stripping the reservations: reserved concurrency is the cost
-control, not a nicety.
+true`. Stated so the arithmetic matches the claim, using the observed floor of 10:
+
+| Target | Reservations | Quota needed |
+|---|---|---|
+| `SurfsUpPanamaIngest` alone (fetch 2 + build 2) | 4 | **≥ 14** |
+| `SurfsUpPanamaWrite` alone (9) | 9 | **≥ 19** |
+| The deployed end state, all four stacks | 13 | **≥ 23** |
+| End state plus AWS's conventional 100-unreserved headroom | 13 | **≥ 113** |
+
+Nothing in this repo should retry the write stack by stripping the reservations: reserved
+concurrency is the cost control, not a nicety.
+
+One second-order blocker was checked and is NOT present: `write-stack` does
+`Fn.importValue('SurfsUpPanamaSiteOrigin')`, and that export is registered live
+(`SurfsUpPanamaSiteOrigin` → `https://d1dtqpd8bf3oze.cloudfront.net`, exported by
+`SurfsUpPanamaSite`). So the quota really is the only thing standing between here and a write
+deploy; there is no second failure waiting behind it.
 
 ## 2. Observed permission table (all us-east-1, 2026-08-09)
 
@@ -227,9 +240,27 @@ properties for real, not merely declared: metric `SurfsUpPanama/IngestSuccess`, 
 `treatMissingData: breaching`, 2 evaluation periods, and both an ALARM and an OK action on the
 alarm topic. All three alarms read `INSUFFICIENT_DATA`.
 
-Expected and not a fault: the dead-man's switch will move to `ALARM` on its own within 2 to 3
-hours, because ingest is genuinely not running. No email will leave until the subscription is
-confirmed.
+**The dead-man's switch is now testable for free, and it is not yet proven.** It should move
+to `ALARM` on its own within 2 to 3 hours, because ingest genuinely is not running — no
+schedule needs disabling. That is expected behaviour, not a fault.
+
+But it is **unverified on this account**, and there is a specific, named way it could fail
+that this project has already been burned by once. §4 records that a CloudWatch alarm on an
+empty metric namespace "would sit on a nonexistent metric forever". `SurfsUpPanama/IngestSuccess`
+has **zero published datapoints** right now: the metric filter that would create it rolled back
+with the ingest stack. The whole of slice-02 rests on the claim that `treatMissingData:
+BREACHING` converts that absence into `ALARM` rather than into a permanent
+`INSUFFICIENT_DATA`, and that claim has never been observed here.
+
+So, precisely: if the alarm reads `ALARM` after ~3 hours, the load-bearing property is proven
+live. **If it is still `INSUFFICIENT_DATA` after ~3 hours, that is a real defect, not a wait**,
+and slice-02's guarantee is hollow in exactly the way §4 warned. Check with
+`aws cloudwatch describe-alarms --alarm-names surfs-up-panama-dead-mans-switch`.
+
+Keep the distinction slice-04 turns on: this observation satisfies R18's *observable* (the
+switch fires when ingest is dead) but not R18's stated *procedure* (disable a running schedule,
+then re-enable it). The two must not be quietly conflated, and no email leaves the topic until
+the subscription is confirmed.
 
 **Money lines, live:** all five exist (`surfs-up-panama-alert-1`, `-alert-5`, `-alert-15`,
 `-action-18`, `-last-line-20`), all at $0.00 actual. The $18 line's subscribers are the email
