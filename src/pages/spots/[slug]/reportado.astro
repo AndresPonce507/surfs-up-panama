@@ -1,9 +1,16 @@
 ---
-// Report screen 2 shell. The reveal renders from the POST response only; see
-// the constraint block in ReportShell.astro.
+// Report screen 2 shell. The reveal (P3, a score comparison) renders from
+// the POST response only; see the constraint block in ReportShell.astro.
+// Slice-01 never sends anything, so the confirmation this document itself
+// can show is narrower and purely local: whether the phone durably holds a
+// queued report for this spot, re-derived on every load (event ddc0ba7c --
+// see the cold-load reveal section of src/report/island.ts). ReportShell.astro
+// is not in this step's files_to_modify, so the mount script below is added
+// here rather than inside it.
 import type { GetStaticPaths } from 'astro';
 import ReportShell from '../../../components/ReportShell.astro';
-import { region } from '../../../data/region';
+import { region, spotById } from '../../../data/region';
+import type { Locale } from '../../../i18n/strings';
 
 export const getStaticPaths = (() =>
   region.spots.map((spot) => ({
@@ -14,6 +21,17 @@ const { slug } = Astro.params;
 if (slug === undefined) {
   throw new Error('spots/[slug]/reportado: slug param missing');
 }
+const locale: Locale = 'es';
+const spot = spotById(slug);
+if (spot === undefined) {
+  throw new Error(`spots/[slug]/reportado: no spot identity for spot_id "${slug}"`);
+}
 ---
 
-<ReportShell locale="es" spotId={slug} />
+<ReportShell locale={locale} spotId={slug} />
+<div data-reveal-spot-name={spot.name} hidden></div>
+<script>
+  import { mountReportReveal } from '../../../report/island';
+
+  mountReportReveal();
+</script>

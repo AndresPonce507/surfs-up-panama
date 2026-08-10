@@ -32,9 +32,12 @@ if (spot === undefined) {
   throw new Error(`ReportCapture: no spot identity for spot_id "${spotId}"`);
 }
 
-// Submission is owned by the report island (commit to queue, POST, render the
-// reveal). The island is not scaffolded yet, so the control is disabled: with
-// no JS, reporting is unavailable by design and the noscript copy says so.
+// Submission is owned by the report island (src/report/island.ts): probe
+// storage, enable Mandar only on a passing probe, commit to the queue, swap
+// the address, render the confirmation. Slice-01 never POSTs (application-
+// architecture.md section 12). The button still ships disabled in the static
+// markup below -- progressive enhancement, 01-06 pins it -- so with no JS,
+// reporting is unavailable by design and the noscript copy says so.
 ---
 
 <Base
@@ -43,8 +46,9 @@ if (spot === undefined) {
   currentPath={paths.report(locale, spotId)}
   altPath={paths.report(locale === 'es' ? 'en' : 'es', spotId)}
 >
-  <h1>{t.report.title(spot.name)}</h1>
-  <form>
+  <h1 data-report-heading>{t.report.title(spot.name)}</h1>
+  <div data-storage-notice hidden></div>
+  <form data-report-form data-spot-id={spotId} data-locale={locale} data-spot-name={spot.name}>
     <fieldset>
       <legend>{t.report.sizeQuestion}</legend>
       {
@@ -80,7 +84,13 @@ if (spot === undefined) {
     </fieldset>
     <button type="submit" disabled>{t.report.submit}</button>
   </form>
+  <div data-report-confirmation hidden></div>
   <noscript>
     <p>{t.report.noscript}</p>
   </noscript>
+  <script>
+    import { mountReportIsland } from '../report/island';
+
+    mountReportIsland();
+  </script>
 </Base>
