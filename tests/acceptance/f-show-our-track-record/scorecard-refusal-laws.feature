@@ -59,7 +59,7 @@ Feature: La aritmética del historial existe como leyes que se niegan a publicar
     Then el margen guardado nunca baja del piso físico del ruido
     And el conjunto coordinado jamás publica antes que el honesto
 
-  @slice-02 @pending @driving_port @in-memory @negative @error @covers-R13
+  @slice-02 @driving_port @in-memory @negative @error @covers-R13
   Scenario: El filtro de confianza se ve disparar: una credencial joven pierde sus muestras
     Given reportes de prueba donde una credencial nació ayer y las demás son veteranas
     And una configuración de confianza de prueba que exige credenciales con edad

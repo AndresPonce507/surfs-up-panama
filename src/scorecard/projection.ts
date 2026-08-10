@@ -1,12 +1,13 @@
 import { aggregateDaily, type DailyAggregate } from './daily-aggregate';
 import { pairResiduals, type PredictionSnapshot, type Residual, type ScorecardVariable, type SurfReport } from './pairing';
+import { eligibleReports, type TrustGateConfig } from './trust-eligibility';
 import { deriveWindows, type WindowStat } from './windows';
 
 export type ProjectionInput = {
   readonly predictions: readonly PredictionSnapshot[];
   readonly reports: readonly SurfReport[];
   readonly variables?: readonly string[];
-  readonly trustConfig: Record<string, unknown>;
+  readonly trustConfig: TrustGateConfig | null;
   readonly resolveReporter: (deviceId: string) => string;
   readonly asOf: string;
 };
@@ -32,7 +33,11 @@ export const projectScorecard = (input: ProjectionInput): ScorecardProjection =>
   validateVariables(input.variables);
   const selected = new Set<ScorecardVariable>((input.variables ?? allowedVariables) as readonly ScorecardVariable[]);
   const residuals = pairResiduals(input).filter((residual) => selected.has(residual.variable));
-  const daily = aggregateDaily(residuals);
+  const gatedReports = eligibleReports(input.reports, input.trustConfig, input.resolveReporter);
+  const gatedResiduals = pairResiduals({ predictions: input.predictions, reports: gatedReports }).filter((residual) =>
+    selected.has(residual.variable),
+  );
+  const daily = aggregateDaily(gatedResiduals);
   return {
     residuals,
     daily,
