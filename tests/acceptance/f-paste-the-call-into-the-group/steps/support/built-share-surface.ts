@@ -40,7 +40,7 @@ type StaticSurfaceFile = { current: SurfaceUpdate };
 // Canonical Spanish vocabulary (application-architecture.md section 10; size
 // words are the v1 band table of domain model section 7.2). The test mirrors
 // the published constants; it never mints size, wind or confidence words.
-const spanishSizeBand: Readonly<Record<string, string>> = {
+export const spanishSizeBand: Readonly<Record<string, string>> = {
   flat: 'Plano',
   ankle_knee: 'Tobillo a rodilla',
   knee_waist: 'Rodilla a cintura',
@@ -50,13 +50,13 @@ const spanishSizeBand: Readonly<Record<string, string>> = {
   double_overhead_plus: 'Doble o más',
 };
 
-const spanishWind: Readonly<Record<string, string>> = {
+export const spanishWind: Readonly<Record<string, string>> = {
   clean: 'limpio',
   choppy: 'picado',
   blown_out: 'destrozado',
 };
 
-const spanishConfidence: Readonly<Record<string, string>> = {
+export const spanishConfidence: Readonly<Record<string, string>> = {
   low: 'baja',
   medium: 'media',
   high: 'alta',
@@ -314,6 +314,14 @@ export type HomeOptions = {
   readonly theme: string;
   readonly motion: string;
   readonly javaScript: boolean;
+  /**
+   * The phone's clipboard is a driven, non-deterministic surface. 'granted'
+   * lets the scenario read what the copy action wrote; 'denied' simulates the
+   * phone refusing (the R9 designed state) by making every write path the
+   * page could use fail the way a real denial does. Omitted means the
+   * browser's defaults, exactly the slice-01 behaviour.
+   */
+  readonly clipboard?: 'granted' | 'denied';
 };
 
 export type OpenHome = {
@@ -329,6 +337,26 @@ export async function newHomePage(browser: Browser, url: string, options: HomeOp
     viewport: { width: options.width, height: 844 },
     javaScriptEnabled: options.javaScript,
   });
+  if (options.clipboard === 'granted') {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: url });
+  }
+  if (options.clipboard === 'denied') {
+    // Refuse every write path a copy control could take, the way a phone that
+    // denied the permission does: the async clipboard rejects NotAllowed and
+    // the legacy command reports failure. Nothing else about the page changes.
+    await context.addInitScript(`(() => {
+      const denied = () => Promise.reject(new DOMException('Write permission denied.', 'NotAllowedError'));
+      if (navigator.clipboard !== undefined) {
+        try {
+          Object.defineProperty(navigator.clipboard, 'writeText', { value: denied });
+          Object.defineProperty(navigator.clipboard, 'write', { value: denied });
+        } catch { /* a page that cannot be denied is reported by its scenario */ }
+      }
+      const originalExec = document.execCommand?.bind(document);
+      document.execCommand = (command, ...rest) =>
+        /copy|cut/i.test(String(command)) ? false : (originalExec ? originalExec(command, ...rest) : false);
+    })();`);
+  }
   const page = await context.newPage();
   await page.emulateMedia({
     colorScheme: options.theme === 'oscuro' ? 'dark' : 'light',
