@@ -11,16 +11,18 @@
 //
 // The counts are therefore never literals. spots_examined is the spots the
 // observation log actually named, and corrections_written is the length of the
-// ledger of corrections this run stored. Nothing writes yet: no spot can earn a
-// correction before the gate exists (06-learning-layer.md section 7), and only
-// the gate may ever mark one applied. So "no correction by default" is what the
-// code does, not a comment about what it intends.
+// ledger of corrections this run stored -- which, since 01-05, can be a
+// refusal: a correction file this run wrote with `applied: false`, because a
+// refusal that leaves no trace is not auditable (06-learning-layer.md
+// section 7). Only src/learning/gates.ts may ever mark one applied; this
+// module never inspects, let alone constructs, that state itself.
 //
 // Store and clock are passed in. Nothing here reads the ambient environment or
 // the ambient clock, per the rule at the top of src/pipeline/ports.ts.
 
 import type { Clock } from '../pipeline/ports';
-import { readObservationLog, spotsReportedIn, type LearningInputStore } from './inputs';
+import { buildCorrectionRecords, currentCorrectionKey } from './correction-file';
+import { readObservationLog, readPredictionLog, spotsReportedIn, type LearningInputStore } from './inputs';
 
 /** What the fit needs of the store: read its inputs, store what it earns. */
 export interface LearningStore extends LearningInputStore {
@@ -41,26 +43,35 @@ export type LearningFitOutcome = {
   completed: boolean;
   /** How many spots the observation log named, never a constant. */
   spots_examined: number;
-  /** How many corrections this run actually stored. */
+  /** How many corrections this run actually stored, refusals included. */
   corrections_written: number;
   events: { type: string; detail?: string }[];
 };
 
 export async function runLearningFitOnce(deps: LearningFitDeps): Promise<LearningFitOutcome> {
-  const reported = await readObservationLog(deps.store);
-  const spots = spotsReportedIn(reported);
+  const observations = await readObservationLog(deps.store);
+  const predictions = await readPredictionLog(deps.store);
+  const spots = spotsReportedIn(observations);
 
-  // The ledger of corrections this run stored. It is empty because nothing in
-  // this run can put one, and the count below is its length, so the report can
-  // never claim a write that did not happen.
-  const storedCorrections: string[] = [];
+  const records = buildCorrectionRecords(
+    spots.map((spotId) => ({
+      spotId,
+      observations: observations.filter((observation) => observation.spot_id === spotId),
+      predictions,
+    })),
+    deps.clock,
+  );
+
+  for (const [spotId, record] of records) {
+    await deps.store.put(currentCorrectionKey(spotId), JSON.stringify(record));
+  }
 
   const events = spots.map((spot_id) => ({ type: 'spot_examined', detail: spot_id }));
 
   return {
     completed: true,
     spots_examined: spots.length,
-    corrections_written: storedCorrections.length,
+    corrections_written: records.size,
     events,
   };
 }
