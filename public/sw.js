@@ -87,6 +87,13 @@ function classifyRequest(request) {
   return null;
 }
 
+/** Our own, same-origin, inspectable response -- never a foreign origin's
+ * answer, a redirect landing elsewhere, or an opaque one. A cross-origin
+ * hop, however 200 OK it looks, never comes back 'basic'. */
+function isTrustworthyResponse(response) {
+  return Boolean(response) && response.ok && response.type === 'basic';
+}
+
 function raceWithTimeout(promise, timeoutMs) {
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => reject(new Error('network-first timeout')), timeoutMs);
@@ -108,7 +115,7 @@ function networkFirst(request) {
   return self.caches.open(CACHE_VERSION).then((cache) =>
     raceWithTimeout(self.fetch(request), NETWORK_FIRST_TIMEOUT_MS)
       .then((response) => {
-        if (response && response.ok) cache.put(request, response.clone());
+        if (isTrustworthyResponse(response)) cache.put(request, response.clone());
         return response;
       })
       .catch(() =>
@@ -126,7 +133,7 @@ function cacheFirst(request) {
       (cached) =>
         cached ||
         self.fetch(request).then((response) => {
-          if (response && response.ok) cache.put(request, response.clone());
+          if (isTrustworthyResponse(response)) cache.put(request, response.clone());
           return response;
         }),
     ),
@@ -165,7 +172,7 @@ function cacheFirstLru(request) {
       (cached) =>
         cached ||
         self.fetch(request).then((response) => {
-          if (response && response.ok) {
+          if (isTrustworthyResponse(response)) {
             cache.put(request, response.clone());
             trimToLimit(cache, MEDIA_CACHE_LIMIT_BYTES);
           }
@@ -193,7 +200,7 @@ function dispatch(entry, request) {
 function precacheOfflineDocument() {
   return self.caches.open(CACHE_VERSION).then((cache) =>
     self.fetch(OFFLINE_DOCUMENT).then((response) => {
-      if (response && response.ok) return cache.put(OFFLINE_DOCUMENT, response.clone());
+      if (isTrustworthyResponse(response)) return cache.put(OFFLINE_DOCUMENT, response.clone());
       return undefined;
     }),
   );
