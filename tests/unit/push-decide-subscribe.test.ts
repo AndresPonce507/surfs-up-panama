@@ -12,7 +12,7 @@ import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
 import { decideSubscribe } from '../../src/push/decide-subscribe';
-import type { StoredSub, SubscribeRequest } from '../../src/push/types';
+import type { StoredSub, SubscribeDecision, SubscribeRequest } from '../../src/push/types';
 
 const identifier = fc
   .string({ minLength: 1, maxLength: 12 })
@@ -558,6 +558,102 @@ describe('decideSubscribe -- daily write quota reject (R13, step 01-04)', () => 
         }
       }),
       { numRuns: 50 },
+    );
+  });
+});
+
+// ------------------------------------------------ unsubscribe idempotence (R14, step 01-05)
+//
+// The law (implementation notes, step 01-05): removal is idempotent, the
+// natural companion to 01-01's upsert idempotence. Removing an identity
+// that is already gone is a SUCCESS ('unsubscribed'), never a rejection and
+// never a thrown error, and folding any number of removals of the same
+// identity forward -- starting from either "present" or "already gone" --
+// always ends the sequence reporting the exact same outcome and the exact
+// same stored rows as the very first removal. An unrelated identity already
+// on file is left byte-for-byte untouched throughout.
+
+function unsubscribeRequest(
+  spotId: string,
+  endpoint: string,
+  deviceId: string,
+  existing: StoredSub[],
+  writesToday: number,
+): { action: 'unsubscribe'; spot_id: string; endpoint: string; device_id: string; now: string; existing: StoredSub[]; writes_today: number; allowlist: string[] } {
+  return {
+    action: 'unsubscribe',
+    spot_id: spotId,
+    endpoint,
+    device_id: deviceId,
+    now: '2026-08-10T18:00:00-05:00',
+    existing,
+    writes_today: writesToday,
+    allowlist: ['fcm.googleapis.com'],
+  };
+}
+
+describe('decideSubscribe -- unsubscribe idempotence (R14, step 01-05)', () => {
+  // covers: R14 -- the point of this step
+  it('is idempotent: removing an identity, whether it starts present or already gone, always reports "unsubscribed" with no rejection, and any number of removals after the first leaves exactly the same stored rows as the first, with an unrelated identity always left untouched', () => {
+    fc.assert(
+      fc.property(
+        identifier,
+        identifier.map((s) => `https://fcm.googleapis.com/fcm/send/${s}`),
+        identifier,
+        fc.boolean(),
+        fc.integer({ min: 1, max: 5 }),
+        (spotId, endpoint, deviceId, identityStartsPresent, repetitions) => {
+          const endpointHash = createHash('sha256').update(endpoint).digest('hex').slice(0, 32);
+          const mine: StoredSub = {
+            spot_id: spotId,
+            endpoint_hash: endpointHash,
+            lang: 'es',
+            threshold_score: null,
+            last_notified_date: null,
+            followup_date: null,
+            device_id: deviceId,
+          };
+          const other: StoredSub = {
+            spot_id: `${spotId}-ajeno`,
+            endpoint_hash: 'hash-de-otro-suscriptor',
+            lang: 'en',
+            threshold_score: 55,
+            last_notified_date: '2026-07-01',
+            followup_date: '2026-07-01',
+            device_id: 'dispositivo-ajeno',
+          };
+
+          let existing: StoredSub[] = identityStartsPresent ? [other, mine] : [other];
+          let firstDecision: SubscribeDecision | undefined;
+
+          for (let i = 0; i < repetitions; i += 1) {
+            const decision = decideSubscribe(unsubscribeRequest(spotId, endpoint, deviceId, existing, i));
+
+            assert.equal(
+              decision.outcome,
+              'unsubscribed',
+              `removal #${i + 1} of an identity that is already gone must report "unsubscribed", never a rejection and never an error`,
+            );
+            assert.equal(decision.rejection, null, 'an "unsubscribed" outcome must carry no rejection');
+            assert.deepEqual(
+              decision.stored,
+              [other],
+              `removal #${i + 1} must leave no row for the removed identity, and the unrelated row untouched`,
+            );
+
+            if (firstDecision !== undefined) {
+              assert.deepEqual(
+                decision,
+                firstDecision,
+                'any removal after the first must leave the exact same reported end state as the first removal (the idempotence law)',
+              );
+            }
+            firstDecision = decision;
+            existing = decision.stored;
+          }
+        },
+      ),
+      { numRuns: 100 },
     );
   });
 });
