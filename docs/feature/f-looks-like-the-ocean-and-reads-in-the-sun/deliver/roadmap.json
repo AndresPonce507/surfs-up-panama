@@ -1,0 +1,576 @@
+{
+  "roadmap": {
+    "project_id": "f-looks-like-the-ocean-and-reads-in-the-sun",
+    "created_at": "2026-08-10T00:00:00Z",
+    "total_steps": 15,
+    "quality_contract_version": 1
+  },
+  "phases": [
+    {
+      "id": "01",
+      "name": "Slice-01: home page becomes deep tropical water, both themes",
+      "description": "The walking skeleton. tokens.css alone takes the ADR's blue-tropical values; every pair is re-measured against the REAL rendered home page, not isolated hex, in both themes. Nothing later is worth building until this holds. Blocks slices 02-05, which are parallel-safe once it lands.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "01-01",
+          "name": "Tokens rewritten to the ADR's blue-tropical values",
+          "criteria": [
+            "tokens.css day and dark colour tokens are replaced with the ADR's values exactly; no hex is invented beyond what the ADR itself specifies.",
+            "The hero gradient's lightest stop is #0D5866 or darker in both themes; #0E5E70 is the recorded rejected value, never reintroduced.",
+            "Every existing token NAME is preserved; only values change, so base.css, components.css and recipes.css keep resolving without edits.",
+            "The home page at 390 px visibly reads as deep tropical water, not the old near-white list, in light and dark theme.",
+            "No component file is edited; the whole visible change flows from tokens.css alone, proving tokens are the one source of colour."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/blue-tropical-home-palette.feature",
+          "scenario_name": "La página de inicio se ve como agua tropical profunda, no como una lista gris, en los dos temas",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/a-surfer-opens-the-home-page-and-it-looks-like-deep-tropical-water-instead-of-a-grey-list-and-eve.md",
+          "u8_observation": "Abro la página de inicio a 390 px, en tema claro y en tema oscuro, y en los dos veo un azul-verde profundo de agua tropical al amanecer en vez de la lista gris de antes, y cada palabra sigue leyéndose con claridad.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @step-01-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @step-01-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @step-01-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @step-01-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @step-01-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @step-01-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @step-01-01 and @ui-u7"]
+          },
+          "deps": [],
+          "files_to_modify": [
+            "src/styles/tokens.css"
+          ],
+          "implementation_notes": "ENTRY GATE, do not start before it clears: feature-delta.md Pre-requisite 1 is a hard gate, not a preference — the current DELIVER wave lands first, because nine in-flight lanes assert contrast against the OLD palette and repainting under them reds all nine for a reason that has nothing to do with their code. Confirm that lane's landing before this step opens. BLOCKER FOUND, read before touching this file: docs/product/architecture/adr-blue-tropical-glass-palette.md, cited by feature-delta.md as 'Accepted 2026-08-09' and as the authority whenever it and feature-delta disagree, DOES NOT EXIST in this worktree. Checked: the architecture directory listing (30 ADRs, none named blue-tropical or glass-palette), a repo-wide grep for 'blue-tropical-glass-palette' and for 'tropical', and the sibling psb-record worktree. All empty. This step cannot responsibly author real token values without it. DO NOT INVENT HEXES. The only two palette facts safe to encode without the ADR are the ones feature-delta.md states directly and that this roadmap was handed verbatim: the hero gradient's lightest stop is #0D5866 or darker, and #0E5E70 was measured at 6.70 and rejected. Every other value (ink, bg, surface, sunken, hairline, ctrl, go, warn, danger, accent, and the dark-theme twins) must be sourced from the ADR once it is committed; this step is blocked on that file existing, not merely on design intent. OLD values for diff auditing (current tokens.css): day ink #14181D/bg #FFFFFF/surface #F2F4F6/sunken #E9EDF1/hero-grad #F7FAFC to #EAF1F5; dark ink #EDF1F4/bg #10141A. TEST PARADIGM: EXEMPT, pure token-value replacement with no branching logic to property-test; compensated by the rendered-measurement property in 01-02. Token NAMES are the contract every consumer already depends on (09-design-system.md Reuse Analysis: EXTEND, not CREATE_NEW) — renaming or restructuring here is out of scope and would ripple into base.css, components.css and recipes.css for no reason this feature asks for. TAGS OWED, FEATURE-WIDE: every non-terminal step in this roadmap (every step whose ui_checks use a @step-NN-MM discriminator) depends on DISTILL authoring that per-step tag AND the matching @ui-uN tag on the right scenario. Neither exists yet. Until DISTILL adds them, a @step-NN-MM run selects zero scenarios and Cucumber exits 0 on an empty selection — read that as NOT YET ARMED, never as a pass. Only the five slice-terminal steps (01-03, 02-03, 03-03, 04-03, 05-03), which use the unrestricted @slice-NN tag with no @step- discriminator, are checkable against real scenarios as soon as any scenario in that slice exists."
+        },
+        {
+          "id": "01-02",
+          "name": "Every ADR pair re-measured against the real render",
+          "criteria": [
+            "Every ADR pair is re-measured against the rendered home page's real DOM, not isolated hex values, in light and dark theme.",
+            "Body text clears 7:1 against its real backdrop; all text clears 4.5:1; non-text UI clears 3:1, including the gradient's worst stop.",
+            "The gradient is sampled as rendered (interpolated), not just its two declared stop hexes, in both themes.",
+            "A pair that fails is named with its exact ratio and its two hex values, never rounded up to pass.",
+            "Falsifiability: one pair is deliberately broken below its floor, watched failing for the right reason, then reverted and the revert verified by git diff."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/blue-tropical-home-palette.feature",
+          "scenario_name": "Cada pareja de la ADR se vuelve a medir contra el fondo real, no contra el hexadecimal aislado",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/a-surfer-opens-the-home-page-and-it-looks-like-deep-tropical-water-instead-of-a-grey-list-and-eve.md",
+          "u8_observation": "Miro la misma página de inicio bajo el sol simulado del mediodía y a las 6 de la mañana: en los dos temas, el texto del cuerpo se lee con margen de sobra y ningún color se acerca al límite de lectura.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @step-01-02 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @step-01-02 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @step-01-02 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @step-01-02 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @step-01-02 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @step-01-02 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @step-01-02 and @ui-u7"]
+          },
+          "deps": ["01-01"],
+          "files_to_modify": [
+            "src/styles/tokens.css"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: a measurement pass over rendered output, not new logic; the property lives in the falsifiability requirement above (arbitrary rendered pairs, all clear their floor, no exceptions). ORACLE, cross-lane and read-only: tests/e2e/daily-call-with-permanent-receipts/walking-skeleton.spec.ts lines 106-165 already computes real luminance/contrast over rendered DOM elements at a 4.5:1 / 7:1 threshold — that is the only contrast-math oracle that exists in this repo today. This step CONSUMES it read-only against the home route; it does not edit it (editing it is a slice-04 concern, and even there it belongs to another feature's directory — see 04-02). If pointing it at the home route under this feature's own tag is not mechanically possible without editing that file, write a same-shape, smaller measurement inline in this step's own acceptance test rather than modifying the sibling feature's spec. THE WALKING-SKELETON REASON THIS SLICE EXISTS: feature-delta.md is explicit that the tokens and the ten pairs are already decided (once the ADR exists) — this step's entire value is proving the computation holds against the RENDERED page rather than the hex values in isolation, exactly the gap that let #0E5E70 (6.70, isolated-looking-fine) fail in practice. Do not shortcut this into a hex-to-hex comparison; it must read real computed styles off the built home document."
+        },
+        {
+          "id": "01-03",
+          "name": "Slice-01 green, dist inspected, both themes hold",
+          "criteria": [
+            "The full slice-01 tag run passes with a real exit code zero, captured by redirect and status read, never through a pipeline.",
+            "No horizontal scroll or clipping at 390 px or 320 px, with the longest Spanish spot name present, in both themes.",
+            "npm run build succeeds with the page-weight gate green; after GREEN the emitted home document is opened and read, not assumed.",
+            "Nothing outside src/styles/tokens.css changed: no number, no word, no route and no import differs from before this slice.",
+            "prefers-reduced-motion is honoured; nothing this slice adds animates, because a token-only change adds nothing that could."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/blue-tropical-home-palette.feature",
+          "scenario_name": "La página de inicio se ve como agua tropical profunda, no como una lista gris, en los dos temas",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/a-surfer-opens-the-home-page-and-it-looks-like-deep-tropical-water-instead-of-a-grey-list-and-eve.md",
+          "u8_observation": "Recorro la página de inicio en el teléfono a 390 px y a 320 px, en los dos temas: nada se sale de la pantalla, ningún texto se corta, y con el movimiento reducido activado nada se mueve.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-01", "01-02"],
+          "files_to_modify": [
+            "src/styles/tokens.css"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: end-to-end verification, not new logic. TERMINAL STEP OF THE SLICE: this is the one step in slice-01 allowed to run the unrestricted @slice-01 tag (no @step- discriminator), because every other slice-01 step is already its dependency — running the whole slice tag earlier would pull in 01-02's not-yet-passing scenarios and fail by construction, which is the exact trap this project has already paid for once. U3 IS EXPECTED N/A: this slice adds no new tappable element, only recolours existing ones; no dedicated @ui-u3 tag is expected to exist, so this slot runs the whole slice tag per the standing convention for an N/A mandate (mirrors docs/feature/f-show-our-track-record's roadmap). GATE DISCIPLINE (project CLAUDE.md): redirect the run to a file, capture $? on the next line, then read the file; never pipe into tail/head/grep. Byte cost: feature-delta.md measured the full five-slice repaint at roughly 400 B gz in the proposal; slice-01 alone is a fraction of that, well inside the 14 KB gz/document and 100 KB/route ceilings, but the gate runs inside npm run build regardless and a regression fails the build, not this step's judgement. CHARTER OWED: docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/ has no files yet (confirmed by directory listing); the charter at the path above must be authored, from the u8_observation fields on this slice's steps, before COMMIT — des-verify-integrity's full run opens and seals charter_path with sha256."
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "name": "Slice-02: glass over water, solid fallback is the real design",
+      "description": "The built report CTA tray is proven, not redesigned: solid first, glass second. `.lang-toggle` has CSS but no markup, so the slice records its absence without inventing it. The hero call card stays solid. Depends on slice-01; parallel-safe with slices 03-05.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "02-01",
+          "name": "Solid fallback proven legible, filter disabled",
+          "criteria": [
+            "With backdrop-filter removed from a contained real build, the built report CTA tray reads as a legible solid card at 390 px and 320 px in both themes.",
+            "Forcing the shipped reduced-transparency branch in a contained real build resolves the tray to background: var(--bg) with no active backdrop filter.",
+            "A contained glass-first regression is rejected naming the real tray and its measured background; the normal solid state is proven through the rendered spot page, not CSS source order alone.",
+            "No `.lang-toggle` markup is fabricated: its absence from built output is recorded for F-READ-IT-IN-YOUR-LANGUAGE. No new selector is added; the existing tray ordering at components.css lines 252-272 remains load-bearing."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/glass-fallback-first.feature",
+      "scenario_name": "El teléfono que no puede pintar vidrio sigue leyendo la bandeja de reportar",
+          "slice_id": "slice-02",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/the-big-card-reads-as-glass-over-water-and-on-a-phone-that-cannot-render-glass-it-still-reads-per.md",
+          "u8_observation": "Con la transparencia reducida activada en el teléfono, la píldora de idioma y la barra de reportar se ven como tarjetas sólidas y legibles, sin ningún borde raro ni texto perdido, sobre el nuevo fondo azul-verde.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @step-02-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @step-02-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @step-02-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @step-02-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @step-02-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @step-02-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @step-02-01 and @ui-u7"]
+          },
+          "deps": ["01-03"],
+          "files_to_modify": [
+        "src/styles/components.css"
+          ],
+      "implementation_notes": "RECOVERED CONTRACT: the actual built surface is `p:has(> a.cta)` on a spot route. `.lang-toggle` has CSS but zero built markup, so F-READ-IT-IN-YOUR-LANGUAGE owns its future UI; do not add a test-owned or production pill here. The acceptance host copies and builds the real Astro project, strips only the real @supports blocks or forces only the real reduced-transparency branch, then observes the emitted spot route in Chromium. It never edits the worktree. The glass-first negative mutates only the contained copy and must fail naming the tray. The hero call card is deliberately solid per 09-design-system.md §4 and the accepted expectation charter. OPEN PRE-REQUISITE 3 does not block the solid fallback. TEST PARADIGM: EXEMPT, rendered-state verification; no new branching logic."
+        },
+        {
+          "id": "02-02",
+          "name": "Glass state reads as water, composites stay AAA",
+          "criteria": [
+            "With backdrop-filter enabled, the built report CTA tray has translucent blur at 390 px in both themes, while its solid CTA button clears AA against its actual background.",
+            "The report CTA tray is the only proven glass surface because it is the only current markup; `.lang-toggle` remains an honest absence until its owning feature lands.",
+            "The hero card has no backdrop filter or translucent background in either theme: 09-design-system.md §4 and the accepted charter settle it as solid, resolving the old wording.",
+            "No new glass surface is added. Any value retune belongs only to the existing components.css/tokens.css mechanism and must retain the slice-01 contrast floors."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/glass-fallback-first.feature",
+      "scenario_name": "Con vidrio disponible la bandeja real conserva contraste y deja ver el agua detrás",
+          "slice_id": "slice-02",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/the-big-card-reads-as-glass-over-water-and-on-a-phone-that-cannot-render-glass-it-still-reads-per.md",
+      "u8_observation": "Con el navegador soportando vidrio, veo la barra de reportar como cristal esmerilado flotando sobre el contenido que se desplaza debajo, y el texto sigue leyéndose perfecto en los dos temas. La tarjeta grande conserva su degradado sólido.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @step-02-02 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @step-02-02 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @step-02-02 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @step-02-02 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @step-02-02 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @step-02-02 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @step-02-02 and @ui-u7"]
+          },
+          "deps": ["02-01"],
+          "files_to_modify": [
+        "src/styles/components.css",
+        "src/styles/tokens.css"
+          ],
+      "implementation_notes": "RESOLVED FROM ACCEPTED TRUTH: 09-design-system.md §4 explicitly refuses glass on the hero call card because it carries the sunlight-read score, and the slice charter says the same. The older phrase 'big card reads as glass' was ambiguous and is corrected in feature-delta.md, not implemented. The accepted ADR's 'glass card over it' describes the visual language and does not overrule the explicit surface allocation. Prove only the live CTA tray. TEST PARADIGM: EXEMPT, rendered composite verification. Slice-04 owns documentation-table recomputation; this step only proves the rendered tray and the solid hero boundary."
+        },
+        {
+          "id": "02-03",
+          "name": "Slice-02 green, both filter states hold",
+          "criteria": [
+            "The full slice-02 tag run passes with a real exit code zero, captured by redirect and status read, never through a pipeline.",
+            "Both tray states pass at 390 px and 320 px in both themes with no horizontal scroll; only the CTA tray is asserted because no language-pill markup ships.",
+            "Zero behaviour change: no import, route or number differs; no language control is invented and the hero remains solid.",
+            "npm run build succeeds with the page-weight gate green; the emitted pages are opened and read after GREEN."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/glass-fallback-first.feature",
+      "scenario_name": "La construcción real conserva una ruta de reportar lista, sin fabricar el control de idioma",
+          "slice_id": "slice-02",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/the-big-card-reads-as-glass-over-water-and-on-a-phone-that-cannot-render-glass-it-still-reads-per.md",
+          "u8_observation": "Recorro el sitio con y sin vidrio soportado, en los dos temas: la píldora de idioma y la barra de reportar siempre se leen, nunca desaparecen ni pierden contraste, y nada más en el sitio cambió.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-02 and @ui-u7"]
+          },
+          "deps": ["02-01", "02-02"],
+          "files_to_modify": [
+        "src/styles/components.css",
+        "src/styles/tokens.css"
+          ],
+      "implementation_notes": "EXEMPT FROM PARADIGM: end-to-end verification. TERMINAL STEP: the only slice-02 step allowed the unrestricted @slice-02 tag. The old hero-card ambiguity is resolved in this roadmap and feature-delta from accepted design-system §4 and the charter. U5 proves the static page arrives ready rather than inventing an irrelevant loading state; the missing language control is recorded, not treated as a feature failure."
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "name": "Slice-03: every other surface belongs to the same product",
+      "description": "Spot detail, ayer, 404 and both report screens inherit the token cascade and get their own consistency proof; mañana is proven for free since it shares RankedList.astro with the home page. Depends only on slice-01; parallel-safe with 02, 04, 05.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "03-01",
+          "name": "Spot detail and ayer read as the same product",
+          "criteria": [
+            "Spot detail (today and tomorrow day cards, back link, report CTA) and the ayer receipt page render the new palette at 390 px, both themes.",
+            "Mañana is proven consistent for free: it renders through the same RankedList.astro slice-01 already restyled, no code change is made to it here.",
+            "No number, size band, wind word, best window or route on either page differs from before this slice.",
+            "Body text on both pages clears 7:1 against its real backdrop; non-text UI clears 3:1."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/palette-across-every-surface.feature",
+          "scenario_name": "La página de un spot y su recibo de ayer se ven como el mismo producto que la portada",
+          "slice_id": "slice-03",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/every-other-surface-belongs-to-the-same-product-spot-pages-manana-ayer-the-404-and-both-report-sc.md",
+          "u8_observation": "Abro la página de Playa Venao y su recibo de ayer a 390 px, en los dos temas: se ven exactamente con el mismo azul-verde de agua tropical que la portada, y todos los números de hoy y de mañana siguen ahí sin cambiar.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-01 and @ui-u7"]
+          },
+          "deps": ["01-03"],
+          "files_to_modify": [
+            "src/components/SpotDetail.astro",
+            "src/pages/spots/[slug]/ayer.astro",
+            "src/styles/components.css"
+          ],
+          "implementation_notes": "READ FIRST: SpotDetail.astro and ayer.astro carry no hardcoded colour today; every visible surface (section, h1, p, a.cta) resolves through tokens.css-driven selectors already in components.css. The default expectation is ZERO change to the .astro files themselves and a components.css touch ONLY if a specific pair fails its floor against the new backdrop (for example the day-card `section` background var(--surface) against the new --ink). Do not add a new rule speculatively; prove the need first. TEST PARADIGM: EXEMPT, rendered-state verification, no new logic. Mañana is explicitly named in feature-delta.md's slice-03 row alongside spot pages, ayer, 404 and both report screens, even though it shares RankedList.astro (already restyled in slice-01) — the point of listing it here is the PROOF that the shared component carries the theme automatically, not new work on it. TAGS OWED (see 01-01): this step's @step-03-01 discriminator does not exist until DISTILL authors it; a green result here before then is NOT YET ARMED."
+        },
+        {
+          "id": "03-02",
+          "name": "404 and both report screens hold the line",
+          "criteria": [
+            "The 404 page and both report screens (capture, reveal shell) render the new palette at 390 px, both themes, with no raw error state and no blank screen.",
+            "ReportCapture.astro's import list is unchanged: spot identity and size bands only, never src/data/forecast, directly or transitively.",
+            "ReportShell.astro stays forecast-free: the reveal shell itself imports nothing from the forecast layer.",
+            "Radio-card and button states (checked, disabled) stay legible against the new palette without a colour-only signal."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/palette-across-every-surface.feature",
+          "scenario_name": "La página que no existe y las dos pantallas de reportar se ven del mismo producto, sin fugas",
+          "slice_id": "slice-03",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/every-other-surface-belongs-to-the-same-product-spot-pages-manana-ayer-the-404-and-both-report-sc.md",
+          "u8_observation": "Escribo mal el nombre de una playa y abro la pantalla de reportar de otra: las tres se ven con el mismo azul-verde tropical, el formulario de reportar no muestra ningún número del pronóstico, y nada se ve roto ni en blanco.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-02 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-02 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-02 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-02 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-02 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-02 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-02 and @ui-u7"]
+          },
+          "deps": ["03-01"],
+          "files_to_modify": [
+            "src/pages/404.astro",
+            "src/components/ReportCapture.astro",
+            "src/components/ReportShell.astro",
+            "src/styles/components.css"
+          ],
+          "implementation_notes": "ANTI-LEAK CONSTRAINT, do not weaken (application-architecture.md sections 7-9, adr-report-flow-leak-isolation.md, restated verbatim in ReportCapture.astro's own header comment): the capture screen must NEVER import src/data/forecast, directly or transitively. This slice may change how these screens look and MUST NOT change what they import. If a visual need seems to require reading forecast data on either report screen, stop and flag it rather than adding the import. READ FIRST: ReportCapture.astro and ReportShell.astro carry no hardcoded colour; fieldset/label/input/button selectors already live in components.css and should re-theme via tokens alone. 404.astro is the thinnest surface (h1, p, nav a only) and is the fastest to verify. TEST PARADIGM: EXEMPT, rendered-state and import-boundary verification, no new logic."
+        },
+        {
+          "id": "03-03",
+          "name": "Slice-03 green across all six surfaces",
+          "criteria": [
+            "The full slice-03 tag run passes with a real exit code zero, captured by redirect and status read, never through a pipeline.",
+            "A sweep across every emitted spot, ayer, mañana, 404 and report route finds the new palette applied and reports how many pages it inspected.",
+            "No import, route, number or word differs anywhere this slice touches; the report screens' import lists are byte-identical to before.",
+            "npm run build succeeds with the page-weight gate green per route; the emitted documents are opened and read after GREEN."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/palette-across-every-surface.feature",
+          "scenario_name": "La página de un spot y su recibo de ayer se ven como el mismo producto que la portada",
+          "slice_id": "slice-03",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/every-other-surface-belongs-to-the-same-product-spot-pages-manana-ayer-the-404-and-both-report-sc.md",
+          "u8_observation": "Recorro todas las playas, mañana, ayer, una dirección mal escrita y las dos pantallas de reportar: todo el sitio se ve del mismo producto, sin ninguna palabra, número o ruta distinta a como estaba antes.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @ui-u7"]
+          },
+          "deps": ["03-01", "03-02"],
+          "files_to_modify": [
+            "src/components/SpotDetail.astro",
+            "src/pages/spots/[slug]/ayer.astro",
+            "src/pages/404.astro",
+            "src/components/ReportCapture.astro",
+            "src/components/ReportShell.astro"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: end-to-end sweep verification. TERMINAL STEP: the only slice-03 step allowed the unrestricted @slice-03 tag. U3 EXPECTED N/A: no new tappable element anywhere in this slice; runs the whole slice tag per the standing convention. The sweep must enumerate whatever dist/spots/*.html and dist/*.html the real installed data produces and fail at zero inspected rather than pass vacuously, matching the falsifiability discipline this project already requires elsewhere."
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "name": "Slice-04: the contrast table describes what the code does",
+      "description": "09-design-system.md's contrast table is rewritten against the real render, and the actual enforcement mechanism (not the one feature-delta names) is repointed so a future drift fails the build loudly. Depends only on slice-01; parallel-safe with 02, 03, 05.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "04-01",
+          "name": "Contrast table rewritten against the real render",
+          "criteria": [
+            "09-design-system.md's section 3 pair table is replaced with slice-01's blue-tropical home pairs, each computed against the real rendered home page, both themes.",
+            "Section 2's 'dawn-cool, not postcard-blue' language is corrected to match the shipped palette; section 4's glass-surface rows are left as TODO if slices 02/03 have not landed yet.",
+            "Every row states its ratio and which floor it clears (AAA/AA/3:1 non-text), mirroring the existing table's format exactly.",
+            "The old dawn-cool numbers are removed, not left alongside the new ones; a stale table is worse than none, per feature-delta.md's own reasoning."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/contrast-gate-drift.feature",
+          "scenario_name": "La tabla de contraste del sistema de diseño dice lo que el código realmente hace",
+          "slice_id": "slice-04",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/the-contrast-table-in-the-design-system-says-what-the-code-actually-does-and-ci-refuses-a-build-t.md",
+          "u8_observation": "Abro la página de inicio en el teléfono, en las dos maneras del tema, bajo la luz simulada del mediodía: cada palabra se lee cómoda y ningún color se ve lavado ni borroso contra su fondo.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @step-04-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @step-04-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @step-04-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @step-04-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @step-04-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @step-04-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @step-04-01 and @ui-u7"]
+          },
+          "deps": ["01-03"],
+          "files_to_modify": [
+            "docs/product/architecture/09-design-system.md"
+          ],
+          "implementation_notes": "TAGS OWED (see 01-01): this step's @step-04-01 discriminator does not exist until DISTILL authors it; a green result here before then is NOT YET ARMED. The 'user-visible' classification on this step is the documentation matching a rendered page, per feature-delta.md's own slice classification note: 'the gate is machinery, but its subject is contrast on rendered pages.' SCOPE NARROWED DELIBERATELY: this step's `deps` is only 01-03, and feature-delta.md declares slices 02-05 parallel-safe once slice-01 lands — that claim is about file disjointness, not content dependency. This step's table content genuinely depends on 02/03's rendered pairs (glass composites, spot-page surfaces) as well as slice-01's, so the criteria above are narrowed to slice-01's home pairs only; the glass and spot-page rows are explicitly deferred to 04-03, by which point 02-03/03-03 are likely green. If 02/03 have not landed when 04-03 closes, leave those rows TODO and flag it rather than transcribing unmeasured numbers. TEST PARADIGM: EXEMPT, documentation transcription against measured values, no logic. Flag to application-architecture.md is unrelated to this feature and out of scope; do not touch it."
+        },
+        {
+          "id": "04-02",
+          "name": "Repoint the drift gate, not the wrong file",
+          "criteria": [
+            "The mechanism that actually computes contrast is a generic getComputedStyle walker, not a pair list; scripts/check-ui-quality.mjs checks no pairs and cannot resolve a CSS cascade statically.",
+            "A new e2e spec owned by this feature duplicates that proven walker and runs it against every route this feature touches, not only home.",
+            "The new spec runs inside npm run ci:local's existing 'browser acceptance' job; no new job is invented.",
+            "The sibling feature's own e2e spec is left untouched; nothing here edits another feature's assertions."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/contrast-gate-drift.feature",
+          "scenario_name": "El sitio se recorre en el teléfono, en las dos maneras del tema, y cada palabra se lee con margen de sobra bajo el sol",
+          "slice_id": "slice-04",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/the-contrast-table-in-the-design-system-says-what-the-code-actually-does-and-ci-refuses-a-build-t.md",
+          "u8_observation": "Recorro la página de inicio, la de un spot y la barra de reportar en el teléfono, en las dos maneras del tema: cada palabra y cada botón se leen con margen de sobra bajo el sol, sin ningún color que se pierda contra su fondo.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @step-04-02 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @step-04-02 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @step-04-02 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @step-04-02 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @step-04-02 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @step-04-02 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @step-04-02 and @ui-u7"]
+          },
+          "deps": ["04-01"],
+          "files_to_modify": [
+            "tests/e2e/f-looks-like-the-ocean-and-reads-in-the-sun/contrast-and-touch-audit.spec.ts"
+          ],
+          "implementation_notes": "MISMATCH FOUND, confirmed by reading source, not assumed: feature-delta.md's Reuse Analysis says scripts/check-ui-quality.mjs is EXTENDed in this slice because 'the pairs it checks are repointed'. Read in full, this script checks ZERO contrast pairs — its own console output at lines 153-155 says 'U1 (contrast) ... need rendered geometry and belong in the browser suite'. ci-local-core.mjs lines 49-52 confirm the 'ui' job IS npm run test:ui, i.e. exactly this script; it cannot resolve a CSS cascade statically and was never meant to. The real contrast math is the generic, palette-agnostic `auditReadingSurface` function in tests/e2e/daily-call-with-permanent-receipts/walking-skeleton.spec.ts lines 92-172 (getComputedStyle-based luminance/contrast walker at 4.5:1/7:1, plus a 44px touch-target check), under the SEPARATE 'browser acceptance' job (npm run test:e2e). It takes no pair list at all — it walks whatever the real page renders, which is why 'repointing pairs' is not the right description of the needed work. Two real gaps instead: (1) that walker is defined inside another feature's e2e file, not importable cleanly by this feature; (2) even if it were shared, it is only invoked against '/' in that spec — spot pages, mañana, ayer, 404 and both report screens are never audited by it today. DECISION: create this feature's OWN e2e spec at the path above, duplicating the same proven walker logic (do not silently modify the sibling's file), and run it against every route this feature touches. Flag to whoever owns daily-call-with-permanent-receipts that the walker is duplicated, not shared, and a future refactor should extract it once both features agree on the shared home — do not perform that extraction unilaterally inside this feature's scope. TEST PARADIGM: EXEMPT, gate wiring and rendered-state verification, no new domain logic."
+        },
+        {
+          "id": "04-03",
+          "name": "Slice-04 green, drift proven to fail loud",
+          "criteria": [
+            "The full slice-04 tag run passes with a real exit code zero, captured by redirect and status read, never through a pipeline.",
+            "Falsifiability: one documented pair is deliberately drifted from the code, the gate is watched failing naming that pair, then reverted and the revert verified by git diff.",
+            "npm run ci:local's ui and browser acceptance jobs both pass with 0 skipped.",
+            "09-design-system.md's table and the shipped palette agree exactly; the glass and spot-page rows deferred from 04-01 are filled in now if 02-03/03-03 are green, otherwise left TODO and flagged."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/contrast-gate-drift.feature",
+          "scenario_name": "La tabla de contraste del sistema de diseño dice lo que el código realmente hace",
+          "slice_id": "slice-04",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/the-contrast-table-in-the-design-system-says-what-the-code-actually-does-and-ci-refuses-a-build-t.md",
+          "u8_observation": "Recorro el sitio completo en el teléfono, en las dos maneras del tema: toda palabra visible se lee con margen de sobra bajo el sol, y si alguien vuelve a aclarar el fondo por accidente, la revisión local del sitio se detiene antes de publicarlo.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @ui-u7"]
+          },
+          "deps": ["04-01", "04-02"],
+          "files_to_modify": [
+            "docs/product/architecture/09-design-system.md",
+            "tests/e2e/f-looks-like-the-ocean-and-reads-in-the-sun/contrast-and-touch-audit.spec.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: gate verification. TERMINAL STEP: the only slice-04 step allowed the unrestricted @slice-04 tag. U3 EXPECTED N/A per the standing convention. The falsifiability pass is required, not optional, per project CLAUDE.md's own rule that green tests do not mean it works and that two tests in this repo have already passed for accidental reasons — a drift gate nobody has watched fail is the same risk in a new location."
+        }
+      ]
+    },
+    {
+      "id": "05",
+      "name": "Slice-05: score bar and confidence shape, never colour alone",
+      "description": "A length-only score bar and a shape-plus-word confidence indicator move from recipes.css (unimported) into shipped markup, giving the ranked list a glance-able read without a second colour vocabulary. Depends only on slice-01; parallel-safe with 02-04.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "05-01",
+          "name": "Score bar ships, length only, shipped colours",
+          "criteria": [
+            "The .bars/.bar/.track/.fill recipe moves from recipes.css into components.css in this same step, per recipes.css's own consumer-known-before-produced rule.",
+            "The bar's fill encodes score by LENGTH only; no new colour is introduced to represent score magnitude.",
+            "Every ranked row (home, mañana) renders its own bar sized to score_q, with no change to score_q itself or row order.",
+            "The bar is non-text UI and clears 3:1 against --sunken in both themes, reusing --ink-2 and --danger exactly as recipes.css already specifies."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/score-bar-and-confidence-shape.feature",
+          "scenario_name": "84 y 6 se ven distintos de un vistazo, con una barra que mide solo por longitud",
+          "slice_id": "slice-05",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/a-surfer-reads-the-ranking-at-a-glance-84-and-6-look-different-and-confidence-is-legible-without-.md",
+          "u8_observation": "Miro la lista de veinte playas: cada fila tiene, junto a su número, una barra corta o larga que deja ver de un vistazo cuál está mejor, sin que ningún número, orden o color de fondo haya cambiado.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-01 and @ui-u7"]
+          },
+          "deps": ["01-03"],
+          "files_to_modify": [
+            "src/styles/recipes.css",
+            "src/styles/components.css",
+            "src/components/RankedList.astro"
+          ],
+          "implementation_notes": "OPEN PRE-REQUISITE 4, does not block, decided by default: feature-delta.md Pre-requisite 4 (whether the score bar's fill also encodes by colour) is open, owned by Andres. Its own recorded recommendation is 'length only, with colour reserved for the weakest-link callout' — this step ships that default. If Andres later says yes to colour too, that is an additive follow-up (a colour scale layered onto an already-correct length encoding), not a rework; do not pre-build a colour path speculatively (Simplicity first). recipes.css's own header states the rule this step executes: 'each block moves into components.css in the same commit as its markup' — .bars is not yet imported anywhere, so this migration is real, first-time work, not a rename. TEST PARADIGM: EXEMPT, markup and static CSS, no branching logic; tests/unit/** is out of scope for this feature (implementation_scope excluded_patterns) so the bar's length-from-score_q mapping is proven through the acceptance test above, not a new unit-level property test — do not add one. TAGS OWED (see 01-01): this step's @step-05-01 discriminator does not exist until DISTILL authors it; a green result here before then is NOT YET ARMED."
+        },
+        {
+          "id": "05-02",
+          "name": "Confidence gets shape plus word, never colour",
+          "criteria": [
+            "Confidence.astro renders the existing dots (●●○/●●●/●○○, recipes.css .conf .dots) beside the existing 'Confianza {word}' text; no new element type is introduced.",
+            "No colour is added to encode confidence level anywhere; --ink-2 stays the only colour in play, matching 09-design-system.md section 9 and DoD row 6 exactly.",
+            "The .conf recipe moves from recipes.css into components.css in this step, alongside the markup that finally consumes it.",
+            "Confidence.astro's public contract (a single `level` prop) is unchanged, since another feature's slice imports this component unmodified."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/score-bar-and-confidence-shape.feature",
+          "scenario_name": "La confianza se lee por forma y palabra, nunca solo por color",
+          "slice_id": "slice-05",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/a-surfer-reads-the-ranking-at-a-glance-84-and-6-look-different-and-confidence-is-legible-without-.md",
+          "u8_observation": "Junto a cada puntaje veo puntos llenos o vacíos y la palabra de confianza completa, todo en el mismo tono gris, sin ningún color que distinga alta de baja, y la fila se lee igual de bien con la pantalla lavada por el sol.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-02 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-02 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-02 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-02 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-02 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-02 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-02 and @ui-u7"]
+          },
+          "deps": ["05-01"],
+          "files_to_modify": [
+            "src/components/Confidence.astro",
+            "src/styles/recipes.css",
+            "src/styles/components.css"
+          ],
+          "implementation_notes": "CONTRADICTION FLAGGED, resolved in favour of the stricter, agreeing pair: feature-delta.md's slice-05 justification prose says confidence 'gets shape as well as colour... a colour-blind surfer and a washed-out screen... read the same information', which could be read as colour PLUS shape. But the feature's own Definition of Done row 6 says 'Confidence and the weakest-link callout are carried by shape plus word, never by colour alone' — and 09-design-system.md section 9 is explicit and reasoned: 'NO colour — confidence is certainty, not verdict, and a green/amber conf would visually collide with the go/stale vocabulary.' DoD row 6 and the design system agree with each other and disagree with the slice-05 prose; this step follows the two that agree and treats the prose as loose language, not a scope grant for a new colour channel. CROSS-LANE FLAG: Confidence.astro's own header comment records that another feature's slice-06 imports this component as-is via a one-line import; keep the `level`-only prop contract exactly as is so that caller does not break. TEST PARADIGM: EXEMPT, markup and static CSS."
+        },
+        {
+          "id": "05-03",
+          "name": "Slice-05 green, glance-able and colour-blind-safe",
+          "criteria": [
+            "The full slice-05 tag run passes with a real exit code zero, captured by redirect and status read, never through a pipeline.",
+            "The score bar and the confidence shape are both provably readable with a colour-vision simulation applied (no information is lost when hue is removed).",
+            "npm run build succeeds with the page-weight gate green; the two-element addition measures close to the ~230 B gz feature-delta.md recorded.",
+            "score_q, rank order and every confidence level's underlying reason are byte-identical to before this slice; only presentation changed."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/score-bar-and-confidence-shape.feature",
+          "scenario_name": "84 y 6 se ven distintos de un vistazo, con una barra que mide solo por longitud",
+          "slice_id": "slice-05",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/a-surfer-reads-the-ranking-at-a-glance-84-and-6-look-different-and-confidence-is-legible-without-.md",
+          "u8_observation": "Recorro la lista completa con un simulador de daltonismo activado: cada fila se sigue leyendo igual de bien, la barra y los puntos de confianza siguen contando la misma historia que en color normal.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @ui-u7"]
+          },
+          "deps": ["05-01", "05-02"],
+          "files_to_modify": [
+            "src/components/RankedList.astro",
+            "src/components/Confidence.astro"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: end-to-end verification. TERMINAL STEP: the only slice-05 step allowed the unrestricted @slice-05 tag. U3 EXPECTED N/A: the bar and the dots are decorative, not new tap targets; the existing <details><summary> tap target is unchanged. This is also the last step of the whole feature's five parallel-safe slices; it does not, by itself, close Definition of Done row 10 (every Slice Plan row flipped shipped) — that is a feature-level rollup after all five slice-terminal steps (01-03, 02-03, 03-03, 04-03, 05-03) are independently green."
+        }
+      ]
+    }
+  ],
+  "implementation_scope": {
+    "source_directories": [
+      "src/styles/",
+      "src/components/",
+      "src/pages/",
+      "docs/product/architecture/"
+    ],
+    "test_directories": [
+      "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/",
+      "tests/e2e/f-looks-like-the-ocean-and-reads-in-the-sun/"
+    ],
+    "excluded_patterns": [
+      "src/pipeline/**",
+      "src/scoring/**",
+      "src/i18n/**",
+      "src/publish/**",
+      "src/data/**",
+      "src/layouts/**",
+      "data/**",
+      "infra/**",
+      "public/**",
+      "package.json",
+      "package-lock.json",
+      "vitest.config.ts",
+      "playwright.config.ts",
+      "tests/unit/**",
+      "tests/acceptance/daily-call-with-permanent-receipts/**",
+      "tests/acceptance/f-bill-stays-zero-and-stays-up/**",
+      "tests/e2e/daily-call-with-permanent-receipts/**"
+    ]
+  },
+  "validation": {
+    "status": "pending",
+    "reviewer": "orchestrator quality gate (des-verify-integrity --roadmap-only)",
+    "approved_at": ""
+  }
+}

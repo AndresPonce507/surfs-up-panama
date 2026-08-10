@@ -1,4 +1,4 @@
-# La píldora de idioma y la bandeja para reportar se ven como vidrio esmerilado flotando sobre el agua tropical del fondo, y en un teléfono que no puede pintar vidrio se siguen leyendo igual de bien como tarjetas sólidas
+# La bandeja para reportar se ve como vidrio esmerilado flotando sobre el agua tropical del fondo, y en un teléfono que no puede pintar vidrio se sigue leyendo igual de bien como tarjeta sólida
 ID: EXP-f-looks-like-the-ocean-and-reads-in-the-sun-2 · Spec rows: slice-02 · Persona: Surfista leyendo el sitio afuera, con el sol de frente, en un Android barato que a veces se niega a pintar vidrio
 
 ## Intent
@@ -12,11 +12,12 @@ vidrio: es la tarjeta sólida de abajo. El vidrio es la mejora que se agrega enc
 aparato la puede pagar, nunca la capa de la que depende poder leer. Esta carta solo se cierra
 cuando las dos versiones, con vidrio y sin vidrio, se leen igual de bien.
 
-Las únicas dos superficies que llevan vidrio son dos tiras chicas y fijas: la píldora de idioma
-(arriba) y la bandeja con el botón de reportar (abajo, fija en la zona del pulgar). La tarjeta
-grande del primer spot, la que lleva el número que se lee a pleno sol, se queda con el degradado
-sólido de agua tropical a propósito y nunca se vuelve vidrio; si en algún momento se ve esmerilada,
-eso es una falla de diseño, no una mejora.
+La única superficie de vidrio que llega a una página construida hoy es la bandeja con el botón de
+reportar, abajo y fija en la zona del pulgar. La regla CSS `.lang-toggle` no tiene marcado todavía:
+su píldora le pertenece a F-READ-IT-IN-YOUR-LANGUAGE y esta carta no la inventa. La tarjeta grande
+del primer spot, la que lleva el número que se lee a pleno sol, se queda con el degradado sólido de
+agua tropical a propósito y nunca se vuelve vidrio; si en algún momento se ve esmerilada, eso es
+una falla de diseño, no una mejora.
 
 ## Preconditions
 Proyecto Node 22; todo corre con npm y un navegador. Cada observación arranca desde el árbol real
@@ -47,26 +48,26 @@ Si ninguno de los dos caminos está disponible en tu equipo, el veredicto es IND
 observación anotada, nunca un PASA por no haber podido mirar.
 
 ## Charter
-Explorá la píldora de idioma y la bandeja de reportar en los dos estados (vidrio soportado, vidrio
-apagado) y en los dos temas. Con vidrio soportado, revisá si de verdad se ven como cristal
-esmerilado flotando sobre lo que se desplaza debajo, no como un color plano pintado encima; scrolleá
-la página con la píldora y la bandeja fijas en pantalla para ver si el contenido que pasa detrás
-realmente se nota a través. Con vidrio apagado, revisá si esas mismas dos tiras siguen leyéndose
-como tarjetas sólidas hechas a propósito, nunca como algo roto o a medio cargar.
+Explorá la bandeja de reportar en los dos estados (vidrio soportado, vidrio apagado) y en los dos
+temas. Con vidrio soportado, revisá si de verdad se ve como cristal esmerilado flotando sobre lo que
+se desplaza debajo, no como un color plano pintado encima; scrolleá la página con la bandeja fija en
+pantalla para ver si el contenido que pasa detrás realmente se nota a través. Con vidrio apagado,
+revisá si esa bandeja sigue leyéndose como tarjeta sólida hecha a propósito, nunca como algo roto o
+a medio cargar.
 
 Después mirá el resto de la home: la tarjeta grande del primer spot tiene que seguir siendo el
 mismo fondo sólido de agua tropical en los dos estados, nunca vidrio. Si en algún momento se ve
 esmerilada, anotalo como contradicción del diseño, no como una mejora.
 
-Leé cada palabra de las dos tiras, en los dos estados, en los dos temas, con el brazo estirado, y
+Leé cada palabra de la bandeja y de su botón, en los dos estados, en los dos temas, con el brazo estirado, y
 si podés, bajo luz fuerte. Probá también con el texto de mayor contenido detrás de la tira (la
 parte más oscura o más cargada de lo que se desplaza) para no evaluar la lectura solo cuando el
 fondo de casualidad ayuda.
 
 ## Expected observations (oracle)
-- **U8 (vidrio apagado, 02-01):** Con la transparencia reducida activada en el teléfono, la píldora de idioma y la barra de reportar se ven como tarjetas sólidas y legibles, sin ningún borde raro ni texto perdido, sobre el nuevo fondo azul-verde.
-- **U8 (vidrio soportado, 02-02):** Con el navegador soportando vidrio, veo la píldora de idioma y la barra de reportar como cristal esmerilado flotando sobre el contenido que se desplaza debajo, y el texto sigue leyéndose perfecto en los dos temas.
-- **U8 (los dos estados juntos, 02-03):** Recorro el sitio con y sin vidrio soportado, en los dos temas: la píldora de idioma y la barra de reportar siempre se leen, nunca desaparecen ni pierden contraste, y nada más en el sitio cambió.
+- **U8 (vidrio apagado, 02-01):** Con la transparencia reducida activada en el teléfono, la barra de reportar se ve como una tarjeta sólida y legible, sin ningún borde raro ni texto perdido, sobre el nuevo fondo azul-verde.
+- **U8 (vidrio soportado, 02-02):** Con el navegador soportando vidrio, veo la barra de reportar como cristal esmerilado flotando sobre el contenido que se desplaza debajo, y el texto sigue leyéndose perfecto en los dos temas.
+- **U8 (los dos estados juntos, 02-03):** Recorro el sitio con y sin vidrio soportado, en los dos temas: la barra de reportar siempre se lee, nunca desaparece ni pierde contraste, y nada más en el sitio cambió.
 - La tarjeta grande del primer spot se ve exactamente igual en los dos estados de vidrio: el mismo
   degradado sólido de agua tropical, nunca esmerilada. Si alguna vez se ve traslúcida, es una
   contradicción del diseño que hay que anotar, no una mejora.
