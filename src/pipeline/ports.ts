@@ -74,8 +74,18 @@ export interface ForecastSource {
   fetchTide(spot_id: string): Promise<SourceResult<TideHour[]>>;
 }
 
+/** A named forecast provider in ingest order. Provider identity owns the raw
+ * archive prefix; normalized member identity remains the prediction-log key. */
+export type ForecastSourceRegistration = {
+  provider_id: string;
+  source: ForecastSource;
+};
+
 export interface IngestDeps {
   source: ForecastSource;
+  /** Ordered provider registry. Until every caller migrates, `source` remains
+   * the compatible single-provider fallback. */
+  sources?: readonly ForecastSourceRegistration[];
   store: IngestStore;
   clock: Clock;
   /** Omit for the normal Pacific publication path, which loads its data-owned launch seed. */

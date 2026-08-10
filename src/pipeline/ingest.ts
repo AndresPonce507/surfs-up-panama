@@ -11,7 +11,14 @@
 // (spot_id, source, run_ts, valid_ts), fields per domain-model section 5.1.
 
 import { loadLaunchSpotSeeds } from '../data/launch-spots';
-import type { IngestDeps, IngestOutcome, MemberSeries, TideHour, WindHour } from './ports';
+import type {
+  ForecastSourceRegistration,
+  IngestDeps,
+  IngestOutcome,
+  MemberSeries,
+  TideHour,
+  WindHour,
+} from './ports';
 
 type PredictionRow = {
   spot_id: string;
@@ -38,20 +45,23 @@ export async function runIngestOnce(deps: IngestDeps): Promise<IngestOutcome> {
   const events: IngestOutcome['events'] = [];
   const recordsByKey = new Map<string, PredictionRow[]>();
   const spots = deps.spots ?? loadLaunchSpotSeeds(deps.launchData);
+  const sources = sourceRegistry(deps);
   for (const spot of spots) {
-    const waves = await deps.source.fetchWaveMembers(spot.spot_id);
-    if (!waves.ok) {
-      events.push({ type: 'wave_source_unavailable', detail: waves.reason });
-      continue;
-    }
-    await deps.store.putRaw(rawKey('open-meteo-marine', deps.clock.now()), waves.verbatim);
     const wind = await deps.source.fetchWind(spot.spot_id);
     if (wind.ok) await deps.store.putRaw(rawKey('open-meteo-wind', deps.clock.now()), wind.verbatim);
     const tide = await deps.source.fetchTide(spot.spot_id);
     if (tide.ok) await deps.store.putRaw(rawKey('coops', deps.clock.now()), tide.verbatim);
 
-    for (const member of waves.data) {
-      addMemberRows(recordsByKey, member, spot.spot_id, deps.clock.now(), wind.ok ? wind.data : [], tide.ok ? tide.data : []);
+    for (const registration of sources) {
+      const waves = await registration.source.fetchWaveMembers(spot.spot_id);
+      if (!waves.ok) {
+        events.push({ type: 'wave_source_unavailable', detail: `${registration.provider_id}:${waves.reason}` });
+        continue;
+      }
+      await deps.store.putRaw(rawKey(registration.provider_id, deps.clock.now()), waves.verbatim);
+      for (const member of waves.data) {
+        addMemberRows(recordsByKey, member, spot.spot_id, deps.clock.now(), wind.ok ? wind.data : [], tide.ok ? tide.data : []);
+      }
     }
   }
   for (const [key, rows] of recordsByKey) {
@@ -59,6 +69,10 @@ export async function runIngestOnce(deps: IngestDeps): Promise<IngestOutcome> {
     events.push({ type: outcome === 'created' ? 'prediction_created' : 'prediction_duplicate', detail: key });
   }
   return { completed: true, events };
+}
+
+function sourceRegistry(deps: IngestDeps): readonly ForecastSourceRegistration[] {
+  return deps.sources ?? [{ provider_id: 'open-meteo-marine', source: deps.source }];
 }
 
 function addMemberRows(
@@ -77,6 +91,7 @@ function addMemberRows(
   const tideDayLow = tideValues.length === 0 ? null : Math.min(...tideValues);
   const tideDayHigh = tideValues.length === 0 ? null : Math.max(...tideValues);
   for (const hour of member.hours) {
+    if (hasNaturalKey(rows, spotId, member, hour.valid_ts)) continue;
     const windAtHour = wind.find((candidate) => candidate.valid_ts === hour.valid_ts)?.wind ?? null;
     const tideAtHour = tide.find((candidate) => candidate.valid_ts === hour.valid_ts)?.tide_m ?? null;
     rows.push({
@@ -101,6 +116,20 @@ function addMemberRows(
     });
   }
   recordsByKey.set(key, rows);
+}
+
+function hasNaturalKey(
+  rows: readonly PredictionRow[],
+  spotId: string,
+  member: MemberSeries,
+  validTimestamp: string,
+): boolean {
+  return rows.some(
+    (row) => row.spot_id === spotId
+      && row.source === member.source
+      && row.run_ts === member.run_ts
+      && row.valid_ts === validTimestamp,
+  );
 }
 
 function differenceInHours(validTimestamp: string, runTimestamp: string): number {
