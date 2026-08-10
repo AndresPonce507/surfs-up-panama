@@ -18,7 +18,7 @@ Feature: La aritmética del historial existe como leyes que se niegan a publicar
   ejercitan la aritmética y solo la aritmética; jamás se disfrazan de reportes
   reales en ninguna superficie pública.
 
-  @slice-02 @pending @driving_port @in-memory @property @covers-R14
+  @slice-02 @driving_port @in-memory @property @covers-R14
   Scenario: Cada reporte se empareja solo con la hora y la playa que el sitio de verdad pronosticó
     Given un registro de pronósticos y reportes de prueba con horas y playas variadas
     When la proyección del historial empareja los reportes contra el registro
