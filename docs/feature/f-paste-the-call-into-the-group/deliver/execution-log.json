@@ -106,6 +106,55 @@
       "s": "SKIPPED",
       "d": "CHECKPOINT_PENDING: user-visible step held at GREEN; COMMIT is refused until des-verify-ui records U1 through U7 PASS and the source-blind examiner records a fresh PASS against the charter",
       "t": "2026-08-10T03:00:29Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T03:27:06Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T03:32:34Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T03:36:48Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: wiring-only step; a unit test would restate what the acceptance oracle already proves end to end (anchor present in the top card, message content, absolute stamped link). The three composed modules already carry their own unit tests from steps 01-01 and 01-02.",
+      "t": "2026-08-10T03:51:13Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: anchor mounted; npm run build exit 0; dist/index.html carries exactly 1 wa.me anchor inside ol.ranked li:first-child with the full five-line Spanish message; home 3914 B gz of 14336. Full acceptance suite and ci:local run by the coordinator. CHECKPOINT_PENDING for U1-U7 and the source-blind examiner before COMMIT.",
+      "t": "2026-08-10T03:51:21Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T03:52:50Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "COMMIT",
+      "s": "SKIPPED",
+      "d": "CHECKPOINT_PENDING: user-visible step held at GREEN; COMMIT is refused until des-verify-ui records U1 through U7 PASS and the source-blind examiner records a fresh PASS against the charter",
+      "t": "2026-08-10T04:01:51Z"
     }
   ]
 }
