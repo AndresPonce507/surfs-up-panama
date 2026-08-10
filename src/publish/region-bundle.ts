@@ -48,7 +48,8 @@ export type BundleDaySummary = {
   readonly size_band: SizeBandToken;
   readonly size_range_m: SizeRangeM;
   readonly wind_state: WindState;
-  readonly best_window: BestWindow;
+  /** null: no genuine daylight peak this day, never a fabricated span (05-scoring-engine.md section 7). */
+  readonly best_window: BestWindow | null;
   /** null means no factor cost this day any score; never a fabricated culprit. */
   readonly weakest_link: Factor | null;
 };

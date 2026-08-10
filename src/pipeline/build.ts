@@ -25,6 +25,7 @@ import type {
   BestWindow,
   ConfLevel,
   SizeRangeM,
+  SurfaceCall,
   WindState,
 } from '../publish/static-surface';
 import {
@@ -97,7 +98,8 @@ type CallRow = {
   size_band: SizeBandToken;
   size_range_m: SizeRangeM;
   wind_state: WindState;
-  best_window: BestWindow;
+  /** null: no genuine daylight peak this day (05-scoring-engine.md section 7, "null when max_q = 0"); never an invented span. */
+  best_window: BestWindow | null;
   bias_applied: number;
   bias_gate: string;
   members_used: number;
@@ -236,9 +238,13 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
   const windowsByCivilDate = bestWindowsByCivilDate(drafts, spot.timezone);
   return drafts.map((draft) => ({
     ...draft,
-    // Every draft's own UTC date prefix seeded the map that produced it, so
-    // this lookup always hits; see bestWindowsByCivilDate for why.
-    best_window: windowsByCivilDate.get(civilDatePrefix(draft.valid_ts))!,
+    // A civil date with zero usable daylight score (every hour blanked, or a
+    // flat day whose max_q is 0) has no honest peak to build a window
+    // around; bestWindowsByCivilDate leaves that date out of the map on
+    // purpose (05-scoring-engine.md section 7: "null when max_q = 0"), so
+    // this lookup can genuinely miss and null is the honest result, not a
+    // bug to paper over with a non-null assertion.
+    best_window: windowsByCivilDate.get(civilDatePrefix(draft.valid_ts)) ?? null,
   }));
 }
 
@@ -261,7 +267,7 @@ function daySummary(call: CallRow): BundleDaySummary {
   };
 }
 
-function surfaceCall(call: CallRow) {
+function surfaceCall(call: CallRow): SurfaceCall {
   return {
     spot_id: call.spot_id,
     score_q: call.score_q,
@@ -270,17 +276,24 @@ function surfaceCall(call: CallRow) {
     size_band: call.size_band,
     size_range_m: call.size_range_m,
     wind_state: call.wind_state,
-    best_window: call.best_window,
+    // best_window is optional on the wire (SurfaceCall), never null: a day
+    // with no genuine peak omits the field rather than publishing a null
+    // token no reading route expects (application-architecture.md section 7:
+    // "best_window absent -> bars omitted").
+    ...(call.best_window === null ? {} : { best_window: call.best_window }),
   };
 }
 
 function spanishCall(call: CallRow): string {
-  return `${spanishSizeBand(call.size_band)}, viento ${spanishWind(call.wind_state)}, mejor de ${call.best_window.start} a ${call.best_window.end}.`;
+  const windowPhrase = call.best_window === null
+    ? 'sin ventana estimada'
+    : `mejor de ${call.best_window.start} a ${call.best_window.end}`;
+  return `${spanishSizeBand(call.size_band)}, viento ${spanishWind(call.wind_state)}, ${windowPhrase}.`;
 }
 
 function followingCivilDate(civilDate: string): string { const date = new Date(`${civilDate}T12:00:00Z`); date.setUTCDate(date.getUTCDate() + 1); return date.toISOString().slice(0, 10); }
 function regionalCivilDate(instant: Date, timezone: string): string { const fields = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(instant); const part = (type: Intl.DateTimeFormatPartTypes) => fields.find((field) => field.type === type)?.value ?? ''; return `${part('year')}-${part('month')}-${part('day')}`; }
-function sameRankedCalls(left: readonly CallRow[], right: readonly CallRow[]): boolean { return left.length === right.length && left.every((call, index) => { const other = right[index]; return other !== undefined && call.spot_id === other.spot_id && call.score_q === other.score_q && call.size_band === other.size_band && call.wind_state === other.wind_state && call.best_window.start === other.best_window.start && call.best_window.end === other.best_window.end; }); }
+function sameRankedCalls(left: readonly CallRow[], right: readonly CallRow[]): boolean { return left.length === right.length && left.every((call, index) => { const other = right[index]; return other !== undefined && call.spot_id === other.spot_id && call.score_q === other.score_q && call.size_band === other.size_band && call.wind_state === other.wind_state && call.best_window?.start === other.best_window?.start && call.best_window?.end === other.best_window?.end; }); }
 
 function sizeRange(sizeBand: string): SizeRangeM {
   const band = SIZE_BANDS.find((candidate) => candidate.band === sizeBand);
@@ -374,7 +387,14 @@ function longestHighScoreRun(
   timezone: string,
 ): BestWindow | null {
   if (daylight.length === 0) return null;
-  const threshold = BEST_WINDOW_RATIO * Math.max(...daylight.map((row) => row.score_q));
+  const dayMax = Math.max(...daylight.map((row) => row.score_q));
+  // A flat or fully-gated day (every daylight hour scores exactly zero) has
+  // no genuine peak to build a window around. Without this guard every
+  // zero-score hour would satisfy `0 >= 0.8 * 0` and the entire daylight
+  // span would wrongly read as "best" -- the design's own documented
+  // exception (05-scoring-engine.md section 7: "null when max_q = 0").
+  if (dayMax === 0) return null;
+  const threshold = BEST_WINDOW_RATIO * dayMax;
   let best: { startIndex: number; endIndex: number } | null = null;
   let runStartIndex: number | null = null;
   daylight.forEach((row, index) => {
