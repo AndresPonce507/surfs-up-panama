@@ -55,7 +55,9 @@
           "u8_observation": "",
           "non_visual_rationale": "Pure decision logic over synthetic inputs; it renders nothing on its own. Its user-visible consequence, a box showing no percentage, no plus-minus margin and no metre figure, is observed on the built page by 01-04 and 01-07, which carry the charter and the U checks.",
           "ui_checks": {},
-          "deps": ["01-01"],
+          "deps": [
+            "01-01"
+          ],
           "files_to_modify": [
             "src/scorecard/publish-gate.ts",
             "src/scorecard/scorecard-block.ts",
@@ -81,7 +83,9 @@
           "u8_observation": "",
           "non_visual_rationale": "A pure copy composer with no mount point; the rendered sentence it produces is observed on the built page by 01-04 and 01-07, which carry the charter and the U checks.",
           "ui_checks": {},
-          "deps": ["01-02"],
+          "deps": [
+            "01-02"
+          ],
           "files_to_modify": [
             "src/scorecard/copy.ts",
             "tests/unit/scorecard-copy.test.ts"
@@ -106,20 +110,75 @@
           "u8_observation": "Abro la página de mi playa a 390 px y, justo debajo del pronóstico de mañana y antes del botón para reportar, leo un recuadro tranquilo que dice que todavía no pueden decirme si aciertan aquí y que van 0 reportes de los 30 que hacen falta. No hay ningún porcentaje, ningún margen y ninguna cifra de acierto en ninguna parte de la página.",
           "non_visual_rationale": "",
           "ui_checks": {
-            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u1"],
-            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u2"],
-            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01"],
-            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u4"],
-            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u5"],
-            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u6"],
-            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u7"]
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u7"
+            ]
           },
-          "deps": ["01-01", "01-02", "01-03"],
+          "deps": [
+            "01-01",
+            "01-02",
+            "01-03"
+          ],
           "files_to_modify": [
             "src/components/TrackRecordBox.astro",
-            "src/components/SpotDetail.astro"
+            "src/components/SpotDetail.astro",
+            "src/styles/components.css"
           ],
-          "implementation_notes": "EXEMPT FROM PARADIGM: template composition and one mount point, single-shot by nature; compensated by the property-based source (01-01), gate (01-02) and copy (01-03) tests underneath it, and by the acceptance suite above it. POSITION, pinned by the oracle not by taste: observeBox compares document position against section[data-day=\"tomorrow\"] and a.cta, so the box goes between the tomorrow section and the paragraph holding the report call to action, src/components/SpotDetail.astro lines 79 to 95. THE MOUNT IS THE ONLY LEGAL ONE AND IT IS CROSS-LANE: src/layouts/Base.astro and src/pages/** are forbidden lanes, a client-side mount is barred by the no-island scenario, and CSS cannot put words into served bytes, so the box has to be a build-time child of SpotDetail.astro. That file is keystone-contended (feature-delta Pre-requisite 2, HANDOFF section 10, keystone slices 06 to 08 in flight). DO NOT START THIS STEP UNTIL THE SERIAL ORDER WITH THE KEYSTONE LANE IS SETTLED; the edit is additive, an import line plus one element between two existing siblings, and must stay that small. NO NAMED SLOT: mount by importing the component directly. A named slot was considered and REJECTED because Astro silently drops named slot content when the receiving component defines no matching <slot name=\"...\"/>: no error, the markup simply vanishes, and the failure looks exactly like a missing feature. Anyone who later reworks this into a slot must add the matching <slot name=\"...\"/> to the receiving component in the same change. MARKUP CONTRACT, cross-referenced against src/styles/recipes.css lines 61 to 116 and the observeBox oracle, because the obvious markup fails: the box element must carry BOTH .scorecard AND .state-empty. .scorecard alone gives a solid border and fails the U5 dashed check; .state-empty alone gives no background and, because .scorecard .counter is a DESCENDANT selector, gives the counter no tabular-nums, failing U6. With both, .state-empty wins the border by source order (line 111 after line 66), .scorecard supplies background var(--surface) so the U1 contrast pair is deterministic instead of depending on the ancestor background walk, and the counter selector matches. Each digit run sits in its own <span class=\"counter\">, so the paragraph's own text nodes carry no digit. NO CSS EDIT: the recipes are consumed as shipped, which IS requirement R37/U7; if a visual need cannot be met by them, stop and flag rather than fork the design system. COMPOSITION ROOT: probe the source, then read it, then compose (01-01 ordering); a refused probe fails the build rather than rendering a zero. THE P5 WIRE IS NOT INVENTED HERE. The box imports the block from src/scorecard/** at build time. red-classification.md refused R4's template-side clause for exactly this reason: 'Astro templates run at build time and static-HTML presence cannot tell a value that arrived computed from one the template computed. That half needs the wire.' So this is not a P5 violation, it is the honest shape until the wire exists. CROSS-LANE DEPENDENCY, SERIALIZED, RECORDED NOT PERFORMED, the exact diff the wire needs, all of it in another lane's files: (1) src/publish/region-bundle.ts lines 63 to 66, BundleSpotDetail = { readonly name: string } gains 'readonly scorecard?: { readonly n_obs: number; readonly n_reporters: number; readonly threshold: number; readonly counter: string; readonly claim_ok: boolean; readonly headline?: string };'. (2) src/pipeline/build.ts line 140 currently reads 'spot_detail: Object.fromEntries(spots.map((spot) => [spot.spot_id, { name: spot.name }])),' and becomes 'spot_detail: Object.fromEntries(spots.map((spot) => [spot.spot_id, { name: spot.name, scorecard: dayOneScorecardBlock(spot.spot_id, deps.observationSource) }])),' with the source injected through deps and imported from src/scorecard/scorecard-block. (3) A THIRD HOP EXISTS AND IS DESIGNED NOWHERE: the spot page does not read the bundle. SpotDetail.astro reads src/data/forecast, which reads data/published-surface.json, and the bundle's spot_detail reaches that surface through no path in the corpus. Whoever lands the wire must design that promotion; this lane will not invent it. CHARTER OWED, BLOCKER FOR THE FULL GATE: docs/product/expectations/f-show-our-track-record/ holds no charter yet (feature-delta records charters as owed at DISTILL open, outside that lane's file boundary). des-verify-integrity --roadmap-only does not open charter_path, but the FULL run does: it requires the file to exist and seals it with sha256. The charter at the path above must be authored before COMMIT, from the U8 observation on this step. U3 IS N/A: the day-one box has nothing tappable, red-classification.md records R33 as N/A rather than fabricating a touch-target check, and the feature file carries no @ui-u3 tag. The quality contract requires all seven U keys, so the U3 slot runs the whole slice-01 suite rather than an empty tag selection, because cucumber exits 0 on a selection that matches nothing and that would be a vacuous green. Read the U3 record as 'no touch target exists', never as 'touch targets were measured'."
+          "implementation_notes": "EXEMPT FROM PARADIGM: template composition and one mount point, single-shot by nature; compensated by the property-based source (01-01), gate (01-02) and copy (01-03) tests underneath it, and by the acceptance suite above it. POSITION, pinned by the oracle not by taste: observeBox compares document position against section[data-day=\"tomorrow\"] and a.cta, so the box goes between the tomorrow section and the paragraph holding the report call to action, src/components/SpotDetail.astro lines 79 to 95. THE MOUNT IS THE ONLY LEGAL ONE AND IT IS CROSS-LANE: src/layouts/Base.astro and src/pages/** are forbidden lanes, a client-side mount is barred by the no-island scenario, and CSS cannot put words into served bytes, so the box has to be a build-time child of SpotDetail.astro. That file is keystone-contended (feature-delta Pre-requisite 2, HANDOFF section 10, keystone slices 06 to 08 in flight). DO NOT START THIS STEP UNTIL THE SERIAL ORDER WITH THE KEYSTONE LANE IS SETTLED; the edit is additive, an import line plus one element between two existing siblings, and must stay that small. NO NAMED SLOT: mount by importing the component directly. A named slot was considered and REJECTED because Astro silently drops named slot content when the receiving component defines no matching <slot name=\"...\"/>: no error, the markup simply vanishes, and the failure looks exactly like a missing feature. Anyone who later reworks this into a slot must add the matching <slot name=\"...\"/> to the receiving component in the same change. MARKUP CONTRACT, cross-referenced against src/styles/recipes.css lines 61 to 116 and the observeBox oracle, because the obvious markup fails: the box element must carry BOTH .scorecard AND .state-empty. .scorecard alone gives a solid border and fails the U5 dashed check; .state-empty alone gives no background and, because .scorecard .counter is a DESCENDANT selector, gives the counter no tabular-nums, failing U6. With both, .state-empty wins the border by source order (line 111 after line 66), .scorecard supplies background var(--surface) so the U1 contrast pair is deterministic instead of depending on the ancestor background walk, and the counter selector matches. Each digit run sits in its own <span class=\"counter\">, so the paragraph's own text nodes carry no digit. NO CSS EDIT: the recipes are consumed as shipped, which IS requirement R37/U7; if a visual need cannot be met by them, stop and flag rather than fork the design system. COMPOSITION ROOT: probe the source, then read it, then compose (01-01 ordering); a refused probe fails the build rather than rendering a zero. THE P5 WIRE IS NOT INVENTED HERE. The box imports the block from src/scorecard/** at build time. red-classification.md refused R4's template-side clause for exactly this reason: 'Astro templates run at build time and static-HTML presence cannot tell a value that arrived computed from one the template computed. That half needs the wire.' So this is not a P5 violation, it is the honest shape until the wire exists. CROSS-LANE DEPENDENCY, SERIALIZED, RECORDED NOT PERFORMED, the exact diff the wire needs, all of it in another lane's files: (1) src/publish/region-bundle.ts lines 63 to 66, BundleSpotDetail = { readonly name: string } gains 'readonly scorecard?: { readonly n_obs: number; readonly n_reporters: number; readonly threshold: number; readonly counter: string; readonly claim_ok: boolean; readonly headline?: string };'. (2) src/pipeline/build.ts line 140 currently reads 'spot_detail: Object.fromEntries(spots.map((spot) => [spot.spot_id, { name: spot.name }])),' and becomes 'spot_detail: Object.fromEntries(spots.map((spot) => [spot.spot_id, { name: spot.name, scorecard: dayOneScorecardBlock(spot.spot_id, deps.observationSource) }])),' with the source injected through deps and imported from src/scorecard/scorecard-block. (3) A THIRD HOP EXISTS AND IS DESIGNED NOWHERE: the spot page does not read the bundle. SpotDetail.astro reads src/data/forecast, which reads data/published-surface.json, and the bundle's spot_detail reaches that surface through no path in the corpus. Whoever lands the wire must design that promotion; this lane will not invent it. CHARTER OWED, BLOCKER FOR THE FULL GATE: docs/product/expectations/f-show-our-track-record/ holds no charter yet (feature-delta records charters as owed at DISTILL open, outside that lane's file boundary). des-verify-integrity --roadmap-only does not open charter_path, but the FULL run does: it requires the file to exist and seals it with sha256. The charter at the path above must be authored before COMMIT, from the U8 observation on this step. U3 IS N/A: the day-one box has nothing tappable, red-classification.md records R33 as N/A rather than fabricating a touch-target check, and the feature file carries no @ui-u3 tag. The quality contract requires all seven U keys, so the U3 slot runs the whole slice-01 suite rather than an empty tag selection, because cucumber exits 0 on a selection that matches nothing and that would be a vacuous green. Read the U3 record as 'no touch target exists', never as 'touch targets were measured'.",
+          "scope_widening_note": "Widened by the orchestrator 2026-08-10. The box renders correct markup but no style, because src/styles/recipes.css is deliberately never imported: its own header says each block moves into components.css in the same commit as its markup. That commit is this one. The step could not reach GREEN without the file that holds the recipe, and the crafter correctly refused to fork the design system into a scoped style block instead."
         },
         {
           "id": "01-05",
@@ -138,7 +197,9 @@
           "u8_observation": "",
           "non_visual_rationale": "The sweep is an HTTP text sweep over every emitted route, with no browser and no pixels; the rendered observation of the same box is chartered by 01-04 and its visual checks by 01-07.",
           "ui_checks": {},
-          "deps": ["01-04"],
+          "deps": [
+            "01-04"
+          ],
           "files_to_modify": [
             "src/components/TrackRecordBox.astro",
             "src/scorecard/observation-source.ts",
@@ -163,7 +224,9 @@
           "u8_observation": "",
           "non_visual_rationale": "The oracles are the emitted file on disk and the bytes served over HTTP with no browser; there is no rendered state here beyond what 01-04 charters and 01-07 measures.",
           "ui_checks": {},
-          "deps": ["01-04"],
+          "deps": [
+            "01-04"
+          ],
           "files_to_modify": [
             "src/components/TrackRecordBox.astro",
             "src/components/SpotDetail.astro"
@@ -188,15 +251,66 @@
           "u8_observation": "Con el teléfono en tema claro y en tema oscuro, el recuadro se lee cómodo a 390 px: nada se sale de la pantalla, ningún texto queda cortado, los números se alinean parejos y el recuadro se ve como un todavía no, no como un error. Con el movimiento reducido activado, nada dentro del recuadro se mueve.",
           "non_visual_rationale": "",
           "ui_checks": {
-            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u1"],
-            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u2"],
-            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01"],
-            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u4"],
-            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u5"],
-            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u6"],
-            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u7"]
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u7"
+            ]
           },
-          "deps": ["01-04"],
+          "deps": [
+            "01-04"
+          ],
           "files_to_modify": [
             "src/components/TrackRecordBox.astro"
           ],
@@ -219,15 +333,69 @@
           "u8_observation": "Recorro el sitio en el teléfono: en cualquier playa que abra, el recuadro dice siempre lo mismo, que todavía no pueden decirme si aciertan ahí y que van 0 reportes de los 30 que hacen falta, y en ninguna parte aparece un porcentaje ni una cifra de acierto.",
           "non_visual_rationale": "",
           "ui_checks": {
-            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u1"],
-            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u2"],
-            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01"],
-            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u4"],
-            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u5"],
-            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u6"],
-            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u7"]
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-show-our-track-record and @slice-01 and @ui-u7"
+            ]
           },
-          "deps": ["01-04", "01-05", "01-06", "01-07"],
+          "deps": [
+            "01-04",
+            "01-05",
+            "01-06",
+            "01-07"
+          ],
           "files_to_modify": [
             "src/components/TrackRecordBox.astro",
             "src/components/SpotDetail.astro"

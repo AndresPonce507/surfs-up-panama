@@ -36,6 +36,125 @@
       "s": "EXECUTED",
       "d": "PASS",
       "t": "2026-08-10T11:38:15Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:03:18Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:03:23Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:06:21Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:07:06Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:08:28Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:35:38Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:35:43Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:35:50Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:35:55Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:37:04Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T16:08:33Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T16:08:37Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "APPROVED_SKIP: EXEMPT FROM PARADIGM per step file implementation_notes -- template composition and one mount point, single-shot by nature. Compensated by the property-based tests underneath (01-01 observation source, 01-02 publish gate, 01-03 copy) and by the slice-01 acceptance suite above it. No new pure-domain logic introduced by this step to warrant a property.",
+      "t": "2026-08-10T16:10:04Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "FAIL",
+      "t": "2026-08-10T16:14:50Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "COMMIT",
+      "s": "SKIPPED",
+      "d": "BLOCKED_BY_DEPENDENCY: GREEN is not clean (6/8 slice-01 scenarios pass; U5/U6 visual-check outline rows fail because src/styles/recipes.css is never imported -- Base.astro only inlines tokens.css/base.css/components.css -- so .scorecard/.state-empty/.scorecard .counter apply no styling in the browser today). The honest fix needs src/styles/components.css, outside this step's files_to_modify (TrackRecordBox.astro, SpotDetail.astro only) and outside implementation_notes' NO CSS EDIT constraint, so per BOUNDARY_RULES I stopped and flagged rather than expanding scope. Separately, per this step's explicit lane instruction, COMMIT for a USER-VISIBLE step is withheld until the orchestrator runs U1-U7 and the source-blind examiner authorises it, which has not happened. Falsification proof done and reverted (leaked 87% caught and reverted, git diff clean). Awaiting orchestrator authorization to add src/styles/components.css to scope, then U1-U7 + Vera, before COMMIT can proceed.",
+      "t": "2026-08-10T16:17:49Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T16:31:13Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:59:17Z"
     }
   ]
 }
