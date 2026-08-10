@@ -414,6 +414,13 @@
       "s": "EXECUTED",
       "d": "PASS_SCOPE: target acceptance 1/1, focused learning laws 17/17, and typecheck pass. Non-visual generated stored-output law; shrink stores the pooled value without a pre-apply clamp. Full unit/build are sandbox-blocked before application behavior by tsx IPC EPERM; full slice retains known future 01-17 and 01-18 failures unchanged.",
       "t": "2026-08-10T20:04:55Z"
+    },
+    {
+      "sid": "01-13",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: shrink corridor law committed as 651e96d with Step-ID 01-13; one behavior x 2 test budget is exactly met. Scoped acceptance, focused learning regression, typecheck, and diff check pass. Full unit/build remain sandbox-blocked at tsx IPC before application behavior; full slice keeps known future 01-17 and 01-18 failures unchanged.",
+      "t": "2026-08-10T20:05:49Z"
     }
   ]
 }
