@@ -309,6 +309,13 @@
       "s": "EXECUTED",
       "d": "PASS_SCOPE: declarations unit 11/11, target acceptance 1/1, typecheck pass. Full regression retains known unrelated stale-surface and later-step failures unchanged.",
       "t": "2026-08-10T19:54:56Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: scoped source-inventory proof committed as 0877e54 with Step-ID: 01-10.",
+      "t": "2026-08-10T19:55:12Z"
     }
   ]
 }
