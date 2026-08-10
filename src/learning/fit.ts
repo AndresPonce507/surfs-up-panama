@@ -28,6 +28,7 @@ import {
   serializeCorrection,
 } from './correction-file';
 import { readObservationLog, readPredictionLog, spotsReportedIn, type LearningInputStore } from './inputs';
+import { TRUST_GATE_KEY, eligibleTrustRecords, parseTrustGate } from './trust';
 
 /** What the fit needs of the store: read its inputs, store what it earns. */
 export interface LearningStore extends LearningInputStore {
@@ -56,12 +57,14 @@ export type LearningFitOutcome = {
 export async function runLearningFitOnce(deps: LearningFitDeps): Promise<LearningFitOutcome> {
   const observations = await readObservationLog(deps.store);
   const predictions = await readPredictionLog(deps.store);
+  const trustGate = await readTrustGate(deps.store);
+  const eligibleObservations = eligibleTrustRecords(observations, trustGate);
   const spots = spotsReportedIn(observations);
 
   const records = buildCorrectionRecords(
     spots.map((spotId) => ({
       spotId,
-      observations: observations.filter((observation) => observation.spot_id === spotId),
+      observations: eligibleObservations.filter((observation) => observation.spot_id === spotId),
       predictions,
     })),
     deps.clock,
@@ -81,4 +84,15 @@ export async function runLearningFitOnce(deps: LearningFitDeps): Promise<Learnin
     corrections_written: records.size,
     events,
   };
+}
+
+/** Read policy at the I/O boundary; eligibility itself remains a pure record-and-config function. */
+async function readTrustGate(store: LearningStore) {
+  const body = await store.get(TRUST_GATE_KEY);
+  if (body === null) return undefined;
+  try {
+    return parseTrustGate(JSON.parse(body) as unknown);
+  } catch {
+    return undefined;
+  }
 }
