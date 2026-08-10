@@ -5,11 +5,18 @@
 // comment).
 //
 // SCOPE: 01-01 shipped the upsert-by-identity walking skeleton (R10, R11).
-// 01-02 (this step) adds the endpoint-allowlist reject (R12): a request
-// whose destination host is not on the caller-declared `allowlist` is
-// rejected loudly, before anything is stored. The daily-quota reject (R13)
-// still does not read `writes_today` -- that is a later slice-01 step and
-// only adds another branch, never changes the signature.
+// 01-02 added the endpoint-allowlist reject (R12): a request whose
+// destination host is not on the caller-declared `allowlist` is rejected
+// loudly, before anything is stored. 01-03 (this step) closes the other
+// half of R12: a destination reached over plain http is rejected the same
+// way, even when its host IS on the allowlist -- an allowlisted host over
+// http still leaks the subscription and lets anyone on the path forge or
+// read notifications, so transport is checked independently of host
+// membership, never folded into a single "bad endpoint" branch (that would
+// destroy the loudness the ADR's self-reporting mitigation depends on). The
+// daily-quota reject (R13) still does not read `writes_today` -- that is a
+// later slice-01 step and only adds another branch, never changes the
+// signature.
 //
 // APPLY-AT-SEND, not stamp-at-subscribe (this step's implementation notes):
 // `threshold_score` is stored exactly as the surfer declared it, explicit
@@ -61,12 +68,18 @@ function upsert(existing: readonly StoredSub[], request: SubscribeRequest, endpo
     : existing.map((row) => (sameIdentity(row, identity) ? mergedRow : row));
 }
 
-/** The parsed destination host, or null when the endpoint cannot even be
- *  parsed as a URL -- an unclassifiable destination is rejected the same as
- *  a classified-but-unknown one (fail closed, no "probably fine" branch). */
-function destinationHost(endpoint: string): string | null {
+type ParsedEndpoint = { host: string; protocol: string };
+
+/** Parse the endpoint once; null when it cannot even be parsed as a URL --
+ *  an unclassifiable destination is rejected the same as a
+ *  classified-but-unknown one (fail closed, no "probably fine" branch).
+ *  `URL#protocol` already lower-cases the scheme, so a differently-cased
+ *  rendering ("HTTP://...") cannot slip past the transport check below by
+ *  string-casing alone. */
+function parseEndpoint(rawEndpoint: string): ParsedEndpoint | null {
   try {
-    return new URL(endpoint).hostname;
+    const url = new URL(rawEndpoint);
+    return { host: url.hostname, protocol: url.protocol };
   } catch {
     return null;
   }
@@ -96,10 +109,42 @@ function rejectUnknownDestination(rawEndpoint: string): SubscribeDecision {
   };
 }
 
+/**
+ * The other half of the R12 reject (07-write-path.md §8.4): a destination
+ * reached over anything but `https:` is refused, loudly, in the same
+ * {what, why, how} shape as `rejectUnknownDestination` -- one vocabulary
+ * for every refusal a caller has to learn, not two. Kept as its own
+ * function (not merged into the allowlist branch) so the two refusal
+ * reasons stay distinguishable: an off-allowlist host and an insecure
+ * transport are different holes with different fixes.
+ */
+function rejectInsecureDestination(rawEndpoint: string): SubscribeDecision {
+  return {
+    outcome: 'rejected',
+    stored: [],
+    rejection: {
+      what: `el destino ${rawEndpoint}`,
+      why:
+        'los destinos de avisos tienen que llegar por una conexión segura (https); ' +
+        'aceptar uno sin cifrar deja la suscripción a la vista de cualquiera en el camino, ' +
+        'que puede leer o falsificar los avisos que le llegan a ese teléfono.',
+      how:
+        'pedí avisos de nuevo desde un navegador real con las notificaciones push ' +
+        'habilitadas, para que la suscripción salga por una conexión segura de verdad.',
+    },
+  };
+}
+
 export function decideSubscribe(request: SubscribeRequest): SubscribeDecision {
   const rawEndpoint = request.subscription.endpoint;
-  const host = destinationHost(rawEndpoint);
-  if (host === null || !isAllowedHost(host, request.allowlist)) {
+  const parsed = parseEndpoint(rawEndpoint);
+  if (parsed === null) {
+    return rejectUnknownDestination(rawEndpoint);
+  }
+  if (parsed.protocol !== 'https:') {
+    return rejectInsecureDestination(rawEndpoint);
+  }
+  if (!isAllowedHost(parsed.host, request.allowlist)) {
     return rejectUnknownDestination(rawEndpoint);
   }
   const endpointHash = hashEndpoint(rawEndpoint);
