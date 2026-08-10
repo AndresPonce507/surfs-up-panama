@@ -39,16 +39,6 @@ import { runProductionBuild } from '../../src/pipeline/run-build-cli';
 /** The instant the committed prediction snapshot was captured for. */
 const CAPTURED_AT = '2026-08-09T11:22:00Z';
 
-function buildOnce(): { readonly publish_surface: any; readonly days: any } {
-  const workDir = mkdtempSync(join(tmpdir(), 'surface-enriched-'));
-  return {
-    get publish_surface() { throw new Error('use built()'); },
-    get days() { throw new Error('use built()'); },
-    ...({} as never),
-    workDir,
-  } as never;
-}
-
 async function built() {
   const workDir = mkdtempSync(join(tmpdir(), 'surface-enriched-'));
   const { bundlePath } = await runProductionBuild([
