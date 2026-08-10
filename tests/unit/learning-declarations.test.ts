@@ -82,6 +82,26 @@ describe('evaluateLearningDeclarations', () => {
     ]);
   });
 
+  it('flags the gate token \'applied\' constructed as a string value outside a gate-named module, with no applied: true literal present (falsifiable: plant it, catch it)', async () => {
+    await writeUniverse({
+      'emitter.ts': [
+        'export function emitCorrectionKey(input: { n: number }): { gate: string } {',
+        "  return { gate: 'applied' };",
+        '}',
+      ].join('\n'),
+    });
+
+    const report = await evaluateLearningDeclarations({ root });
+
+    expect(report.applied_marking_sites).toEqual([join(root, 'emitter.ts')]);
+    expect(report.violations).toEqual([
+      {
+        rule: RULE_ONLY_THE_GATE_MAY_MARK_APPLIED,
+        detail: `${join(root, 'emitter.ts')} can mark a correction applied without the gate having weighed the evidence`,
+      },
+    ]);
+  });
+
   it('does not treat carrying a verdict through as a marking site: it cannot invent the state, only carry it', async () => {
     await writeUniverse({
       'emitter.ts': [
