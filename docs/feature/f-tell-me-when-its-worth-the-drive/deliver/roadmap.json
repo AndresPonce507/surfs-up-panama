@@ -500,8 +500,8 @@
           "scenario_name": "Si el teléfono no concede el permiso, el spot se queda sin avisos y lo dice en palabras",
           "slice_id": "slice-01",
           "surface_classification": "user-visible",
-          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/a-surfer-opens-playa-venao-taps-avisos-de-este-spot-grants-permission-and-sees-listo-only-after.md",
-          "u8_observation": "Toco la línea de avisos de Playa Venao y no doy el permiso: la pantalla me dice en español sencillo que sin permiso no puede avisarme, la página sigue sin decir que tengo avisos activos, y por más que toque no me vuelve a pedir el permiso.",
+          "charter_path": "../../../product/expectations/f-tell-me-when-its-worth-the-drive/a-surfer-opens-playa-venao-taps-avisos-de-este-spot-grants-permission-and-sees-listo-only-after.md",
+          "u8_observation": "Toco la línea de avisos de Playa Venao y no doy el permiso: la pantalla me dice en español\n  sencillo que sin permiso no puede avisarme, la página sigue sin decir que tengo avisos activos, y\n  por más que toque no me vuelve a pedir el permiso.",
           "non_visual_rationale": "",
           "ui_checks": {
             "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u1"],

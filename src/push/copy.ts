@@ -4,4 +4,5 @@
  */
 export const pushCopy = {
   activate: 'Avisos de este spot',
+  permissionRefused: 'Sin permiso no podemos avisarte.',
 } as const;

@@ -1,6 +1,7 @@
 type PushCapableWindow = {
   PushManager?: unknown;
   ServiceWorkerRegistration?: { prototype: { pushManager?: unknown } };
+  Notification?: { permission?: NotificationPermission };
   navigator: { serviceWorker?: unknown };
 };
 
@@ -21,7 +22,16 @@ function canRequestPush(windowPort: PushCapableWindow): boolean {
 export function mountPushSettings(documentPort: Document, windowPort: PushCapableWindow): void {
   const control = documentPort.querySelector<HTMLElement>('[data-field="avisos"]');
   if (control === null || !canRequestPush(windowPort)) return;
+
+  const action = control.querySelector<HTMLButtonElement>('[data-field="avisos-activate"]');
+  const refusal = control.querySelector<HTMLElement>('[data-field="avisos-permission-refused"]');
+
   control.hidden = false;
+  action?.addEventListener('click', () => {
+    if (windowPort.Notification?.permission === 'granted') return;
+    if (refusal !== null) refusal.hidden = false;
+    if (action !== null) action.disabled = true;
+  });
 }
 
 mountPushSettings(document, window);
