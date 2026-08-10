@@ -174,3 +174,64 @@ undeclared document. The inline registration snippet is inline, so it is weighed
 document's own 14 KB rather than as a first-visit asset. A `<link rel="manifest">` in slice-05
 WILL be counted as a first-visit asset and must be emitted in the build output.
 
+
+## Observed RED, slices 02-05 JIT DISTILL, 2026-08-10
+
+Slices 02-05 entered DISTILL together on coordinator dispatch (this lane, `build/f2-signal`),
+which supersedes the earlier "slices 03-04 may not enter DISTILL until f-tell slice-01 exists"
+line above: the dispatch instructs authoring now, with the cross-feature blocks RECORDED rather
+than waited out. The flush scenarios therefore plant already-committed records at the queue seam
+(`tests/acceptance/f-works-with-no-signal/steps/support/queue-seam.ts` — a PROPOSED naming,
+reconciliation owed to f-tell slice-01, recorded in `cross_lane_seams`), because capture is
+another feature's journey and the behaviour under test here is only ever the flush.
+
+Commands, each redirected to a file with the status captured directly, never piped:
+
+```
+npm run test:at -- --tags "@feature-f-works-with-no-signal and @slice-02"   REAL_EXIT=1  (5 scenarios: 4 failed, 1 passed)
+npm run test:at -- --tags "@feature-f-works-with-no-signal and @slice-03"   REAL_EXIT=1  (7 scenarios: 7 failed)
+npm run test:at -- --tags "@feature-f-works-with-no-signal and @slice-04"   REAL_EXIT=1  (3 scenarios: 3 failed)
+npm run test:at -- --tags "@feature-f-works-with-no-signal and @slice-05"   REAL_EXIT=1  (3 scenarios: 2 failed, 1 passed)
+```
+
+A `--dry-run` over `@feature-f-works-with-no-signal` reported 30 scenarios / 394 steps with zero
+undefined steps under `strict: true`, and `npx tsc --noEmit` exits 0. Every failure below is an
+`AssertionError` raised by its own behaviour oracle after the real build was served and Chromium
+walked it at 390 px — zero `IMPORT_ERROR`, `FIXTURE_BROKEN` or `SETUP_FAILURE`. (One transient
+`ReferenceError` in the post-review scenario split was caught by this very gate and fixed before
+commit; the re-run above is the clean record.)
+
+| Slice | Scenario | Classification | Evidence |
+| --- | --- | --- | --- |
+| slice-02 | A fresh forecast is never called old | MISSING_FUNCTIONALITY | No machine-readable publish moment underneath the home page (`time[datetime]` / `[data-published-at]` both absent). The visible stamp and the no-Viejo guard already hold |
+| slice-02 | Three hours later the same page admits it is old | MISSING_FUNCTIONALITY | With the phone's clock moved 3.4 h (Playwright clock), the page never says the settled Viejo line. No flip script exists |
+| slice-02 | An old forecast served with no signal looks old, never fresh | MISSING_FUNCTIONALITY | Offline navigation dies `net::ERR_EMPTY_RESPONSE` (no helper installed — the slice-01 registration seam), so neither the kept copy nor the Viejo line renders. Right reason: two missing halves, both named |
+| slice-02 | With no JavaScript the page still tells the true hour | GUARD_ALREADY_TRUE | PASSES today: the corrected plain-clock stamp (BUGFIX `6b02fe0`, Pre-requisite 1 CLOSED) renders with scripts off. A deliberate guard consuming the landed fix; step 02-04 proves it falsifiable rather than implementing |
+| slice-02 | Admitting age costs almost nothing to carry | MISSING_FUNCTIONALITY | The built home carries no inline script beyond the helper registration: nothing to weigh, stated as the finding |
+| slice-03 | A report filed with no signal sends itself when the signal comes back | MISSING_FUNCTIONALITY | Planted committed record; signal returned (server answering + window `online` dispatched); nothing reached the site in 10 s. No flush code exists |
+| slice-03 | A report waiting on a phone that never noticed the signal return still goes out | MISSING_FUNCTIONALITY | Withheld-helper journey staged; captured context also names the missing registration ("the built home page starts no offline helper"). No activation flush exists |
+| slice-03 | A throttled door keeps the report waiting patiently, never as a failure | MISSING_FUNCTIONALITY | The scripted 429 door heard zero knocks: no flush ever tried. Entry correctly still queued |
+| slice-03 | A report the site refuses is kept, explained, and never hammered | MISSING_FUNCTIONALITY | The scripted refusal reason never rendered anywhere the surfer can see. Label correctly kept (vacuously — no flush) |
+| slice-03 | The sin señal page finally makes its second promise, and counts what is waiting | MISSING_FUNCTIONALITY | Offline navigation dies at the registration seam; sentence two and the queue box do not exist on the page either |
+| slice-03 | Filed on the sand, the report is saved for the road | MISSING_FUNCTIONALITY (cross-feature) | The real report form renders its three settled questions but `Mandar` times out: no capture island (f-tell slice-01). The RED names the exact seam the integration waits on |
+| slice-03 | Sent from the road | MISSING_FUNCTIONALITY (cross-feature) | Its Given replays the filing journey (Pillar-2 composition); with no capture and no flush, nothing reaches the site. Split from the scenario above per the Sentinel review (one When per scenario) |
+| slice-04 | The phone never decides a report already went; it asks, and the site answers | MISSING_FUNCTIONALITY | Two planted records, one prestored on the site; the site was asked about neither. No replay code exists |
+| slice-04 | A report the site already had is answered exactly like the first time | MISSING_FUNCTIONALITY | No ask, so no first-answer acceptance to observe |
+| slice-04 | An answer lost on the way back never becomes a second report | MISSING_FUNCTIONALITY | The lose-answer-once branch was staged (server stores, socket dies); the site was asked 0 times where the journey needs exactly 2 |
+| slice-05 | The site offers itself to the home screen with its settled identity | MISSING_FUNCTIONALITY | The built home names no app identity (no manifest link — also the Base.astro head seam). No manifest, no icons exist |
+| slice-05 | No promise of avisos before avisos exist | GUARD_ALREADY_TRUE | PASSES today: no avisos wording renders anywhere. This guard IS the recorded A2HS staging condition; it must stay green until the alerts lane's subscribe path is live |
+| slice-05 | Opening like an app costs almost nothing on a normal visit | MISSING_FUNCTIONALITY | No app identity in the build to weigh, stated as the finding |
+
+Two scenarios are deliberately green at DISTILL (`GUARD_ALREADY_TRUE`): both are absence/truth
+guards whose passing is the specified state today, with falsifiability passes demanded in their
+roadmap steps (02-04, 05-02) instead of implementation. Sixteen of eighteen are genuine RED and
+DELIVER may take slices 02 and 05 now; slices 03-04 are authorable-RED with their cross-feature
+blocks recorded (f-tell slices 01/03/04, the queue-seam naming, and the deploy-blocked write
+stack: CloudFormation writes are denied to the CLI identity today, so the live send stays out of
+every oracle — zero AWS anywhere in these phases).
+
+Peer review (Sentinel, nw-acceptance-designer-reviewer, 2026-08-10): CONDITIONALLY_APPROVED,
+0 blockers, 1 high — a compound two-When journey scenario in slice-03 — resolved in the same
+session by splitting it into the two chained scenarios recorded above; all other dimensions
+scored 9-10 with mandates CM-A/B/C passing. Reviewer output is PR-ephemeral per the wave
+contract; this line is the durable record of the verdict and the fix.

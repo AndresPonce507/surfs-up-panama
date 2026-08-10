@@ -61,12 +61,14 @@ the correct JIT state, not a gap.
 
 ## Current DISTILL coverage
 
-Updated 2026-08-09 at slice-01 JIT DISTILL. Twelve acceptance scenarios exist across
-`tests/acceptance/f-works-with-no-signal/the-last-forecast-still-reads.feature` and
-`the-helper-keeps-its-discipline.feature`, all tagged `@feature-f-works-with-no-signal` at file
-level and `@slice-01` on every scenario. All twelve are observed RED with classification
-`MISSING_FUNCTIONALITY` (`distill/red-classification.md`). Rows belonging to slices that have not
-entered DISTILL stay expected-uncovered.
+Updated 2026-08-10 at the slices 02-05 JIT DISTILL (slice-01's entry was 2026-08-09).
+Thirty acceptance scenarios exist across six feature files under
+`tests/acceptance/f-works-with-no-signal/` (`the-last-forecast-still-reads`,
+`the-helper-keeps-its-discipline`, `an-old-forecast-says-so`, `a-queued-report-sends-itself`,
+`it-sends-once-and-only-once`, `it-opens-like-an-app`), all tagged
+`@feature-f-works-with-no-signal` at file level and `@slice-NN` on every scenario. Observed
+classification per scenario lives in `distill/red-classification.md`: 27 RED
+`MISSING_FUNCTIONALITY`, 2 deliberate `GUARD_ALREADY_TRUE` absence/truth guards.
 
 | Requirement | Active acceptance evidence | Status |
 |---|---|---|
@@ -87,11 +89,34 @@ entered DISTILL stay expected-uncovered.
 | R38 | "A surfer parked at Venao..."; "With nothing saved for what they asked for..." | Covered for the two states slice-01 adds (offline-with-cache, offline-no-cache): each asserts its own words and that neither reads as a browser error. The remaining designed states arrive with slices 02, 03 and 04 |
 | R41 | "With nothing saved for what they asked for, no signal lands on plain Spanish words" | Covered for the surface slice-01 adds: no raw timestamp, no placeholder token, no machine word, no English on the sin señal page |
 | R34, R35, R36, R37, R39, R40 | the shipped `ui-quality` gate (`npm run test:ui`, `scripts/check-ui-quality.mjs`) | Covered by mechanism, not by a scenario, and deliberately not tagged. Verified 2026-08-09, both halves: the gate walks every built HTML document under `dist/` (`walk(DIST)` then an `.html` filter), so it starts covering `/sin-senal` the moment the page is built; and it is genuinely gated, as job `ui` of the ten in `scripts/ci-local-core.mjs:49` with `default: true`, running `npm run test:ui`, which builds first. Duplicating U1-U7 as browser scenarios would restate a shipped gate; a `@covers-Rn` tag on a test that does not check the thing would be worse. The U8 observation is the human examiner's against the slice charter |
-| R15 to R18 (slice-02) | none | Expected-uncovered. Authorable, but green needs the BUGFIX lane's corrected stamp (Pre-requisite 1) |
-| R19 to R30 (slices 03, 04) | none | Expected-uncovered. Blocked on f-tell slices 01, 03 and 04 (Pre-requisites 2 and 3); flush and backoff oracles are already fixed by `07-write-path.md` §5 |
-| R31 to R33 (slice-05) | none | Expected-uncovered. Unblocked the moment slice-01 lands |
+| R15 | "A fresh forecast is never called old" (embedded moment + stamp); "With no JavaScript the page still tells the true hour" (JS-off half, green guard on the landed BUGFIX); "An old forecast served with no signal looks old, never fresh" (SW-served-copy half) | Covered, RED (JS-off half already true; Pre-requisite 1 CLOSED at `6b02fe0`) |
+| R16 | "Three hours later the same page admits it is old"; "An old forecast served with no signal looks old, never fresh" | Covered, RED, with one half deferred: the >3 h Viejo flip is pinned verbatim; the under-3 h RELATIVE age has no settled Spanish string in §10 and is deliberately not pinned — the settled absolute stamp is the honest under-3 h rendering until the string exists (copy gap flagged, cousin's-crew channel, same as Pre-requisite 6a) |
+| R17 | "Three hours later..." and "An old forecast served with no signal..." both assert the underneath moment unchanged; "A fresh forecast is never called old" guards the inverse (fresh never dressed old) | Covered, RED |
+| R18 | "Admitting age costs almost nothing to carry" | Covered, RED. Gzipped dist measurement, registration snippet excluded |
+| R19 | "A report filed with no signal sends itself when the signal comes back" | Covered, RED. The Given plants a committed record at the queue seam (capture is f-tell's journey); seam naming PROPOSED, reconciliation owed (cross_lane_seams) |
+| R20 | "A report waiting on a phone that never noticed the signal return still goes out" | Covered, RED. Models the queue-predates-helper state by withholding /sw.js on the first visit |
+| R21 | "Sent from the road" (order observable once mint exists) | Partly covered, RED. Mint itself is f-tell slice-03's; mint-before-flush becomes assertable when /api/mint exists, seam left visible in step 03-01 |
+| R22 | "A throttled door keeps the report waiting patiently, never as a failure" | Covered, RED at the acceptance layer (one knock in window, entry kept, no failure words); the precise ladder (30s×2^n, jitter, cap) is the step 03-03 unit oracle with an injected clock — a `@property` candidate per the project paradigm |
+| R23 | "...exactly as it was filed" step in every flush scenario: deep-equal against the committed record plus wind/quality membership in `src/data/report-vocab.ts` tokens | Covered, RED. The frozen-vocabulary half guards the queued-placeholder-becomes-invalid-POST trap |
+| R24 | Delete-on-200: every flush scenario's "no longer waiting"; keep-and-explain: "A report the site refuses is kept, explained, and never hammered" | Covered, RED |
+| R25 | "...still goes out" asserts zero background-sync registrations at flush time | Covered, RED |
+| R26 | "The sin señal page finally makes its second promise, and counts what is waiting" | Covered, RED. Singular box only: no settled plural string exists (flagged in step 03-05); the slice-01 absence-scenario amendment is pre-authorized in step 03-05 |
+| R27 | "Filed on the sand, the report is saved for the road" + "Sent from the road" (the full journey, two chained scenarios); "A report filed with no signal sends itself..." (flush half) | Covered, RED, cross-feature: the journey's capture half is f-tell slice-01's and the RED names that seam (Mandar times out, no island) |
+| R28 | "A report the site already had is answered exactly like the first time"; "An answer lost on the way back never becomes a second report" | Covered, RED, with the rendering-equality half deferred: word-for-word reveal equality becomes assertable when f-tell slice-04 ships the renderer (amendment owed, step 04-02); today's oracle is the idempotent ack + single stored record + no double count |
+| R29 | "The phone never decides a report already went; it asks, and the site answers" | Covered, RED. Two queued, one already stored, both must be asked |
+| R30 | "An answer lost on the way back never becomes a second report" | Covered, RED. The harness stages the store-then-dead-socket branch for real |
+| R31 | "The site offers itself to the home screen with its settled identity" | Covered, RED. Reads the identity from the built head — the manifest link is the recorded Base.astro seam, so RED holds until the coordinator lands that line |
+| R32 | "No promise of avisos before avisos exist" | Covered as a deliberate ABSENCE guard (GUARD_ALREADY_TRUE): the settled hint wording must NOT render before a live subscribe path exists (the recorded A2HS ownership condition, step 05-02); the render assertion is the alerts lane's amendment at flip time |
+| R33 | "Opening like an app costs almost nothing on a normal visit" | Covered, RED. Manifest+favicon gz weight plus a watched visit fetching neither icon |
 
 Note for slice-03's DISTILL opener: the scenario "With nothing saved for what they asked for, no
 signal lands on plain Spanish words" asserts that `"Los reportes que mandes quedan guardados."` is
 ABSENT (R4). That assertion becomes false the moment slice-03 makes the sentence true (R26).
 Amending that one step is slice-03's, and it is an amendment owed, not a test that broke.
+RESOLVED 2026-08-10: the exact edit is pre-authorized verbatim in roadmap step 03-05 (delete the
+one `And` line from the slice-01 scenario, then drop the orphaned step definition), the only
+acceptance-test edit permitted in that phase.
+
+Note on R7 (map/thumb LRU row): still uncovered at the browser and deliberately so — no map or
+thumb surface exists on any lane yet (the slice-01 record above stands). None of slices 02-05
+changes this; the browser proof stays owed to the moment a map or a thumb exists.

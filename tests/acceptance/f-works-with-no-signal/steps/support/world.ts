@@ -148,13 +148,38 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
 
 export type SignalState = 'online' | 'blackout' | 'stall';
 
+/**
+ * How the write path answers a send (slices 03-04). 'live' is byte-for-byte
+ * the behaviour slice-01 was recorded against. The scripted behaviours model
+ * the settled server contract of 07-write-path.md sections 4.3 to 5: a
+ * throttled front door (429, bodyless), a refusal with a reason (400), and
+ * the nastiest branch, an answer stored by the site but lost on the way back
+ * to the phone. Dedup memory implements 4.4: the first answer for a
+ * `report_id` is kept, and a replay is answered with that original reveal as
+ * `queued_duplicate`, never counted twice.
+ */
+export type WritePathBehaviour = 'live' | 'throttled' | 'server-error' | 'refused' | 'lose-answer-once';
+
+export type ReceivedSend = Readonly<{ body: string; at: number }>;
+
+const REFUSAL_REASON_ES = 'El reporte no tiene la forma que esperamos.';
+export { REFUSAL_REASON_ES };
+
 const site = {
   signal: 'online' as SignalState,
   counting: false,
   asked: [] as string[],
   held: new Set<Socket>(),
   /** Path -> replacement body, so an amended helper is served without ever touching dist/. */
-  overrides: new Map<string, { body: string; contentType: string }>(),
+  overrides: new Map<string, { body: string; contentType: string; status?: number | undefined }>(),
+  writePath: {
+    behaviour: 'live' as WritePathBehaviour,
+    /** report_id -> the exact reveal body the site composed the first time. */
+    stored: new Map<string, string>(),
+    /** Every send that reached the site, in arrival order. */
+    received: [] as ReceivedSend[],
+    answersLost: 0,
+  },
 };
 
 export function resetSite(): void {
@@ -162,7 +187,112 @@ export function resetSite(): void {
   site.counting = false;
   site.asked = [];
   site.overrides.clear();
+  site.writePath.behaviour = 'live';
+  site.writePath.stored.clear();
+  site.writePath.received = [];
+  site.writePath.answersLost = 0;
   releaseHeldSockets();
+}
+
+export function setWritePathBehaviour(behaviour: WritePathBehaviour): void {
+  site.writePath.behaviour = behaviour;
+}
+
+/** Every send that reached the site, oldest first. The driven-port observable of a flush. */
+export function writePathReceived(): ReceivedSend[] {
+  return [...site.writePath.received];
+}
+
+/** How many distinct reports the site is holding. One, ever, is the slice-04 promise. */
+export function writePathStoredCount(): number {
+  return site.writePath.stored.size;
+}
+
+/** The reveal the site composed the first time it stored this report, or null. */
+export function writePathStoredAnswer(reportId: string): string | null {
+  return site.writePath.stored.get(reportId) ?? null;
+}
+
+/**
+ * Puts a report into the site's memory as if an earlier send had already
+ * succeeded, reveal and all. The Given of every "the site already has it"
+ * scenario: the phone's queue entry survived, the site's record did too.
+ */
+export function prestoreReport(reportId: string): void {
+  site.writePath.stored.set(reportId, composeFirstReveal(reportId));
+}
+
+function composeFirstReveal(reportId: string): string {
+  return JSON.stringify({
+    outcome: 'compared',
+    mark: LIVE_ANSWER_MARK,
+    report_id: reportId,
+    predicted: { score_q: 74, size_band: 'waist_chest', size_range_m: [0.7, 1.1], wind_state: 'choppy', conf_level: 'medium' },
+    delta: { score_points: 4, size_bands: 0 },
+    counter: { n_reports: site.writePath.stored.size + 1, threshold: 30 },
+  });
+}
+
+function answerSend(body: string, response: http.ServerResponse, socket: Socket): void {
+  const noStore = { 'cache-control': 'no-store' } as const;
+  site.writePath.received.push({ body, at: Date.now() });
+
+  if (site.writePath.behaviour === 'throttled') {
+    // The front door, free and bodyless (07-write-path.md section 4.3).
+    response.writeHead(429, { ...noStore, 'retry-after': '30' });
+    response.end();
+    return;
+  }
+  if (site.writePath.behaviour === 'server-error') {
+    response.writeHead(503, { ...noStore, 'content-type': 'application/json; charset=utf-8' });
+    response.end(JSON.stringify({ error: { code: 'store_unavailable', what: 'No pudimos guardar el reporte.', why: 'La bodega no responde.', how: 'El teléfono lo intenta de nuevo solo.' } }));
+    return;
+  }
+  if (site.writePath.behaviour === 'refused') {
+    response.writeHead(400, { ...noStore, 'content-type': 'application/json; charset=utf-8' });
+    response.end(JSON.stringify({ error: { code: 'schema_invalid', what: REFUSAL_REASON_ES, why: 'Le falta un dato o trae uno que no existe.', how: 'Revisa el reporte; esperar no lo arregla.' } }));
+    return;
+  }
+
+  let reportId = 'unknown';
+  try {
+    const parsed = JSON.parse(body) as { report_id?: string };
+    if (typeof parsed.report_id === 'string' && parsed.report_id.length > 0) reportId = parsed.report_id;
+  } catch {
+    // A body the site cannot read still gets the live answer; slice-01's
+    // scenarios never asserted on parsing and must keep their recorded RED.
+  }
+
+  const already = site.writePath.stored.get(reportId);
+  if (already !== null && already !== undefined) {
+    // 07 section 4.4: the original reveal, rebuilt, outcome queued_duplicate.
+    // Not double-counted, quota untouched, stored answer byte-preserved.
+    const original = JSON.parse(already) as Record<string, unknown>;
+    response.writeHead(200, { ...noStore, 'content-type': 'application/json; charset=utf-8' });
+    response.end(JSON.stringify({ ...original, outcome: 'queued_duplicate' }));
+    return;
+  }
+
+  if (site.writePath.behaviour === 'lose-answer-once' && site.writePath.answersLost === 0) {
+    // The site heard and stored the report; the answer died on the way back.
+    site.writePath.answersLost += 1;
+    site.writePath.stored.set(reportId, composeFirstReveal(reportId));
+    socket.destroy();
+    return;
+  }
+
+  if (site.writePath.behaviour === 'live') {
+    // Byte-for-byte the answer slice-01 was recorded against.
+    site.writePath.stored.set(reportId, composeFirstReveal(reportId));
+    response.writeHead(200, { ...noStore, 'content-type': 'application/json; charset=utf-8' });
+    response.end(JSON.stringify({ outcome: 'compared', mark: LIVE_ANSWER_MARK }));
+    return;
+  }
+
+  const reveal = composeFirstReveal(reportId);
+  site.writePath.stored.set(reportId, reveal);
+  response.writeHead(200, { ...noStore, 'content-type': 'application/json; charset=utf-8' });
+  response.end(reveal);
 }
 
 function releaseHeldSockets(): void {
@@ -179,8 +309,12 @@ export function requestsAsked(): string[] {
   return [...site.asked];
 }
 
-export function overrideServedFile(path: string, body: string, contentType: string): void {
-  site.overrides.set(path, { body, contentType });
+export function overrideServedFile(path: string, body: string, contentType: string, status?: number): void {
+  site.overrides.set(path, { body, contentType, status });
+}
+
+export function clearServedOverride(path: string): void {
+  site.overrides.delete(path);
 }
 
 /**
@@ -235,9 +369,11 @@ export function ensureServedSite(): Promise<{ server: http.Server; baseUrl: stri
       const noStore = { 'cache-control': 'no-store' } as const;
 
       if (request.method === 'POST' && pathname === WRITE_PATH) {
-        const answer = JSON.stringify({ outcome: 'compared', mark: LIVE_ANSWER_MARK });
-        response.writeHead(200, { ...noStore, 'content-type': 'application/json; charset=utf-8' });
-        response.end(answer);
+        const chunks: Buffer[] = [];
+        request.on('data', (chunk: Buffer) => chunks.push(chunk));
+        request.on('end', () => {
+          answerSend(Buffer.concat(chunks).toString('utf8'), response, request.socket);
+        });
         return;
       }
       if (request.method !== 'GET' && request.method !== 'HEAD') {
@@ -248,7 +384,7 @@ export function ensureServedSite(): Promise<{ server: http.Server; baseUrl: stri
 
       const override = site.overrides.get(pathname);
       if (override) {
-        response.writeHead(200, { ...noStore, 'content-type': override.contentType });
+        response.writeHead(override.status ?? 200, { ...noStore, 'content-type': override.contentType });
         response.end(override.body);
         return;
       }
@@ -369,6 +505,60 @@ export async function freshPhone(state: SignalScenario): Promise<Page> {
   state.context = null;
   state.page = null;
   return phonePage(state);
+}
+
+/**
+ * A phone that runs no JavaScript at all (slice-02, R15): the absolute
+ * publish time must still read true, because truth lives in the document,
+ * never in a script. Same 390 px phone, scripting off.
+ */
+export async function phoneWithoutJavaScript(state: SignalScenario): Promise<Page> {
+  if (state.context) await state.context.close();
+  state.context = null;
+  state.page = null;
+  await assertBuiltSite();
+  const { baseUrl } = await ensureServedSite();
+  state.baseUrl = baseUrl;
+  const browser = await ensureBrowser();
+  const context = await browser.newContext({
+    viewport: { width: 390, height: 844 },
+    deviceScaleFactor: 3,
+    isMobile: true,
+    hasTouch: true,
+    locale: 'es-PA',
+    javaScriptEnabled: false,
+  });
+  const page = await context.newPage();
+  state.context = context;
+  state.page = page;
+  return page;
+}
+
+/**
+ * Serves 404 for the helper script, modelling a phone that queued reports
+ * before any helper ever installed (slice-03, the activation trigger: the
+ * queue predates the helper, and the helper's first activation must flush
+ * it). The site is fully functional unregistered, so this is a real state.
+ */
+export function withholdHelper(state: SignalScenario): void {
+  const url = helperUrlFromBuiltHome();
+  if (url === null) {
+    state.failures.push({
+      label: 'withhold the offline helper from a first visit',
+      error: new Error('the built home page starts no offline helper, so there is nothing to withhold'),
+    });
+    return;
+  }
+  const path = url.startsWith('http') ? new URL(url).pathname : url;
+  overrideServedFile(path, 'not here yet', 'text/plain; charset=utf-8', 404);
+}
+
+/** Ends the withholding: the next visit gets the real emitted helper. */
+export function releaseHelper(): void {
+  const url = helperUrlFromBuiltHome();
+  if (url === null) return;
+  const path = url.startsWith('http') ? new URL(url).pathname : url;
+  clearServedOverride(path);
 }
 
 export function setSignal(state: SignalScenario, signal: SignalState): void {

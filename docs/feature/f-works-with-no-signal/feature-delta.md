@@ -168,8 +168,52 @@ land.
 
 ### [REF] JIT status
 
-No acceptance test exists for this feature. That is correct, not a gap: the JIT rule keeps each
-slice's tests absent until that slice enters DISTILL. Slice-01 is the first legal entrant and no
-decision gates its scenario authoring; its landing (not authoring) is sequenced behind
-Pre-requisites 4 and 5. Slices 01, 02 and 05 need zero AWS. The requirement checklist and the
-RED-classification contract live under `docs/feature/f-works-with-no-signal/distill/`.
+Updated 2026-08-10. All five slices have entered DISTILL. Slice-01 entered 2026-08-09 (12
+scenarios, all observed RED, mid-DELIVER on this lane). Slices 02-05 entered together
+2026-08-10 on coordinator dispatch — which supersedes the earlier gate that kept 03-04 out of
+DISTILL until f-tell slice-01 existed: their scenarios are authored NOW with the cross-feature
+blocks recorded, and their Givens plant already-committed records at the queue seam because
+capture is f-tell's journey and the behaviour under test here is only ever the flush. 30
+scenarios total across six feature files; per-scenario RED classification in
+`distill/red-classification.md`; requirement coverage in `distill/requirement-checklist.md`;
+step-level roadmap phases 02-05 appended to `deliver/roadmap.json` (29 steps total,
+`des-verify-integrity --roadmap-only` exit 0). Slices 02 and 05 need zero AWS and no f-tell
+deliverable; slices 03-04 are authorable-RED but GREEN-blocked cross-feature (Pre-requisites 2
+and 3) and their live send stays deploy-blocked while CloudFormation writes are denied to the
+CLI identity (no oracle anywhere requires AWS).
+
+### [REF] Slices 02-05 acceptance design (2026-08-10)
+
+Reconciliation re-run at this DISTILL open: 0 contradictions. Pre-requisite 1 is CLOSED — the
+raw-ISO stamp BUGFIX landed at `6b02fe0` and slice-02's scenarios consume it (one scenario is a
+deliberate green guard over it). The expectation charters for slices 02-05 now exist under
+`docs/product/expectations/f-works-with-no-signal/` (Pre-requisite 9b satisfied for these
+slices; slice-01's charter already existed at `4cc99fa` and was not touched).
+
+| Slice | Feature file | Scenarios | Notes |
+|---|---|---|---|
+| slice-02 | `an-old-forecast-says-so.feature` | 5 (3 error-path, 1 nfr) | Time passes via the phone's own moved clock, never a doctored document. One copy gap flagged: no settled Spanish string for the under-3 h RELATIVE age; the settled absolute stamp is the honest rendering until the string exists (cousin's-crew channel) |
+| slice-03 | `a-queued-report-sends-itself.feature` | 7 (2 error-path, 2 chained cross-feature integration) | Byte-identical replay asserts vocabulary membership against `src/data/report-vocab.ts` — the frozen-token trap. Second copy gap flagged: §14 settles only the SINGULAR queue-box string; the plural is routed for confirmation, the scenario pins the singular. The integration journey is told in two chained scenarios (split per Sentinel review, one When per scenario) |
+| slice-04 | `it-sends-once-and-only-once.feature` | 3 (all failure-domain, incl. the lost-ack branch) | Server-side dedup is the trusted decider (07 §4.4); the client never carries an "already sent" memory. Rendering-equality oracle strengthens at f-tell slice-04 (amendment owed, step 04-02) |
+| slice-05 | `it-opens-like-an-app.feature` | 3 (1 absence guard, 1 nfr) | Config-shaped slice; no Tier-B state machine warranted |
+
+**A2HS ownership, settled and recorded (step 05-02, cross_lane_seams):** the hint was claimed by
+two committed plans (this slice-05 and the alerts feature's slice-02, per the unrecoverable plan
+documents of Pre-requisite 8; no competing claim exists anywhere on disk, verified 2026-08-10).
+The call on record: it ships HERE, staged dark, under the binding condition that the avisos
+wording never renders publicly before a live subscribe path exists — the same no-untrue-sentence
+rule that staged the offline copy. The alerts lane flips it visible and amends the guard
+scenario in the same change that brings its subscribe path live; it does not re-ship the hint.
+This defers the "hint renders" half of DoD row 8 to that flip, deliberately.
+
+**New cross-lane seams recorded in `deliver/roadmap.json` `cross_lane_seams`:** the Base.astro
+head line for the manifest link + theme-color and for the page-context flush trigger
+(coordinator-owned, serialized after f-paste's OG block); the IndexedDB queue naming proposed at
+`tests/acceptance/f-works-with-no-signal/steps/support/queue-seam.ts` (database `surf-reports`,
+store `queue`, keyPath `report_id` — reconciliation owed against f-tell slice-01's module,
+whichever lands first fixes the names); and the A2HS flip above.
+
+**Two pre-authorized acceptance amendments** (spec changes owed to future moments, recorded so
+they are edits owed, not tests that broke): step 03-05 deletes slice-01's sentence-two absence
+line when the promise becomes true; step 04-02 strengthens the duplicate-answer oracle to
+word-for-word rendering equality when f-tell slice-04 ships the reveal renderer.
