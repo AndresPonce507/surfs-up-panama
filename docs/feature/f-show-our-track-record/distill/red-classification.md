@@ -41,7 +41,8 @@ slice-01-only dispatch does not license writing it. Those rows stay expected-unc
 Selection gate, run first because cucumber exits 0 on a tag expression that selects nothing:
 
 ```
-npm run test:at -- --dry-run --tags "@feature-f-show-our-track-record and @slice-01"
+npm run test:at -- --dry-run --tags "@feature-f-show-our-track-record and @slice-01" > /tmp/record-dry.log 2>&1
+DRY_EXIT=0
 ```
 
 Observed: `8 scenarios (8 skipped)`, `95 steps (95 skipped)`, zero undefined, zero ambiguous.
@@ -50,7 +51,11 @@ hooks the daily-call and f-bill lanes register, times eight scenarios); the per-
 confirms only this feature's file was selected. `strict: true` is on, so an undefined or
 ambiguous step would have failed here.
 
-Type gate: `npm run typecheck` exit 0.
+Type gate: `npm run typecheck > /tmp/record-tc.log 2>&1` exit 0.
+
+Every gate above and below was redirected to a file with its status captured on the next
+statement. None was piped into `tail`, `head` or `grep`: a pipeline returns the last command's
+status, and this repository has committed over a red gate exactly that way (project CLAUDE.md).
 
 RED run:
 
@@ -59,18 +64,25 @@ npm run test:at -- --tags "@feature-f-show-our-track-record and @slice-01" > /tm
 REAL_EXIT=1
 ```
 
-`8 scenarios (8 failed)`, `95 steps (81 passed, 6 skipped, 8 failed)`. The gate was redirected to
-a file and its status captured directly, never piped into `tail`, `head` or `grep`.
+`8 scenarios (8 failed)`, `95 steps (81 passed, 6 skipped, 8 failed)`. Failure-message counts across
+the run: 5 scenarios stopped at oracle A, 1 at oracle C, 2 at oracle B.
 
 Regression run, untagged, to prove the sibling lanes were not disturbed:
 
 ```
-npm run test:at
+npm run test:at > /tmp/record-full.log 2>&1
 FULL_EXIT=1
-86 scenarios (78 passed, 8 failed)   993 steps (979 passed, 6 skipped, 8 failed)   1m 4.755s
+86 scenarios (78 passed, 8 failed)   993 steps (979 passed, 6 skipped, 8 failed)   1m 6.963s
 ```
 
 The 78 pre-existing scenarios all still pass. The 8 failures are exactly the 8 authored here.
+`pgrep -fl "astro preview"` after the tagged run and again after the untagged run: nothing, so the
+`AfterAll` teardown reclaims the daemonised preview server it starts.
+
+Note on what the run does and does not prove: scenarios 4 to 7 stop at the chained box-absent
+oracle, so their own absence assertions and the U1-U7 aggregation have never executed their
+bodies. That is the correct trap-3 defusal, not a gap, but it does mean those assertion bodies
+are first exercised in DELIVER, on the commit that makes the box appear.
 
 #### Scenario table
 
@@ -140,6 +152,8 @@ would have been a lie.
 |---|---|---|
 | R3 (the zero is computed from real store state, not asserted) | Not authored, not tagged | Separating "computed" from "hardcoded" needs input variation, and the only input is a report store that does not exist. Any structural proxy (for instance "no write stack under `infra/lib/`") is green with zero production code today and green-and-wrong the day the store lands. Falsifiability for R3 arrives with slice-03, which owns replacing the source with the real read. The sweep is the closest honest approach and is not coverage of R3. |
 | R5 (counter shape `"N / 30"` contractual; a shape mismatch fails the build LOUD) | Not authored, not tagged | R5 is entirely about the P5 payload field. `spot_detail` reaches nothing today: `src/pipeline/build.ts:140` emits `{name}` only and the page reads `data/published-surface.json`, so the producer-to-page wire for this block does not exist. Authoring against a payload field with no producer would put a design decision in a test. The settled section 14 wireframe box renders only the sentence, with no separate `"0 / 30"` element, so there is no rendered form of R5 to assert either. Both halves belong with the wire. |
+| R2, producer clause | Not asserted; the user-visible consequence is | R2's first clause names the same six payload fields on the same absent wire as R5, so it takes the same refusal. Scenarios 2 and 4 cover only what a surfer can see: every emitted spot page carries the box, and no claim renders anywhere inside it. The checklist records R2 as PARTIAL, not covered. |
+| R4, template-side clause | Not asserted; the client-side clause is | "The frontend renders and never computes statistics" splits in two. No client code derives anything: covered outright, since the sentence is in the served bytes with no JS and the document ships no island. No TEMPLATE code derives anything: not covered, because Astro templates run at build time and static-HTML presence cannot tell a value that arrived computed from one the template computed. That half needs the wire. |
 | R6 (threshold 30 has one exported code home) | Not tagged; partially exercised | Scenarios 1, 2 and 4 pin the rendered threshold at exactly 30, which is the user-visible half. The "one code home, exported for the write path's P3 composer" half is source structure with no observable at a production entry point, and its named consumer (the P5 producer) is the wire this lane refuses to invent. |
 | R33 (U3, 44 px touch targets) | Recorded N/A | The row itself says the slice-01 box is static and this should record the fact rather than fabricate a target check. There is nothing tappable in the day-one box. |
 | R9, byte-ceiling half | Partially covered | The island half is asserted directly. The ceiling half is enforced by production: the page-weight integration runs inside `npm run build` and a build that breaks a ceiling cannot finish, so a build failure surfaces as a harness error rather than a silent pass. |

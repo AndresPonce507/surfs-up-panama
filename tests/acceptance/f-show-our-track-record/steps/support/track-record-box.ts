@@ -31,6 +31,9 @@ export const THRESHOLD = 30;
 
 export type DigitCarrier = { readonly ownText: string; readonly fontVariantNumeric: string };
 
+/** Every element in the box that owns visible text, with the colour it paints it in. */
+export type TextCarrier = { readonly ownText: string; readonly color: string };
+
 export type BoxObservation = {
   readonly found: boolean;
   readonly text: string;
@@ -40,6 +43,7 @@ export type BoxObservation = {
   readonly borderStyle: string;
   readonly dangerColor: string;
   readonly digitCarriers: readonly DigitCarrier[];
+  readonly textCarriers: readonly TextCarrier[];
   readonly boxScrollWidth: number;
   readonly boxClientWidth: number;
   readonly documentScrollWidth: number;
@@ -68,6 +72,7 @@ export async function observeBox(page: Page): Promise<BoxObservation> {
       borderStyle: '',
       dangerColor: '',
       digitCarriers: [] as { ownText: string; fontVariantNumeric: string }[],
+      textCarriers: [] as { ownText: string; color: string }[],
       boxScrollWidth: 0,
       boxClientWidth: 0,
       documentScrollWidth: document.documentElement.scrollWidth,
@@ -93,6 +98,7 @@ export async function observeBox(page: Page): Promise<BoxObservation> {
     }
 
     const carriers: { ownText: string; fontVariantNumeric: string }[] = [];
+    const texts: { ownText: string; color: string }[] = [];
     let clipped = 0;
     let animated = 0;
     const subtree: Element[] = [box, ...Array.from(box.querySelectorAll('*'))];
@@ -102,6 +108,10 @@ export async function observeBox(page: Page): Promise<BoxObservation> {
         if (node.nodeType === 3) own += node.textContent ?? '';
       }
       const style = window.getComputedStyle(element);
+      // U1 is measured per text-bearing element, not once on the box: the
+      // sentence and the counter may sit in children with their own colour,
+      // and a child painted too faintly is exactly the failure U1 exists for.
+      if (own.trim() !== '') texts.push({ ownText: own.replace(/\s+/g, ' ').trim(), color: style.color });
       if (/\d/.test(own)) carriers.push({ ownText: own.replace(/\s+/g, ' ').trim(), fontVariantNumeric: style.fontVariantNumeric });
       if (style.textOverflow === 'ellipsis' && style.overflow !== 'visible') clipped += 1;
       if (style.animationName !== 'none' || Number.parseFloat(style.transitionDuration) > 0) animated += 1;
@@ -119,6 +129,7 @@ export async function observeBox(page: Page): Promise<BoxObservation> {
       borderStyle: boxStyle.borderStyle,
       dangerColor: window.getComputedStyle(document.documentElement).getPropertyValue('--danger').trim(),
       digitCarriers: carriers,
+      textCarriers: texts,
       boxScrollWidth: box.scrollWidth,
       boxClientWidth: box.clientWidth,
       documentScrollWidth: document.documentElement.scrollWidth,

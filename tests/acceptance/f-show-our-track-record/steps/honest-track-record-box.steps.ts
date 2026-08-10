@@ -298,9 +298,19 @@ Then('el recuadro cumple sus comprobaciones visuales sobre su propio fondo', fun
   const box = requiredBox();
   const failures: string[] = [];
 
-  const ratio = contrastRatio(box.color, box.background);
-  if (ratio < 4.5) {
-    failures.push(`U1 contrast: box text ${box.color} on its own backdrop ${box.background} measures ${ratio.toFixed(2)}:1, below 4.5:1`);
+  // Measured per text-bearing element rather than once on the box: the
+  // sentence and the counter can sit in children with their own colour.
+  if (box.textCarriers.length === 0) {
+    failures.push('U1 contrast: no element in the box carries visible text, so there is nothing to measure');
+  }
+  for (const carrier of box.textCarriers) {
+    const ratio = contrastRatio(carrier.color, box.background);
+    if (ratio < 4.5) {
+      failures.push(
+        `U1 contrast: "${carrier.ownText}" is painted ${carrier.color} on the box's own backdrop ${box.background}, ` +
+          `which measures ${ratio.toFixed(2)}:1 and is below 4.5:1`,
+      );
+    }
   }
   if (box.documentScrollWidth > box.viewportWidth + 1) {
     failures.push(`U2 overflow: the document scrolls to ${box.documentScrollWidth}px inside a ${box.viewportWidth}px viewport`);
