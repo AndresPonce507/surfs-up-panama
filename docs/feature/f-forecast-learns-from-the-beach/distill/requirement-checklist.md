@@ -85,6 +85,32 @@ and from the shipped seams named in the feature-delta's seam audit.
 | R16 | same file: outline "A wind residual may not ship without its own noise floor" and "The shipped source forms no residual for wind at all" | covered, RED |
 | R17 | `the-fit-refuses-until-the-evidence-earns-it.feature`: property "Which wind a reporter named changes no number the fit writes" | covered, RED |
 | R18 | same file: the seed-identity assertion carried by the refusal scenarios and by "Twenty-two mornings from seven people finally earn a correction" | covered, RED |
-| R19 | Enforced by naming discipline across both feature files and both step modules; no scenario title, step name or emitted event says learned, accurate or improved | covered by construction |
-| R20-R39 | none | expected-uncovered by design, per-slice JIT (`HANDOFF.md` §1 DISTILL row) |
-| R40 | slice-01 is classified non-visual in the feature-delta with its N/A rationale; no pixel check is fabricated here | covered by classification |
+| R19 | `the-fit-refuses-until-the-evidence-earns-it.feature`: the walking skeleton bears `@covers-R19`; the feature prose and the recovery review prohibit learning or accuracy language for fixture evidence | covered by direct tag + naming review |
+| R20 | `a-correction-file-can-never-move-a-number-past-the-gates.feature`: "A stored correction that passed every gate finally moves the number a surfer reads" and "A correction the gates refused is carried in silence and changes nothing" | authored, scaffold-parked (slice-02) |
+| R21 | same file: both hand-forged scenarios plus the refused-carried one | authored, scaffold-parked (slice-02) |
+| R22 | same file: "However big the stored move, the published height never moves past forty percent of the forecast" | authored, scaffold-parked (slice-02) |
+| R23 | same file: "However big the stored move, the published score never moves more than twelve points" | authored, scaffold-parked (slice-02) |
+| R24 | same file: "An unreadable correction file is read as absent, and the reader says why" | authored, scaffold-parked (slice-02) |
+| R25 | same file: "A score move stated in any unit but the points a surfer sees is refused by name" | authored, scaffold-parked (slice-02) |
+| R26 | same file: "Deleting every correction file returns the product to day zero on the next build" | authored, scaffold-parked (slice-02) |
+| R27 | `a-correction-file-can-never-move-a-number-past-the-gates.feature`: the deletion/revert scenario bears `@covers-R27`; shipped `scoring-laws.test.ts` no-file property and keystone launch-identity scenario remain the PRESERVE regression net | covered by direct tag + shipped tests |
+| R28 | `a-new-spot-rides-its-parents-not-its-own-noise.feature`: "A Caribbean spot can never borrow a Pacific bias, at any weight" and the rides-its-parents scenario | authored, scaffold-parked (slice-03) |
+| R29 | same file: rides-its-parents plus the property "One loud rating moves a brand-new spot by only a sliver of itself" | authored, scaffold-parked (slice-03) |
+| R30 | same file: the group-activation pair and "Once eight spots have proven themselves different, pooling steps aside on its own" | authored, scaffold-parked (slice-03) |
+| R31 | `one-voice-counts-once-and-a-habit-is-subtracted.feature`: session collapse, the wild-claim fence, chronic disagreement, the newcomer guard | authored, scaffold-parked (slice-04) |
+| R32 | same file: the rarely-reported-day pair plus the incident-file scenario | authored, scaffold-parked (slice-04) |
+| R33 | same file: "A habit of calling it big, seen at two beaches, is measured and mostly subtracted" (including the never-published scan) | authored, scaffold-parked (slice-04) |
+| R34 | `a-bad-month-degrades-to-day-zero-not-to-silently-wrong-numbers.feature`: the kill/spare pair plus the shuffled-time outline | authored, scaffold-parked (slice-05) |
+| R35 | same file: the hazards scenario, the calibration-removal scenario, the shrinkage-alarm scenario | authored, scaffold-parked (slice-05) |
+| R36 | `the-learning-jobs-can-write-only-their-own-shelves.feature`: all four declaration scenarios | authored, scaffold-parked (slice-06) |
+| R37 | same file's widened-fence scenario plus `the-published-number-finally-moves-and-the-archive-says-why.feature`: "Neither learning job can touch anything but its own shelves" | authored, scaffold-parked (slice-06, slice-07) |
+| R38 | `the-published-number-finally-moves-and-the-archive-says-why.feature`: the number-moves scenario and the below-the-gate scenario | authored, scaffold-parked (slice-07); the REAL half stays blocked on Pre-requisites 2 and 3 |
+| R39 | same two scenarios' archived-call oracles (`bias_applied`, `bias_gate`) | authored, scaffold-parked (slice-07) |
+| R40 | One representative scenario in every slice bears `@covers-R40`; charters 01-06 record non-visual N/A boundaries, and slice-07's roadmap 07-04 carries the executable U1-U7 inheritance guard, U8 public-surface observation, and charter | covered by direct tags + classification contract; slice-07 examination BLOCKED |
+
+Coverage note, 2026-08-10: slices 02-07 were authored ahead of their JIT turn on the owner's
+explicit instruction. They are PARKED behind the feature-scoped skip marker in
+`tests/acceptance/f-forecast-learns-from-the-beach/steps/support/pending-slices.ts`; the
+authoring-time RED/guard observations in `red-classification.md` are diagnostic only. A later
+slice is not entered, ready, or passing until its own marker is removed and a fresh RED run is
+recorded against the then-current seams and prerequisites.
