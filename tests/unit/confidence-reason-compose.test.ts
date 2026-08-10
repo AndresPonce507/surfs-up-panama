@@ -319,7 +319,13 @@ describe('composeConfidenceReasonEs', () => {
               && !CLAIMS_MODEL_DISAGREEMENT.test(reason),
             `la razón nombra desacuerdo o un término apagado: "${reason}"`,
           );
-          if (track === null && fresh === null && missing.length === 0) {
+          const hasNoSurvivingSignal = track === null && fresh === null && missing.length === 0;
+          assert.equal(
+            /se[ñn]al/iu.test(reason),
+            hasNoSurvivingSignal,
+            `la admisión de señal ${hasNoSurvivingSignal ? 'debe aparecer' : 'debe desaparecer'} cuando el historial o un reporte vuelve a informar: "${reason}"`,
+          );
+          if (hasNoSurvivingSignal) {
             assert.equal(result.level, 'low', 'sin ningún factor sobreviviente la confianza no puede fabricarse alta');
             assert.match(reason, /se[ñn]al/iu, `sin una señal sobreviviente la razón debe admitirlo: "${reason}"`);
           }
