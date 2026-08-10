@@ -1,0 +1,399 @@
+{
+  "roadmap": {
+    "project_id": "f-see-what-killed-it",
+    "created_at": "2026-08-09T23:50:00Z",
+    "total_steps": 10,
+    "quality_contract_version": 1
+  },
+  "phases": [
+    {
+      "id": "01",
+      "name": "Slice-01: the spot page names what killed the day, per day section",
+      "description": "Plumbing plus a render, never modelling. The engine already picks the culprit and the receipt already carries it; the value simply never crosses into the file the pages read. This phase closes that carry inside src/publish, adds one self-contained component, and stops.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "01-01",
+          "name": "Shared Spanish factor vocabulary in one movable module",
+          "criteria": [
+            "One module maps each of the four factor tokens to its Spanish noun and definite article; no other Spanish factor word exists anywhere in this lane.",
+            "The module imports nothing at all, so the later move into the shared data lane is a file move plus an import path change.",
+            "Property: every factor token resolves to a non-empty Spanish word carrying no engine token, no English, no em dash, no data punctuation.",
+            "Token tuple is declared locally and asserted equal to the engine Factor union at the publish boundary, never imported from scoring."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "La frase está en español y no filtra nada del código",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure token to word map with no markup and no layout; the words first become visible in 01-05, which carries the charter and the U1 to U7 checks.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/publish/factor-vocab.ts",
+            "tests/unit/weakest-link-vocab.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): unit tests are property-based with fast-check, the house style at tests/unit/scoring-laws.test.ts; example-based tests are fallback only with a documented reason; integration and E2E stay single-example. Adapted from the Hypothesis wording because this repo is TypeScript with fast-check. DISPATCH: project CLAUDE.md declares the functional paradigm and selects @nw-functional-software-crafter for every DELIVER step; the agent field carries the schema-valid name and the orchestrator maps it. WHY THIS FILE EXISTS AND WHY HERE: R28 requires the Spanish factor names to come from ONE shared vocabulary module, seamed with F-KNOW-HOW-MUCH-TO-TRUST-IT, whose confidence_reason copy names the same four factors (05-scoring-engine.md section 3.6). The house home for such a module is src/data (the src/data/report-vocab.ts precedent), and src/data/** is a FORBIDDEN WRITE LANE for this build. So the module lands at src/publish/factor-vocab.ts and is SHAPED FOR THE MOVE: zero imports, tokens declared locally as a const tuple exactly like WIND_STATE_TOKENS. src/data/report-vocab.ts lines 29-30 state the rule that makes this load-bearing: a module under src/data may never import from src/publish/** or src/scoring/**, so a vocab module that imported Factor from src/scoring/engine could not be moved without an edit. The equality assertion between the local token tuple and the engine Factor union lives on the publish side, mirroring static-surface.ts line 19 (WindState = WindStateToken). CROSS-FEATURE DEPENDENCY, FLAGGED NOT FIXED: extracting this module to src/data/factor-vocab.ts and pointing both features at it is owed to whoever owns src/data/**; it is a git mv plus one import path change by construction. COPY SHAPE: export the bare noun (dirección, tamaño, viento, marea) AND the definite article per token, because this feature needs 'el viento' inside a sentence while the confidence lane needs the bare noun inside its own. Do not invent further copy here."
+        },
+        {
+          "id": "01-02",
+          "name": "SurfaceCall carries the published culprit token",
+          "criteria": [
+            "SurfaceCall gains an optional weakest_link field typed as the vocabulary token or null, documented as the reading-surface half of the day summary.",
+            "assertStrictTwoDayUpdate accepts a surface whose rows carry the field and still accepts rows without it, so retained dawn receipts keep validating.",
+            "Property: adding or omitting the field never changes any other published field and never changes the two-day or distinct-ranking refusals.",
+            "Step does not populate the field; population is the serialized cross-lane build.ts edit recorded in this roadmap."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "El punto débil llega a la superficie que leen las páginas, no solo al recibo",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A wire-type field and its validator behaviour; nothing renders. The value it carries becomes visible in 01-05, which owns the charter and the U1 to U7 checks.",
+          "ui_checks": {},
+          "deps": ["01-01"],
+          "files_to_modify": [
+            "src/publish/static-surface.ts",
+            "tests/unit/weakest-link-surface-contract.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): property-based with fast-check as in 01-01 over the validator laws; single-example fallback only with a documented reason. THIS STEP CANNOT TURN ITS SCENARIO GREEN ON THIS LANE'S FILES, AND MUST NOT PRETEND TO. Scenario 5 (@in-memory) drives runIngestOnce/runBuildOnce and asserts that bundle.publish_surface.days[i].spots[j].weakest_link equals bundle.days[i].spots[j].weakest_link. publish_surface is constructed inline at src/pipeline/build.ts lines 141-151 from surfaceCall(), a module-private function at lines 255-266; the bundle is written straight to the store at line 153 with no hook a publish-side module could reach. src/pipeline/build.ts is a FORBIDDEN WRITE LANE here. The scenario goes green only when this ONE line lands in surfaceCall()'s returned object, immediately after 'best_window: call.best_window,' on line 264:      weakest_link: call.weakest_link,      That is a SERIALIZED CROSS-LANE DEPENDENCY on the keystone/producer lane that owns build.ts (feature-delta Pre-requisite 1). Do not edit build.ts to unblock this step; report the block and continue with 01-03 onward, which are independent of it. WHY THE TYPE STILL SHIPS HERE: without the optional field on SurfaceCall the producer lane's one-liner does not typecheck, so this step is the half that makes the cross-lane line a one-liner instead of a two-file change. R3 SECOND HALF, DELIBERATELY NOT CLOSED HERE: the requirement checklist marks R3 partially covered and names the gap, that a real pipeline run populates every committed row. tests/unit/published-surface-fields.test.ts is the existing guard family for exactly that class and it reads the COMMITTED data/published-surface.json on purpose (its header lines 8 to 11). Extending it to weakest_link TODAY would turn the unit suite red on trunk for every other lane, because the committed file carries zero occurrences right now. So that guard is owed IN THE SAME CHANGE as the build.ts one-liner, once a real build repopulates the file; it is recorded as a cross-lane follow-up, not planted red here."
+        },
+        {
+          "id": "01-03",
+          "name": "Reader resolves the culprit per spot and day",
+          "criteria": [
+            "A pure publish-side reader answers, for one spot id and one day index, the published culprit token or null, never a derived or guessed one.",
+            "Today resolves from current.calls and tomorrow from current.days[1].spots, matching src/data/forecast.ts line 77 exactly, pinned by a unit test.",
+            "Property: a spot absent from the surface, a null field and an absent field all answer null; no input yields a fabricated factor.",
+            "Property: each spot answers only from its own published row; one row's culprit never leaks into another spot or the other day."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "Ninguna playa se queda callada mientras las demás sí lo dicen",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure lookup over the committed reading surface with no markup; its output becomes visible in 01-05, which carries the charter and the U1 to U7 checks.",
+          "ui_checks": {},
+          "deps": ["01-02"],
+          "files_to_modify": [
+            "src/publish/weakest-link.ts",
+            "tests/unit/weakest-link-surface-contract.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): property-based with fast-check over the resolution laws; single-example only for the committed-file smoke read. WHY A SECOND READER EXISTS, STATED PLAINLY SO NOBODY OVER-READS IT: the architecturally correct home for this carry is DaySummary in src/data/forecast.ts, which is the declared P1 render source SpotDetail.astro already consumes. src/data/** is a FORBIDDEN WRITE LANE for this build, so the carry lands in src/publish/**, which the lane declares as the surface plumbing. THE DRIFT HAZARD THIS CREATES, AND ITS ONLY MITIGATION: src/data/forecast.ts line 77 reads days as [summaries(current.calls), summaries(current.days[1].spots)] - today comes from the LEGACY calls alias and tomorrow from days[1].spots. That quirk is a compatibility alias for the yesterday and receipt readers, not an accident. This reader must replicate it, not the more obvious days[0]/days[1]. THE ACCEPTANCE SUITE CANNOT CATCH A MISTAKE HERE: applyPublishedCulprits in the step file plants the same today plan into BOTH current.calls and current.days[0].spots, so either reading passes all eleven scenarios. That makes the day-selection rule a UNIT-TEST OBLIGATION with a comment naming forecast.ts line 77 as the twin, and the failure it prevents is the page showing the wrong day's culprit, which is exactly the two-surfaces-must-not-disagree rule of application-architecture.md section 7 lines 320-323. CROSS-LANE FOLLOW-UP, FLAGGED: the day src/data/forecast.ts opens, DaySummary should absorb weakest_link and this module should collapse to nothing but the formatter, deleting the duplicated day-selection rule. Record it; do not perform it. IMPORT SHAPE: read the committed surface the same way forecast.ts does; the module graph already contains that JSON, so this adds no second parse of a different artifact. LEAK RULE: this module lives on the forecast side and the report flow must never reach it, directly or transitively (application-architecture.md sections 7 to 9)."
+        },
+        {
+          "id": "01-04",
+          "name": "Spanish culprit sentence from one swappable constant",
+          "criteria": [
+            "A house display formatter turns one factor token into the settled Spanish sentence; no component and no page ever composes that sentence inline.",
+            "The wording lives in exactly one exported constant so the pending copy settlement is a one-line swap, never an edit across files.",
+            "Property: for every factor token the sentence names that factor in Spanish and carries no engine token, no English word, no em dash, no double hyphen.",
+            "Property: the sentence never contains braces, brackets or quotation marks, and never the words null, undefined or NaN."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "La página nombra el culpable publicado, nunca uno que deduzca ella sola",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Pure string composition behind the house never-format-inline discipline; the sentence reaches pixels in 01-05, which carries the charter and the U1 to U7 checks.",
+          "ui_checks": {},
+          "deps": ["01-01"],
+          "files_to_modify": [
+            "src/publish/display-format.ts",
+            "tests/unit/published-display-format.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): property-based with fast-check across all four tokens; the settled-wording example is a single-example anchor with a documented reason. WHY HERE: SpotDetail.astro's own header lines 8 to 12 state the house rule that size and window are always rendered through src/publish/display-format.ts and never formatted by hand, so every surface says the same thing about the same wave. The culprit sentence joins that discipline; the Reuse Analysis row for display-format already anticipates it. OPEN COPY ITEM (feature-delta Pre-requisite 3), do not close it: 'Lo que lo tumba' appears nowhere in the repo and the settled section 14 wireframe carries '← el punto débil'. No scenario pins the wording; the acceptance assertions require ONLY that the Spanish factor noun appears inside the callout (steps file FACTOR_WORD, fixture factor_words). Write the recommended sentence from Pre-requisite 3 minus the number, which belongs to slice-02: 'Lo que lo tumba: el viento.' with the article and noun coming from 01-01's vocabulary. HOLD IT IN ONE EXPORTED CONSTANT so Andres's settlement through the cousin's crew channel is a one-line swap; do not invent flowery product copy and do not add the sub-score, which is slice-02's promise. STRINGS BOUNDARY CONFLICT, FLAGGED NOT FIXED: the project rule and the feature plan both say UI strings land in src/i18n/strings.ts so F-READ-IT-IN-YOUR-LANGUAGE translates one surface later, and src/i18n/** is a FORBIDDEN WRITE LANE for this build. The same conflict was handled this way on the sibling lane (define once in the allowed lane, flag the consolidation). Record the move of this constant into strings.ts as a cross-lane follow-up owed to the i18n owner. ASSERTION TRAPS worth pinning as properties: the steps file rejects a double hyphen as well as an em dash (EM_DASH = /[—]|--/), rejects data punctuation /[{}\\[\\]\"]/, and its CODE_LEAK word list includes the bare English words the, today and tomorrow as well as the four engine tokens."
+        },
+        {
+          "id": "01-05",
+          "name": "Callout component renders per day section",
+          "criteria": [
+            "A new self-contained component renders one visible element carrying data-field weakest-link, holding the Spanish sentence for that spot and that day.",
+            "Each day section shows its own day's culprit; today's is never tomorrow's and tomorrow's is never today's on the same page.",
+            "The element is genuinely rendered, not merely emitted: text is readable through innerText, never only present in the markup.",
+            "All markup, logic and scoped styling live in the component; the spot page receives only the import and the mount."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "El surfista abre su playa y lee qué la tumbó hoy y qué la tumba mañana",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-see-what-killed-it/a-surfer-taps-a-spot-and-on-both-day-sections-sees-the-one-factor-that-ruined-it-named.md",
+          "u8_observation": "Abro mi playa en el teléfono y en la sección de hoy leo, en una frase tranquila y terminada, qué fue lo que la tumbó; en la sección de mañana leo la de mañana, y ninguna de las dos me repite la del otro día. No parece una anotación de programador: parece parte de la página.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-03", "01-04"],
+          "files_to_modify": [
+            "src/components/WeakestLink.astro"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: publish-time markup composition, single-shot by nature and not unit-testable without a component-container harness this lane will not introduce; compensated by the property-based tests on the vocabulary (01-01), the reader (01-03) and the formatter (01-04), and by ten browser scenarios over the emitted dist. MARKUP CONTRACT, fixed by DISTILL and non-negotiable: exactly ONE element per day section, located by section[data-day=\"today\"] [data-field=\"weakest-link\"] and its tomorrow twin, following the house data-field convention already used by score, size and window. Props are the spot id and the day index; the component asks 01-03 for the token and 01-04 for the sentence and does no lookup, no arithmetic and no derivation of its own. INNERTEXT IS LOAD-BEARING: every oracle reads innerText, never textContent, precisely so that markup which ships but never renders visibly reads as an empty box rather than as a pass. Do not render it hidden, zero-sized, clipped or behind display:none. This repo's worst shipped bug passed all ten CI jobs; that shape is closed here on purpose. ZERO NEW JAVASCRIPT: the element renders at publish time (adr-publish-time-html-rendering.md); the spot route's JS budget must not move. STYLING: scoped styles inside the component using named tokens only (09-design-system.md line 237). Do NOT edit src/styles/** - it is outside this lane's declared boundary; the bar recipe at src/styles/recipes.css belongs to slice-04 and is not needed for a sentence. THE MOUNT IS ANOTHER LANE'S FILE AND IS THREE LINES, NOT ONE. src/components/SpotDetail.astro is owned by the concurrent BUGFIX lane (worktree /Users/andres/psb-bugfix, branch build/f2-bugfix) and by keystone slice-06; it is a FORBIDDEN WRITE LANE here. Hand this exact delta to whoever lands it, as a serialized cross-lane edit: (a) frontmatter, new line after line 18 (the display-format import): import WeakestLink from './WeakestLink.astro'; (b) inside section[data-day=\"today\"], new line after line 72 (the today window paragraph), indented ten spaces: <WeakestLink spotId={spotId} day={0} /> (c) inside section[data-day=\"tomorrow\"], new line after line 86 (the tomorrow window paragraph), indented ten spaces: <WeakestLink spotId={spotId} day={1} /> Both mounts sit INSIDE the existing day-summary fragment, so a spot with no summary for that day keeps its current sentence and gains no callout. R4 DISCREPANCY, FLAGGED LOUDLY: R4 and the feature-delta say 'exactly one mount line', and the markup contract requires an element inside EACH day section while Astro requires an import, so the honest delta is three added lines. Nothing in the component moves that number to one. The RED classification already demoted R4's one-line half to a DELIVER code-review constraint because it is not observable through the built surface; this is the code-review fact it needs."
+        },
+        {
+          "id": "01-06",
+          "name": "Perfect day renders no callout element",
+          "criteria": [
+            "When the published culprit is explicitly null, neither day section renders any weakest-link element: none empty, none hidden, none at all.",
+            "The page shows no stray word and no code word where the culprit would go; score, size and window still render for both days.",
+            "A sibling beach published in the same morning still names its own culprit, so silence is that row's, never the whole render's.",
+            "The absence reads as a designed state at 390 px: no empty box, no dangling label, no artificial loading."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "Un día perfecto no tiene culpable, y la página no parece rota por eso",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-see-what-killed-it/a-surfer-taps-a-spot-and-on-both-day-sections-sees-the-one-factor-that-ruined-it-named.md",
+          "u8_observation": "Abro una playa que salió perfecta y sencillamente no hay frase de culpable, ni un recuadro vacío ni una palabra suelta donde iría; la página se ve completa, con su puntaje, su tamaño y su ventana, y la playa de al lado sigue diciendo el suyo.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-05"],
+          "files_to_modify": [
+            "src/components/WeakestLink.astro"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: one designed UI state; compensated by 01-03's property that a null field resolves to null. THE ORACLE COUNTS ELEMENTS, NOT TEXT: the step file asserts todayCount and tomorrowCount are both 0 for this beach, so rendering an empty element, or an element hidden by CSS, FAILS. The component must emit nothing at all for a null culprit. This is the settled degrade, not an invention: application-architecture.md section 7 line 294 and src/publish/region-bundle.ts line 52, 'never a fabricated culprit'. weakest_link is null exactly when every factor damage is 0 (05-scoring-engine.md section 4, law L10), which is a perfect day, not missing data. WHY THIS SCENARIO CANNOT PASS VACUOUSLY, and why that matters to the crafter: an absence assertion is trivially true against a page that renders nothing at all, so the scenario closes on a sibling beach from the same published morning that MUST name its culprit. A component that silently renders nothing everywhere fails on the sibling, not here. The fixture beach is playa-guanico with an explicit null on both days; the sibling is playa-venao. The same walk also asserts the rest of the day section survives, so the callout must be a sibling element in the section, never a wrapper around score, size or window. Also pinned: no null, undefined or NaN anywhere in the page body text."
+        },
+        {
+          "id": "01-07",
+          "name": "Absent field stays silent, page reads complete",
+          "criteria": [
+            "When the published row carries no culprit field at all, neither day section renders a weakest-link element and no raw error reaches the page.",
+            "The page is not blank and shows no TypeError, ReferenceError or server-error text; today's score still renders.",
+            "A missing field is treated as a normal page state, never as a render failure and never as a reason to invent a culprit.",
+            "A sibling beach published in the same morning still names its own culprit."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "Una playa cuya mañana se publicó sin ese dato calla en vez de inventar",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-see-what-killed-it/a-surfer-taps-a-spot-and-on-both-day-sections-sees-the-one-factor-that-ruined-it-named.md",
+          "u8_observation": "Abro una playa cuya mañana se publicó sin ese dato y la página simplemente no dice nada del culpable: se lee entera, con su puntaje, sin un error crudo ni un hueco en blanco, y la playa de al lado sí nombra el suyo.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-05"],
+          "files_to_modify": [
+            "src/components/WeakestLink.astro"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: a second designed UI state over a different input shape; compensated by 01-03's property that an absent field resolves to null. WHY THIS IS NOT A DUPLICATE OF 01-06: 01-06's beach publishes weakest_link: null explicitly; this beach (playa-reina) has the KEY DELETED from its rows entirely, which is what happens on a surface written before the field existed - the state the committed data/published-surface.json is in today, with zero occurrences of weakest_link. The optional field on SurfaceCall means TypeScript will not warn; the reader must answer null for a missing key exactly as for an explicit null, and the component must render nothing either way. The distinct oracle here is that the page reads COMPLETE: not blank, no raw error text, today's score non-empty. That closes the honest degrade of application-architecture.md section 7 line 295, and it is the same failure class as the 19-of-20 missing-optional-fields bug this repo already shipped green: the surface must degrade to silence, never to 'undefined'. Do not add a placeholder sentence, a dash, a skeleton or an aria-only label for the absent case; the settled degrade is nothing at all."
+        },
+        {
+          "id": "01-08",
+          "name": "Callout mounts on spot page only",
+          "criteria": [
+            "Today's ranked list renders zero weakest-link elements and its content is otherwise unchanged.",
+            "The same beach's own page names its culprit in the same visit, so the list's silence is scope, not a missing feature.",
+            "The component is referenced by the spot page only; no other route, layout or component imports it.",
+            "The ranked list source is not edited at all in this slice."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "El culpable aparece en la página de la playa y no cambia la lista de hoy",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-see-what-killed-it/a-surfer-taps-a-spot-and-on-both-day-sections-sees-the-one-factor-that-ruined-it-named.md",
+          "u8_observation": "Miro la lista de hoy y se ve exactamente como siempre, sin ninguna frase de culpable; entro a la playa y ahí sí me dice qué la tumbó. El aviso vive en la página de la playa y en ningún otro lado.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-05"],
+          "files_to_modify": [
+            "src/components/WeakestLink.astro"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: a scoping guard over built artifacts; the acceptance oracle counts elements on the emitted home document. THE OBSERVABLE HALF OF R4. The oracle counts [data-field=\"weakest-link\"] across the WHOLE home document and requires 0, then opens the spot page and requires the culprit. So the containment rule is: the component is mounted by the spot page and by nothing else. src/components/RankedList.astro is DO NOT TOUCH in the Reuse Analysis and is a FORBIDDEN WRITE LANE here; it is also owned right now by the concurrent BUGFIX lane. The settled section 14 home wireframe carries no weakest-link element, and adding one is a new DISCUSS decision, not scope creep. THE FALSIFIABILITY PASS BELONGS HERE (project rule: prove every negative falsifiable). This scenario's list half passes today against a page that renders nothing anywhere, so after 01-05 lands, deliberately mount the component into the list, watch this scenario fail for the right reason, revert, and verify the revert with git diff. Record the observation. Do not leave the experiment behind. NOTE FOR THE CODE REVIEW: the mount itself is the cross-lane SpotDetail.astro delta recorded in 01-05; this step verifies its containment, it does not perform it."
+        },
+        {
+          "id": "01-09",
+          "name": "Words carry the callout, never colour",
+          "criteria": [
+            "With every colour signal flattened to one ink on one paper, both day sections still name their factor in readable Spanish words.",
+            "The factor name lives in the element's own text, never in a swatch, an icon, a border tint or a background alone.",
+            "No colour, weight or position is the sole carrier of which factor is named.",
+            "The flattened reading is taken through innerText, so markup present but not rendered reads as empty and fails."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "Quien no distingue colores recibe la misma información",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-see-what-killed-it/a-surfer-taps-a-spot-and-on-both-day-sections-sees-the-one-factor-that-ruined-it-named.md",
+          "u8_observation": "Con la pantalla lavada, sin un solo color, sigo leyendo en palabras qué tumbó la playa hoy y qué la tumba mañana: la información no dependía del color, estaba escrita.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-05"],
+          "files_to_modify": [
+            "src/components/WeakestLink.astro",
+            "src/publish/display-format.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: an accessibility invariant asserted over the rendered surface; compensated by 01-04's property that every factor token composes to a sentence naming it in Spanish words. THE DESIGN LAW: 09-design-system.md line 237 - the weakest link is named by the arrow plus words, and colour never carries the callout alone. Slice-01 ships the WORDS half; the arrow and the bars are slice-04 and must not be pre-built here. WHAT THE HARNESS ACTUALLY DOES: it injects a stylesheet forcing every colour, background, border, fill, stroke and shadow to one ink on one paper, then re-reads the callout through innerText. After that only text survives, so a culprit conveyed by a coloured swatch, an icon, a border tint, or by markup that is present but never rendered, reads as empty and fails. Do not read this as a colour-blindness simulation; it is the honest way to assert the factor is named in words. PRACTICAL CONSEQUENCE for the component: the factor noun must sit in the element's own text node. An aria-label, a title attribute, a CSS ::before content string or a background image is NOT the words - innerText does not return them. This step touches display-format.ts only if 01-04's sentence needs the factor noun moved inside the visible text rather than an adjacent decorated element; if 01-04 already satisfies it, this step is the explicit verification pass and the formatter is left unchanged."
+        },
+        {
+          "id": "01-10",
+          "name": "Seven visual checks, both themes, real backdrop",
+          "criteria": [
+            "Both callout sentences clear 4.5:1 against the nearest non-transparent ancestor background, in light theme and in dark theme.",
+            "Type comes from the declared scale: at least 14 px with line height at least 1.2 times the size, surviving the longest Spanish spot name.",
+            "No horizontal overflow at 390 px; the report call to action still measures at least 44 by 44 px and is not displaced.",
+            "Under reduced motion the callout carries no transition and no animation; no artificial loading inside it; no raw colour in its style attribute.",
+            "The repository UI quality gate exits 0 for the built surface."
+          ],
+          "test_file": "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+          "scenario_name": "La frase se lee en el teléfono, en los dos temas, con el nombre de playa más largo",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-see-what-killed-it/a-surfer-taps-a-spot-and-on-both-day-sections-sees-the-one-factor-that-ruined-it-named.md",
+          "u8_observation": "En Santa Catalina - La Punta, a 390 px, la frase del culpable se lee cómoda en tema claro y en tema oscuro, sin que nada se salga de la pantalla ni se corte; con movimiento reducido nada se anima, y el botón de reportar sigue donde estaba y del mismo tamaño.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-see-what-killed-it and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-05", "01-06", "01-07", "01-08", "01-09"],
+          "files_to_modify": [
+            "src/components/WeakestLink.astro"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: measured UI quality over built artifacts; the browser oracle and the repository gate are the instruments. ONE SCENARIO OUTLINE, TWO EXAMPLE ROWS, BOTH OWNED BY THIS STEP: | claro | normal | and | oscuro | reducido |. Both must pass; the dark row also carries prefers-reduced-motion. CONTRAST IS MEASURED AGAINST THE REAL BACKDROP, not white: the audit walks up from the callout to the nearest ancestor whose computed background is not transparent, so a token that only clears AA on paper will fail on a card. Both themes, so pick tokens that hold in both. THE COUNT GUARD FIRES FIRST: the audit compares the number of callout elements found against the number the published plan expects (two for this beach, which publishes size today and wind tomorrow), and reports 'nothing to measure' before any contrast maths runs - so a missing render can never read as 'AA is fine'. U3 has TWO halves: any interactive element the callout adds must measure 44 px, and the existing thumb-zone report call to action (a.cta) must still measure 44 by 44 and not be displaced or occluded. THE SIMPLEST WAY TO HOLD BOTH: ship no interactive element inside the callout at all - slice-01 promises a sentence, not a control, and the 'por qué' reason tap is explicitly F-KNOW-HOW-MUCH-TO-TRUST-IT's. U7 forbids raw colour in the element's own style attribute, and the repository gate scripts/check-ui-quality.mjs owns the no-raw-hex-outside-src/styles rule and must exit 0 for the built surface; scripts/** is a FORBIDDEN WRITE LANE, so the gate is run, never edited. U2 uses the longest Spanish spot name, Santa Catalina - La Punta: let the sentence wrap rather than forcing it onto one line. GATE DISCIPLINE, this repo has committed over a red gate through a pipeline before: run npm run test:at -- --tags \"@feature-f-see-what-killed-it and @slice-01\" with output redirected to a file, capture $? on its own line, then read the file; never pipe a gate into tail, head or grep. Expect 11 scenarios, 0 failed, real exit 0 - except that scenario 5 stays red until the serialized cross-lane build.ts line lands (see 01-02), which is a BLOCK to report, not a reason to edit a forbidden file. Then run npm run test:at -- --tags \"not @feature-f-see-what-killed-it\" and confirm the other 78 scenarios still pass. AFTER GREEN: npm run build and INSPECT what actually renders in dist (project rule: green tests do not mean it works; the conf_level bug shipped green on all ten jobs). COMMIT IS BLOCKED until the slice charter exists - see the charter gap recorded in this roadmap - because the source-blind examiner is dispatched with the charter and its U8 observation and nothing else."
+        }
+      ]
+    }
+  ],
+  "implementation_scope": {
+    "source_directories": [
+      "src/publish/",
+      "src/components/"
+    ],
+    "test_directories": [
+      "tests/unit/"
+    ],
+    "excluded_patterns": [
+      "src/pipeline/**",
+      "src/components/RankedList.astro",
+      "src/components/SpotDetail.astro",
+      "src/data/**",
+      "src/i18n/**",
+      "src/share/**",
+      "src/report/**",
+      "src/pages/**",
+      "src/layouts/**",
+      "src/styles/**",
+      "infra/**",
+      "public/**",
+      "scripts/**",
+      "package.json",
+      "package-lock.json",
+      "tests/acceptance/**",
+      "docs/feature/*/",
+      "docs/epic/**"
+    ]
+  },
+  "cross_lane_dependencies": [
+    {
+      "id": "X1",
+      "what": "src/pipeline/build.ts surfaceCall() must carry weakest_link onto the reading surface",
+      "exact_change": "one line, 'weakest_link: call.weakest_link,', inserted in the object returned by surfaceCall() immediately after 'best_window: call.best_window,' (build.ts line 264)",
+      "why_not_here": "src/pipeline/build.ts is a forbidden write lane for this build and is owned by the keystone/producer lane (feature-delta Pre-requisite 1). publish_surface is constructed inline at build.ts lines 141-151 and written straight to the store at line 153, so no module under src/publish/** can reach it.",
+      "blocks": ["01-02"],
+      "blocks_scenario": "El punto débil llega a la superficie que leen las páginas, no solo al recibo",
+      "owner": "keystone / producer lane",
+      "serialized": true
+    },
+    {
+      "id": "X2",
+      "what": "src/components/SpotDetail.astro mount of the callout component",
+      "exact_change": "three added lines: 'import WeakestLink from './WeakestLink.astro';' after line 18; '<WeakestLink spotId={spotId} day={0} />' after line 72 inside section[data-day=\"today\"]; '<WeakestLink spotId={spotId} day={1} />' after line 86 inside section[data-day=\"tomorrow\"]; both mounts indented ten spaces, inside the existing day-summary fragment",
+      "why_not_here": "SpotDetail.astro is a forbidden write lane and is contended right now by the BUGFIX lane (branch build/f2-bugfix, worktree /Users/andres/psb-bugfix) and by keystone slice-06.",
+      "blocks": ["01-05", "01-06", "01-07", "01-08", "01-09", "01-10"],
+      "blocks_scenario": "every browser scenario of slice-01",
+      "owner": "integration coordinator / BUGFIX lane",
+      "serialized": true,
+      "flag": "R4 says 'exactly one mount line'. The markup contract requires an element inside EACH day section and Astro requires an import, so the honest delta is three lines. The RED classification already demoted R4's one-line half to a DELIVER code-review constraint because it is not observable through the built surface."
+    },
+    {
+      "id": "X3",
+      "what": "Shared Spanish factor-name vocabulary module owed to src/data/**",
+      "exact_change": "git mv src/publish/factor-vocab.ts to src/data/factor-vocab.ts and update the import in src/publish/display-format.ts; the module is authored with zero imports precisely so this is a move plus one import path, nothing else",
+      "why_not_here": "src/data/** is a forbidden write lane. R28 requires one shared module, seamed with F-KNOW-HOW-MUCH-TO-TRUST-IT whose confidence_reason copy names the same four factors. src/data/report-vocab.ts carries wind states and quality tokens only.",
+      "blocks": [],
+      "blocks_scenario": "none; slice-01 ships correct Spanish from the interim home",
+      "owner": "src/data owner, jointly with F-KNOW-HOW-MUCH-TO-TRUST-IT",
+      "serialized": false
+    },
+    {
+      "id": "X4",
+      "what": "Callout copy consolidated into src/i18n/strings.ts",
+      "exact_change": "move the one exported sentence constant from src/publish/display-format.ts into strings.ts so F-READ-IT-IN-YOUR-LANGUAGE translates one surface later",
+      "why_not_here": "src/i18n/** is a forbidden write lane. The constant is held as a single exported value so both the copy settlement (Pre-requisite 3) and this move are one-line changes.",
+      "blocks": [],
+      "blocks_scenario": "none; no scenario pins the wording",
+      "owner": "i18n owner",
+      "serialized": false
+    },
+    {
+      "id": "X5",
+      "what": "Populated-per-build guard for weakest_link on the committed surface (R3 second half)",
+      "exact_change": "extend tests/unit/published-surface-fields.test.ts to require weakest_link on every committed row, IN THE SAME CHANGE as X1 and a real build that repopulates data/published-surface.json",
+      "why_not_here": "the guard reads the committed file on purpose; the committed file carries zero occurrences today, so planting the guard now turns the unit suite red on trunk for every other lane. The requirement checklist already records this half as owed alongside the Pre-requisite 4 schema work.",
+      "blocks": [],
+      "blocks_scenario": "none; R3's fixture-planted half is covered by scenarios 5 and 6",
+      "owner": "producer lane, together with X1",
+      "serialized": true
+    },
+    {
+      "id": "X6",
+      "what": "Slice-01 expectation charter",
+      "exact_change": "create docs/product/expectations/f-see-what-killed-it/a-surfer-taps-a-spot-and-on-both-day-sections-sees-the-one-factor-that-ruined-it-named.md carrying the U8 observation pre-named in the feature-delta slice classification table",
+      "why_not_here": "this DELIVER phase's single deliverable is roadmap.json; the charter is feature-delta Pre-requisite 9, owed by the slice DISTILL owner. Verified absent: docs/product/expectations/f-see-what-killed-it/ does not exist.",
+      "blocks": ["01-10"],
+      "blocks_scenario": "none directly; it blocks the source-blind examination and therefore COMMIT",
+      "owner": "slice DISTILL owner",
+      "serialized": true
+    }
+  ],
+  "validation": {
+    "status": "pending",
+    "reviewer": "orchestrator quality gate (des-verify-integrity --roadmap-only)",
+    "approved_at": ""
+  }
+}
