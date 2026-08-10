@@ -67,16 +67,7 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
   <h1>{t.home.header}</h1>
   <p><time datetime={forecast.published_at}>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</time></p>
   <p data-stale-notice hidden style="color:var(--warn);font-size:var(--text-meta);font-weight:600"></p>
-  <script is:inline>
-    const stamp = document.querySelector('time[datetime]');
-    const notice = document.querySelector('[data-stale-notice]');
-    if (stamp && notice && Date.now() - Date.parse(stamp.dateTime) > 10800000) {
-      const seen = new Date(stamp.dateTime);
-      const hour = (seen.getUTCHours() + 19) % 24;
-      notice.hidden = false;
-      notice.textContent = `Viejo. Lo último que vimos fue a las ${hour % 12 || 12}:${String(seen.getUTCMinutes()).padStart(2, '0')} ${hour < 12 ? 'a.m.' : 'p.m.'} No pudimos sacar datos nuevos esta mañana.`;
-    }
-  </script>
+  <script is:inline>const t=document.querySelector('time[datetime]'),n=document.querySelector('[data-stale-notice]');if(t&&n&&Date.now()-Date.parse(t.dateTime)>108e5){const d=new Date(t.dateTime),h=(d.getUTCHours()+19)%24;n.hidden=!1;n.textContent=`Viejo. Lo último que vimos fue a las ${h%12||12}:${String(d.getUTCMinutes()).padStart(2,'0')} ${h<12?'a.m.':'p.m.'} No pudimos sacar datos nuevos esta mañana.`}</script>
   <nav>
     <a href={paths.home(locale)} aria-current={day === 0 ? 'page' : undefined}>
       {t.home.tabToday}
