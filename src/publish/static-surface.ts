@@ -1,5 +1,6 @@
 import type { WindStateToken } from '../data/report-vocab';
 import type { SizeBandToken } from '../data/size-bands';
+import type { ConfidenceResult } from '../scoring/confidence';
 import type { FactorToken } from './factor-vocab';
 
 /** Spot-local `HH:MM` strings, precomputed at publish time; pages never compute them. */
@@ -27,6 +28,24 @@ export type WindState = WindStateToken;
  */
 export type ConfLevel = 'low' | 'medium' | 'high';
 
+/**
+ * The reason terms behind `conf_level`, not a pre-rendered sentence: the
+ * Spanish is composed at render time from `src/scoring/confidence.ts`, so
+ * wording changes never require a republish and the 160-character bound
+ * (`application-architecture.md` section 7 P1) is enforced where the
+ * sentence is actually made (`adr-enriched-fields-reach-the-reading-
+ * surface.md`). Derived from `ConfidenceResult`, the one place that shape is
+ * computed, so this type cannot drift from what the scoring engine produces.
+ */
+export type ConfidenceReason = Pick<ConfidenceResult, 'dominant' | 'spread_terms' | 'track_state'>;
+
+/** Day-independent spot identity carried on the surface itself, mirroring
+ * `region-bundle.ts`'s `BundleSpotDetail` so a page never has to read the
+ * bundle for it -- the bundle is written to S3 and never committed. */
+export type SurfaceSpotDetail = {
+  readonly name: string;
+};
+
 export type SurfaceCall = {
   readonly spot_id: string;
   readonly score_q: number;
@@ -47,11 +66,21 @@ export type SurfaceCall = {
    * A MISSING key and an explicit `null` are different facts and this type
    * must not collapse them: missing means an older surface published before
    * this field existed; `null` means the pipeline computed a perfect day, no
-   * factor cost it any score. Population happens once, in `surfaceCall()`
-   * (src/pipeline/build.ts) -- this step only widens the wire type so that
-   * one-line addition typechecks.
+   * factor cost it any score. No renderer may collapse the two. Population
+   * happens once, in `surfaceCall()` (src/pipeline/build.ts).
+   *
+   * Typed as `FactorToken`, the publish-side vocabulary, not the scoring
+   * engine's `Factor`. Two lanes reached this field from opposite ends and
+   * disagreed here. `FactorToken` wins because this is a wire type: the
+   * reading surface has no business importing the engine's internal union,
+   * and factor-vocab.ts already carries the guard asserting the two sets are
+   * equal at the publish boundary. If they ever diverge that guard fails,
+   * which is exactly where the failure belongs.
    */
   readonly weakest_link?: FactorToken | null;
+  /** Same backward-compatibility reason as `weakest_link`: every freshly
+   * built call sets this key, older committed surfaces may not have it. */
+  readonly confidence_reason?: ConfidenceReason;
 };
 
 export type PublishedSurfaceDay = {
@@ -73,6 +102,14 @@ export type PublishedSurfaceUpdate = {
   readonly calls: readonly SurfaceCall[];
   /** Today and tomorrow, never a copied single-day ranking. */
   readonly days: readonly [PublishedSurfaceDay, PublishedSurfaceDay];
+  /**
+   * Day-independent identity, unordered on purpose so it cannot encode a
+   * third ranking that disagrees with either day array -- the same reasoning
+   * as `region-bundle.ts`'s `spot_detail`, preserved rather than restated.
+   * Optional for the same backward-compatibility reason as the per-call
+   * enriched fields.
+   */
+  readonly spot_detail?: Readonly<Record<string, SurfaceSpotDetail>>;
 };
 
 export type DawnReceipt = {
