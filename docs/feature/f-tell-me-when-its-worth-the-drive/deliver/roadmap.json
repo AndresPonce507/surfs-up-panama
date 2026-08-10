@@ -533,8 +533,8 @@
           "scenario_name": "Al volver, el estado de avisos sale de la suscripción real del navegador",
           "slice_id": "slice-01",
           "surface_classification": "user-visible",
-          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/a-surfer-opens-playa-venao-taps-avisos-de-este-spot-grants-permission-and-sees-listo-only-after.md",
-          "u8_observation": "Vuelvo a abrir la página de Playa Venao después de una visita anterior: aunque el teléfono se acuerde de algo, la página no dice que tengo avisos activos, porque de verdad no los tengo.",
+          "charter_path": "../../../product/expectations/f-tell-me-when-its-worth-the-drive/a-surfer-opens-playa-venao-taps-avisos-de-este-spot-grants-permission-and-sees-listo-only-after.md",
+          "u8_observation": "Vuelvo a abrir la página de Playa Venao después de una visita anterior: aunque el teléfono se\n  acuerde de algo, la página no dice que tengo avisos activos, porque de verdad no los tengo.",
           "non_visual_rationale": "",
           "ui_checks": {
             "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-01 and @ui-u1"],
