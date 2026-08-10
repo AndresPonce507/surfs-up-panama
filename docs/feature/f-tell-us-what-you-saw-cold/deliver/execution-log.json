@@ -379,6 +379,41 @@
       "s": "SKIPPED",
       "d": "CHECKPOINT_PENDING: surface_classification is user-visible, charter shared with 01-03/01-04/01-05 (docs/product/expectations/f-tell-us-what-you-saw-cold/a-surfer-walking-off-playa-venao-...md); no fresh U1-U7 plus source-blind examine sealed to it yet, so the tool's own COMMIT gate refuses (des-log-phase verified this by refusing EXECUTED PASS: no PASS evidence for all U1-U7, no current Vera verdict). No production UI changed in this step regardless: ReportCapture.astro was poisoned then reverted, git diff empty, byte-identical. Committing the world.ts fixture fix and this step's log/proof as the durable record; nothing user-visible is at risk of shipping unexamined.",
       "t": "2026-08-10T19:18:21Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: read project truth, step contract, active AT, report source, and existing evidence; classified non-visual.",
+      "t": "2026-08-10T20:09:29Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: active pre-authored byte-ceiling scenario passed, 1 scenario and 13 steps; it is a regression guard already satisfied by the shipped island.",
+      "t": "2026-08-10T20:09:32Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: the active acceptance guard already passed and this measured NFR needs no new unit decomposition.",
+      "t": "2026-08-10T20:09:34Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: reportar max document 3203 B gz, reportado max 2807 B gz, full reportar module graph 3739 B gz; no runtime npm imports; build/page-weight, focused/full tests, typecheck and fast local gate green; UI N/A per roadmap.",
+      "t": "2026-08-10T20:09:37Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: non-visual gate satisfied; no source change because measured artifact stays inside every ceiling. Commit records exact evidence only.",
+      "t": "2026-08-10T20:09:51Z"
     }
   ]
 }
