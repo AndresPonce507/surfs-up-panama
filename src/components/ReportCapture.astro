@@ -44,7 +44,6 @@ if (spot === undefined) {
   locale={locale}
   title={t.report.title(spot.name)}
   currentPath={paths.report(locale, spotId)}
-  altPath={paths.report(locale === 'es' ? 'en' : 'es', spotId)}
 >
   <h1 data-report-heading>{t.report.title(spot.name)}</h1>
   <div data-storage-notice hidden></div>
