@@ -94,9 +94,8 @@ function coordinateText(value: number): string {
 /**
  * Decodes the real NOAA gfswave grib_filter response used by the independent
  * source. One response carries HTSGW, PERPW and DIRPW as separate GRIB2
- * messages. A first unmasked value from each matching message becomes one
- * normalized wave hour; the source request already limits its bbox to the
- * supported coast.
+ * messages. The requested Section 3 grid cell from each matching message
+ * becomes one normalized wave hour; its bitmap yields the land-mask decision.
  */
 export function parseGfswaveGrib2(bytes: Uint8Array, target?: GridPoint): MemberSeries[] {
   const fields = readGribMessages(bytes)
