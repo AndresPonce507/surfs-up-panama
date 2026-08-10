@@ -17,6 +17,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
   RULE_ONLY_THE_GATE_MAY_MARK_APPLIED,
+  RULE_WIND_RESIDUAL_NEEDS_ITS_OWN_FLOOR,
   evaluateLearningDeclarations,
 } from '../../src/learning/declarations';
 
@@ -168,5 +169,62 @@ describe('evaluateLearningDeclarations', () => {
     });
 
     await expect(evaluateLearningDeclarations({ root })).resolves.toBeDefined();
+  });
+
+  it('flags a declared r_wind residual with no wind noise floor at all as a violation (falsifiable: plant it, catch it)', async () => {
+    await writeUniverse({
+      'learning-source.ts': [
+        "export const RESIDUAL_FORMS = ['r_height', 'r_wind'] as const;",
+        '',
+        'export const SIGMA_EFF: Record<string, { value: number; derived_from: string }> = {',
+        "  height: { value: 0.48, derived_from: 'height-error-decomposition' },",
+        '};',
+      ].join('\n'),
+    });
+
+    const report = await evaluateLearningDeclarations({ root });
+
+    expect(report.violations).toContainEqual({
+      rule: RULE_WIND_RESIDUAL_NEEDS_ITS_OWN_FLOOR,
+      detail: expect.any(String),
+    });
+  });
+
+  it('does not violate the wind floor rule when the wind floor is derived from the wind label\'s own confusion structure', async () => {
+    await writeUniverse({
+      'learning-source.ts': [
+        "export const RESIDUAL_FORMS = ['r_height', 'r_wind'] as const;",
+        '',
+        'export const SIGMA_EFF: Record<string, { value: number; derived_from: string }> = {',
+        "  height: { value: 0.48, derived_from: 'height-error-decomposition' },",
+        "  wind: { value: 0.31, derived_from: 'wind-label-confusion-structure' },",
+        '};',
+      ].join('\n'),
+    });
+
+    const report = await evaluateLearningDeclarations({ root });
+
+    expect(report.violations.filter((violation) => violation.rule === RULE_WIND_RESIDUAL_NEEDS_ITS_OWN_FLOOR)).toEqual(
+      [],
+    );
+  });
+
+  it('flags a wind floor whose derivation still names height as a violation, even when it also names wind (falsifiable: plant it, catch it)', async () => {
+    await writeUniverse({
+      'learning-source.ts': [
+        "export const RESIDUAL_FORMS = ['r_wind'] as const;",
+        '',
+        'export const SIGMA_EFF: Record<string, { value: number; derived_from: string }> = {',
+        "  wind: { value: 0.48, derived_from: 'wind-floor-borrowed-from-height-metres' },",
+        '};',
+      ].join('\n'),
+    });
+
+    const report = await evaluateLearningDeclarations({ root });
+
+    expect(report.violations).toContainEqual({
+      rule: RULE_WIND_RESIDUAL_NEEDS_ITS_OWN_FLOOR,
+      detail: expect.any(String),
+    });
   });
 });

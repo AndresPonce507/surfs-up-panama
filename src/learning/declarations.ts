@@ -1,9 +1,8 @@
 // A whole-source examination for safety rules that are claims about the
-// entire shipped tree, not about one execution: today, that only the gate
-// may ever mark a correction applied (06-learning-layer.md section 7). Later
-// rules (a wind residual must bring its own noise floor, section 8) read the
-// same inventory this module already collects; this module does not yet
-// enforce that second rule.
+// entire shipped tree, not about one execution: only the gate may ever mark
+// a correction applied (06-learning-layer.md section 7), and a wind residual
+// may never ship without its own noise floor (section 8). Both rules read
+// the same inventory this module collects.
 //
 // The universe under examination is read as TEXT and scanned as SYNTAX ONLY.
 // Nothing here ever imports, requires, or executes a file it examines: it
@@ -35,11 +34,27 @@ import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/** The one rule this examination can report a violation for today. */
+/** Only the gate may ever construct the applied state (06-learning-layer.md section 7). */
 export const RULE_ONLY_THE_GATE_MAY_MARK_APPLIED = 'only-the-gate-may-mark-a-correction-applied';
+
+/**
+ * A declared r_wind residual form must bring its own noise floor, derived
+ * from the wind label's own confusion structure rather than borrowed from
+ * height (06-learning-layer.md section 8). Naming the token `r_wind` here,
+ * in the examiner's own source, is not "creating r_wind in shipped source":
+ * it is the same data-and-documentation use the module header already makes
+ * for `RESIDUAL_FORMS` and the token `'applied'`, and SELF_PATH excludes
+ * this file from every walk for exactly that reason.
+ */
+export const RULE_WIND_RESIDUAL_NEEDS_ITS_OWN_FLOOR = 'a-wind-residual-must-bring-its-own-noise-floor';
 
 /** A module allowed to construct the applied state: any file whose basename starts with this. */
 const GATE_MODULE_PREFIX = 'gates';
+
+/** The residual form whose noise floor this rule requires. */
+const WIND_RESIDUAL_FORM = 'r_wind';
+/** The key under SIGMA_EFF a wind noise floor must be declared at. */
+const WIND_FLOOR_KEY = 'wind';
 
 const SOURCE_EXTENSIONS = new Set(['.ts', '.tsx']);
 const EXCLUDED_DIRECTORIES = new Set(['node_modules', '.git', 'dist', '.astro']);
@@ -83,11 +98,16 @@ export async function evaluateLearningDeclarations(input: { root: string }): Pro
     appliedMarkingSites.push(...declared.appliedMarkingSites);
   }
 
+  const dedupedResidualForms = dedupe(residualForms);
+
   return {
-    residual_forms: dedupe(residualForms),
+    residual_forms: dedupedResidualForms,
     noise_floors: noiseFloors,
     applied_marking_sites: appliedMarkingSites,
-    violations: onlyTheGateMayMarkAppliedViolations(appliedMarkingSites),
+    violations: [
+      ...onlyTheGateMayMarkAppliedViolations(appliedMarkingSites),
+      ...windResidualNeedsItsOwnFloorViolations(dedupedResidualForms, noiseFloors),
+    ],
   };
 }
 
@@ -121,6 +141,40 @@ function onlyTheGateMayMarkAppliedViolations(sites: readonly string[]): Learning
       rule: RULE_ONLY_THE_GATE_MAY_MARK_APPLIED,
       detail: `${site} can mark a correction applied without the gate having weighed the evidence`,
     }));
+}
+
+// ---------- the rule (01-04 criteria 1-3) ----------
+
+/**
+ * A declared r_wind residual makes a numeric claim, and a numeric claim with
+ * no noise floor would let its significance gate rest on the sample's own
+ * agreement alone -- the coordinated-lying vulnerability the floor exists to
+ * close. A floor is only a floor if it is derived from wind's own confusion
+ * structure: one borrowed from height is the wrong shape for a three-word
+ * categorical label and does not satisfy the rule (criterion 3).
+ */
+function windResidualNeedsItsOwnFloorViolations(
+  residualForms: readonly string[],
+  noiseFloors: Record<string, NoiseFloor>,
+): LearningDeclarationsViolation[] {
+  if (!residualForms.includes(WIND_RESIDUAL_FORM)) return [];
+
+  const windFloor = noiseFloors[WIND_FLOOR_KEY];
+  if (windFloor !== undefined && derivedFromNamesTheWindLabelsOwnConfusionStructure(windFloor.derived_from)) {
+    return [];
+  }
+
+  const detail =
+    windFloor === undefined
+      ? `${WIND_RESIDUAL_FORM} is declared with no ${WIND_FLOOR_KEY} entry in SIGMA_EFF at all, so its significance gate would rest on the sample's agreement alone`
+      : `the ${WIND_FLOOR_KEY} noise floor's derived_from ("${windFloor.derived_from}") does not name the wind label's own confusion structure`;
+
+  return [{ rule: RULE_WIND_RESIDUAL_NEEDS_ITS_OWN_FLOOR, detail }];
+}
+
+/** Must name wind's own confusion structure; a derivation still naming height is borrowed, not earned. */
+function derivedFromNamesTheWindLabelsOwnConfusionStructure(derivedFrom: string): boolean {
+  return /wind/i.test(derivedFrom) && !/height/i.test(derivedFrom);
 }
 
 // ---------- per-file syntax scan ----------
