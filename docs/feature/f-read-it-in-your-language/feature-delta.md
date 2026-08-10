@@ -199,3 +199,51 @@ table; READ-08 empties it. "en settled" means a verbatim English string exists i
 | Day-one empty state / counter | F-SHOW | en settled §10; scorecard headline copy not yet written in either language |
 | Weakest-link and damages phrasing | F-SEE | not yet written in either language |
 | Push copy | F-TELL-ME | not yet written in either language |
+
+## Wave: DISTILL / [REF] Scenario inventory
+
+DISTILL opened 2026-08-10. The `.feature` files under
+`tests/acceptance/f-read-it-in-your-language/` are the scenario SSOT; this table is a pointer.
+38 scenarios, 17 tagged `@negative`/`@error` (45%). Every scenario carries file-level
+`@feature-f-read-it-in-your-language` plus BOTH `@READ-NN` (the plan's ids, dispatch hard rule)
+and `@slice-NN` (the mechanical id `cucumber.mjs` and the carpaccio gate document), plus
+`@covers-Rn` against `distill/requirement-checklist.md`. Steps live in
+`tests/acceptance/f-read-it-in-your-language/steps/read-your-language.steps.ts`: READ-01 steps
+are real drivers over the emitted tree, observed RED (11 assertion-class failures, 0 broken) at
+DISTILL open; every later slice's steps are `pending` scaffolds unskipped at that slice's
+DELIVER entry (`distill/red-classification.md` carries the observed run and the unskip
+contract).
+
+| File | Slice | Scenarios | Notes |
+|---|---|---|---|
+| `english-tree-and-toggle.feature` | READ-01 | 9 (1 `@walking_skeleton`) | Toggle, twin landing, link discipline, alternates, no locale machinery, no half-translation, byte ceilings; U3 toggle-target scenario pending browser measurement |
+| `translation-coverage-gate.feature` | READ-02 | 6 | Three detectors seeded red against contained fixtures, false-positive guard, ratchet shrink/growth |
+| `no-hidden-copy-gate.feature` | READ-03 | 4 | Inline-literal refusal by file and line, registered copy homes, non-copy false-positive guard, written-reason debt |
+| `route-map-conformance.feature` | READ-04 | 4 | Dead builder, twinless page, bidirectional twinship, yesterday builder through the route map (real driver, RED today) |
+| `english-spot-and-yesterday.feature` | READ-05 | 5 | Spot page in English, format law, English absences, honest yesterday (invariant valid under both Pre-requisite 3 options) |
+| `english-share-card.feature` | READ-06 | 2 | Settled §10 English template + locale declaration; RED-for-right-reason only after f-paste 01-04 land |
+| `english-report-flow.feature` | READ-07 | 4 | Real CTA, settled English questions, locale-blind wire (byte-identical records, canonical tokens), flow states after f-tell-us lands |
+| `one-language-pass-complete.feature` | READ-08 | 4 | Ratchets to absolute, total twinship, the epic sentence end to end, nothing reworded |
+
+## Wave: DISTILL / [REF] Port treatment and test placement
+
+Per the Architecture of Reference: the driving surface is the BUILT PAGE (the emitted `dist/`
+tree, the visitor's real reading surface) for user-visible slices, and the check run against a
+contained seeded fixture (the f-bill shape) for the three non-visual gate slices. Driven-external
+fakes: none needed at this feature's acceptance layer (no clock, no network in scope; the wire
+byte-comparison in READ-07 drives the report island's committed record seam). Test placement:
+`tests/acceptance/f-read-it-in-your-language/` matching both siblings. The
+`docs/architecture/atdd-infrastructure-policy.md` row for the built-tree driving port is appended
+in this same commit; the three gate mechanisms add their rows at their own DELIVER entry, because
+choosing them now would pre-empt the crafter's seam design on a contended file.
+
+## Wave: DISTILL / [REF] Pre-requisites the scenarios lean on
+
+| # | Dependency | Effect on scenarios |
+|---|---|---|
+| 1 | Pre-requisite 1 (English copy sign-off, toggle labels included) | No unsettled string is pinned anywhere; unsettled copy asserted by property (present, English, never bracketed, never Spanish). Settled §10 verbatim strings are pinned |
+| 2 | Pre-requisite 2 (English call-line source) | READ-01/05 assert the visible property only; the builder-vs-client answer changes step wiring at DELIVER, never the `.feature` text |
+| 3 | Pre-requisite 3 (English yesterday for Spanish receipts) | READ-05's honesty scenario asserts the invariant both options satisfy; the chosen frame copy lands via Pre-requisite 1 |
+| 4 | f-paste slices 01-04, f-tell-us slices 01, 03-05 | READ-06/07 flow-state scenarios stay pending until the producing lanes land; authored now so the contract is on disk |
+| 5 | Pre-requisite 5 contended seams | READ-02/03/04 add local-CI jobs serially; `Base.astro` head coordinates with f-paste slice-03 |
+| 6 | Pre-requisite 6 (settle, coordinator-declared) | READ-08 scenarios unskip only at settle |

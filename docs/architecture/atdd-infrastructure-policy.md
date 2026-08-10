@@ -8,6 +8,7 @@ treatment for its port class.
 
 | Port | Mechanism | Note |
 |---|---|---|
+| Built public tree (visitor reading surface) | Real `npm run build` output: acceptance steps read the emitted `dist/` documents (pages, anchors, language declarations, alternates); browser-measured observables (target sizes, viewport, contrast) ride `npm run test:ui` / Playwright | Added at f-read-it-in-your-language DISTILL (2026-08-10). Same surface the keystone's page-weight and reading scenarios drive. The three i18n check mechanisms (READ-02/03/04) add their own rows at their DELIVER entry. |
 | Local CI protection command | Production-owned in-process `runLocalCi({ argv, repoRoot, output, commandRunner, environment, declarationInput })` export from `scripts/ci-local.mjs`, with a captured output port | Slice-02 drives the stable CI command semantics without a test-owned wrapper, fork, or `commandRunner`. The stable public command remains `scripts/ci-local.mjs` and delegates to this entry. `environment` is an explicit read-only input. `declarationInput: { root, mode: 'declaration-only' }` selects the same production evaluator without asking the supplied root to be a package or CDK app. |
 
 ## Driven internal (real)
