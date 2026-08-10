@@ -33,6 +33,10 @@ Back from the confirmation, reopen the report screen, reload mid-flow, kill the 
 Mandar. Nothing you do should ever surface a forecast before a label is saved, and nothing should
 ever return you to an editable form for a report already saved.
 
+## U8 restraint observation (verbatim from the roadmap quality contract, step 01-03)
+
+En la pantalla del reporte de Playa Venao respondo las tres preguntas con una mano, toco Mandar y la pantalla cambia a la confirmación guardada: sin puntaje, sin pronóstico, sin camino de vuelta al formulario. Se ve terminada a 390 px en tema claro y oscuro, y con movimiento reducido activado nada se anima.
+
 ## Expected observations (oracle)
 - La pantalla uno muestra exactamente tres preguntas en español de a pie: ¿Qué tan grande? con
   siete opciones de Plano a Doble o más, ¿El viento? con Limpio, Picado y Destrozado, y ¿Cómo
@@ -71,3 +75,4 @@ anywhere, that is a leak, not progress.
 ## Session log (append-only)
 | date | examiner | verdict | observations |
 |------|----------|---------|--------------|
+| 2026-08-10 | Vera (nw-user-examiner) | FAIL | At 390px, light/dark/reduced-motion all rendered clean: three questions, no forecast leak, storage-fail message before Mandar enables, offline flow identical, 48px targets, no horizontal scroll. Submit stores durably (IndexedDB `entries` row confirmed: waist_chest/clean/good) then navigates to `/spots/playa-venao/reportado/` showing "Guardado. Cuando vuelva la señal lo mandamos y te decimos cómo nos fue." verbatim. BUT: reloading that confirmation address (explicitly instructed check) renders a near-blank page - no heading, no "Guardado" text, no error, only a "Playa Venao" link - reproducible on reload and on a fresh direct navigation to the same URL. Root cause visible from the public surface: `curl` of `/spots/playa-venao/reportado/` shows zero `<script>` tags in the served document, so the confirmation only ever renders when arrived at via the in-app transition; any cold load of the URL the product itself navigated to is permanently blank. Breaks "la confirmación se lee tranquila" / "se ve terminada" for any user whose reload, tab restore, or share of that link lands cold. |
