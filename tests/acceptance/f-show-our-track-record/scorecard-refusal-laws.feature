@@ -33,7 +33,7 @@ Feature: La aritmética del historial existe como leyes que se niegan a publicar
     Then la variable de viento se rechaza en voz alta, nombrándola
     And ningún residuo de viento aparece en ninguna cuenta
 
-  @slice-02 @pending @driving_port @in-memory @property @covers-R15
+  @slice-02 @driving_port @in-memory @property @covers-R15
   Scenario: El orden en que lleguen los reportes jamás cambia la cuenta
     Given cualquier conjunto de reportes de prueba emparejables
     When la proyección procesa el conjunto en dos órdenes distintos

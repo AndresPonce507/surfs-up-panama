@@ -285,6 +285,28 @@ function canonicalCounts(result: AnyRec): string {
   return JSON.stringify(rows);
 }
 
+function canonicalDailyCounts(result: AnyRec): string {
+  const rows = result['daily'];
+  assert.ok(Array.isArray(rows), 'the projection outcome exposes no daily aggregates at its port');
+  assert.ok(rows.length > 0, 'pairable reports produced no daily aggregate at the projection port');
+  return JSON.stringify(
+    (rows as AnyRec[])
+      .map((row) => ({
+        spot: String(row['spot_id']),
+        source: String(row['source']),
+        lead: String(row['lead_bucket']),
+        variable: String(row['variable']),
+        day: String(row['day']),
+        n: Number(row['n']),
+        sumErr: Number(row['sum_err']),
+        sumAbsErr: Number(row['sum_abs_err']),
+        sumSqErr: Number(row['sum_sq_err']),
+        devices: [...(row['device_ids'] as string[])].sort(),
+      }))
+      .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))),
+  );
+}
+
 // ---------------------------------------------------------------- Given
 
 Given('un registro de pronósticos y reportes de prueba con horas y playas variadas', function () {
@@ -648,8 +670,8 @@ Then('las cuentas diarias y las ventanas quedan idénticas en ambos órdenes', {
       const forward = project(projectionInput({ reports }));
       const reversed = project(projectionInput({ reports: [...reports].reverse() }));
       assert.equal(
-        canonicalCounts(forward),
-        canonicalCounts(reversed),
+        `${canonicalDailyCounts(forward)}|${canonicalCounts(forward)}`,
+        `${canonicalDailyCounts(reversed)}|${canonicalCounts(reversed)}`,
         'the same report set produced different window stats in a different arrival order; ' +
           'daily aggregates must be additive and order-free (requirement R15).',
       );
