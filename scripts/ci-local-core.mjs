@@ -55,6 +55,25 @@ const JOBS = [
     steps: [['ui quality mandates', 'npm', ['run', 'test:ui']]],
   },
   {
+    // The requirements gates. `elicitation` checks that every answer DISCUSS
+    // collected names something that can fail; the other two ARE some of those
+    // things. They read committed docs and built output, nothing else, so they
+    // are fast and run in the first wave.
+    //
+    // `copy` and `cold-load` need dist/, which the serial `budget` job builds
+    // last — so they run against whatever dist/ is present. On a clean checkout
+    // that means they skip, and the honest place they bite is a local run after
+    // a build. Wiring them to the build itself would serialise the whole gate
+    // for two sub-second checks.
+    name: 'requirements',
+    default: true,
+    steps: [
+      ['elicitation commitments', 'node', ['scripts/check-elicitation-commitments.mjs']],
+      ['copy surface', 'node', ['scripts/check-copy-surface.mjs']],
+      ['cold load', 'node', ['scripts/check-cold-load.mjs']],
+    ],
+  },
+  {
     // Two concurrent `astro build` runs collide on the shared
     // .astro/.prerender/.vite scratch directory, whatever --outDir each was
     // given. This job builds, so it runs in its own wave, alone, after every
