@@ -141,6 +141,13 @@
       "s": "EXECUTED",
       "d": "PASS",
       "t": "2026-08-10T18:20:50Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: 8 target fallback scenarios (95 steps), all U1-U7 tags, typecheck, build, and rendered 390/320 light/dark reduced-transparency checks passed.",
+      "t": "2026-08-10T20:44:31Z"
     }
   ]
 }

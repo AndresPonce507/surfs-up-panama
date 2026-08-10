@@ -65,6 +65,7 @@ parte más oscura o más cargada de lo que se desplaza) para no evaluar la lectu
 fondo de casualidad ayuda.
 
 ## Expected observations (oracle)
+- Con la transparencia reducida activada en el teléfono, la píldora de idioma y la barra de reportar se ven como tarjetas sólidas y legibles, sin ningún borde raro ni texto perdido, sobre el nuevo fondo azul-verde.
 - **U8 (vidrio apagado, 02-01):** Con la transparencia reducida activada en el teléfono, la barra de reportar se ve como una tarjeta sólida y legible, sin ningún borde raro ni texto perdido, sobre el nuevo fondo azul-verde.
 - **U8 (vidrio soportado, 02-02):** Con el navegador soportando vidrio, veo la barra de reportar como cristal esmerilado flotando sobre el contenido que se desplaza debajo, y el texto sigue leyéndose perfecto en los dos temas.
 - **U8 (los dos estados juntos, 02-03):** Recorro el sitio con y sin vidrio soportado, en los dos temas: la barra de reportar siempre se lee, nunca desaparece ni pierde contraste, y nada más en el sitio cambió.
@@ -95,3 +96,4 @@ la tabla de contraste del documento de diseño es slice-04. Su ausencia no hace 
 ## Session log (append-only)
 | date | examiner | verdict | observations |
 |------|----------|---------|--------------|
+| 2026-08-10 | Vera | FAIL | En la home construida a 390 px y 320 px, claro y oscuro, la CTA fija “Ver el llamado” siguió completa, legible y sin scroll horizontal con transparencia reducida; el modo reducido confirmó fondo sólido y `filter`/`backdrop-filter` en `none`. Pero en el modo normal también se observó la misma bandeja sólida, sin efecto de vidrio esmerilado ni contenido visible a través al desplazarse; el estado soportado incumple U8 02-02. La tarjeta grande del primer spot se mantuvo sólida. |
