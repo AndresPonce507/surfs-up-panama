@@ -28,8 +28,22 @@
 
 import { describe, expect, it } from 'vitest';
 
-// @ts-expect-error — plain ESM script, no type declarations alongside it.
-import { runLocalCi } from '../../scripts/ci-local-core.mjs';
+import { runLocalCi as runLocalCiFromScript } from '../../scripts/ci-local-core.mjs';
+
+/**
+ * The gate is a plain ESM script with no hand-written types, so tsc infers its
+ * default `argv = []` as `never[]` and rejects any real argument list. Naming
+ * the shape here is narrower than loosening the script itself, and it keeps the
+ * three ports this test actually drives visible.
+ */
+const runLocalCi = runLocalCiFromScript as (options: {
+  readonly argv: readonly string[];
+  readonly output: { write(line: string): void; error(line: string): void };
+  readonly commandRunner: (
+    command: string,
+    args: readonly string[],
+  ) => Promise<{ status: number; out: string }>;
+}) => Promise<number>;
 
 const ACCEPTANCE_STEPS = ['test:at', 'test:e2e'] as const;
 
@@ -43,7 +57,7 @@ async function acceptanceStepsInvokedBy(argv: readonly string[]): Promise<string
   await runLocalCi({
     argv: [...argv],
     output: { write() {}, error() {} },
-    commandRunner: async (_command: string, args: string[]) => {
+    commandRunner: async (_command: string, args: readonly string[]) => {
       invoked.push(args.join(' '));
       return { status: 0, out: '' };
     },
