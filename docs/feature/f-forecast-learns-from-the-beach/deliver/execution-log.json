@@ -281,6 +281,34 @@
       "s": "EXECUTED",
       "d": "PASS",
       "t": "2026-08-10T19:51:51Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: inherited source and prior evidence inspected; source inventory is already active and non-visual.",
+      "t": "2026-08-10T19:54:56Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: target pre-authored acceptance already green at inherited base (1 scenario, 11 steps); no activation marker was present.",
+      "t": "2026-08-10T19:54:56Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: added direct shipped-source declaration inventory proof; source already satisfied its assertion.",
+      "t": "2026-08-10T19:54:56Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS_SCOPE: declarations unit 11/11, target acceptance 1/1, typecheck pass. Full regression retains known unrelated stale-surface and later-step failures unchanged.",
+      "t": "2026-08-10T19:54:56Z"
     }
   ]
 }

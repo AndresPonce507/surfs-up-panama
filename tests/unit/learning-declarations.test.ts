@@ -11,7 +11,8 @@
 
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -22,6 +23,7 @@ import {
 } from '../../src/learning/declarations';
 
 let root: string;
+const SHIPPED_SOURCE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../src');
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), 'learning-declarations-'));
@@ -40,6 +42,23 @@ async function writeUniverse(files: Record<string, string>): Promise<void> {
 }
 
 describe('evaluateLearningDeclarations', () => {
+  it('reports the shipped source inventory as height and score only, with their own explained floors', async () => {
+    const report = await evaluateLearningDeclarations({ root: SHIPPED_SOURCE_ROOT });
+
+    expect([...report.residual_forms].sort()).toEqual(['r_height', 'r_score']);
+    expect(report.noise_floors).toEqual({
+      height: {
+        value: 0.48,
+        derived_from: expect.stringContaining('height-error-decomposition'),
+      },
+      score: {
+        value: 25,
+        derived_from: expect.stringContaining('q_obs anchor'),
+      },
+    });
+    expect(report.violations).toEqual([]);
+  });
+
   it('returns the full report shape and reads the declared inventory, for any root given', async () => {
     await writeUniverse({
       'learning-source.ts': [
