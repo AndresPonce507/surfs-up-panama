@@ -351,6 +351,34 @@
       "s": "EXECUTED",
       "d": "PASS: physical-floor behavior committed as ff6f844 with Step-ID: 01-11; test budget 2 behaviors x 2 = 4, adding 2 focused tests.",
       "t": "2026-08-10T19:59:19Z"
+    },
+    {
+      "sid": "01-12",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: inherited truth, roadmap, current evidence, and non-visual rationale inspected; 01-11 floor implementation and the isolated-store fit port identified.",
+      "t": "2026-08-10T20:01:44Z"
+    },
+    {
+      "sid": "01-12",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: named pre-authored property was already active and green from 01-11; inspected its 20-run isolated-store driving-port proof and confirmed correction-exists assertion.",
+      "t": "2026-08-10T20:01:44Z"
+    },
+    {
+      "sid": "01-12",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: added the matching 20-run fast-check gate law over 10..40 mornings, 5..9 reporters, zero spread, and 0.01..0.95 of sigma_eff/sqrt(n).",
+      "t": "2026-08-10T20:01:44Z"
+    },
+    {
+      "sid": "01-12",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS_SCOPE: gate law 11/11, named acceptance property 1/1, typecheck, and 27 focused learning tests pass. Non-visual generated stored-output law, no rendered surface.",
+      "t": "2026-08-10T20:01:44Z"
     }
   ]
 }

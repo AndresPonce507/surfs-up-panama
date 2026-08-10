@@ -146,6 +146,33 @@ describe('gateCorrection: G3 physical noise floor -- agreement cannot buy precis
       { numRuns: 100 },
     );
   });
+
+  it('refuses every zero-spread difference under the physical floor across the same counts and reporters as the nightly-fit property', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 10, max: 40 }),
+        fc.integer({ min: REQUIRED_DISTINCT_REPORTERS, max: 9 }),
+        fc.double({ min: 0.01, max: 0.95, noNaN: true, noDefaultInfinity: true }),
+        (n, reporters, fractionOfThreshold) => {
+          // With zero spread, the gate's standard error is exactly its physical
+          // floor. Twice that floor is sigma_eff / sqrt(n), so this generated
+          // difference remains strictly below G3's significance threshold.
+          const threshold = SIGMA_EFF.height.value / Math.sqrt(n);
+          const b = fractionOfThreshold * threshold;
+          const verdict = gateCorrection({ n, reporters, b, se: 0, sigma_eff: SIGMA_EFF.height.value });
+
+          assert.equal(verdict.se, physicalNoiseFloor(SIGMA_EFF.height.value, n), 'zero spread must still store the physical floor');
+          assert.equal(
+            verdict.applied,
+            false,
+            `${n} perfectly agreeing mornings from ${reporters} people with difference ${b} below ${threshold} must never be publishable`,
+          );
+          assert.equal(verdict.reason, 'not_significant', 'G1 and G2 clear, so the physical floor must be the refusal reason');
+        },
+      ),
+      { numRuns: 20 },
+    );
+  });
 });
 
 describe('gateCorrection: this step\'s own acceptance numbers, as fixture examples', () => {
