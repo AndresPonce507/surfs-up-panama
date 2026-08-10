@@ -110,19 +110,28 @@ function raceWithTimeout(promise, timeoutMs) {
   });
 }
 
-/** Network-first, 3 s timeout, fall back to cache, then the precached offline document. */
+/** The last forecast that loaded, stamp intact -- or, with nothing yet on the phone, the precached offline document. */
+function lastKnownGoodResponse(cache, request) {
+  return cache.match(request).then((cached) => cached || cache.match(OFFLINE_DOCUMENT));
+}
+
+/** Network-first, 3 s timeout, fall back to cache, then the precached offline document.
+ *
+ * "The origin is unreachable" is not one shape: a stalled or DNS-dead
+ * connection never resolves (the timeout race rejects), and a same-origin
+ * 5xx or a captive portal / redirect-elsewhere handing back someone else's
+ * page still RESOLVES the fetch, 200 OK and all. Both are treated the same
+ * way -- neither is trustworthy, so neither is ever handed to the page or
+ * written into the cache; only the forecast already on the phone is. */
 function networkFirst(request) {
   return self.caches.open(CACHE_VERSION).then((cache) =>
     raceWithTimeout(self.fetch(request), NETWORK_FIRST_TIMEOUT_MS)
       .then((response) => {
-        if (isTrustworthyResponse(response)) cache.put(request, response.clone());
+        if (!isTrustworthyResponse(response)) return lastKnownGoodResponse(cache, request);
+        cache.put(request, response.clone());
         return response;
       })
-      .catch(() =>
-        cache
-          .match(request)
-          .then((cached) => cached || cache.match(OFFLINE_DOCUMENT)),
-      ),
+      .catch(() => lastKnownGoodResponse(cache, request)),
   );
 }
 
