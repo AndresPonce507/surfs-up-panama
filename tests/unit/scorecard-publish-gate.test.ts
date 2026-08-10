@@ -202,7 +202,13 @@ describe('scorecard block — composing the box\'s decision', () => {
     fc.assert(
       fc.property(fc.string(), (spotId) => {
         const block = scorecardBlockFromObservationCount(dayOneObservationSource(spotId));
-        assert.deepEqual(block, { n_obs: 0, n_reporters: 0, threshold: REPORTS_REQUIRED, claim_ok: false });
+        assert.deepEqual(block, {
+          n_obs: 0,
+          n_reporters: 0,
+          threshold: REPORTS_REQUIRED,
+          counter: `0 / ${REPORTS_REQUIRED}`,
+          claim_ok: false,
+        });
       }),
     );
   });
