@@ -90,6 +90,10 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
           <strong>{summary.score_q}</strong>
           <p>{index === 0 ? repeatableCall(summary) : summary.call[locale]}</p>
           {summary.conf_level !== undefined && <Confidence level={summary.conf_level} />}
+          {/* The one action the big card offers, handed in by the route so this
+              component stays a reading surface. Only the top card takes it, so
+              the page can never grow a second share action. */}
+          {index === 0 && <slot name="top-card-action" />}
         </li>
       ))
     }
