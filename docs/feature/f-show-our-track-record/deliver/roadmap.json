@@ -329,7 +329,7 @@
           "scenario_name": "El surfista abre su playa y lee, debajo del pronóstico, que todavía no podemos decirle si acertamos ahí",
           "slice_id": "slice-01",
           "surface_classification": "user-visible",
-          "charter_path": "docs/product/expectations/f-show-our-track-record/a-surfer-opens-any-spot-page-and-reads-under-the-forecast-that-we-cannot-say-yet-whether-we-get.md",
+          "charter_path": "../../../product/expectations/f-show-our-track-record/a-surfer-opens-any-spot-page-and-reads-under-the-forecast-that-we-cannot-say-yet-whether-we-get.md",
           "u8_observation": "Recorro el sitio en el teléfono: en cualquier playa que abra, el recuadro dice siempre lo mismo, que todavía no pueden decirme si aciertan ahí y que van 0 reportes de los 30 que hacen falta, y en ninguna parte aparece un porcentaje ni una cifra de acierto.",
           "non_visual_rationale": "",
           "ui_checks": {
