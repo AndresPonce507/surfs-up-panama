@@ -1,7 +1,7 @@
-# Slice-02 requirement checklist
+# Slice-02 and Slice-03 requirement checklist
 
 Feature: `f-looks-like-the-ocean-and-reads-in-the-sun`
-Slice entered: `slice-02` only, 2026-08-10
+Slices entered: `slice-02` and `slice-03 / 03-01`, 2026-08-10
 
 ## Reconciliation
 
@@ -40,12 +40,22 @@ manufacturing markup or treating the absent control as current user functionalit
 | U7 named tokens | The CTA tray's source mechanism is checked for `--bg`, `--sp-3`, and `--sp-4`; rendered checks prove that mechanism reaches the page. |
 | U8 charter | `docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/the-big-card-reads-as-glass-over-water-and-on-a-phone-that-cannot-render-glass-it-still-reads-per.md` is the source-blind observation. Its title/body already state the actual tray and solid hero boundary. |
 
+## Slice-03 / 03-01 coverage
+
+| Requirement | Scenario / driving surface | Evidence shape |
+|---|---|---|
+| Spot detail and yesterday receipt retain the tropical product identity | `La página de un spot y su recibo de ayer...` / real built Playa Venao and yesterday receipt | A contained production Astro build is served to Chromium at 390 px in both themes; the browser observes only emitted documents. |
+| Today and tomorrow retain their useful reading facts | same scenario / real built spot detail | The visible today and tomorrow cards, score, size, window, back link and report action must all remain present and readable. |
+| Sunlight, phone, touch and reduced-motion disciplines hold | same scenario / real built routes | Rendered body words clear 7:1, controls are at least 44 px where present, no horizontal scroll occurs, and reduced motion removes movement. |
+| Source-blind U8 observation | `every-other-surface-belongs-to-the-same-product-spot-pages-manana-ayer-the-404-and-both-report-sc.md` | The charter carries the roadmap's exact 03-01 observation and negative observations without asking the examiner to inspect code. |
+
 ## Deferred inventory, not authored
 
 | Slice | Build map | Charter | Acceptance suite | Status |
 |---|---|---|---|---|
-| slice-03 | Existing roadmap rows 03-01..03-03 | Missing | Missing | JIT DISTILL has not opened it. |
+| slice-03 | Existing roadmap rows 03-01..03-03 | 03-01 present | 03-01 armed | 03-02 and 03-03 remain absent until their dependency turn. |
 | slice-04 | Existing roadmap rows 04-01..04-03 | Missing | Missing | JIT DISTILL has not opened it. |
 | slice-05 | Existing roadmap rows 05-01..05-03 | Present | Missing | JIT DISTILL has not opened it. |
 
-No deferred feature file, charter, or step definition was created in this turn.
+No future-slice feature file, charter, or step definition was created in this turn. The new
+Slice-03 contract covers only the dependency-ready 03-01 route pair.

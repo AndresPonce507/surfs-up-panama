@@ -1,7 +1,7 @@
-# Slice-02 red classification
+# Slice-02 and Slice-03 red classification
 
 Feature: `f-looks-like-the-ocean-and-reads-in-the-sun`
-Slice entered: `slice-02`, 2026-08-10
+Slices entered: `slice-02` and `slice-03 / 03-01`, 2026-08-10
 
 ## Commands observed
 
@@ -32,3 +32,20 @@ This recovery is a DISTILL/map repair around styling that is already present, so
 scenarios are honestly green rather than fabricated RED. The one deliberate regression reaches
 the rendered behavior oracle and proves the guard would be RED for missing solid-fallback
 functionality. No failure is classified as BROKEN. No later-slice test was authored.
+
+## Slice-03 / 03-01 commands observed
+
+```sh
+npm run typecheck
+npm run test:at -- --tags '@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @step-03-01'
+```
+
+## Slice-03 / 03-01 classification
+
+| Scenario group | Observable exercised | Classification | Evidence |
+|---|---|---|---|
+| Playa Venao and its yesterday receipt, light and dark | Real emitted spot and yesterday documents at 390 px | `GUARD_GREEN` | The contained production build reached Chromium in both themes. The user-visible today/tomorrow cards, score, size, window, navigation, report action, reading margin, touch surfaces, viewport and reduced-motion checks all reached their browser oracles. |
+
+The inherited token cascade already satisfies this visual consistency contract, so a missing-style
+RED is not honestly available. This is a guard contract, not a fabricated failure. Slice-03/03-02
+and Slice-03/03-03 remain unarmed and absent.
