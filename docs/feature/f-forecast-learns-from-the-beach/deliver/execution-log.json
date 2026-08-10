@@ -561,6 +561,34 @@
       "s": "EXECUTED",
       "d": "PASS: read the full feature delta, active acceptance contract, roadmap 01-18, prior delivery evidence, residual implementation, unit-law baseline, functional paradigm, and non-visual rationale before executing this step.",
       "t": "2026-08-10T20:43:43Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: read the 02-01 acceptance contract, apply-world driving port, pending-slice scaffold, recovered roadmap, correction record type, and learning input boundaries. Non-visual report object is the observable.",
+      "t": "2026-08-10T20:46:52Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: named unreadable-file scenario is active and red at its Then oracle (1 scenario, 18 passed, 1 failed, 1 skipped). The dynamic load seam is absent, so no read report exists; no acceptance wording was changed.",
+      "t": "2026-08-10T20:47:19Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: new loader unit suite is red semantically (4 of 5 fail). The skeleton returns raw bytes as loaded, so malformed bytes, foreign units, and valid-record parsing all fail their declared report oracles rather than a collection error.",
+      "t": "2026-08-10T20:48:07Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS_SCOPE: both named loader scenarios pass (20 and 19 steps), loader unit suite 6/6, learning units 52/52, and typecheck pass. Non-visual report object only. Full learning AT is 22 passed, 7 expected later-slice-02 apply/recheck/clamp/deletion failures, 28 skipped. Full unit 133/134 and fast CI 5/8 retain only the unrelated stale 2026-08-09 published-surface refusal.",
+      "t": "2026-08-10T20:49:22Z"
     }
   ]
 }
