@@ -146,6 +146,30 @@ const LEVELS: readonly ConfidenceLevel[] = ['high', 'medium', 'low'];
  */
 const WORST_CASE_RESULT: ConfidenceResult = confidence([], { kind: 'absolute' }, null, null, ['wind', 'tide']);
 
+/**
+ * The real 2026-08-08 Venao pull with the tide present, mirroring
+ * `MODELS_SPLIT_ON_PERIOD` in the acceptance steps: heights and directions
+ * close, periods split 15.5 s against 10.05 s. Verified before authoring:
+ * with `missing` empty this gives `dominant: 'spread_period'`, so it is the
+ * one shape 01-04 exists for -- the cause the sentence must name is the
+ * period, and the tide, though the cap that binds on other mornings, bound
+ * nothing here. Default sampling for `engineResult` reaches two spread terms
+ * far enough apart for period alone to dominate only rarely, so this rides as
+ * an explicit fast-check example rather than hoping a random run finds it.
+ */
+const PERIOD_SPLIT_RESULT: ConfidenceResult = confidence(
+  [
+    { source: 'uno', lead_h: 0, swell: { h_m: 0.64, t_s: 15.5, dir_deg: 206 }, swell2: null },
+    { source: 'dos', lead_h: 0, swell: { h_m: 0.66, t_s: 15.5, dir_deg: 204 }, swell2: null },
+    { source: 'tres', lead_h: 0, swell: { h_m: 0.78, t_s: 11.6, dir_deg: 212 }, swell2: null },
+    { source: 'cuatro', lead_h: 0, swell: { h_m: 0.86, t_s: 10.05, dir_deg: 203 }, swell2: null },
+  ],
+  { kind: 'absolute' },
+  null,
+  null,
+  [],
+);
+
 describe('composeConfidenceReasonEs', () => {
   /**
    * 05-scoring-engine.md section 3.6, cap-application row: when an input is
@@ -188,6 +212,37 @@ describe('composeConfidenceReasonEs', () => {
           `la razón habla de desacuerdo con dominant="${result.dominant}" y ${result.members_used} modelo(s): "${reason}"`,
         );
       }),
+    );
+  });
+
+  /**
+   * The other half of 01-04's misattribution fix. `PERIOD_SPLIT_RESULT`
+   * confirms the branch is reachable at all (default sampling rarely lands
+   * period alone dominating), and the generic property alongside it proves
+   * the same law over the whole engine domain: whenever period genuinely
+   * dominates, the reason names it from the injected vocabulary, and never
+   * once smuggles in the tide -- even though `missing` is empty for every
+   * row this property inspects, so no cap is topping anything to blame the
+   * tide for (05-scoring-engine.md section 6.1).
+   */
+  it('names the period disagreement when period dominates, and never the tide', () => {
+    assert.equal(PERIOD_SPLIT_RESULT.dominant, 'spread_period', 'test fixture error: PERIOD_SPLIT_RESULT must actually dominate on period');
+
+    fc.assert(
+      fc.property(engineResult, sentinelVocab, (result, vocab) => {
+        if (result.dominant !== 'spread_period') return;
+        const reason = composeConfidenceReasonEs(result, vocab);
+
+        assert.ok(
+          reason.includes(vocab.period),
+          `dominant="spread_period" pero la razón no nombra "${vocab.period}": "${reason}"`,
+        );
+        assert.ok(
+          !reason.includes(vocab.tide),
+          `dominant="spread_period" con missing=[] pero la razón culpa a la marea ("${vocab.tide}"): "${reason}"`,
+        );
+      }),
+      { examples: [[PERIOD_SPLIT_RESULT, FACTOR_VOCAB_ES]] },
     );
   });
 

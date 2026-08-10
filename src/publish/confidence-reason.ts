@@ -49,12 +49,22 @@ export const REASON_PHRASES_ES = {
   /** More than one went dark: one named clause per missing input. */
   missing_several_inputs: 'Faltan los datos {inputs}',
   /**
-   * Nothing was missing, so no cap bound the level and the cause is whichever
-   * spread term dominates. Naming that term is step 01-04's work; until it
-   * lands this states the one thing that is true of every such morning. It is
-   * a placeholder, not settled copy.
+   * Nothing was missing, so no cap bound the level. Reached only when no
+   * named spread term dominates either: today that means the tracked cause is
+   * track record, freshness, height, direction, or no signal at all --
+   * naming those is not this step's job, so this states the one thing that
+   * is true of every such morning. It is a placeholder, not settled copy.
    */
   nothing_missing: 'Hoy no falta ningún dato para esta playa',
+  /**
+   * Nothing was missing, so no cap bound the level, and the models split on
+   * this term instead: `{factor}` names it from the injected vocabulary,
+   * never a second copy authored here. `confidence()` forces every spread
+   * term to zero below two members (05-scoring-engine.md section 6.1), so
+   * this can only be reached with two or more models actually disagreeing --
+   * never on a single-model day (step 01-05's shape).
+   */
+  spread_disagreement: 'Los modelos no se ponen de acuerdo en el {factor}',
   /**
    * `c_fresh === null`: no beach report has ever reached this spot, so the
    * level is agreement between forecast models, never a confirmation from the
@@ -108,12 +118,16 @@ function honestyClauses(result: ConfidenceResult): readonly string[] {
 
 function bindingCauseClause(result: ConfidenceResult, vocab: FactorVocabEs): string {
   const missing = orderedMissingInputs(result.missing);
-  if (missing.length === 0) return REASON_PHRASES_ES.nothing_missing;
-
-  const template = missing.length === 1
-    ? REASON_PHRASES_ES.missing_one_input
-    : REASON_PHRASES_ES.missing_several_inputs;
-  return template.replace('{inputs}', namedMissingInputs(missing, vocab));
+  if (missing.length > 0) {
+    const template = missing.length === 1
+      ? REASON_PHRASES_ES.missing_one_input
+      : REASON_PHRASES_ES.missing_several_inputs;
+    return template.replace('{inputs}', namedMissingInputs(missing, vocab));
+  }
+  if (result.dominant === 'spread_period') {
+    return REASON_PHRASES_ES.spread_disagreement.replace('{factor}', vocab.period);
+  }
+  return REASON_PHRASES_ES.nothing_missing;
 }
 
 function namedMissingInputs(missing: readonly MissingInput[], vocab: FactorVocabEs): string {
