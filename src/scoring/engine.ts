@@ -10,6 +10,9 @@
 // Purity contract (05 section 3): every function here is total and pure. No
 // I/O, no clock, no config lookup, no ambient reads. Inputs in, value out.
 
+import { leadBucketOf, SIGMA_EFF } from '../learning/constants';
+import { gateCorrection } from '../learning/gates';
+
 // ---------- input types (05 section 3) ----------
 
 export type SwellTrain = { h_m: number; t_s: number; dir_deg: number };
@@ -273,14 +276,88 @@ export function rankSpots(
 
 export function applyCorrection(
   seed: SpotSeed,
-  _correction: CorrectionRecord | null,
+  correction: CorrectionRecord | null,
 ): CorrectionOutcome {
+  if (correction === null) return inertCorrection(seed);
+
+  const heightCandidates = heightEvidenceIn(correction).map(({ source, bucket, evidence }) => ({
+    source,
+    bucket,
+    evidence,
+    decision: correctionGate(evidence, SIGMA_EFF.height.value),
+  }));
+  const scoreEvidence = isCorrectionEvidence(correction.score_delta) ? correction.score_delta : undefined;
+  const scoreDecision = scoreEvidence === undefined
+    ? undefined
+    : correctionGate(scoreEvidence, SIGMA_EFF.score.value);
+  const gate = overallGate([...heightCandidates.map((candidate) => candidate.decision), scoreDecision]);
+  const admittedHeights = new Map(
+    heightCandidates
+      .filter((candidate) => candidate.decision.admitted)
+      .map((candidate) => [`${candidate.source}\u0000${candidate.bucket}`, candidate.evidence.b]),
+  );
+
+  return {
+    params: paramsFrom(seed),
+    memberHBias: (source, lead_h) => admittedHeights.get(`${source}\u0000${leadBucketOf(lead_h)}`) ?? 0,
+    delta_q: scoreDecision?.admitted ? -scoreEvidence!.b / 100 : 0,
+    gate,
+  };
+}
+
+type CorrectionEvidence = {
+  b: number;
+  se: number;
+  n: number;
+  reporters: number;
+};
+
+type HeightEvidence = { source: string; bucket: string; evidence: CorrectionEvidence };
+
+function inertCorrection(seed: SpotSeed): CorrectionOutcome {
   return {
     params: paramsFrom(seed),
     memberHBias: () => 0,
     delta_q: 0,
     gate: 'no_file',
   };
+}
+
+type CorrectionDecision = { gate: CorrectionGate; admitted: boolean };
+
+function correctionGate(evidence: CorrectionEvidence, sigma_eff: number): CorrectionDecision {
+  const verdict = gateCorrection({ ...evidence, sigma_eff });
+  return { gate: verdict.reason as CorrectionGate, admitted: verdict.applied };
+}
+
+function overallGate(decisions: readonly (CorrectionDecision | undefined)[]): CorrectionGate {
+  const present = decisions.filter((decision): decision is CorrectionDecision => decision !== undefined);
+  return present.find((decision) => decision.admitted)?.gate ?? present[0]?.gate ?? 'no_file';
+}
+
+function heightEvidenceIn(correction: CorrectionRecord): HeightEvidence[] {
+  const perSource = correction.bias;
+  if (!isRecord(perSource) || !isRecord(perSource['swell_h_m']) || !isRecord(perSource['swell_h_m']['per_source'])) return [];
+
+  return Object.entries(perSource['swell_h_m']['per_source'])
+    .sort(([left], [right]) => left.localeCompare(right))
+    .flatMap(([source, buckets]) => isRecord(buckets)
+      ? Object.entries(buckets)
+        .sort(([left], [right]) => left.localeCompare(right))
+        .flatMap(([bucket, value]) => isCorrectionEvidence(value) ? [{ source, bucket, evidence: value }] : [])
+      : []);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isCorrectionEvidence(value: unknown): value is CorrectionEvidence {
+  return isRecord(value)
+    && typeof value['b'] === 'number' && Number.isFinite(value['b'])
+    && typeof value['se'] === 'number' && Number.isFinite(value['se'])
+    && typeof value['n'] === 'number' && Number.isFinite(value['n'])
+    && typeof value['reporters'] === 'number' && Number.isFinite(value['reporters']);
 }
 
 export function sizeBand(h_eff_m: number, bands: SizeBandTable): string {
