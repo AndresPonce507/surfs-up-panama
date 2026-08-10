@@ -265,7 +265,7 @@
             "Radio-card and button states (checked, disabled) stay legible against the new palette without a colour-only signal."
           ],
           "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/palette-across-every-surface.feature",
-          "scenario_name": "La página que no existe y las dos pantallas de reportar se ven del mismo producto, sin fugas",
+          "scenario_name": "La página que no existe y las dos pantallas de reportar se ven como el mismo producto",
           "slice_id": "slice-03",
           "surface_classification": "user-visible",
           "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/every-other-surface-belongs-to-the-same-product-spot-pages-manana-ayer-the-404-and-both-report-sc.md",
