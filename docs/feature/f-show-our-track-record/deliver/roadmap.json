@@ -1,0 +1,275 @@
+{
+  "roadmap": {
+    "project_id": "f-show-our-track-record",
+    "created_at": "2026-08-09T23:55:00Z",
+    "total_steps": 8,
+    "quality_contract_version": 1
+  },
+  "phases": [
+    {
+      "id": "01",
+      "name": "Slice-01: every spot page says honestly that we cannot tell yet",
+      "description": "The day-one empty state ships as a real unconditional surface on every spot page: the settled sentence composed from the block's own two integers, under the forecast, with the publish gate refusing in code. No step renders an accuracy number, because zero reports exist.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "01-01",
+          "name": "Observation source reports absence as a structured outcome",
+          "criteria": [
+            "Asking the source how many reports a spot has returns a structured outcome; it never returns undefined, never returns a bare empty collection, and never throws.",
+            "The day-one source answers the same store-absent outcome, with a plain reason, for every spot id, because no observation store is deployed in this build.",
+            "The source is probed before it is read; a refused probe fails the build loudly naming the source and never renders a counter.",
+            "The threshold 30 has exactly one exported home, importable by the future write-path composer, and is never retyped at a second site."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/honest-track-record-box.feature",
+          "scenario_name": "La frase y sus números llegan en lo que se sirve, sin que el teléfono calcule nada",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A driven port and its probe; nothing is mounted and no pixel exists to observe. The rendered surface this port feeds ships in 01-04, which carries the charter and the U1 to U7 checks.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/scorecard/observation-source.ts",
+            "src/scorecard/threshold.ts",
+            "tests/unit/scorecard-observation-source.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): property-based with fast-check, house style tests/unit/scoring-laws.test.ts, per project CLAUDE.md (functional, PBT default). NON-VACUITY, the trap that cost a sibling lane real time: an absence oracle that reads 'the store is empty' is green with zero production code. The fix carried over from the learning lane is that the port RETURNS an outcome, so every absence claim becomes a positive report from a surface that must exist. Shape, settled here so the crafter does not invent a second one: ObservationCount = { kind: 'store-absent', reason: string } | { kind: 'counted', n_obs: number, n_reporters: number }. Only 'store-absent' is producible today; 'counted' exists because slice-03 replaces the source with the real read and the union must be able to say so. Properties worth proving: for ANY spot id (fast-check arbitrary string) the day-one source answers store-absent with a non-empty reason; the outcome is total, no input throws; two calls for the same id agree. EARNED TRUST, kept deliberately small: there is no store to fault-inject, so the probe's whole job today is proving the source is reachable and reports a structured outcome instead of throwing or returning undefined. Wire then probe then use at the composition root (the Astro component in 01-04): a refused probe throws a build error naming the source rather than rendering a fabricated zero. Drive that refusal path in the unit test with an INJECTED refusing source, which is why the source is a parameter and never a module-scope singleton; the test is non-vacuous because the refusing source is a real value the test constructs. The catalogue of substrate lies (unreadable store, partial read, clock skew) arrives with slice-03, when there is a real dependency capable of lying; designing it now for a dependency that does not exist would be the same dishonesty in the other direction. Pre-requisite 7 is pre-wired by this shape and NOT resolved here: from the day the store exists an unreadable source must fail the publish LOUD, and the union plus the probe make that expressible without a rewrite. R6 is half covered by the threshold home; the rendered half is 01-04. src/data/report-vocab.ts is NOT imported by this slice: QUALITY_OBSERVED_SCORE and the q_obs anchors are slice-02 arithmetic and the day-one box shows no score, so importing them here would be decoration."
+        },
+        {
+          "id": "01-02",
+          "name": "Publish gate refuses every claim below the threshold",
+          "criteria": [
+            "Deciding what the box says is a total function returning exactly one of two outcomes, the counter state or a gated claim; no input throws.",
+            "A claim is produced only when all three clauses hold: at least ten paired observations, at least five distinct trust-eligible reporters, and bias beyond twice the floored standard error.",
+            "A clause whose input does not exist evaluates as unavailable, and unavailable is refused, never assumed satisfied; the gate is fail-closed.",
+            "Property: with fewer than five distinct trust-eligible reporters the decision is always the counter state, never a claim, whatever the other numbers say.",
+            "Each refusal law is watched failing against a deliberately broken gate, then reverted, with the revert verified by git diff."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/honest-track-record-box.feature",
+          "scenario_name": "El recuadro no insinúa ninguna cifra de acierto ni ningún margen",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Pure decision logic over synthetic inputs; it renders nothing on its own. Its user-visible consequence, a box showing no percentage, no plus-minus margin and no metre figure, is observed on the built page by 01-04 and 01-07, which carry the charter and the U checks.",
+          "ui_checks": {},
+          "deps": ["01-01"],
+          "files_to_modify": [
+            "src/scorecard/publish-gate.ts",
+            "src/scorecard/scorecard-block.ts",
+            "tests/unit/scorecard-publish-gate.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): fast-check properties, house style. WHY THIS IS SLICE-01 AND NOT BORROWED FROM SLICE-02: the box cannot render at all without deciding counter-versus-claim, so the decision predicate is this slice's own. THE BOUNDARY, stated so the crafter does not drift: slice-01 implements the DECISION over an already-formed block and nothing else. It does NOT implement residual pairing, the daily aggregate item, the 30 and 90 day windows, bias, se_sample, se_gate, sigma_eff or the recompute test. Those are Slice Plan row slice-02 (feature-delta.md); they have no acceptance scenario in this workspace because the JIT rule withheld them, and authoring them here would put a whole roadmap row in the wrong slice. CLAUSE SHAPE: each of the three clauses evaluates to satisfied | unsatisfied | unavailable, and claim_ok is true only when all three are satisfied. In slice-01 the bias clause is UNAVAILABLE by construction, because no residual exists to compute it from, and unavailable is refused. That is honest and fail-closed; an implementation that silently treated a missing bias as satisfied would publish a claim from nothing, the single worst outcome this feature can produce. Slice-02 flips that clause from unavailable to computed and inherits every refusal property written here unchanged. GATE DEFINITION, copied not invented, from domain-model.md section 9 and 06-learning-layer.md section 7 G2/G3: n >= 10 AND distinct trust-eligible reporter_key >= 5 AND |bias| > 2 * se_gate, with se_gate = max(se_sample, 0.5 * sigma_eff / sqrt(n)). The k >= 5 clause exists because fabricated reports agree with each other; a gate never seen refusing proves nothing, so the refusal property must be watched failing against a deliberately broken gate before it counts (project CLAUDE.md: prove every negative falsifiable). SIXTH LAW, dropped from the criteria only to stay inside the five-criterion budget and still required: today's one real input, the store-absent outcome of 01-01, must always decide the counter state with n = 0 and threshold 30. THE BLOCK carries integers only: n_obs, n_reporters, threshold, claim_ok, and never a pre-rendered sentence. Composing the sentence is 01-03's job, so the two numbers stay numbers until the last moment; domain-model.md section 13 put threshold beside counter for exactly this reason."
+        },
+        {
+          "id": "01-03",
+          "name": "Settled sentence composed from the block's two integers",
+          "criteria": [
+            "The sentence is produced from the block's own two integers and reads, word for word, the settled Spanish of application-architecture section 10.",
+            "The composition separates counter values from prose, so a renderer can treat the digits without losing a single space of the sentence.",
+            "Property: for any integers, joining the parts yields the settled sentence with those integers in place; no prose part carries a digit.",
+            "Property: the text carries no em dash, no unreplaced placeholder, no English word and no technical vocabulary, at any integer values.",
+            "The sentence has one exported home in this lane; consolidating it into the shared verbatim strings file is recorded, not performed."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/honest-track-record-box.feature",
+          "scenario_name": "La frase del recuadro es la asentada, sin raya larga, sin inglés y sin marcadores de relleno",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure copy composer with no mount point; the rendered sentence it produces is observed on the built page by 01-04 and 01-07, which carry the charter and the U checks.",
+          "ui_checks": {},
+          "deps": ["01-02"],
+          "files_to_modify": [
+            "src/scorecard/copy.ts",
+            "tests/unit/scorecard-copy.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory): fast-check properties. THE SENTENCE, verbatim from application-architecture.md section 10 line 419, reproduced here only because the acceptance harness already pins it byte for byte in tests/acceptance/f-show-our-track-record/steps/support/track-record-box.ts: 'Todavía no podemos decirte si acertamos aquí. Van 0 reportes de los 30 que hacen falta.' It is a verbatim string: it may not be reworded, and Definition of Done row 2 requires the two numbers to be RENDERED FROM THE BLOCK'S INTEGERS, not typed into a literal. WHY PARTS AND NOT A FLAT STRING, forced by the U6 oracle: observeBox collects every element whose OWN text nodes contain a digit and requires font-variant-numeric tabular-nums on each of them. A single paragraph holding the whole sentence is itself a digit carrier without tabular-nums, so U6 fails by construction. The digits therefore have to sit in their own .counter children, which means the composer must hand the renderer an ordered sequence separating prose from counter values (for example { kind: 'text' } and { kind: 'count' } parts) plus a flat join for assertions. Joining the parts must reproduce the sentence EXACTLY, spaces included: box.text is whitespace-normalised textContent and the acceptance oracle asserts it CONTAINS the settled sentence, so losing the space before or after a wrapped digit fails the walking-skeleton scenario. COPY RULES the properties must enforce (project CLAUDE.md, and the acceptance oracle's own matchers): no em dash anywhere; no {n}, {threshold} or {{ }} left unreplaced; no English, the oracle greps /\\breports?\\b|\\bwe need\\b|\\btrack record\\b|\\bcan't tell\\b/i; no technical text, the oracle greps /\\bnull\\b|\\bundefined\\b|\\bNaN\\b|claim_ok|n_obs|n_reporters|scorecard|JSON/i, so the word scorecard may appear in a class name but never in rendered text. FILE HOME, deliberate: the string lives in src/scorecard/copy.ts, NOT in src/i18n/strings.ts. src/i18n is another lane's file and this lane must not edit it; the sibling report lane took the identical decision for its own settled copy. FLAG for the integrator: consolidating this verbatim string into strings.ts, both locales, marked verbatim, is a one-line follow-up owned by whoever holds that file. NO BOX HEADER: Pre-requisite 1a records that '¿Cómo nos ha ido aquí?' exists only in the section 14 wireframe and not in section 10's settled copy list, with the declared fallback being to ship the box WITHOUT a header. Ship no header. A header would also risk adding a digit to the box, which fails the only-zero-and-thirty oracle."
+        },
+        {
+          "id": "01-04",
+          "name": "Track-record box renders under the forecast",
+          "criteria": [
+            "A surfer at 390 px reads, below the tomorrow forecast and above the report call to action, a box carrying the settled sentence word for word.",
+            "The box is rendered entirely at build time from the scorecard modules; the page derives no statistic and renders only what it imports.",
+            "The box wears the shipped card recipes so it reads as a not-yet state, never an error or a blank; no stylesheet is edited.",
+            "The only numbers inside the box are its own zero and thirty, and every digit sits in a counter element of its own.",
+            "The rest of the spot page is untouched: score, size, window, the back link and the report call to action render as before."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/honest-track-record-box.feature",
+          "scenario_name": "El surfista abre su playa y lee, debajo del pronóstico, que todavía no podemos decirle si acertamos ahí",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-show-our-track-record/a-surfer-opens-any-spot-page-and-reads-under-the-forecast-that-we-cannot-say-yet-whether-we-get.md",
+          "u8_observation": "Abro la página de mi playa a 390 px y, justo debajo del pronóstico de mañana y antes del botón para reportar, leo un recuadro tranquilo que dice que todavía no pueden decirme si aciertan aquí y que van 0 reportes de los 30 que hacen falta. No hay ningún porcentaje, ningún margen y ninguna cifra de acierto en ninguna parte de la página.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-01", "01-02", "01-03"],
+          "files_to_modify": [
+            "src/components/TrackRecordBox.astro",
+            "src/components/SpotDetail.astro"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: template composition and one mount point, single-shot by nature; compensated by the property-based source (01-01), gate (01-02) and copy (01-03) tests underneath it, and by the acceptance suite above it. POSITION, pinned by the oracle not by taste: observeBox compares document position against section[data-day=\"tomorrow\"] and a.cta, so the box goes between the tomorrow section and the paragraph holding the report call to action, src/components/SpotDetail.astro lines 79 to 95. THE MOUNT IS THE ONLY LEGAL ONE AND IT IS CROSS-LANE: src/layouts/Base.astro and src/pages/** are forbidden lanes, a client-side mount is barred by the no-island scenario, and CSS cannot put words into served bytes, so the box has to be a build-time child of SpotDetail.astro. That file is keystone-contended (feature-delta Pre-requisite 2, HANDOFF section 10, keystone slices 06 to 08 in flight). DO NOT START THIS STEP UNTIL THE SERIAL ORDER WITH THE KEYSTONE LANE IS SETTLED; the edit is additive, an import line plus one element between two existing siblings, and must stay that small. NO NAMED SLOT: mount by importing the component directly. A named slot was considered and REJECTED because Astro silently drops named slot content when the receiving component defines no matching <slot name=\"...\"/>: no error, the markup simply vanishes, and the failure looks exactly like a missing feature. Anyone who later reworks this into a slot must add the matching <slot name=\"...\"/> to the receiving component in the same change. MARKUP CONTRACT, cross-referenced against src/styles/recipes.css lines 61 to 116 and the observeBox oracle, because the obvious markup fails: the box element must carry BOTH .scorecard AND .state-empty. .scorecard alone gives a solid border and fails the U5 dashed check; .state-empty alone gives no background and, because .scorecard .counter is a DESCENDANT selector, gives the counter no tabular-nums, failing U6. With both, .state-empty wins the border by source order (line 111 after line 66), .scorecard supplies background var(--surface) so the U1 contrast pair is deterministic instead of depending on the ancestor background walk, and the counter selector matches. Each digit run sits in its own <span class=\"counter\">, so the paragraph's own text nodes carry no digit. NO CSS EDIT: the recipes are consumed as shipped, which IS requirement R37/U7; if a visual need cannot be met by them, stop and flag rather than fork the design system. COMPOSITION ROOT: probe the source, then read it, then compose (01-01 ordering); a refused probe fails the build rather than rendering a zero. THE P5 WIRE IS NOT INVENTED HERE. The box imports the block from src/scorecard/** at build time. red-classification.md refused R4's template-side clause for exactly this reason: 'Astro templates run at build time and static-HTML presence cannot tell a value that arrived computed from one the template computed. That half needs the wire.' So this is not a P5 violation, it is the honest shape until the wire exists. CROSS-LANE DEPENDENCY, SERIALIZED, RECORDED NOT PERFORMED, the exact diff the wire needs, all of it in another lane's files: (1) src/publish/region-bundle.ts lines 63 to 66, BundleSpotDetail = { readonly name: string } gains 'readonly scorecard?: { readonly n_obs: number; readonly n_reporters: number; readonly threshold: number; readonly counter: string; readonly claim_ok: boolean; readonly headline?: string };'. (2) src/pipeline/build.ts line 140 currently reads 'spot_detail: Object.fromEntries(spots.map((spot) => [spot.spot_id, { name: spot.name }])),' and becomes 'spot_detail: Object.fromEntries(spots.map((spot) => [spot.spot_id, { name: spot.name, scorecard: dayOneScorecardBlock(spot.spot_id, deps.observationSource) }])),' with the source injected through deps and imported from src/scorecard/scorecard-block. (3) A THIRD HOP EXISTS AND IS DESIGNED NOWHERE: the spot page does not read the bundle. SpotDetail.astro reads src/data/forecast, which reads data/published-surface.json, and the bundle's spot_detail reaches that surface through no path in the corpus. Whoever lands the wire must design that promotion; this lane will not invent it. CHARTER OWED, BLOCKER FOR THE FULL GATE: docs/product/expectations/f-show-our-track-record/ holds no charter yet (feature-delta records charters as owed at DISTILL open, outside that lane's file boundary). des-verify-integrity --roadmap-only does not open charter_path, but the FULL run does: it requires the file to exist and seals it with sha256. The charter at the path above must be authored before COMMIT, from the U8 observation on this step. U3 IS N/A: the day-one box has nothing tappable, red-classification.md records R33 as N/A rather than fabricating a touch-target check, and the feature file carries no @ui-u3 tag. The quality contract requires all seven U keys, so the U3 slot runs the whole slice-01 suite rather than an empty tag selection, because cucumber exits 0 on a selection that matches nothing and that would be a vacuous green. Read the U3 record as 'no touch target exists', never as 'touch targets were measured'."
+        },
+        {
+          "id": "01-05",
+          "name": "Every emitted spot page carries the box",
+          "criteria": [
+            "The box renders unconditionally on every emitted spot page; no per-spot condition, no opt-in flag, no path where a spot renders without it.",
+            "The day-one source answers for any spot id at all, so no spot can fall through to a page without a box.",
+            "A sweep across every emitted spot page finds the settled sentence on all of them and reports how many pages it inspected.",
+            "Falsifiability: the source is broken for one spot, the sweep is watched naming it, then reverted and the revert verified by git diff."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/honest-track-record-box.feature",
+          "scenario_name": "Ninguna playa se queda sin su recuadro, ni la última de la lista",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The sweep is an HTTP text sweep over every emitted route, with no browser and no pixels; the rendered observation of the same box is chartered by 01-04 and its visual checks by 01-07.",
+          "ui_checks": {},
+          "deps": ["01-04"],
+          "files_to_modify": [
+            "src/components/TrackRecordBox.astro",
+            "src/scorecard/observation-source.ts",
+            "tests/unit/scorecard-observation-source.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory) for the unit half: a fast-check property over arbitrary spot ids proving the day-one source answers store-absent for every one of them, which is what makes the unconditional render safe. THIS IS A DESIGN CONSTRAINT, NOT A VERIFICATION PASS. The worst bug this repository has shipped is exactly this shape: data/published-surface.json carried conf_level on zero of 60 rows and size_band on one of twenty spots, all ten CI jobs passed, and nineteen of twenty spot pages would have rendered undefined (project CLAUDE.md). So the rule for this box is NO CONDITIONAL RENDER. Any guard of the form 'render the box only when a block is present' recreates that bug the moment one spot's block goes missing. The box is unconditional and the source is total; if a source ever cannot answer, the composition root fails the build loudly (01-01) instead of quietly dropping the box from one page. The acceptance sweep enumerates whatever dist/spots/*.html the real installed data produced, twenty pages at RED, fetches each over HTTP, names the missing routes in its failure message and fails at zero inspected, so it cannot pass vacuously. THE FALSIFIABILITY PASS IS REQUIRED, NOT OPTIONAL: this repository has two tests that passed for accidental reasons, and a sweep nobody has watched fail would be the third."
+        },
+        {
+          "id": "01-06",
+          "name": "Sentence ships in the bytes, no island",
+          "criteria": [
+            "The document the build emits for a spot already contains the settled sentence with both numbers written out.",
+            "A phone that fetches the page and executes nothing still receives the whole sentence.",
+            "The emitted document ships no hydrated island and no client hydration directive for this box.",
+            "The box adds no runtime script and no npm dependency to the spot route, and the build's page-weight ceilings still pass."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/honest-track-record-box.feature",
+          "scenario_name": "El recuadro no le mete ni una isla ni un guion al teléfono",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The oracles are the emitted file on disk and the bytes served over HTTP with no browser; there is no rendered state here beyond what 01-04 charters and 01-07 measures.",
+          "ui_checks": {},
+          "deps": ["01-04"],
+          "files_to_modify": [
+            "src/components/TrackRecordBox.astro",
+            "src/components/SpotDetail.astro"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: a static-output regression guard over built artifacts; the acceptance oracles read the emitted document and the served bytes directly. This is largely a discipline step: an Astro component with no client: directive is already static, so the work is proving it and keeping it that way. The oracle greps the emitted HTML for /<astro-island/i and for /\\sclient:(load|idle|visible|media|only)\\b/i, and a second scenario fetches the page and asserts the sentence is in the served bytes without executing anything. WHY THIS MATTERS BEYOND THE TAG: application-architecture.md section 7 P5 says the frontend renders and never computes statistics, and the page-weight ceilings this build already enforces leave no room for a script whose only job is printing one settled sentence. R9's byte-ceiling half is enforced by production rather than by an assertion: the page-weight integration runs inside npm run build, so a ceiling break fails the build and surfaces as a harness error rather than a silent pass. If the box ever needs interactivity that is a new slice and a new conversation, not a client: directive added here."
+        },
+        {
+          "id": "01-07",
+          "name": "Box reads well at 390 px, both themes",
+          "criteria": [
+            "Every element carrying visible text measures at least 4.5:1 against the box's own resolved backdrop, in the light theme and the dark theme.",
+            "Neither the document nor the box scrolls sideways at 390 px, and no text in the box truncates with an ellipsis.",
+            "With reduced motion requested, nothing inside the box animates or transitions.",
+            "The box wears the dashed not-yet treatment, never the danger colour, and every counter digit renders with tabular numerals from the shipped recipe.",
+            "The shipped static UI quality gate still exits zero with the box on the page, and that gate's script is not edited."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/honest-track-record-box.feature",
+          "scenario_name": "El recuadro se lee bien en el teléfono, en los dos temas y sin movimiento",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-show-our-track-record/a-surfer-opens-any-spot-page-and-reads-under-the-forecast-that-we-cannot-say-yet-whether-we-get.md",
+          "u8_observation": "Con el teléfono en tema claro y en tema oscuro, el recuadro se lee cómodo a 390 px: nada se sale de la pantalla, ningún texto queda cortado, los números se alinean parejos y el recuadro se ve como un todavía no, no como un error. Con el movimiento reducido activado, nada dentro del recuadro se mueve.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-04"],
+          "files_to_modify": [
+            "src/components/TrackRecordBox.astro"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: a designed visual state measured on the real built page; the acceptance outline is the oracle. COVERAGE, stated honestly: the outline runs two combinations, light theme with normal motion and dark theme with reduced motion. It does not run all four, so do not claim it does. U3 IS N/A AND ITS SLOT IS NOT EVIDENCE: the day-one box has nothing tappable, red-classification.md records R33 as N/A rather than fabricating a touch-target check, and the feature file carries no @ui-u3 tag. The quality contract requires all seven U keys, so the U3 slot runs the whole slice-01 suite; a @ui-u3 tag expression would select zero scenarios and cucumber exits 0 on an empty selection, which is a vacuous green. THE CHECKS ARE ALREADY SATISFIED OR BROKEN BY THE MARKUP CHOSEN IN 01-04, so this step is where the numbers are measured and any miss is corrected in the component: both recipe classes on the box element (U5 dashed border, U1 deterministic backdrop), digits in .counter children (U6 tabular-nums per digit carrier, and the paragraph's own text nodes digit-free), no ellipsis truncation at 390 px (U6 type), no transition or animation under reduced motion (U4). The reduced-motion check counts any descendant whose computed animation-name is not none or whose transition-duration is above zero, so a global transition leaking into the box is a real failure; if one does, flag it rather than adding a local CSS override, because src/styles is not this lane's file. THE STATIC GATE IS NOT NEGOTIABLE: the outline also asserts scripts/check-ui-quality.mjs still exits 0 with the box on the page. scripts/** is a forbidden lane here, and the instinct on a gate failure is to edit the gate. Change the component instead; if the gate is genuinely wrong, stop and flag it."
+        },
+        {
+          "id": "01-08",
+          "name": "Slice green, and dist inspected not assumed",
+          "criteria": [
+            "The full slice-01 tag run passes with a real exit code of zero, captured by redirect and status read, never through a pipeline.",
+            "The untagged acceptance run shows no sibling-lane scenario regressed.",
+            "After green the site is built and the emitted spot documents are read, rather than trusting the suite.",
+            "No accuracy number, percentage, margin or claim wording appears anywhere the feature touches, at any moment of the journey."
+          ],
+          "test_file": "tests/acceptance/f-show-our-track-record/honest-track-record-box.feature",
+          "scenario_name": "El surfista abre su playa y lee, debajo del pronóstico, que todavía no podemos decirle si acertamos ahí",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-show-our-track-record/a-surfer-opens-any-spot-page-and-reads-under-the-forecast-that-we-cannot-say-yet-whether-we-get.md",
+          "u8_observation": "Recorro el sitio en el teléfono: en cualquier playa que abra, el recuadro dice siempre lo mismo, que todavía no pueden decirme si aciertan ahí y que van 0 reportes de los 30 que hacen falta, y en ninguna parte aparece un porcentaje ni una cifra de acierto.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-show-our-track-record and @slice-01 and @ui-u7"]
+          },
+          "deps": ["01-04", "01-05", "01-06", "01-07"],
+          "files_to_modify": [
+            "src/components/TrackRecordBox.astro",
+            "src/components/SpotDetail.astro"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: end-to-end verification; E2E verifies wiring, not invariants. GATE DISCIPLINE, non-negotiable: run npm run test:at -- --tags \"@feature-f-show-our-track-record and @slice-01\" with output redirected to a file, capture the status on the next statement, then read the file. Never pipe a gate into tail, head or grep: a pipeline returns the last command's status and this repository has committed over a red gate exactly that way. Expected 8 scenarios, 0 failed, real exit 0; the pre-delivery RED run recorded 8 scenarios, 8 failed, at three distinct behaviour oracles (red-classification.md). Then run the untagged suite: at RED it was 86 scenarios, 78 passed and 8 failed, so GREEN means 86 passing and no sibling regression. Then npm run build and READ the emitted dist spot documents. That last step is the project's own hard-won rule: the worst bug this project shipped passed all ten CI jobs. NOTE ON THE SCENARIO COLUMN: this step re-drives the walking-skeleton scenario as the whole-journey proof; every scenario in the feature file is already owned by 01-01 through 01-07, so nothing here is an orphan. WHAT THIS STEP MAY NOT DO: it may not reach for a number. Zero surf reports have ever been filed, the counter reads 0 because 0 is what the source reports, and nothing in this slice may seed, demo-fill or fabricate a report to make a richer state visible. AFTER GREEN the orchestrator runs des-verify-ui, then dispatches the source-blind examiner with only the charter; COMMIT is refused until both records pass, and the charter itself is still owed (see 01-04)."
+        }
+      ]
+    }
+  ],
+  "implementation_scope": {
+    "source_directories": [
+      "src/scorecard/",
+      "src/components/"
+    ],
+    "test_directories": [
+      "tests/unit/"
+    ],
+    "excluded_patterns": [
+      "src/pipeline/**",
+      "src/publish/**",
+      "src/data/**",
+      "src/scoring/**",
+      "src/pages/**",
+      "src/layouts/**",
+      "src/share/**",
+      "src/report/**",
+      "src/learning/**",
+      "src/i18n/**",
+      "src/styles/**",
+      "infra/**",
+      "public/**",
+      "scripts/**",
+      "vitest.config.ts",
+      "package.json",
+      "package-lock.json",
+      "tests/acceptance/**",
+      "data/**"
+    ]
+  },
+  "validation": {
+    "status": "pending",
+    "reviewer": "orchestrator quality gate (des-verify-integrity --roadmap-only)",
+    "approved_at": ""
+  }
+}
