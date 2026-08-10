@@ -94,10 +94,19 @@ function isTrustworthyResponse(response) {
   return Boolean(response) && response.ok && response.type === 'basic';
 }
 
-function raceWithTimeout(promise, timeoutMs) {
+/** Races a fresh fetch of `request` against a timer, whichever settles first.
+ * The loser is never left running: a network that answers first needs no
+ * abort (there is nothing left to cancel), and a network that is still
+ * pending when the timer wins is aborted the instant it loses, so a stalled
+ * connection is never held open past the guard it lost to. */
+function raceNetworkWithTimeout(request, timeoutMs) {
+  const controller = new AbortController();
   return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error('network-first timeout')), timeoutMs);
-    promise.then(
+    const timer = setTimeout(() => {
+      controller.abort();
+      reject(new Error('network-first timeout'));
+    }, timeoutMs);
+    self.fetch(request, { signal: controller.signal }).then(
       (value) => {
         clearTimeout(timer);
         resolve(value);
@@ -125,7 +134,7 @@ function lastKnownGoodResponse(cache, request) {
  * written into the cache; only the forecast already on the phone is. */
 function networkFirst(request) {
   return self.caches.open(CACHE_VERSION).then((cache) =>
-    raceWithTimeout(self.fetch(request), NETWORK_FIRST_TIMEOUT_MS)
+    raceNetworkWithTimeout(request, NETWORK_FIRST_TIMEOUT_MS)
       .then((response) => {
         if (!isTrustworthyResponse(response)) return lastKnownGoodResponse(cache, request);
         cache.put(request, response.clone());
