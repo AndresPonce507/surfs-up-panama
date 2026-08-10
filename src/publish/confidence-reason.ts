@@ -55,6 +55,22 @@ export const REASON_PHRASES_ES = {
    * a placeholder, not settled copy.
    */
   nothing_missing: 'Hoy no falta ningún dato para esta playa',
+  /**
+   * `c_fresh === null`: no beach report has ever reached this spot, so the
+   * level is agreement between forecast models, never a confirmation from the
+   * beach (05-scoring-engine.md section 6.3). Read off the result, never
+   * asserted unconditionally: the day a real report lands `c_fresh` stops
+   * being null and this clause drops itself with no code edit.
+   */
+  nobody_reported: 'Todavía nadie ha reportado desde la playa',
+  /**
+   * `track_state === 'unverified'`: no gated scorecard exists yet for this
+   * spot (05-scoring-engine.md section 6.2). Read off the result, never
+   * asserted unconditionally: the day a scorecard clears its gate
+   * `track_state` becomes `'measured'` and this clause drops itself with no
+   * code edit.
+   */
+  no_verified_record: 'Este spot todavía no tiene historial verificado',
 } as const;
 
 /**
@@ -73,7 +89,21 @@ export function composeConfidenceReasonEs(
   result: ConfidenceResult,
   vocab: FactorVocabEs,
 ): string {
-  return `${bindingCauseClause(result, vocab)}.`;
+  const clauses = [bindingCauseClause(result, vocab), ...honestyClauses(result)];
+  return `${clauses.join('. ')}.`;
+}
+
+/**
+ * The two binding copy clauses this step adds, in a stable reading order.
+ * Both read straight off `result` -- never hardcoded -- so a morning with a
+ * real report or a real scorecard composes a shorter, truer sentence with no
+ * code edit (DoD 4: input-driven, never a claim the data has not earned).
+ */
+function honestyClauses(result: ConfidenceResult): readonly string[] {
+  const clauses: string[] = [];
+  if (result.c_fresh === null) clauses.push(REASON_PHRASES_ES.nobody_reported);
+  if (result.track_state === 'unverified') clauses.push(REASON_PHRASES_ES.no_verified_record);
+  return clauses;
 }
 
 function bindingCauseClause(result: ConfidenceResult, vocab: FactorVocabEs): string {
