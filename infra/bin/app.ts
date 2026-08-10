@@ -17,7 +17,9 @@ import { projectAccountId, projectRegion } from '../lib/physical-names.js';
 import { SiteStack } from '../lib/site-stack.js';
 import { WriteStack } from '../lib/write-stack.js';
 
-const app = new App();
+// Exported so asset-level guardrails can synthesize this exact app and inspect
+// the staged deployment packages, not merely the in-memory template.
+export const app = new App();
 
 type GuardrailStackOptions = Readonly<{
   enablePredictionArchiveTransition?: boolean;
