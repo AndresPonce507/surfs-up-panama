@@ -17,6 +17,8 @@ const playaVenao = {
   timezone: 'America/Panama',
 };
 
+const fixtureServerThresholdScore = 55;
+
 function subscriptionWithBar(bar: number, overrides: Partial<StoredSub> = {}): StoredSub {
   return {
     spot_id: playaVenao.spot_id,
@@ -57,6 +59,7 @@ describe('planNotifications', () => {
             spots: [playaVenao],
             scores: { [playaVenao.spot_id]: score },
             subscriptions: [subscriptionWithBar(bar)],
+            default_threshold_score: fixtureServerThresholdScore,
             run_cap: 10_000,
           });
 
@@ -86,6 +89,31 @@ describe('planNotifications', () => {
     );
   });
 
+  it('uses the declared server bar as the one monotone in-range cut for a subscriber who chose none', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 100 }),
+        (serverBar) => {
+          const sweep = Array.from({ length: 101 }, (_, score) => planNotifications({
+            now: '2026-08-10T07:25:00-05:00',
+            spots: [playaVenao],
+            scores: { [playaVenao.spot_id]: score },
+            subscriptions: [subscriptionWithBar(0, { threshold_score: null })],
+            default_threshold_score: serverBar,
+            run_cap: 10_000,
+          }).sends.length > 0);
+
+          assert.deepEqual(
+            sweep,
+            Array.from({ length: 101 }, (_, score) => score >= serverBar),
+            'a no-bar subscription has exactly one monotone in-range cut at the declared server bar',
+          );
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
   it('plans only during the closed 06:25, 07:25, and 08:25 spot-local window', () => {
     fc.assert(
       fc.property(
@@ -98,6 +126,7 @@ describe('planNotifications', () => {
             spots: [spot],
             scores: { [spot.spot_id]: 100 },
             subscriptions: [subscriptionWithBar(0)],
+            default_threshold_score: fixtureServerThresholdScore,
             run_cap: 1,
           });
 
@@ -135,6 +164,7 @@ describe('planNotifications', () => {
               spots: [spot],
               scores: { [spot.spot_id]: 100 },
               subscriptions,
+              default_threshold_score: fixtureServerThresholdScore,
               run_cap: 10_000,
             });
 

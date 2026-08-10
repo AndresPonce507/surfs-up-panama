@@ -80,6 +80,8 @@ const LEJOS = { spot_id: 'spot-lejano', slug: 'spot-lejano', name: 'Spot Lejano'
 const TODAY = '2026-08-10';
 const ALLOWLIST = ['fcm.googleapis.com', 'web.push.apple.com', 'updates.push.services.mozilla.com'];
 const DEVICE = 'dispositivo-de-prueba';
+/** Scenario harness data, never a product-ratified server threshold. */
+const HARNESS_DEFAULT_THRESHOLD_SCORE = 55;
 
 function sub(overrides: Partial<StoredSub> = {}): StoredSub {
   return {
@@ -143,6 +145,7 @@ async function plan(self: unknown, overrides: Record<string, unknown> = {}): Pro
     spots: world.pushSpots ?? [VENAO],
     scores: world.pushScores ?? {},
     subscriptions: world.pushSubs ?? [],
+    default_threshold_score: HARNESS_DEFAULT_THRESHOLD_SCORE,
     run_cap: world.pushRunCap ?? 10_000,
     ...overrides,
   });
