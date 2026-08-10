@@ -327,14 +327,18 @@ function after(self: unknown): AvisosSurface {
 /**
  * A negative observation is only worth anything once the thing it is about
  * exists. "No aparece el estado activo" is trivially true on a page with no
- * avisos control at all, and a trivially true assertion is a false green. Every
- * negative Then in this file therefore first requires the affordance to be
- * there, so the scenario can only pass by real behaviour.
+ * avisos control at all, and a trivially true assertion is a false green.
+ *
+ * The one honest exception is a context that genuinely cannot request avisos:
+ * R6 proves that case with a separate same-page comparison, which requires the
+ * action in a capable context and forbids it in the incapable one. The shared
+ * no-active-state oracle must therefore allow zero actions only after the live
+ * page reports that push is unavailable.
  */
 function affordanceMissing(self: unknown): string[] {
   const world = w(self);
   const observed = world.islandAfter ?? world.islandBefore;
-  if (observed !== undefined && observed.actions.length > 0) return [];
+  if (observed !== undefined && (observed.actions.length > 0 || !observed.pushCapable)) return [];
   return [
     'la página construida no ofrece ningún control de avisos, así que esta comprobación en negativo todavía no prueba nada',
   ];
@@ -626,6 +630,11 @@ Then('la página no ofrece ninguna acción para activar avisos', { timeout: 120_
     if (capable.actions.length === 0) {
       findings.push(
         'la misma página tampoco ofrece la acción donde el navegador SÍ puede pedir avisos, así que su ausencia aquí no distingue nada',
+      );
+    }
+    if (capable.onStateTexts.length > 0) {
+      findings.push(
+        `la página en un navegador que SÍ puede pedir avisos ya muestra un estado activo sin una suscripción real: ${capable.onStateTexts.join(' | ')}`,
       );
     }
   } finally {
