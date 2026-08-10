@@ -13,6 +13,8 @@ import { OBSERVATION_LOG_PREFIX, PREDICTION_LOG_PREFIX } from '../../src/learnin
 const CARIBBEAN_ID = 'caribe-unit';
 const PACIFIC_ID = 'pacifico-unit';
 const CARIBBEAN_KEY = `learned/corrections/v1/current/${CARIBBEAN_ID}.json`;
+const ESTABLISHED_ID = 'established-unit';
+const NEW_ID = 'new-unit';
 
 type PoolingSpot = { spot_id: string; region_id: string; coast: string; break_type: string };
 
@@ -65,6 +67,13 @@ async function run(store: MemoryStore, spots: PoolingSpot[]): Promise<void> {
   await runLearningFitOnce({ store, clock: clock(), spots } as LearningFitDeps);
 }
 
+function storedHeight(store: MemoryStore, spotId: string): { b: number; applied: boolean } {
+  const body = store.objects.get(`learned/corrections/v1/current/${spotId}.json`);
+  assert.ok(body, `the fit must store the auditable correction record for ${spotId}`);
+  const record = JSON.parse(body) as { bias: { swell_h_m: { per_source: { ncep_gfswave016: { lead_24_48: { b: number; applied: boolean } } } } } };
+  return record.bias.swell_h_m.per_source.ncep_gfswave016.lead_24_48;
+}
+
 describe('pooling hierarchy: a basin is a hard wall', () => {
   it('keeps every Caribbean correction byte-identical when arbitrary Pacific evidence is removed', async () => {
     await fc.assert(
@@ -88,6 +97,59 @@ describe('pooling hierarchy: a basin is a hard wall', () => {
             withPacific.objects.get(CARIBBEAN_KEY),
             withoutPacific.objects.get(CARIBBEAN_KEY),
             'a Pacific input may never change bytes stored for a Caribbean spot, however many mornings or what difference it claims',
+          );
+        },
+      ),
+      { numRuns: 50 },
+    );
+  });
+});
+
+describe('pooling hierarchy: cold starts retain the launch corridor', () => {
+  it('keeps every two-morning spot nearer its established neighbour than its own isolated difference', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.double({ min: 0.4, max: 1.2, noNaN: true, noDefaultInfinity: true }),
+        async (newDifference) => {
+          const established: PoolingSpot = { spot_id: ESTABLISHED_ID, region_id: 'pa-pacific', coast: 'pacific', break_type: 'beach' };
+          const newcomer: PoolingSpot = { spot_id: NEW_ID, region_id: 'pa-pacific', coast: 'pacific', break_type: 'beach' };
+          const together = new MemoryStore();
+          const alone = new MemoryStore();
+          await writeSpot(together, ESTABLISHED_ID, 22, 7, 0.22);
+          await writeSpot(together, NEW_ID, 2, 2, newDifference);
+          await writeSpot(alone, NEW_ID, 2, 2, newDifference);
+          await run(together, [established, newcomer]);
+          await run(alone, [newcomer]);
+
+          const stored = storedHeight(together, NEW_ID);
+          const neighbour = storedHeight(together, ESTABLISHED_ID).b;
+          const own = storedHeight(alone, NEW_ID).b;
+          assert.equal(stored.applied, false, 'two mornings may never earn an applied correction');
+          assert.ok(
+            Math.abs(stored.b - neighbour) < Math.abs(stored.b - own),
+            'a two-morning spot must stay nearer its established neighbour than its own isolated difference',
+          );
+        },
+      ),
+      { numRuns: 50 },
+    );
+  });
+
+  it('moves every one-morning claim by no more than one third of that claim', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.double({ min: 0.3, max: 1.2, noNaN: true, noDefaultInfinity: true }),
+        async (loudDifference) => {
+          const established: PoolingSpot = { spot_id: ESTABLISHED_ID, region_id: 'pa-pacific', coast: 'pacific', break_type: 'beach' };
+          const newcomer: PoolingSpot = { spot_id: NEW_ID, region_id: 'pa-pacific', coast: 'pacific', break_type: 'beach' };
+          const store = new MemoryStore();
+          await writeSpot(store, ESTABLISHED_ID, 22, 7, 0);
+          await writeSpot(store, NEW_ID, 1, 1, loudDifference);
+          await run(store, [established, newcomer]);
+
+          assert.ok(
+            Math.abs(storedHeight(store, NEW_ID).b) <= loudDifference / 3 + 1e-12,
+            'one loud morning may move a brand-new spot by at most one third of its claim',
           );
         },
       ),
