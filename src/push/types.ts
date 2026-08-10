@@ -31,8 +31,10 @@ export type SubscribeRequest = {
   subscription: PushEndpointSubscription;
   lang: string;
   /** Omitted when the surfer chose no bar — never defaulted by this type
-   *  or by decideSubscribe. */
-  threshold_score?: number;
+   *  or by decideSubscribe. `| undefined` (not just `?`) so callers built
+   *  from generated/spread data can carry the key with value `undefined`
+   *  under `exactOptionalPropertyTypes`. */
+  threshold_score?: number | undefined;
   device_id: string;
   /** Declared input; decideSubscribe never reads an ambient clock. */
   now: string;
