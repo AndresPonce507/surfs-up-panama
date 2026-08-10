@@ -40,6 +40,9 @@ const PRECACHE_PARTS = ['/favicon.svg', OFFLINE_DOCUMENT];
 const WRITE_PATH = '/api/report';
 const NETWORK_FIRST_TIMEOUT_MS = 3000;
 const MEDIA_CACHE_LIMIT_BYTES = 5 * 1024 * 1024;
+const OFFLINE_SENTENCE = 'Esto es lo último que vimos';
+const RENDERED_FORECAST_HOUR = /Actualizado\s+(\d{1,2}:\d{2}\s+(?:a|p)\.m\.)/;
+const PUBLISHED_AT = /<time[^>]+datetime=["']([^"']+)["']/i;
 
 const NETWORK_ONLY = 'network-only';
 const NETWORK_FIRST = 'network-first';
@@ -120,9 +123,79 @@ function raceNetworkWithTimeout(request, timeoutMs) {
   });
 }
 
-/** The last forecast that loaded, stamp intact -- or, with nothing yet on the phone, the precached offline document. */
+/** Same clock wording as src/publish/reading-state.ts. public/ is copied as a
+ * classic script, so it cannot import the canonical source formatter. */
+function formatPanamaTime(publishedAt) {
+  const instant = new Date(publishedAt);
+  const hour = (instant.getUTCHours() + 19) % 24;
+  const minutes = String(instant.getUTCMinutes()).padStart(2, '0');
+  const meridiem = hour < 12 ? 'a.m.' : 'p.m.';
+  return `${hour % 12 || 12}:${minutes} ${meridiem}`;
+}
+
+function formattedPublishedHour(publishedAt) {
+  if (Number.isNaN(new Date(publishedAt).getTime())) return undefined;
+  return formatPanamaTime(publishedAt);
+}
+
+/** A forecast document may carry either its source timestamp or its settled
+ * rendered stamp. Both describe the cached copy itself, never this build. */
+function forecastHourInDocument(document) {
+  const publishedAt = PUBLISHED_AT.exec(document)?.[1];
+  if (publishedAt !== undefined) return formattedPublishedHour(publishedAt);
+  return RENDERED_FORECAST_HOUR.exec(document)?.[1];
+}
+
+function forecastHourFromResponse(response) {
+  if (!response) return Promise.resolve(undefined);
+  return response.clone().text().then(forecastHourInDocument, () => undefined);
+}
+
+function isOfflineDocument(request) {
+  return new URL(request.url).pathname === OFFLINE_DOCUMENT;
+}
+
+/** First matching cached forecast stamp wins. Cache insertion order makes that
+ * the earliest reading copy this cache still holds; every normal forecast page
+ * for one refresh carries the same published stamp. */
+function lastCachedForecastHour(cache) {
+  return cache.keys().then((keys) =>
+    keys
+      .filter((key) => !isOfflineDocument(key))
+      .reduce(
+        (hour, key) => hour.then((known) => known || cache.match(key).then(forecastHourFromResponse)),
+        Promise.resolve(undefined),
+      ),
+  );
+}
+
+function fillOfflineSentence(document, hour) {
+  const sentence = hour === undefined ? `${OFFLINE_SENTENCE}.` : `${OFFLINE_SENTENCE}, de las ${hour}`;
+  return document.replace(/Esto es lo último que vimos(?:, de las [^<]*)?/, sentence);
+}
+
+/** The offline body is composed only when served: its hour comes from a
+ * forecast already in this phone's cache, never the precached build artifact. */
+function offlineDocumentWithLastForecastHour(cache, offline) {
+  return lastCachedForecastHour(cache).then((hour) =>
+    offline.clone().text().then((document) =>
+      new Response(fillOfflineSentence(document, hour), {
+        status: offline.status,
+        statusText: offline.statusText,
+        headers: offline.headers,
+      }),
+    ),
+  );
+}
+
+/** The last forecast that loaded, stamp intact -- or, with nothing yet on the phone, the composed precached offline document. */
 function lastKnownGoodResponse(cache, request) {
-  return cache.match(request).then((cached) => cached || cache.match(OFFLINE_DOCUMENT));
+  return cache.match(request).then((cached) => {
+    if (cached && !isOfflineDocument(request)) return cached;
+    return (cached ? Promise.resolve(cached) : cache.match(OFFLINE_DOCUMENT)).then((offline) =>
+      offline ? offlineDocumentWithLastForecastHour(cache, offline) : undefined,
+    );
+  });
 }
 
 /** Network-first, 3 s timeout, fall back to cache, then the precached offline document.
@@ -148,7 +221,9 @@ function networkFirst(request) {
 /** A document navigation may land on our plain offline page; an asset keeps its own failure. */
 function offlineDocumentForNavigation(cache, request, error) {
   if (request.mode !== 'navigate') return Promise.reject(error);
-  return cache.match(OFFLINE_DOCUMENT).then((offline) => offline || Promise.reject(error));
+  return cache.match(OFFLINE_DOCUMENT).then((offline) =>
+    offline ? offlineDocumentWithLastForecastHour(cache, offline) : Promise.reject(error),
+  );
 }
 
 /** Cache-first: a hit answers immediately, a miss fetches and stores the response.

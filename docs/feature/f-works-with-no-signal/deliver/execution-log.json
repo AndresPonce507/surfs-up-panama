@@ -267,6 +267,20 @@
       "s": "EXECUTED",
       "d": "PASS: verified 01-08 navigation fallback files staged for commit after all requested gates passed",
       "t": "2026-08-10T20:48:07Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: RED formatter guard failed with a semantic assertion; worker now derives the served sin-senal hour from the cached forecast stamp (or omits the clause when no forecast is cached). Target Chromium AT 1 scenario/14 steps; sw-hour-format 1/1; router 10/10; full units 93/93; typecheck; build; fast CI 8/8 passed, 0 skipped. UI N/A: this changes served text content only; existing offline-page surface remains covered by 01-01.",
+      "t": "2026-08-10T20:53:56Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: verified staged 01-09 worker, formatter drift guard, and feature-local execution evidence after all requested gates passed; test budget 1 behavior x 2 = 2, 1 unit test.",
+      "t": "2026-08-10T20:54:09Z"
     }
   ]
 }
