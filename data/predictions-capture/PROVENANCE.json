@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-08-10T11:22:05.884Z",
+  "captured_at": "2026-08-10T12:04:21.591Z",
   "spots_requested": 20,
   "wave_endpoint": "https://marine-api.open-meteo.com/v1/marine",
   "wind_endpoint": "https://api.open-meteo.com/v1/forecast",

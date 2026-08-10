@@ -1,7 +1,7 @@
 import type { WindStateToken } from '../data/report-vocab';
 import type { SizeBandToken } from '../data/size-bands';
 import type { ConfidenceResult } from '../scoring/confidence';
-import type { Factor } from '../scoring/engine';
+import type { FactorToken } from './factor-vocab';
 
 /** Spot-local `HH:MM` strings, precomputed at publish time; pages never compute them. */
 export type BestWindow = {
@@ -58,13 +58,26 @@ export type SurfaceCall = {
   readonly wind_state?: WindState;
   readonly best_window?: BestWindow;
   /**
-   * `null` means no factor cost this day any score -- a genuine perfect day,
-   * and deliberately distinguishable from a missing key, which means an
-   * older surface published before this field existed. No renderer may
-   * collapse the two. Optional on the wire for that backward-compatibility
-   * reason only; every freshly built call sets this key.
+   * The reading-surface half of the day summary's `weakest_link`
+   * (`BundleDaySummary`, src/publish/region-bundle.ts). Optional for the same
+   * reason as the five structured fields above: surfaces committed before
+   * this field existed carry no such key at all.
+   *
+   * A MISSING key and an explicit `null` are different facts and this type
+   * must not collapse them: missing means an older surface published before
+   * this field existed; `null` means the pipeline computed a perfect day, no
+   * factor cost it any score. No renderer may collapse the two. Population
+   * happens once, in `surfaceCall()` (src/pipeline/build.ts).
+   *
+   * Typed as `FactorToken`, the publish-side vocabulary, not the scoring
+   * engine's `Factor`. Two lanes reached this field from opposite ends and
+   * disagreed here. `FactorToken` wins because this is a wire type: the
+   * reading surface has no business importing the engine's internal union,
+   * and factor-vocab.ts already carries the guard asserting the two sets are
+   * equal at the publish boundary. If they ever diverge that guard fails,
+   * which is exactly where the failure belongs.
    */
-  readonly weakest_link?: Factor | null;
+  readonly weakest_link?: FactorToken | null;
   /** Same backward-compatibility reason as `weakest_link`: every freshly
    * built call sets this key, older committed surfaces may not have it. */
   readonly confidence_reason?: ConfidenceReason;
