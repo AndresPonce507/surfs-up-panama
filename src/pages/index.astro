@@ -13,6 +13,7 @@ import ShareControls from '../components/ShareControls.astro';
 import { forecast } from '../data/forecast';
 import { spotById } from '../data/region';
 import { stampedShareLink, whatsAppShareHref } from '../share/share-link';
+import { composeLinkAnnouncement } from '../share/link-announcement';
 import {
   composeWhatsAppCallMessage,
   type ShareDaySummary,
@@ -97,15 +98,21 @@ if (configuredSite === undefined) {
   throw new Error('home: astro.config.mjs no declara site y el mensaje no puede llevar una dirección absoluta');
 }
 
+const homeShareSummary = shareSummary(forecast.published_at);
 const completedCall = composeWhatsAppCallMessage(
-  shareSummary(forecast.published_at),
+  homeShareSummary,
   stampedShareLink(configuredSite.toString(), forecast.published_at),
 );
 
 const shareHref = whatsAppShareHref(completedCall);
+const homeAnnouncement = composeLinkAnnouncement({
+  spotName: homeShareSummary.spotName,
+  score: homeShareSummary.scoreQ,
+  site: configuredSite.toString(),
+});
 ---
 
-<RankedList locale="es" day={0}>
+<RankedList locale="es" day={0} announcement={homeAnnouncement}>
   <CopyControl slot="top-card-action" call={completedCall} />
   <ShareControls
     slot="top-card-action"
