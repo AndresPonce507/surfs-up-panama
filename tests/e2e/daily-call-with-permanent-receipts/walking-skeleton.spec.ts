@@ -219,7 +219,7 @@ test('a surfer can read a real Spanish call and yesterday remains a separate pub
     'the twenty home rows cannot all show the same score, because that would be filler rather than a coast ranking',
   ).toBeGreaterThan(1);
   await expect.soft(page.locator('ol.ranked li').first().locator('strong')).toHaveText(/^(?:[1-9][0-9]?|100)$/, { timeout: 1_000 });
-  await expect.soft(page.locator('ol.ranked li').first().locator('p')).not.toHaveText(/placeholder/i, { timeout: 1_000 });
+  await expect.soft(page.locator('ol.ranked li').first().locator(':scope > p')).not.toHaveText(/placeholder/i, { timeout: 1_000 });
   await expect.soft(page.locator('body')).not.toContainText(/placeholder/i, { timeout: 1_000 });
   await expect.soft(page.locator('body')).not.toContainText('Updated', { timeout: 1_000 });
   await expect.soft(page.locator('a[href^="/en/"]'), 'this Spanish-only feature must not ship an English route').toHaveCount(0, { timeout: 1_000 });
