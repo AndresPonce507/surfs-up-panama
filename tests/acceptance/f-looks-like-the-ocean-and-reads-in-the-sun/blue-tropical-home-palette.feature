@@ -47,9 +47,9 @@ Feature: La portada se ve como agua tropical profunda, no como una lista gris, y
       | oscuro |
 
   @slice-01 @step-01-02 @driving_port @real-io @negative @error
-  Scenario: El texto de la tarjeta destacada en tema claro hereda el color pensado para fondos claros y pierde el margen de lectura contra el degradado oscuro
-    Given la superficie publicada real, sin modificar
-    When el surfista abre la portada a 390 px, con tema "claro"
+  Scenario: Un build cuyo texto de la tarjeta destacada vuelve a heredar la tinta pensada para fondos claros se rechaza
+    Given una copia aislada cuyo texto de la tarjeta destacada vuelve a heredar la tinta pensada para fondos claros
+    When esa copia se abre a 390 px, con tema "claro"
     Then el texto del cuerpo de la tarjeta destacada no despeja 7 a 1 contra su fondo real, y la medición nombra el color y la proporción exactos
 
   @slice-01 @step-01-02 @driving_port @real-io @negative @error
