@@ -142,6 +142,7 @@ ol.ranked li:first-child > span {
 }
 
 ol.ranked li:first-child > a {
+  color: var(--hero-ink);
   font-size: var(--text-title1);
   font-weight: 800;
   line-height: var(--leading-tight);
@@ -149,6 +150,7 @@ ol.ranked li:first-child > a {
 }
 
 ol.ranked li:first-child > strong {
+  color: var(--hero-ink);
   font-size: var(--score-hero);
   font-weight: 800;
   letter-spacing: -0.03em;
@@ -159,7 +161,7 @@ ol.ranked li:first-child > p {
   grid-column: 1 / 3;
   margin-top: var(--sp-2);
   display: block;
-  color: var(--ink);
+  color: var(--hero-ink-2);
   font-size: var(--text-body);
   font-weight: 400;
   line-height: var(--leading-body);
@@ -219,12 +221,12 @@ ol.ranked li > details.confidence > div {
 
 /* hero card: both the closed summary and the opened reason sit directly on
    --hero-grad (normal document flow now, no separate solid backdrop), so
-   both need the darker ink already proven readable against the worst
-   gradient stop (09-design-system.md) -- the same token the hero's own
-   call paragraph already uses. */
+   both need the light ink proven readable against the load-bearing worst
+   gradient stop -- the same --hero-ink-2 token the hero's own call
+   paragraph uses, not --ink (that token is for text on light surfaces). */
 ol.ranked li:first-child > details.confidence > summary,
 ol.ranked li:first-child > details.confidence > div {
-  color: var(--ink);
+  color: var(--hero-ink-2);
 }
 
 /* ---- spot page day cards */
