@@ -10,21 +10,71 @@ alarms. The one deliberate leftover is the `surfs-up-panama-guard-20` budget (se
 
 ## 1. The verdict that matters
 
-**`andres-cli` cannot bootstrap and cannot deploy. Hard blocker; only Andres clears it.**
+**CLEARED 2026-08-09, then superseded by a different, harder blocker.** The permission
+blocker described in round 1 is gone. The blocker now is an account service quota.
 
-- `cdk bootstrap` fails at its first CloudFormation call: `cloudformation:CreateChangeSet`
-  DENIED (real run, exit 1, 2026-08-09). `cloudformation:CreateStack` DENIED too, so there
-  is no changeset-free fallback. No CloudFormation write path exists for this credential.
-- Even resource-by-resource (which ADR-iac-cdk forbids anyway), three of the four stacks
-  are unreachable: `scheduler:CreateSchedule` (ingest), `dynamodb:CreateTable` and
-  `lambda:CreateFunctionUrlConfig` (write), `s3:PutBucketPublicAccessBlock` (site guardrail
-  6, BLOCK_ALL) are all DENIED.
-- `lambda:PutFunctionConcurrency` is DENIED at the IAM level. Consequence stated plainly:
-  **the Lambda concurrency quota question (07-write-path §7.2 item 0.15) cannot be answered
-  by this credential.** An IAM denial is not a quota rejection; nothing was learned about
-  the applied quota. All four Service Quotas reads and `lambda:GetAccountSettings` are also
-  denied, and the CloudWatch `SERVICE_QUOTA()` metric-math read fails because the account
-  has never run a Lambda, so no `AWS/Usage` ConcurrentExecutions metric exists to bind to.
+### 1.1 The permission blocker is cleared
+
+Andres bootstrapped from an admin profile and installed the narrow durable grant this
+document recommended in §5:
+
+- `CDKToolkit` stack is `CREATE_COMPLETE` (12/12 resources, `aws://602167897909/us-east-1`).
+- Inline user policy `cdk-deploy-via-bootstrap-roles` allows exactly `sts:AssumeRole` on
+  `arn:aws:iam::602167897909:role/cdk-hnb659fds-*` and nothing else.
+- `AdministratorAccess` was removed again. Standing admin is gone.
+- Verified end to end this session: three `cdk deploy` runs executed real CloudFormation
+  writes through the bootstrap exec role while `iam:ListAttachedUserPolicies` stayed denied
+  to `andres-cli` itself.
+
+Consequence for every DENIED row in §2: those are **user-level** denials and they no longer
+govern a CloudFormation-driven deploy. Proven, not assumed — `s3:PutBucketPublicAccessBlock`
+is denied to `andres-cli`, yet the live site bucket returns all four block flags `true`
+because the exec role applied them (§7).
+
+### 1.2 The real blocker: the Lambda concurrency quota is 10
+
+**Applied quota `L-B99A9384` (`Concurrent executions`) = 10.** Read 2026-08-09 through the
+`cdk-hnb659fds-lookup-role` (read-only, inside the grant Andres installed):
+`lambda:GetAccountSettings` returns `ConcurrentExecutions: 10`,
+`UnreservedConcurrentExecutions: 10`; `servicequotas:GetServiceQuota` returns `Value: 10.0`,
+`Adjustable: true`.
+
+This is not the ≤102 case 07-write-path §7.2 item 0.15 anticipated. It is far worse:
+
+> AWS rejects any reservation that leaves the account below its minimum unreserved value.
+> On this account that floor is **10**, and the quota is **10**. Therefore
+> **no reserved concurrency of any size ≥ 1 can be set on this account at all.**
+
+Confirmed independently by a real deploy, not only by a quota read. `SurfsUpPanamaIngest`
+failed on its first Lambda and CloudFormation rolled the whole stack back. Exact text:
+
+```
+Resource handler returned message: "Specified ReservedConcurrentExecutions for function
+decreases account's UnreservedConcurrentExecution below its minimum value of [10].
+(Service: Lambda, Status Code: 400, Request ID: 867695d6-05be-4246-b14c-b02c00ee7277)"
+(HandlerErrorCode: InvalidRequest)
+```
+
+The reservation that was rejected was `surfs-up-panama-build`, asking for **2**.
+
+What this costs, stated in two separate claims so neither hides the other:
+
+1. **The aggregate cost bound survives, by accident.** An account ceiling of 10 concurrent
+   executions is tighter than the 13 this project would have reserved, so total compute
+   cannot run away. The bound holds; the declared mechanism does not.
+2. **The isolation property is gone, and that is the serious loss.** Guardrail 1's reserved
+   concurrency is what keeps the write path and the ingest path in separate buckets. Without
+   it they compete for one shared pool of 10, so a write flood can starve the fetch Lambda —
+   precisely the "a billing flood stops the prediction log" failure guardrail 8 exists to
+   prevent (`system-architecture.md` §9). The breaker's *trip* action (set write functions to
+   reserved 0) would still be accepted; its *restore* action (back to 2/1/1/1) would be
+   rejected by the same rule.
+
+The fix is Andres's and it is one request: raise `L-B99A9384`. It is marked `Adjustable:
+true`. The precondition to deploy `SurfsUpPanamaWrite` unchanged is **quota ≥ 13 + 10 = 23**;
+to also keep AWS's conventional 100-unreserved headroom it is **113**. Nothing in this repo
+should retry the write stack by stripping the reservations: reserved concurrency is the cost
+control, not a nicety.
 
 ## 2. Observed permission table (all us-east-1, 2026-08-09)
 
@@ -112,11 +162,99 @@ and `lambda:GetAccountSettings` to andres-cli (both denied today) and check quot
 functions and 2+1+1+1 on the four write functions, 17 total, and AWS requires 100
 unreserved on top.
 
+> **Both steps above were executed by Andres on 2026-08-09 and worked. See §1.1.**
+>
+> **Correction of record, same date: the arithmetic in the paragraph directly above is
+> wrong and is left in place only so the error is traceable.** It counted six non-write
+> functions. The four real stacks declare **four** non-write functions carrying a
+> reservation (`fetch` 2, `build` 2, `resize` 2, `breaker` 2) plus the four write functions
+> (`report` 2, `mint` 1, `push` 1, `photo-presign` 1). Counted from the synthesized
+> templates, not from prose: **the sum is 13, not 17**, so the "100 unreserved on top"
+> precondition is **≥ 113, not ≥ 117**. The six-function figure came from the synth-only
+> `SurfsUpPanamaGuardrails` fixture stack, which has ten placeholder functions and must
+> never be deployed (§8).
+>
+> The precondition turned out to be academic anyway. The observed quota is **10** and the
+> observed minimum-unreserved floor on this account is also **10**, so no reservation of any
+> size is settable. §1.2 has the number, the source, and the verbatim rejection.
+
 ## 6. Stack-by-stack requirement vs observed state
 
-| Stack (`system-architecture.md` §11) | Needs beyond CloudFormation | Blocked today by |
+Rewritten 2026-08-09 after the first real deploy. "Blocked by" now means observed at deploy
+time, not predicted from a permission probe. Every stack was deployed by explicit stack ID;
+`--all` was never used, for the reason in §8.
+
+| Stack (`system-architecture.md` §11) | Needs beyond CloudFormation | Deploy result, 2026-08-09 |
 |---|---|---|
-| site-stack | S3 bucket + BLOCK_ALL + versioning + lifecycle, CloudFront distribution + OAC, response headers policy | cloudformation:*; also s3:PutBucketPublicAccessBlock and cloudfront:CreateOriginAccessControl if ever attempted by hand |
-| ingest-stack | EventBridge Scheduler schedules, fetch/build Lambdas, log groups, metric filters | cloudformation:*; also scheduler:CreateSchedule by hand |
-| write-stack | 4 Function URLs (auth NONE), DynamoDB PROVISIONED 25/25, resize, breakers, PutFunctionConcurrency | cloudformation:*; also dynamodb:CreateTable, lambda:CreateFunctionUrlConfig, lambda:PutFunctionConcurrency by hand |
-| observability-stack | SNS topic + subscription, alarms, metric filters, budgets + $18 action | deployable only piecemeal by hand today (sns/cloudwatch/budgets are allowed), which ADR-iac-cdk rejects; via CloudFormation blocked like the rest |
+| site-stack | S3 bucket + BLOCK_ALL + versioning + lifecycle, CloudFront distribution + OAC, response headers policy | **DEPLOYED, `CREATE_COMPLETE`**, 8/8 resources. `s3:PutBucketPublicAccessBlock` is still denied to `andres-cli` and was applied anyway by the exec role; verified live (§7) |
+| ingest-stack | EventBridge Scheduler schedules, fetch/build Lambdas, log groups, metric filters | **FAILED, rolled back to `ROLLBACK_COMPLETE`.** Not a permission failure: `scheduler:CreateSchedule` never got a turn. Rejected on `ReservedConcurrentExecutions` for `surfs-up-panama-build`, quota 10 vs floor 10 (§1.2). Rollback was clean, zero orphans |
+| write-stack | 4 Function URLs (auth NONE), DynamoDB PROVISIONED 25/25, resize, breakers, PutFunctionConcurrency | **NOT ATTEMPTED, deliberately.** It carries 9 of the 13 reservations and would fail identically on its first Lambda. Its DynamoDB table is `RemovalPolicy.RETAIN` with the fixed name `surfs-up-panama-write-store`, so a create-then-rollback would strand an orphan that blocks every later retry with "already exists". The answer was already known with certainty from two independent sources, so paying that price to re-learn it was refused |
+| observability-stack | SNS topic + subscription, alarms, budgets, $18 line | **DEPLOYED, `CREATE_COMPLETE`**, 14/14 resources. Contains no Lambda, so the quota does not touch it. Verified live (§7) |
+
+## 7. Live state after the first deploy (read back 2026-08-09, not inferred)
+
+Read through the `cdk-hnb659fds-lookup-role` because `andres-cli` cannot even
+`lambda:ListFunctions`. Read-only throughout; nothing in this section was written by hand.
+
+**Stacks:** `SurfsUpPanamaSite` `CREATE_COMPLETE`, `SurfsUpPanamaObservability`
+`CREATE_COMPLETE`, `SurfsUpPanamaIngest` `ROLLBACK_COMPLETE` (empty shell; a retry must
+delete it first), `CDKToolkit` `CREATE_COMPLETE`.
+
+**Site (`surfs-up-panama-site-602167897909`), every guardrail checked against the live API:**
+
+| Guardrail | Required | Observed live |
+|---|---|---|
+| slice-01 / R1 archive versioning | Enabled | `Status: Enabled` |
+| guardrail 6 BLOCK_ALL | four flags true | all four `true` |
+| guardrail 4 lifecycle | 3 rules, none touching `predictions/` | `raw/` 30d, `photos/` 90d, multipart-abort 7d. No expiration or transition rule matches `predictions/` |
+| R16 cost-allocation tag | `Project=surfs-up-panama` | present |
+| origin privacy | OAC only, TLS enforced | policy denies non-TLS and allows only `cloudfront.amazonaws.com` scoped to distribution `E30CRNEUVE67RM` |
+
+Distribution `E30CRNEUVE67RM` is `Deployed`, HTTP/2+3, OAC `ESB03MBNA6DAZ`, domain
+`d1dtqpd8bf3oze.cloudfront.net`.
+
+**Known-open, honest:** `GET https://d1dtqpd8bf3oze.cloudfront.net/` returns **403 with raw
+`AccessDenied` XML**, which is exactly the surfer-facing failure HANDOFF §10 says must never
+happen. It is not a stack defect: the bucket is empty, so CloudFront cannot fetch the
+`/404.html` the `errorResponses` mapping points at and falls back to the origin error. The
+403→404 mapping is unprovable until site content is published, and proving it belongs to
+whichever lane owns publishing, not to infra.
+
+**Observability, live:** topics `surfs-up-panama-alarms` and `surfs-up-panama-breaker` exist.
+The email subscription on the alarm topic is **`PendingConfirmation`** — that is pre-requisite
+5 and the single next human action. The dead-man's switch carries all four load-bearing
+properties for real, not merely declared: metric `SurfsUpPanama/IngestSuccess`, period 3600 s,
+`treatMissingData: breaching`, 2 evaluation periods, and both an ALARM and an OK action on the
+alarm topic. All three alarms read `INSUFFICIENT_DATA`.
+
+Expected and not a fault: the dead-man's switch will move to `ALARM` on its own within 2 to 3
+hours, because ingest is genuinely not running. No email will leave until the subscription is
+confirmed.
+
+**Money lines, live:** all five exist (`surfs-up-panama-alert-1`, `-alert-5`, `-alert-15`,
+`-action-18`, `-last-line-20`), all at $0.00 actual. The $18 line's subscribers are the email
+plus the `surfs-up-panama-breaker` topic; that topic currently has no subscriber because the
+breaker Lambda lives in the undeployed write stack, so the $18 line notifies Andres but
+trips nothing. Say that plainly rather than calling the breaker live.
+
+**Two flags for Andres, neither actioned here:**
+
+1. **Budget count went from 2 to 7.** If AWS charges beyond the first two budgets per account,
+   this stack creates recurring spend against a design target of $0.00/month — the guardrail
+   billing the thing it guards. **Unverified by construction:** `pricing:GetProducts` is denied
+   to `andres-cli`, and an IAM denial is not a pricing answer, the same doctrine §1 applies to
+   quotas. Settle it with a real observation: in ~48 h run `aws ce get-cost-and-usage` grouped
+   by `SERVICE` and look for an AWS Budgets line.
+2. **`surfs-up-panama-guard-20` is now redundant** with the stack-created
+   `surfs-up-panama-last-line-20`. It was the interim hand-made guard from the previous lane.
+   Deleting it would drop the account to 6 budgets, but deleting a live spend guardrail is
+   Andres's call, not an agent's, so it was left alone.
+
+## 8. Never `cdk deploy --all` in this repo
+
+`infra/bin/app.ts` synthesizes five stacks. Four are real; `SurfsUpPanamaGuardrails` is a
+synth-only fixture that exists to be asserted against by `infra/test/guardrails.test.ts`.
+It declares ten placeholder Lambdas carrying **20** reserved executions and an unnamed
+`RETAIN` bucket. Deploying it would push required quota to 33, strand a bucket, and prove
+nothing. Deploy by explicit stack ID, in the mandated order: site, ingest, observability,
+then write LAST.

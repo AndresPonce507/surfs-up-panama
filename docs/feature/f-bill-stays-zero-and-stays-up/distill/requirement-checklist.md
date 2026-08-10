@@ -61,11 +61,30 @@ Updated 2026-08-09 (DEVOPS/platform lane): slice-05 shipped. R20-R24 are covered
 `infra/test/month-close.test.ts`, and the live half of R20/R21/R23/R24 was proven once against
 the real account (exit 0 at $0.00; see `red-classification.md`). R22's live half (a real
 above-zero month) is unprovable until such a month exists, by construction; its logic is covered
-by the negative scenario and units. Slice-04 remains blocked: R18/R19 are live email proofs
-gated on the first deploy, which is hard-blocked on andres-cli permissions
-(`docs/product/architecture/aws-permission-inventory.md` §1, §5). R26 held: the slice-05 reader
-runs on read-only `ce`/`freetier` grants alone, and no credential that can write a production
-data store was created or held by this lane.
+by the negative scenario and units. R26 held: the slice-05 reader runs on read-only
+`ce`/`freetier` grants alone, and no credential that can write a production data store was
+created or held by this lane.
+
+Updated again 2026-08-09, after the first real deploy (`aws-permission-inventory.md` §7):
+
+- **R1 and R16 now have live proof, not only a CI assert.** The real archive bucket
+  `surfs-up-panama-site-602167897909` exists and returns versioning `Status: Enabled` and the
+  tag `Project=surfs-up-panama` from the live S3 API. Guardrail 4 also holds against the real
+  lifecycle configuration: the three rules match `raw/`, `photos/` and the multipart-abort
+  case, and none expires or transitions anything under `predictions/`. Slice-01's promise is
+  no longer a declaration about a bucket that might one day exist.
+- **Slice-04 is still blocked, but the blocker changed and got deeper.** The permission
+  blocker cleared. Three new ones replaced it, each independently sufficient: there is no
+  ingest schedule to disable, because `SurfsUpPanamaIngest` rolled back on a Lambda
+  concurrency quota of 10 (`feature-delta.md` pre-requisite 7); the alarm topic's email
+  subscription is `PendingConfirmation`, and R18 requires a *confirmed* subscriber
+  (pre-requisite 5); and R19's OK half additionally needs a real `ingest.success` event that
+  the deployed placeholder handler deliberately never emits, which must not be faked to close
+  the row.
+- **R25 nuance worth stating once.** The CI gate proves the *declarations*. It cannot prove
+  the deployed reservations, and this deploy is the demonstration: every slice-01 to
+  slice-03 assert was green while the account could not actually set a single reserved
+  concurrency. A green gate is necessary and not sufficient, exactly as CLAUDE.md warns.
 
 Architectural note recorded here because it changes how future slices must be authored: the
 declaration checks for slices 01-03 do NOT live inside the pre-existing
