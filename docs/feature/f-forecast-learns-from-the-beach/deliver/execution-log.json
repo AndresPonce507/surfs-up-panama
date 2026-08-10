@@ -736,6 +736,41 @@
       "s": "EXECUTED",
       "d": "PASS: 03-03 committed as HEAD with Step-ID 03-03. Break-type grouping activates at three region-local gated spots; non-active spots retain the regional parent. The 02-03 builder seam remains untouched and blocked.",
       "t": "2026-08-10T21:26:41Z"
+    },
+    {
+      "sid": "03-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "03-04 begins after 03-03. Non-visual hierarchy work only: estimate tau from eight genuinely gated spot corrections with a permanent floor; do not touch 02-03 build wiring.",
+      "t": "2026-08-10T21:27:22Z"
+    },
+    {
+      "sid": "03-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm run test:at -- --name Once eight spots have proven themselves different, pooling steps aside on its own\",\"exit\":1,\"classification\":\"expected behavioral RED\",\"failure\":\"stored gaps still equal the tau=6 hand-set prior gaps\"}",
+      "t": "2026-08-10T21:29:31Z"
+    },
+    {
+      "sid": "03-04",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm test -- --run tests/unit/learning-hierarchy-laws.test.ts\",\"exit\":0,\"classification\":\"initial law check after implementation; controlled threshold poison follows\"}",
+      "t": "2026-08-10T21:29:31Z"
+    },
+    {
+      "sid": "03-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "{\"focused_acceptance\":\"1 scenario, 19 steps PASS\",\"learning_units\":\"9 files, 62 tests PASS\",\"typecheck\":\"PASS\",\"full_learning_acceptance\":\"57 scenarios: 28 passed, 22 skipped, 7 blocked only by unchanged 02-03 build wiring\",\"falsification\":\"TAU_ESTIMATION_MIN_GATED_SPOTS=7 made the fewer-than-eight fast-check law fail after 3 runs; restored 8\",\"non_visual_rationale\":\"stored correction arithmetic only; no visual surface changed\"}",
+      "t": "2026-08-10T21:31:37Z"
+    },
+    {
+      "sid": "03-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "{\"commit\":\"d2c1770\",\"message\":\"feat(learning): estimate pooling tau from gated spots\",\"status\":\"green\"}",
+      "t": "2026-08-10T21:31:42Z"
     }
   ]
 }
