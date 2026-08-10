@@ -30,13 +30,12 @@ function subscriptionWithBar(bar: number): StoredSub {
 }
 
 describe('planNotifications', () => {
-  it('plans exactly one Spanish morning aviso for every subscriber-supplied bar from 0 to 100 when its score reaches that bar', () => {
+  it('plans a send if and only if a morning score reaches the subscriber-supplied bar across the full scale', () => {
     fc.assert(
       fc.property(
         fc.integer({ min: 0, max: 100 }),
         fc.integer({ min: 0, max: 100 }),
-        (bar, extra) => {
-          const score = bar + Math.floor((extra * (100 - bar)) / 100);
+        (bar, score) => {
           const plan = planNotifications({
             now: '2026-08-10T07:25:00-05:00',
             spots: [playaVenao],
@@ -45,7 +44,18 @@ describe('planNotifications', () => {
             run_cap: 10_000,
           });
 
-          assert.equal(plan.sends.length, 1, 'a score at or above the supplied bar plans exactly one send');
+          assert.ok(
+            plan && typeof plan === 'object',
+            'la corrida no llegó a decidir nada, así que un cero de avisos todavía no prueba la regla',
+          );
+          assert.equal(
+            plan.sends.length,
+            score >= bar ? 1 : 0,
+            'a send is planned if and only if the score reaches the subscriber-supplied bar',
+          );
+
+          if (score < bar) return;
+
           const [send] = plan.sends;
           assert.equal(send?.lang, 'es', 'the plan preserves the subscriber language');
           assert.equal(send?.spot_id, playaVenao.spot_id, 'the plan keeps the subscribed spot');
