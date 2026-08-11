@@ -44,7 +44,12 @@ export type ResidualSample = {
 };
 
 /** One height residual sample, keyed to the model and lead bucket it was measured on (06 section 5.1). */
-export type HeightResidualRow = { readonly source: string; readonly leadBucket: string; readonly sample: ResidualSample };
+export type HeightResidualRow = {
+  readonly spotId: string;
+  readonly source: string;
+  readonly leadBucket: string;
+  readonly sample: ResidualSample;
+};
 
 /**
  * r_height, formed for every report that pairs with a prediction row. One
@@ -68,6 +73,7 @@ export function formHeightResidualRows(
       const { mid, varianceM2, bandWidthM } = bandMidAndVarianceM(band);
       const value = hEff(prediction.swell_h_m, prediction.swell_t_s) - mid;
       rows.push({
+        spotId: observation.spot_id,
         source: prediction.source,
         leadBucket: leadBucketOf(prediction.lead_h),
         sample: {
@@ -188,7 +194,12 @@ function collapseHeightDeviceDays(rows: readonly HeightResidualRow[]): HeightRes
     if (exemplar === undefined) continue;
     const collapsedDeviceDays = collapseDeviceDayMedian(group.map((row) => row.sample));
     for (const sample of winsorizeSpotDayResiduals(collapsedDeviceDays)) {
-      collapsed.push({ source: exemplar.source, leadBucket: exemplar.leadBucket, sample: withoutSessionIdentity(sample) });
+      collapsed.push({
+        spotId: exemplar.spotId,
+        source: exemplar.source,
+        leadBucket: exemplar.leadBucket,
+        sample: withoutSessionIdentity(sample),
+      });
     }
   }
   return collapsed;

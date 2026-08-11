@@ -44,6 +44,15 @@ export const G1_MIN_MORNINGS = 10;
 export const TAU_SPOT_PRIOR = 6;
 
 /**
+ * Per-reporter backfitting prior, 06 section 5.2: evidence reaches half
+ * influence at four reports and is always pulled toward zero.
+ */
+export const TAU_REPORTER_OFFSET = 4;
+
+/** The additive spot/reporter fit uses this fixed, inspectable pass count. */
+export const REPORTER_OFFSET_BACKFIT_ITERATIONS = 3;
+
+/**
  * Once eight gated spots make between-spot variation estimable, pooling may
  * weaken from its launch prior but never disappear.  This is a permanent
  * floor, not another launch-time prior (06 section 5.3).
