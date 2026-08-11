@@ -470,6 +470,27 @@
       "s": "EXECUTED",
       "d": "PASS: implementation commit 103ca64; fresh U8 PASS; reviewer iteration 2 APPROVED; external Function-URL/quota/device/deployed spot-index gates remain INDETERMINATE.",
       "t": "2026-08-11T14:01:38Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: endpoint repair RED. Configured local real-I/O browser scenario failed because built form exposed no explicit mint Function URL; endpoint-free browser scenario failed because the static artifact still exposed write URLs. Both failures were semantic page-configuration assertions.",
+      "t": "2026-08-11T14:44:30Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: endpoint repair RED. Transport tests observed hard-coded relative /api/mint and /api/report, and absent endpoint configuration still invoked mint; the Function-URL output contract was absent from the synthesized write stack.",
+      "t": "2026-08-11T14:44:34Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: endpoint repair GREEN. Configured local real-I/O and endpoint-free production-static Chromium scenarios passed (2 scenarios, 53 steps): explicit Function URLs send the saved bytes, while absent endpoint variables leave one durable queued row and make zero mint/report requests. Typecheck, 320 unit tests, 70 infra tests, build, report-leak/page-budget, and synth gates passed. Deployed Function-URL/CORS and external write gates remain INDETERMINATE; no deploy was performed.",
+      "t": "2026-08-11T14:47:33Z"
     }
   ]
 }

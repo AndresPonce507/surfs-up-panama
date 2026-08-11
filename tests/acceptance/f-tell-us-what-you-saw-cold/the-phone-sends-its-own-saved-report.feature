@@ -17,3 +17,11 @@ Feature: The phone sends its own saved report
     And the phone receives the saved label's private answer before it can show the outcome
     And the surfer sees their saved report arrived only after its matching answer
     And the surfer sees neither an account step nor our forecast before a server answer
+
+  @slice-03 @driving_port @real-io @no-write-endpoints @covers-R19
+  Scenario: A static page without write endpoints keeps its saved label on the phone
+    Given the built site is running as it would be at the beach
+    And a surfer has the report screen open for Playa Venao
+    When the surfer answers waist to chest, choppy wind and a good session
+    And the surfer taps Mandar
+    Then the endpoint-free static page keeps exactly one saved label and sends nothing

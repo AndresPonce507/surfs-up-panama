@@ -107,8 +107,8 @@ function reportOf(entry: QueuedReport): Record<string, unknown> {
 // ---------- Givens ----------
 
 Given('the built site is running as it would be at the beach', { timeout: 240_000 }, async function (this: object) {
-  scenarioState(this);
-  await assertBuiltSite();
+  const state = scenarioState(this);
+  await assertBuiltSite(state.endpointMode);
 });
 
 Given(
@@ -121,7 +121,7 @@ Given(
 
 Given('a surfer has the report screen open for Playa Venao', { timeout: 240_000 }, async function (this: object) {
   const state = scenarioState(this);
-  await assertBuiltSite();
+  await assertBuiltSite(state.endpointMode);
   await openSpotPage(state);
   await followReportCta(state);
 });
@@ -141,7 +141,7 @@ Given(
   { timeout: 240_000 },
   async function (this: object) {
     const state = scenarioState(this);
-    await assertBuiltSite();
+    await assertBuiltSite(state.endpointMode);
     await openSpotPage(state);
     await followReportCta(state);
     await setSignal(state, false);
@@ -175,7 +175,7 @@ When('the surfer taps Mandar', { timeout: 60_000 }, async function (this: object
 
 When('a surfer opens the report screen for Playa Venao', { timeout: 240_000 }, async function (this: object) {
   const state = scenarioState(this);
-  await assertBuiltSite();
+  await assertBuiltSite(state.endpointMode);
   await openReportScreenDirectly(state);
 });
 

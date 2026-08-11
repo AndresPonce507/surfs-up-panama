@@ -19,8 +19,10 @@ export async function sendSavedReport(
   savedBytes: string,
   credential: string,
   fetcher: Fetcher = fetch,
+  reportEndpoint: string | undefined = undefined,
 ): Promise<SubmissionOutcome> {
-  const response = await fetcher('/api/report', {
+  if (reportEndpoint === undefined) throw new Error('No hay un endpoint para enviar el reporte.');
+  const response = await fetcher(reportEndpoint, {
     method: 'POST',
     cache: 'no-store',
     headers: {

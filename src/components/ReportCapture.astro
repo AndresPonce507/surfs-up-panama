@@ -31,6 +31,18 @@ const spot = spotById(spotId);
 if (spot === undefined) {
   throw new Error(`ReportCapture: no spot identity for spot_id "${spotId}"`);
 }
+const mintEndpoint = configuredWriteEndpoint(import.meta.env.PUBLIC_REPORT_MINT_URL);
+const submitEndpoint = configuredWriteEndpoint(import.meta.env.PUBLIC_REPORT_SUBMIT_URL);
+
+function configuredWriteEndpoint(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  try {
+    const endpoint = new URL(value);
+    return endpoint.protocol === 'https:' || endpoint.protocol === 'http:' ? endpoint.href : undefined;
+  } catch {
+    return undefined;
+  }
+}
 
 // Submission is owned by the report island (src/report/island.ts): probe
 // storage, enable Mandar only on a passing probe, commit to the queue, swap
@@ -47,7 +59,14 @@ if (spot === undefined) {
 >
   <h1 data-report-heading>{t.report.title(spot.name)}</h1>
   <div data-storage-notice hidden></div>
-  <form data-report-form data-spot-id={spotId} data-locale={locale} data-spot-name={spot.name}>
+  <form
+    data-report-form
+    data-report-mint-url={mintEndpoint}
+    data-report-submit-url={submitEndpoint}
+    data-spot-id={spotId}
+    data-locale={locale}
+    data-spot-name={spot.name}
+  >
     <fieldset>
       <legend>{t.report.sizeQuestion}</legend>
       {

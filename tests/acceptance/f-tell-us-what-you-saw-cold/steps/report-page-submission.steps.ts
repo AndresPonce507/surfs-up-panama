@@ -5,7 +5,7 @@
 import { Then } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 
-import { observedWriteRequest, observedWriteResponse, queuedReports, scenarioState, textBeforeReportAnswer, visibleText } from './support/world';
+import { configuredWriteEndpoints, observedWriteRequest, observedWriteResponse, queuedReports, scenarioState, textBeforeReportAnswer, visibleText } from './support/world';
 
 Then('the phone keeps one saved label while it waits for an answer', async function (this: object) {
   const reports = await queuedReports(scenarioState(this));
@@ -21,6 +21,19 @@ Then('the page itself asks for anonymous permission and sends that exact saved l
   const reports = await queuedReports(state);
   const saved = reports[0]?.row;
   assert.ok(saved, 'WHAT: no saved label exists to send. HOW: commit it before asking the server.');
+
+  const configured = await configuredWriteEndpoints(state);
+  assert.ok(state.baseUrl, 'test setup: no local write origin was mounted into the built page');
+  assert.equal(
+    configured.mint,
+    `${state.baseUrl}/api/mint`,
+    'WHAT: the static report page has no explicit mint endpoint. WHY: the deployed site has no /api proxy. HOW: inject the Function URL at build time and expose it only to the report island.',
+  );
+  assert.equal(
+    configured.report,
+    `${state.baseUrl}/api/report`,
+    'WHAT: the static report page has no explicit report endpoint. WHY: the deployed site has no /api proxy. HOW: inject the Function URL at build time and expose it only to the report island.',
+  );
 
   await observedWriteRequest(state, '/api/report');
   const mintIndex = state.writeAttempts.findIndex((attempt) => new URL(attempt.url).pathname === '/api/mint');
@@ -42,6 +55,8 @@ Then('the page itself asks for anonymous permission and sends that exact saved l
     'WHAT: the page sent the label before asking for anonymous permission. HOW: ask for the permission first, then send the unchanged saved label with it.',
   );
   assert.equal(report.method, 'POST', 'WHAT: the saved label did not leave through its one-way send. HOW: use the settled write action.');
+  assert.equal(mint.url, configured.mint, 'WHAT: mint used a path other than the injected endpoint. HOW: use the configured Function URL, never a relative /api default.');
+  assert.equal(report.url, configured.report, 'WHAT: report used a path other than the injected endpoint. HOW: use the configured Function URL, never a relative /api default.');
   assert.equal(
     report.body,
     JSON.stringify(saved),
@@ -104,4 +119,18 @@ Then('the surfer sees neither an account step nor our forecast before a server a
   for (const forbidden of ['Inicia sesión', 'Crear cuenta', 'pronóstico', 'Dijimos', 'score']) {
     assert.ok(!text.includes(forbidden), `WHAT: the waiting screen shows ${JSON.stringify(forbidden)}. HOW: preserve the anonymous, forecast-free journey until the server answers.`);
   }
+});
+
+Then('the endpoint-free static page keeps exactly one saved label and sends nothing', async function (this: object) {
+  const state = scenarioState(this);
+  const configured = state.configuredEndpointsBeforeSubmit;
+  assert.ok(configured, 'test setup: the page did not expose its form before Mandar');
+  assert.deepEqual(
+    configured,
+    { mint: null, report: null },
+    'WHAT: the endpoint-free static page still exposes a write URL. HOW: omit both endpoint attributes unless the build supplies a valid complete pair.',
+  );
+  const reports = await queuedReports(state);
+  assert.equal(reports.length, 1, 'WHAT: an endpoint-free static page did not retain exactly one durable label. HOW: commit locally and leave it available until a real endpoint exists.');
+  assert.equal(state.writeAttempts.length, 0, 'WHAT: an endpoint-free static page attempted a write. HOW: never invent a relative /api request when deployment configuration is absent.');
 });

@@ -37,6 +37,8 @@ import type { UniverseSnapshot } from './state-delta';
 
 export const REPOSITORY_ROOT = fileURLToPath(new URL('../../../../../', import.meta.url));
 export const DIST_ROOT = resolve(REPOSITORY_ROOT, 'dist');
+const ENDPOINTLESS_DIST_ROOT = resolve(REPOSITORY_ROOT, '.acceptance-endpointless-dist');
+type EndpointMode = 'configured' | 'absent';
 
 export const SPOT_ID = 'playa-venao';
 export const SPOT_NAME = 'Playa Venao';
@@ -71,15 +73,29 @@ const execFileAsync = promisify(execFile);
 
 export type BuildOutcome = Readonly<{ exitCode: number; output: string }>;
 
-let buildPromise: Promise<BuildOutcome> | null = null;
+const builds = new Map<EndpointMode, Promise<BuildOutcome>>();
 
-/** Runs the real `npm run build` exactly once per acceptance run. */
-export function ensureBuiltSite(): Promise<BuildOutcome> {
-  buildPromise ??= (async (): Promise<BuildOutcome> => {
+/** Builds each deployed-shaped endpoint configuration once, with real static output. */
+export function ensureBuiltSite(mode: EndpointMode = 'configured'): Promise<BuildOutcome> {
+  const existing = builds.get(mode);
+  if (existing !== undefined) return existing;
+  const build = (async (): Promise<BuildOutcome> => {
+    const { baseUrl } = await ensureServedSite(mode);
+    const endpointEnvironment = mode === 'configured'
+      ? { PUBLIC_REPORT_MINT_URL: `${baseUrl}/api/mint`, PUBLIC_REPORT_SUBMIT_URL: `${baseUrl}/api/report` }
+      : { PUBLIC_REPORT_MINT_URL: undefined, PUBLIC_REPORT_SUBMIT_URL: undefined };
+    const { PUBLIC_REPORT_MINT_URL: _ignoredMintUrl, PUBLIC_REPORT_SUBMIT_URL: _ignoredSubmitUrl, ...baseEnvironment } = process.env;
+    const args = mode === 'configured'
+      ? ['run', 'build']
+      : ['run', 'build', '--', '--outDir', ENDPOINTLESS_DIST_ROOT];
     try {
-      const { stdout, stderr } = await execFileAsync('npm', ['run', 'build'], {
+      const { stdout, stderr } = await execFileAsync('npm', args, {
         cwd: REPOSITORY_ROOT,
         maxBuffer: 64 * 1024 * 1024,
+        env: {
+          ...baseEnvironment,
+          ...endpointEnvironment,
+        },
       });
       return { exitCode: 0, output: `${stdout}\n${stderr}` };
     } catch (error) {
@@ -90,11 +106,12 @@ export function ensureBuiltSite(): Promise<BuildOutcome> {
       };
     }
   })();
-  return buildPromise;
+  builds.set(mode, build);
+  return build;
 }
 
-export async function assertBuiltSite(): Promise<void> {
-  const build = await ensureBuiltSite();
+export async function assertBuiltSite(mode: EndpointMode = 'configured'): Promise<void> {
+  const build = await ensureBuiltSite(mode);
   assert.equal(
     build.exitCode,
     0,
@@ -127,7 +144,7 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
  * appended, else the built 404 document with a 404 status. No directory
  * indexes, no redirects, nothing `astro preview` would quietly fix.
  */
-function resolveDocument(pathname: string): string | null {
+function resolveDocument(pathname: string, distRoot: string): string | null {
   const decoded = decodeURIComponent(pathname);
   const safe = normalize(decoded).replace(/^(\.\.[/\\])+/, '');
   if (safe.includes('..')) return null;
@@ -140,8 +157,8 @@ function resolveDocument(pathname: string): string | null {
     candidates.push(safe, `${safe}.html`);
   }
   for (const candidate of candidates) {
-    const path = resolve(DIST_ROOT, candidate.replace(/^\//, ''));
-    if (!path.startsWith(DIST_ROOT)) return null;
+    const path = resolve(distRoot, candidate.replace(/^\//, ''));
+    if (!path.startsWith(distRoot)) return null;
     if (existsSync(path) && statSync(path).isFile()) return path;
   }
   return null;
@@ -149,7 +166,7 @@ function resolveDocument(pathname: string): string | null {
 
 type ServedSite = Readonly<{ server: http.Server; baseUrl: string; writeStoreRoot: string }>;
 
-let serverPromise: Promise<ServedSite> | null = null;
+const servedSites = new Map<EndpointMode, Promise<ServedSite>>();
 
 /**
  * Holds delivery of an already-computed real local report response long enough
@@ -200,12 +217,16 @@ const reportResponseBarrier = new ReportResponseBarrier();
  * actual clock and the launch spot index. This is a production-local adapter,
  * never a test-owned receipt or browser-route interception.
  */
-export function ensureServedSite(): Promise<ServedSite> {
-  serverPromise ??= createServedSite();
-  return serverPromise;
+export function ensureServedSite(mode: EndpointMode = 'configured'): Promise<ServedSite> {
+  const existing = servedSites.get(mode);
+  if (existing !== undefined) return existing;
+  const served = createServedSite(mode);
+  servedSites.set(mode, served);
+  return served;
 }
 
-async function createServedSite(): Promise<ServedSite> {
+async function createServedSite(mode: EndpointMode): Promise<ServedSite> {
+  const distRoot = mode === 'configured' ? DIST_ROOT : ENDPOINTLESS_DIST_ROOT;
   const writeStoreRoot = await mkdtemp(join(tmpdir(), 'surfs-up-report-write-'));
   let server: http.Server | undefined;
   try {
@@ -233,9 +254,9 @@ async function createServedSite(): Promise<ServedSite> {
         response.end('method not allowed');
         return;
       }
-      const document = resolveDocument(pathname);
+      const document = resolveDocument(pathname, distRoot);
       if (document === null) {
-        const notFound = resolve(DIST_ROOT, '404.html');
+        const notFound = resolve(distRoot, '404.html');
         if (existsSync(notFound)) {
           response.writeHead(404, { 'content-type': 'text/html; charset=utf-8' });
           createReadStream(notFound).pipe(response);
@@ -328,6 +349,7 @@ export type CapturedWriteRequest = Readonly<{
 }>;
 
 export interface ReportFlowScenario {
+  endpointMode: EndpointMode;
   flags: { storageRefused: boolean; javaScriptEnabled: boolean };
   offline: boolean;
   context: BrowserContext | null;
@@ -337,6 +359,7 @@ export interface ReportFlowScenario {
   pageErrors: string[];
   captured: CapturedResponse[];
   writeAttempts: CapturedWriteRequest[];
+  configuredEndpointsBeforeSubmit: Readonly<{ mint: string | null; report: string | null }> | null;
   reportTextBeforeResponse: string | null;
   savedReportBeforeResponse: Record<string, unknown> | null;
   distSnapshot: UniverseSnapshot | null;
@@ -352,6 +375,7 @@ export function scenarioState(world: object): ReportFlowScenario {
 
 Before({ tags: '@feature-f-tell-us-what-you-saw-cold' }, function (this: object) {
   scenarios.set(this, {
+    endpointMode: 'configured',
     flags: { storageRefused: false, javaScriptEnabled: true },
     offline: false,
     context: null,
@@ -361,10 +385,15 @@ Before({ tags: '@feature-f-tell-us-what-you-saw-cold' }, function (this: object)
     pageErrors: [],
     captured: [],
     writeAttempts: [],
+    configuredEndpointsBeforeSubmit: null,
     reportTextBeforeResponse: null,
     savedReportBeforeResponse: null,
     distSnapshot: null,
   });
+});
+
+Before({ tags: '@no-write-endpoints' }, function (this: object) {
+  scenarioState(this).endpointMode = 'absent';
 });
 
 Before({ tags: '@local-real-io' }, function () {
@@ -382,13 +411,14 @@ After({ tags: '@local-real-io' }, function () {
 
 AfterAll(async function () {
   if (browserPromise) await (await browserPromise).close();
-  if (serverPromise) {
-    const { server, writeStoreRoot } = await serverPromise;
+  for (const served of servedSites.values()) {
+    const { server, writeStoreRoot } = await served;
     await new Promise<void>((resolveServer, rejectServer) => {
       server.close((error) => error === undefined ? resolveServer() : rejectServer(error));
     });
     await rm(writeStoreRoot, { recursive: true, force: true });
   }
+  await rm(ENDPOINTLESS_DIST_ROOT, { recursive: true, force: true });
 });
 
 /**
@@ -397,8 +427,8 @@ AfterAll(async function () {
  */
 export async function phonePage(state: ReportFlowScenario): Promise<Page> {
   if (state.page) return state.page;
-  await assertBuiltSite();
-  const { baseUrl } = await ensureServedSite();
+  const { baseUrl } = await ensureServedSite(state.endpointMode);
+  await assertBuiltSite(state.endpointMode);
   state.baseUrl = baseUrl;
   const browser = await ensureBrowser();
   const context = await browser.newContext({
@@ -512,6 +542,10 @@ export async function answerThreeQuestions(state: ReportFlowScenario): Promise<v
 
 export async function tapMandar(state: ReportFlowScenario): Promise<void> {
   const page = await phonePage(state);
+  state.configuredEndpointsBeforeSubmit = await page.locator('[data-report-form]').evaluate((form) => ({
+    mint: form.getAttribute('data-report-mint-url'),
+    report: form.getAttribute('data-report-submit-url'),
+  }));
   try {
     await page.getByRole('button', { name: 'Mandar' }).click({ timeout: 4000 });
   } catch (error) {
@@ -556,6 +590,17 @@ export async function observedWriteResponse(
     await new Promise<void>((resolvePause) => { setTimeout(resolvePause, 25); });
   }
   return state.captured.find((attempt) => new URL(attempt.url).pathname === pathname);
+}
+
+/** The real local adapter is injected into the built static page as full URLs. */
+export async function configuredWriteEndpoints(
+  state: ReportFlowScenario,
+): Promise<Readonly<{ mint: string | null; report: string | null }>> {
+  const page = await phonePage(state);
+  return page.locator('[data-report-form]').evaluate((form) => ({
+    mint: form.getAttribute('data-report-mint-url'),
+    report: form.getAttribute('data-report-submit-url'),
+  }));
 }
 
 /** Captures the actual page state while its real local report response is held. */
