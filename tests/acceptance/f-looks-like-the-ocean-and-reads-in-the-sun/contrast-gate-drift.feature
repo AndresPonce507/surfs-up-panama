@@ -29,3 +29,10 @@ Feature: La tabla de contraste dice lo mismo que la portada que un surfista real
     Given una copia aislada de la tabla corregida vuelve a guardar una pareja de la paleta gris reemplazada
     When esa tabla se compara con la portada publicada
     Then la comprobación rechaza la tabla nombrando el color gris viejo y la pareja tropical que falta
+
+  @slice-04 @step-04-02 @driving_port @real-io @ui-u1 @ui-u2 @ui-u3 @ui-u4 @ui-u5 @ui-u6 @ui-u7
+  Scenario: El sitio se recorre en el teléfono, en las dos maneras del tema, y cada palabra se lee con margen de sobra bajo el sol
+    Given las rutas que el surfista puede abrir están listas para recorrer
+    When el surfista las recorre a 390 px, con tema claro y oscuro, y pide quietud
+    Then las palabras, los controles y el ancho de cada ruta publicada conservan un margen de lectura cómodo
+    And la revisión local publica ese recorrido dentro de su aceptación de navegador sin inventar otra revisión

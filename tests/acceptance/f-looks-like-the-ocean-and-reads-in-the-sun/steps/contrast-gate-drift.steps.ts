@@ -8,7 +8,7 @@ import { chromium, type Browser, type Page } from '@playwright/test';
 import assert from 'node:assert/strict';
 import { get } from 'node:http';
 import { createServer } from 'node:net';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 
@@ -29,6 +29,7 @@ const projectRoot = process.cwd();
 const designSystemPath = join(projectRoot, 'docs/product/architecture/09-design-system.md');
 const ciCorePath = join(projectRoot, 'scripts/ci-local-core.mjs');
 const cucumberConfigPath = join(projectRoot, 'cucumber.mjs');
+const featureOwnedAuditPath = join(projectRoot, 'tests/e2e/f-looks-like-the-ocean-and-reads-in-the-sun/contrast-and-touch-audit.spec.ts');
 const openedHomes = new WeakMap<ContrastWorld, OpenedHome>();
 const copiedTables = new WeakMap<ContrastWorld, string>();
 
@@ -362,6 +363,45 @@ Then('la comprobación rechaza la tabla nombrando el color gris viejo y la parej
   assert.ok(stale, 'la copia deliberadamente vieja dejó de contener un color gris conocido');
   assert.ok(missing, 'la copia deliberadamente vieja dejó de omitir una pareja tropical requerida');
   assert.match(`${stale}; ${missing}`, /#[0-9A-F]{6}.*pareja tropical/i, 'la negativa no nombra a la vez el color gris viejo y la pareja tropical ausente');
+});
+
+Given('las rutas que el surfista puede abrir están listas para recorrer', function () {
+  assert.ok(existsSync(featureOwnedAuditPath), 'la ruta de auditoría propia de esta función todavía no existe');
+  const audit = readFileSync(featureOwnedAuditPath, 'utf8');
+  for (const route of ['/', '/manana/', '/spots/playa-venao/', '/spots/playa-venao/ayer/', '/spots/playa-venao/reportar/', '/spots/playa-venao/reportado/', '/404']) {
+    assert.ok(audit.includes(`path: '${route}'`), `la auditoría propia no recorre ${route}`);
+  }
+  assert.match(audit, /getComputedStyle/, 'la auditoría no pregunta al navegador qué ruta realmente pinta');
+  assert.doesNotMatch(audit, /expectedRows|#(?:[0-9A-F]{3}){1,2}\b/i, 'la auditoría conserva una lista de parejas o colores, en vez de recorrer la cascada real');
+});
+
+When('el surfista las recorre a 390 px, con tema claro y oscuro, y pide quietud', function () {
+  const result = spawnSync('npm', ['run', 'test:e2e', '--', '--grep', 'a surfer can read and tap every feature-owned route in both themes'], {
+    cwd: projectRoot,
+    env: credentialFreeEnvironment(),
+    encoding: 'utf8',
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  assert.equal(result.status, 0, `el recorrido de navegador no terminó bien:\n${result.stdout}${result.stderr}`);
+});
+
+Then('las palabras, los controles y el ancho de cada ruta publicada conservan un margen de lectura cómodo', function () {
+  // The preceding production browser run is the observable proof. This
+  // follow-up makes the static U2/U4/U6/U7 gate part of the same journey.
+  const result = spawnSync('npm', ['run', 'test:ui'], {
+    cwd: projectRoot,
+    env: credentialFreeEnvironment(),
+    encoding: 'utf8',
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  assert.equal(result.status, 0, `la comprobación de presentación no terminó bien:\n${result.stdout}${result.stderr}`);
+});
+
+Then('la revisión local publica ese recorrido dentro de su aceptación de navegador sin inventar otra revisión', function () {
+  const ciCore = readFileSync(ciCorePath, 'utf8');
+  const e2eJobs = ciCore.match(/name: 'e2e'/g) ?? [];
+  assert.equal(e2eJobs.length, 1, `la revisión local debe tener exactamente una aceptación de navegador; encontró ${e2eJobs.length}`);
+  assert.match(ciCore, /name: 'e2e'[\s\S]*?steps: \[\['browser acceptance', 'npm', \['run', 'test:e2e'\]\]\]/, 'la aceptación de navegador existente no ejecuta el recorrido propio');
 });
 
 After(async function (this: ContrastWorld) {
