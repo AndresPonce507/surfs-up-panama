@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 
+import { experimental_AstroContainer as AstroContainer } from 'astro/container';
 import { describe, it } from 'vitest';
 
 import type { DaySummary } from '../../src/data/forecast';
 import { shareDaySummaryFor } from '../../src/share/day-summary';
+// @ts-expect-error Astro resolves component modules in the Vitest pipeline.
+import SpotDetail from '../../src/components/SpotDetail.astro';
 
 const complete: DaySummary = {
   spot_id: 'playa-venao',
@@ -33,11 +36,15 @@ describe('shareDaySummaryFor', () => {
     );
   });
 
-  it.each(['size_band', 'wind_state', 'best_window', 'conf_level'] as const)(
+  it.each(['size_band', 'size_range_m', 'wind_state', 'best_window', 'conf_level', 'call.es'] as const)(
     'withholds the share template when %s is absent instead of aborting the reading surface',
     (field) => {
-      const partial = { ...complete } as Record<string, unknown>;
-      delete partial[field];
+      const partial = { ...complete, call: { ...complete.call } } as unknown as Record<string, unknown>;
+      if (field === 'call.es') {
+        delete (partial.call as Record<string, unknown>).es;
+      } else {
+        delete partial[field];
+      }
 
       assert.equal(
         shareDaySummaryFor(
@@ -49,4 +56,26 @@ describe('shareDaySummaryFor', () => {
       );
     },
   );
+
+  it('keeps the honest reading page while omitting both share controls for an incomplete row', async () => {
+    const container = await AstroContainer.create();
+    const html = await container.renderToString(SpotDetail, {
+      props: {
+        locale: 'es',
+        spotId: 'mariatos',
+        announcement: {
+          title: 'Mariatos, 69',
+          description: 'Llamado de surf para Mariatos.',
+          url: 'https://olas.example/spots/mariatos/',
+          locale: 'es_PA',
+        },
+      },
+    });
+
+    assert.match(html, /data-day="today"/, 'la lectura de hoy desapareció con el dato parcial');
+    assert.match(html, /data-field="score"/, 'el número honesto dejó de renderizarse');
+    assert.doesNotMatch(html, /class="spot-share"/, 'la página ofreció compartir un llamado incompleto');
+    assert.doesNotMatch(html, /share-whatsapp/, 'la página inventó una acción de WhatsApp');
+    assert.doesNotMatch(html, /Copiar el llamado/, 'la página inventó una acción de copiar');
+  });
 });

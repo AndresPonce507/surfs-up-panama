@@ -43,12 +43,15 @@ export function shareDaySummaryFor(
   spotName: string,
   summary: DaySummary,
 ): ShareDaySummary | undefined {
-  const { size_band, wind_state, best_window, conf_level } = summary;
+  const { size_band, size_range_m, wind_state, best_window, conf_level } = summary;
   if (
     size_band === undefined
+    || size_range_m === undefined
     || wind_state === undefined
     || best_window === undefined
     || conf_level === undefined
+    || typeof summary.call.es !== 'string'
+    || summary.call.es.trim() === ''
   ) {
     return undefined;
   }
