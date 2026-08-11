@@ -60,11 +60,34 @@ manufacturing markup or treating the absent control as current user functionalit
 | A report page that visibly advances the prediction is rejected | `Una pantalla de reportar que adelanta la llamada...` / contained mutated report document | The copy adds the real current forecast call as plain visible text and the browser oracle rejects the emitted report before publication. |
 | Source-blind U8 observation | `every-other-surface-belongs-to-the-same-product-spot-pages-manana-ayer-the-404-and-both-report-sc.md` | The charter states the 03-02 observation and its two user-visible failure modes without asking the examiner to inspect source. |
 
+## Slice-03 / 03-03 coverage
+
+| Requirement | Scenario / driving surface | Evidence shape |
+|---|---|---|
+| Every emitted Slice-03 document receives the same product treatment | `Cada pantalla publicada conserva...` / contained `npm run build`, then literal emitted HTML routes | The production command includes publish verification and the page-weight gate. The test enumerates actual `dist/` documents after that build rather than deriving a sample from data. |
+| Every spot has its detail, yesterday, report-capture and report-result documents | same scenario / all `dist/spots/**.html` | Each emitted spot family must contain all four public documents. `manana.html` and `404.html` are required alongside those families. |
+| The terminal pass cannot be vacuous | `Una publicación sin pantallas...` / controlled empty published population | The population guard rejects zero inspected documents and names that exact reason. |
+| Palette, reading, mobile fit, reduced motion and ready state hold across the population | same scenario / Chromium at 390 px in clear and dark themes with reduced motion | For every emitted document in both themes, the browser compares the real palette to the built home surface and rejects blank, overflowed, moving or unreadable pages with their literal emitted filename. Translucent layers are composited over their real backdrop and gradients are measured at every emitted stop. |
+| Report screens preserve their non-forecast boundary | same scenario / locked report import commitments | The two report-component import lists are compared exactly against their accepted boundary before the terminal pass is accepted. |
+
+## Slice-03 / 03-03 UI mandate coverage
+
+| Mandate | Terminal-sweep evidence |
+|---|---|
+| U1 contrast | Each emitted document in clear and dark themes has a real browser contrast pass for visible reading text against its rendered backdrop. Translucent surfaces are composited and every gradient stop is checked. |
+| U2 small viewport | Each emitted document is opened at 390 px and rejects horizontal overflow. |
+| U3 touch target | N/A for the terminal: it adds no new control. The unrestricted `@slice-03` run retains the 03-01 and 03-02 control checks. |
+| U4 motion | Each emitted document is inspected with reduced motion and rejects active transitions or animations. |
+| U5 states | The sweep rejects blank or busy documents; the zero-population scenario proves the terminal cannot report a made-up ready state. |
+| U6 type rhythm | Each emitted document proves its computed body family, body scale and body leading resolve from the product type tokens. |
+| U7 design-system compliance | Each emitted document proves the emitted stylesheet both declares and uses the product’s type, colour, spacing, radius, elevation, motion and touch tokens. |
+| U8 charter | The source-blind charter above requires the exhaustive public walk, names its observed population, and defines zero inspection as failure. |
+
 ## Deferred inventory, not authored
 
 | Slice | Build map | Charter | Acceptance suite | Status |
 |---|---|---|---|---|
-| slice-03 | Existing roadmap rows 03-01..03-03 | 03-01 and 03-02 present | 03-01 green; 03-02 armed RED | 03-03 remains absent until its dependency turn. |
+| slice-03 | Existing roadmap rows 03-01..03-03 | 03-01, 03-02 and 03-03 present | 03-01 green; 03-02 depends on its recorded product fix; 03-03 terminal sweep armed | 03-03 is a contract-only terminal sweep; it changes no product source. |
 | slice-04 | Existing roadmap rows 04-01..04-03 | Missing | Missing | JIT DISTILL has not opened it. |
 | slice-05 | Existing roadmap rows 05-01..05-03 | Present | Missing | JIT DISTILL has not opened it. |
 
