@@ -5,10 +5,10 @@
 import { After, Given, Then, When } from '@cucumber/cucumber';
 import { chromium, type Browser, type Page } from '@playwright/test';
 import assert from 'node:assert/strict';
-import { copyFileSync, cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
 import { get } from 'node:http';
 import { createServer } from 'node:net';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { tmpdir } from 'node:os';
 
@@ -52,11 +52,24 @@ type OpenedReportSurfaces = {
   revealAudit: ReportAudit;
   reportState: ReportState;
 };
+type PublishedRouteKind = 'spot' | 'ayer' | 'manana' | 'reportar' | 'reportado' | 'unknown';
+type PublishedRoute = { file: string; url: string; kind: PublishedRouteKind };
+type PublishedAudit = { route: PublishedRoute; findings: string[] };
+type PublishedSweep = {
+  root: string;
+  preview: ChildProcess;
+  browser: Browser;
+  page: Page;
+  audits: PublishedAudit[];
+  counts: Record<PublishedRouteKind, number>;
+};
 
 const projectRoot = process.cwd();
 const prepared = new WeakMap<SurfaceWorld, { root: string; mode: Mode }>();
 const opened = new WeakMap<SurfaceWorld, OpenedSurface>();
 const openedReports = new WeakMap<SurfaceWorld, OpenedReportSurfaces>();
+const publishedSweeps = new WeakMap<SurfaceWorld, PublishedSweep>();
+const emptyPublishedRoots = new WeakMap<SurfaceWorld, string>();
 
 function credentialFreeEnvironment(): NodeJS.ProcessEnv {
   const environment = { ...process.env };
@@ -94,6 +107,15 @@ function build(root: string): void {
     cwd: root, env: credentialFreeEnvironment(), encoding: 'utf8', maxBuffer: 10 * 1024 * 1024,
   });
   assert.equal(result.status, 0, `test fixture error: la construcción real falló antes de la observación:\n${result.stdout}${result.stderr}`);
+}
+
+function buildPublishedSurface(root: string): void {
+  const result = spawnSync('npm', ['run', 'build'], {
+    cwd: root, env: credentialFreeEnvironment(), encoding: 'utf8', maxBuffer: 10 * 1024 * 1024,
+  });
+  const output = `${result.stdout}${result.stderr}`;
+  assert.equal(result.status, 0, `test fixture error: npm run build falló antes del recorrido publicado:\n${output}`);
+  assert.match(output, /page weight|page-weight|weight gate/i, `test fixture error: npm run build no mostró el resultado del peso por página:\n${output}`);
 }
 
 function playaVenaoRoute(root: string, yesterday = false): string {
@@ -194,6 +216,174 @@ async function paletteOf(page: Page): Promise<Palette> {
     const root = getComputedStyle(document.documentElement);
     return { bodyBackground: getComputedStyle(document.body).backgroundColor, bg: resolve('--bg'), ink: resolve('--ink'), surface: resolve('--surface') };
   })()`) as Promise<Palette>;
+}
+
+function emittedHtmlFiles(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) return emittedHtmlFiles(path);
+    return entry.isFile() && entry.name.endsWith('.html') ? [path] : [];
+  });
+}
+
+function kindOfPublishedRoute(file: string): PublishedRouteKind {
+  if (file === 'manana.html') return 'manana';
+  if (file === '404.html') return 'unknown';
+  if (/^spots\/[^/]+\.html$/.test(file)) return 'spot';
+  if (/^spots\/[^/]+\/ayer\.html$/.test(file)) return 'ayer';
+  if (/^spots\/[^/]+\/reportar\.html$/.test(file)) return 'reportar';
+  if (/^spots\/[^/]+\/reportado\.html$/.test(file)) return 'reportado';
+  throw new Error(`test fixture error: la página publicada ${file} no pertenece al recorrido de slice-03`);
+}
+
+function publishedRoutes(root: string): PublishedRoute[] {
+  const dist = join(root, 'dist');
+  assert.ok(statSync(dist).isDirectory(), 'test fixture error: la construcción no produjo dist/');
+  const files = emittedHtmlFiles(dist)
+    .map((path) => relative(dist, path).replaceAll('\\', '/'))
+    .filter((file) => file !== 'index.html')
+    .sort();
+  assert.ok(files.length > 0, 'WHAT: el recorrido inspeccionó cero pantallas. HOW: publicar al menos una página HTML antes de anunciar el recorrido.');
+  return files.map((file) => ({ file, url: `/${file}`, kind: kindOfPublishedRoute(file) }));
+}
+
+async function auditPublishedPage(page: Page, route: PublishedRoute, expected: Palette): Promise<PublishedAudit> {
+  const findings = (await page.evaluate(`(() => {
+    const expected = ${JSON.stringify(expected)};
+    const parse = (value) => (value.match(/rgba?\\(([^)]+)\\)/i)?.[1] ?? '0,0,0,1').split(',').map(Number);
+    const compact = (value) => value.replace(/\\s+/g, ' ').trim();
+    const luminance = (rgb) => rgb.map((n = 0) => { const v = n / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }).reduce((sum, n, i) => sum + n * ([0.2126, 0.7152, 0.0722][i] ?? 0), 0);
+    const contrast = (a, b) => (Math.max(luminance(a), luminance(b)) + 0.05) / (Math.min(luminance(a), luminance(b)) + 0.05);
+    const resolve = (name) => { const marker = document.createElement('i'); marker.style.backgroundColor = 'var(' + name + ')'; document.body.append(marker); const value = getComputedStyle(marker).backgroundColor; marker.remove(); return value; };
+    const resolveType = (property, name) => { const marker = document.createElement('i'); marker.style.setProperty(property, 'var(' + name + ')'); document.body.append(marker); const value = getComputedStyle(marker).getPropertyValue(property); marker.remove(); return value; };
+    const composite = (front, back) => {
+      const alpha = front[3] ?? 1;
+      return [0, 1, 2].map((index) => Math.round((front[index] ?? 0) * alpha + (back[index] ?? 0) * (1 - alpha)));
+    };
+    const backdropsFor = (element) => {
+      if (!element) return [parse(getComputedStyle(document.body).backgroundColor)];
+      const style = getComputedStyle(element);
+      const colours = style.backgroundImage !== 'none'
+        ? [...style.backgroundImage.matchAll(/rgba?\\(([^)]+)\\)/ig)].map((match) => match[1].split(',').map(Number))
+        : [parse(style.backgroundColor)];
+      if (colours.length === 0) return null;
+      const visible = colours.filter((colour) => (colour[3] ?? 1) > 0);
+      if (visible.length === 0) return backdropsFor(element.parentElement);
+      if (visible.every((colour) => (colour[3] ?? 1) >= 1)) return visible;
+      const underneath = backdropsFor(element.parentElement);
+      if (underneath === null) return null;
+      return visible.flatMap((colour) => underneath.map((base) => composite(colour, base)));
+    };
+    const findings = [];
+    if (getComputedStyle(document.body).backgroundColor !== expected.bodyBackground || resolve('--bg') !== expected.bg || resolve('--ink') !== expected.ink) {
+      findings.push('no conserva la paleta publicada de la portada');
+    }
+    const root = getComputedStyle(document.documentElement);
+    const body = getComputedStyle(document.body);
+    if (body.fontFamily !== resolveType('font-family', '--font') || body.fontSize !== resolveType('font-size', '--text-body') || body.lineHeight !== resolveType('line-height', '--leading-body')) findings.push('no conserva la escala, el ritmo y la familia tipográfica del producto');
+    const emittedCss = [...document.querySelectorAll('style')].map((style) => style.textContent || '').join('\\n');
+    for (const token of ['--font', '--text-body', '--leading-body', '--ink', '--bg', '--sp-3', '--sp-4', '--r-m', '--shadow-1', '--dur-1', '--tap']) {
+      if (!root.getPropertyValue(token).trim() || !emittedCss.includes('var(' + token + ')')) findings.push('no usa el token de diseño ' + token);
+    }
+    const words = compact(document.body.innerText || '');
+    if (!words) findings.push('llega en blanco');
+    const readable = [...document.querySelectorAll('h1, h2, p, time, legend, label, a, button, summary')]
+      .filter((element) => compact(element.textContent || '').length > 0 && getComputedStyle(element).visibility !== 'hidden');
+    for (const element of readable) {
+      const backdrops = backdropsFor(element);
+      if (backdrops === null) {
+        findings.push('no se pudo medir el fondo real de "' + compact(element.textContent || '').slice(0, 42) + '"');
+        continue;
+      }
+      for (const backdrop of backdrops) {
+        const ratio = contrast(parse(getComputedStyle(element).color), backdrop);
+        if (ratio < 4.5) findings.push('lectura "' + compact(element.textContent || '').slice(0, 42) + '" queda en ' + ratio.toFixed(2) + ':1 contra su fondo real');
+      }
+    }
+    if (document.documentElement.scrollWidth > document.documentElement.clientWidth) findings.push('tiene scroll horizontal a 390 px');
+    if (document.readyState !== 'complete' || document.querySelector('[aria-busy="true"]')) findings.push('no llega lista');
+    const moving = [...document.querySelectorAll('*')].some((element) => {
+      const style = getComputedStyle(element);
+      return style.transitionDuration !== '0s' || style.animationName !== 'none';
+    });
+    if (moving) findings.push('declara movimiento con movimiento reducido');
+    return findings;
+  })()`)) as string[];
+  return { route, findings };
+}
+
+async function openPublishedSweep(world: SurfaceWorld, theme: string): Promise<void> {
+  const fixture = prepared.get(world);
+  assert.ok(fixture, 'test fixture error: falta el sitio preparado');
+  buildPublishedSurface(fixture.root);
+  const routes = publishedRoutes(fixture.root);
+  const port = await unusedPort();
+  const preview = spawn(join(projectRoot, 'node_modules/.bin/vite'), ['preview', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: fixture.root, env: credentialFreeEnvironment(), stdio: 'ignore' });
+  const base = `http://127.0.0.1:${port}`;
+  await waitFor(base, preview);
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
+  await page.goto(`${base}/index.html`, { waitUntil: 'load' });
+  const homePalette = await paletteOf(page);
+  const audits: PublishedAudit[] = [];
+  for (const route of routes) {
+    await page.goto(`${base}${route.url}`, { waitUntil: 'load' });
+    audits.push(await auditPublishedPage(page, route, homePalette));
+  }
+  const counts: Record<PublishedRouteKind, number> = { spot: 0, ayer: 0, manana: 0, reportar: 0, reportado: 0, unknown: 0 };
+  for (const route of routes) counts[route.kind] += 1;
+  publishedSweeps.set(world, { root: fixture.root, preview, browser, page, audits, counts });
+}
+
+function assertedPublishedSweep(world: SurfaceWorld): PublishedSweep {
+  const sweep = publishedSweeps.get(world);
+  assert.ok(sweep, 'test fixture error: todavía no se recorrieron las pantallas publicadas');
+  return sweep;
+}
+
+function assertPublishedPopulation(counts: Record<PublishedRouteKind, number>): void {
+  const required: PublishedRouteKind[] = ['spot', 'ayer', 'manana', 'reportar', 'reportado', 'unknown'];
+  const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+  assert.ok(total > 0, 'WHAT: el recorrido inspeccionó cero pantallas. HOW: publicar al menos una página HTML antes de anunciar el recorrido.');
+  for (const kind of required) assert.ok(counts[kind] > 0, `WHAT: el recorrido no encontró ninguna pantalla de ${kind}. HOW: enumerar los documentos emitidos antes de comprobar la paleta.`);
+}
+
+function assertCompleteSpotFamilies(audits: PublishedAudit[]): void {
+  const families = new Map<string, Set<PublishedRouteKind>>();
+  for (const { route } of audits) {
+    if (!route.file.startsWith('spots/')) continue;
+    const slug = route.file.slice('spots/'.length).split('/')[0]?.replace(/\.html$/, '');
+    assert.ok(slug, `test fixture error: no se pudo reconocer la playa de ${route.file}`);
+    const family = families.get(slug) ?? new Set<PublishedRouteKind>();
+    family.add(route.kind);
+    families.set(slug, family);
+  }
+  for (const [slug, family] of families) {
+    const missing = (['spot', 'ayer', 'reportar', 'reportado'] as const).filter((kind) => !family.has(kind));
+    assert.deepEqual(missing, [], `WHAT: ${slug} quedó con una ruta publicada incompleta (${missing.join(', ')}). HOW: emitir sus cuatro pantallas antes de cerrar el recorrido.`);
+  }
+}
+
+function reportImportLines(root: string, file: string): string[] {
+  const frontmatter = readFileSync(join(root, file), 'utf8').split('---', 3)[1] ?? '';
+  return frontmatter.split('\n').filter((line) => line.startsWith('import '));
+}
+
+function assertReportImportBoundary(root: string): void {
+  assert.deepEqual(reportImportLines(root, 'src/components/ReportCapture.astro'), [
+    "import Base from '../layouts/Base.astro';",
+    "import { spotById } from '../data/region';",
+    "import { sizeBands } from '../data/size-bands';",
+    "import { strings, type Locale } from '../i18n/strings';",
+    "import { paths } from '../i18n/routes';",
+  ], 'la pantalla para contar lo visto cambió sus importaciones acordadas');
+  assert.deepEqual(reportImportLines(root, 'src/components/ReportShell.astro'), [
+    "import Base from '../layouts/Base.astro';",
+    "import { spotById } from '../data/region';",
+    "import { strings, type Locale } from '../i18n/strings';",
+    "import { paths } from '../i18n/routes';",
+  ], 'la pantalla posterior al reporte cambió sus importaciones acordadas');
 }
 
 async function audit(page: Page, kind: 'spot' | 'ayer', expected: Palette, baseline: VisibleBaseline): Promise<PageAudit> {
@@ -493,6 +683,53 @@ Then('la comprobación rechaza las pantallas de reportar antes de que adelanten 
   assert.ok(findings.some((finding) => finding.includes('adelanta la llamada del pronóstico')), `se esperaba el rechazo de adelantar la llamada; se obtuvo ${findings.join('; ')}`);
 });
 
+Given('la construcción completa del sitio está lista para recorrer', function (this: SurfaceWorld) { prepare(this, 'normal'); });
+
+When('el surfista recorre cada pantalla que publicó el sitio a {int} px, con tema {string}', async function (this: SurfaceWorld, width: number, theme: string) {
+  assert.equal(width, 390, 'test fixture error: el recorrido terminal está fijado al ancho de teléfono del contrato');
+  await openPublishedSweep(this, theme);
+});
+
+Then('cada pantalla conserva el agua tropical, una lectura clara y una llegada completa', function (this: SurfaceWorld) {
+  const sweep = assertedPublishedSweep(this);
+  const findings = sweep.audits.flatMap(({ route, findings: routeFindings }) => routeFindings.map((finding) => `${route.file}: ${finding}`));
+  assert.deepEqual(findings, [], findings.join('; '));
+  assertReportImportBoundary(sweep.root);
+});
+
+Then('el recorrido nombra cuántas pantallas de playa, ayer, mañana, reportar, reportado y dirección desconocida inspeccionó', function (this: SurfaceWorld) {
+  const sweep = assertedPublishedSweep(this);
+  assertPublishedPopulation(sweep.counts);
+  const total = Object.values(sweep.counts).reduce((sum, count) => sum + count, 0);
+  console.log(`BARRIDO SLICE-03: ${total} pantallas inspeccionadas (playa ${sweep.counts.spot}, ayer ${sweep.counts.ayer}, mañana ${sweep.counts.manana}, reportar ${sweep.counts.reportar}, reportado ${sweep.counts.reportado}, dirección desconocida ${sweep.counts.unknown}).`);
+});
+
+Then('ninguna pantalla publicada queda fuera del recorrido', function (this: SurfaceWorld) {
+  const sweep = assertedPublishedSweep(this);
+  assertCompleteSpotFamilies(sweep.audits);
+  assertPublishedPopulation(sweep.counts);
+});
+
+Given('una publicación sin ninguna pantalla para recorrer', function (this: SurfaceWorld) {
+  const root = mkdtempSync(join(tmpdir(), 'surfs-up-slice-03-empty-'));
+  mkdirSync(join(root, 'dist'), { recursive: true });
+  writeFileSync(join(root, 'dist', 'index.html'), '<!doctype html><title>inicio</title>');
+  emptyPublishedRoots.set(this, root);
+});
+
+When('el surfista pide el recuento de las pantallas publicadas', function (this: SurfaceWorld) {
+  assert.ok(emptyPublishedRoots.has(this), 'test fixture error: faltaba la publicación sin pantallas');
+});
+
+Then('la comprobación rechaza el recorrido porque inspeccionó cero pantallas', function (this: SurfaceWorld) {
+  const root = emptyPublishedRoots.get(this);
+  assert.ok(root, 'test fixture error: faltaba la publicación vacía');
+  assert.throws(
+    () => publishedRoutes(root),
+    /inspeccionó cero pantallas/,
+  );
+});
+
 After(async function (this: SurfaceWorld) {
   const surface = opened.get(this);
   await surface?.browser.close();
@@ -504,6 +741,13 @@ After(async function (this: SurfaceWorld) {
   if (reportSurfaces?.preview.exitCode === null) {
     await new Promise<void>((resolve) => { reportSurfaces.preview.once('exit', () => resolve()); reportSurfaces.preview.kill(); setTimeout(resolve, 1_000).unref(); });
   }
+  const publishedSweep = publishedSweeps.get(this);
+  await publishedSweep?.browser.close();
+  if (publishedSweep?.preview.exitCode === null) {
+    await new Promise<void>((resolve) => { publishedSweep.preview.once('exit', () => resolve()); publishedSweep.preview.kill(); setTimeout(resolve, 1_000).unref(); });
+  }
   const fixture = prepared.get(this);
   if (fixture) rmSync(fixture.root, { recursive: true, force: true });
+  const emptyRoot = emptyPublishedRoots.get(this);
+  if (emptyRoot) rmSync(emptyRoot, { recursive: true, force: true });
 });

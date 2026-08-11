@@ -51,3 +51,22 @@ Feature: La página de cada playa conserva el mismo agua tropical que la portada
     Given una copia del sitio donde reportar recibe la llamada del pronóstico antes de tiempo
     When el surfista abre la página que no existe y las dos pantallas de reportar de Playa Venao en un teléfono estrecho, con tema "claro"
     Then la comprobación rechaza las pantallas de reportar antes de que adelanten la llamada
+
+  @slice-03 @driving_port @real-io @ui-u1 @ui-u2 @ui-u4 @ui-u5 @ui-u6 @ui-u7
+  Scenario Outline: Cada pantalla publicada conserva el mismo producto al recorrer el sitio entero, en tema <tema>
+    Given la construcción completa del sitio está lista para recorrer
+    When el surfista recorre cada pantalla que publicó el sitio a 390 px, con tema "<tema>"
+    Then cada pantalla conserva el agua tropical, una lectura clara y una llegada completa
+    And el recorrido nombra cuántas pantallas de playa, ayer, mañana, reportar, reportado y dirección desconocida inspeccionó
+    And ninguna pantalla publicada queda fuera del recorrido
+
+    Examples:
+      | tema   |
+      | claro  |
+      | oscuro |
+
+  @slice-03 @driving_port @real-io @negative @error @ui-u5
+  Scenario: Una publicación sin pantallas para inspeccionar se rechaza antes de anunciar el recorrido
+    Given una publicación sin ninguna pantalla para recorrer
+    When el surfista pide el recuento de las pantallas publicadas
+    Then la comprobación rechaza el recorrido porque inspeccionó cero pantallas

@@ -68,3 +68,23 @@ npm run test:at -- --tags '@feature-f-looks-like-the-ocean-and-reads-in-the-sun 
 The 03-02 scaffold compiles, all four scenarios bind, and its two deliberate regressions reach
 their intended oracles. The remaining positive failure is an honest product gap, not an import,
 fixture, browser-startup or assertion-shape failure. Slice-03/03-03 remains unarmed and absent.
+
+## Slice-03 / 03-03 commands observed
+
+```sh
+npm run typecheck
+npm run test:at -- --dry-run --tags '@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03'
+npm run test:at -- --tags '@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03'
+```
+
+## Slice-03 / 03-03 classification
+
+| Scenario group | Observable exercised | Classification | Evidence |
+|---|---|---|---|
+| Exhaustive emitted-route walk | Contained `npm run build`, then every Slice-03 document over Chromium at 390 px in clear and dark themes | `GUARD_GREEN` | The production build and page-weight gate ran before each browser walk. The output named 82 documents in each theme: 20 spot, 20 yesterday, 20 report capture, 20 report result, one tomorrow and one unknown-page document. Text is measured against solid, translucent-composited and every gradient-stop backdrop. |
+| Empty published population | Explicit zero-document population passed to the terminal population guard | `MISSING_FUNCTIONALITY` when deliberately falsified | The guard rejects the population with the exact "inspeccionó cero pantallas" reason. The Cucumber scenario passes because that rejection is required. |
+
+The terminal sweep is honestly green. It has no style change to drive: the inherited token cascade
+reached every emitted document. The prior 03-02 interactive-target RED was remediated by
+`320b1be`; the full unrestricted Slice-03 run now passes 10 scenarios and 136 steps. The former
+03-02 evidence above remains historical evidence, rather than being rewritten.

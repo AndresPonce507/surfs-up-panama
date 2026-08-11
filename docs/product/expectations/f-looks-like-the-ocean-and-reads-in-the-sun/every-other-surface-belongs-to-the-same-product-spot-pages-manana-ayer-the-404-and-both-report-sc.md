@@ -1,6 +1,6 @@
 # Cada página de playa conserva el mismo agua tropical de la portada
 
-ID: EXP-f-looks-like-the-ocean-and-reads-in-the-sun-3 · Spec rows: slice-03 / 03-01, 03-02 · Persona: surfista que abre una playa concreta antes de manejar, vuelve al recibo de ayer para comparar lo que pasó, y necesita una salida clara si escribió mal la dirección o quiere contar lo que vio
+ID: EXP-f-looks-like-the-ocean-and-reads-in-the-sun-3 · Spec rows: slice-03 / 03-01, 03-02, 03-03 · Persona: surfista que abre una playa concreta antes de manejar, vuelve al recibo de ayer para comparar lo que pasó, y necesita una salida clara si escribió mal la dirección o quiere contar lo que vio
 
 ## Intent
 
@@ -21,6 +21,8 @@ lectura.
    de un reporte de Playa Venao.
 5. Repetir todas las páginas en tema claro y oscuro, con movimiento reducido activado en la última
    pasada. Si no hay un recibo de ayer, observar el mensaje honesto que ocupa su lugar.
+6. Para el cierre, recorrer cada documento publicado de playa, ayer, mañana, reportar, reportado y
+   dirección desconocida. Anotar la cantidad realmente abierta; cero pantallas no es una pasada.
 
 ## Charter
 
@@ -51,9 +53,11 @@ no se puede usar debe seguir siendo legible.
 - Al elegir una respuesta para reportar, la selección se entiende por su marca y su tarjeta, no solo por color; la acción todavía inactiva sigue siendo visible y legible.
 - Negative: si una pantalla para reportar adelanta un número, tamaño, viento o llamado antes de recibir la lectura de la persona, es FALLA.
 - Negative: si la dirección inexistente muestra palabras técnicas, un error crudo o una página en blanco, es FALLA.
+- El recorrido final nombra cuántas pantallas de playa, ayer, mañana, reportar, reportado y dirección desconocida abrió. Cada familia de playa tiene sus cuatro pantallas, y una sola pantalla sin revisar es FALLA.
+- Negative: si el recorrido dice que todo está bien después de abrir cero pantallas, es FALLA. Si una pantalla publicada pierde la paleta, llega vacía, se sale del teléfono o deja texto sin contraste, es FALLA con el nombre de esa pantalla.
 
-Diferido, fuera de 03-02: el recorrido completo de las seis superficies es 03-03. Su ausencia no
-hace fallar estas dos observaciones de ruta.
+El recorrido completo de las seis superficies es el cierre 03-03. Se hace sobre documentos
+publicados y se deja que el sitio nombre su propia población, no una muestra elegida de playas.
 
 ## Session log (append-only)
 
