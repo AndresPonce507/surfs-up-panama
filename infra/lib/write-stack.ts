@@ -6,9 +6,9 @@
 // at deploy time the applied quota is at or under 102, controls 0.2 and 0.6
 // do not exist, and this stack must be rolled back (section 7.2 item 0.15).
 //
-// The four write handlers are HONEST PLACEHOLDERS returning 501: the real
-// handlers belong to F-TELL-US-WHAT-YOU-SAW-COLD. What this stack makes real
-// today is the cost ceiling itself: reserved concurrency, the breakers, the
+// Report and mint are real F-TELL-US-WHAT-YOU-SAW-COLD handlers. Push and
+// photo-presign remain honest 501 placeholders until their owners land. The
+// stack also makes the cost ceiling real: reserved concurrency, breakers, the
 // provisioned fail-closed table, and the exact resources the $18 budget line
 // trips.
 
