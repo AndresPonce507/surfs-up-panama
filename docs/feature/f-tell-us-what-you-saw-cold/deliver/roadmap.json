@@ -2,7 +2,7 @@
   "roadmap": {
     "project_id": "f-tell-us-what-you-saw-cold",
     "created_at": "2026-08-09T23:20:00Z",
-    "total_steps": 14,
+    "total_steps": 20,
     "quality_contract_version": 1
   },
   "phases": [
@@ -664,6 +664,152 @@
             "tests/acceptance/f-tell-us-what-you-saw-cold/steps/write-path-cost-guardrails.steps.ts"
           ],
           "implementation_notes": "EXEMPT FROM PARADIGM: credential-free local-CI composition and CDK synth are integration wiring, so they stay example-based. Compensate with the property-based policy units in 02-02 and 02-03. Record every deliberate drift and same-copy restoration. F-BILL retains the $18 action and live dead-man proof."
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "name": "Slice-03: the saved report arrives once",
+      "description": "A real report journey sends the already durable label through the guarded write path, shows a calm arrival receipt, and never doubles a repeated send. Deploy proof remains blocked until the declared external prerequisites are resolved.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "03-01",
+          "name": "Connect the real report journey to the guarded write handler",
+          "criteria": [
+            "The production report page sends a saved record only through the production report handler and shows an arrival state without forecast language.",
+            "Anonymous credential recovery remains invisible to the surfer and a missing or invalid credential gets one background recovery attempt.",
+            "The acceptance walking skeleton runs against REPORT_ACCEPTANCE_ORIGIN with no test-owned or intercepted endpoint."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/report-arrives-once.feature",
+          "scenario_name": "A surfer sends a saved report and sees it arrive",
+          "slice_id": "slice-03",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/the-saved-report-leaves-the-phone-lands-on-the-server-and-the-surfer-sees-it-arrive-filing-the.md",
+          "u8_observation": "Después de Mandar veo de un vistazo que mi reporte llegó. No me piden cuenta, no aparece pronóstico y la pantalla queda tranquila, terminada y legible a 390 px.",
+          "non_visual_rationale": "",
+          "ui_checks": { "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-03 and @ui-u1"], "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-03 and @ui-u2"], "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-03 and @ui-u3"], "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-03 and @ui-u4"], "U5-U7": ["npm", "run", "test:ui"] },
+          "files_to_modify": ["src/report/island.ts", "src/report/submit.ts", "src/report/mint.ts", "infra/lib/write-stack.ts", "tests/unit/report-submit.test.ts"],
+          "implementation_notes": "External prerequisite: do not deploy until feature-delta Pre-requisites 2, 5 and 6 are resolved. Real local handler plus real local store is valid for RED/GREEN before deployment. No fake endpoint, intercepted response or client-side forecast payload is valid."
+        },
+        {
+          "id": "03-02",
+          "name": "Keep retries, quota waits and unknown beaches honest",
+          "criteria": [
+            "A repeated report identity receives one arrival and does not create a second report or spend the daily allowance again.",
+            "A full daily allowance returns the real handler deferral for a real pre-provisioned device; the later browser calm-wait launch proof remains external-only.",
+            "An unknown beach is refused plainly by the real public handler before it can become a stored report, and opening the report screen flushes only reports already waiting."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/report-arrives-once.feature",
+          "scenario_name": "Sending the same saved report again leaves one arrival; A full daily allowance defers another saved report",
+          "slice_id": "slice-03",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/the-saved-report-leaves-the-phone-lands-on-the-server-and-the-surfer-sees-it-arrive-filing-the.md",
+          "u8_observation": "Un segundo intento no duplica nada y una espera se siente como espera, no como un error. El mensaje sigue limpio, alineado y sereno.",
+          "non_visual_rationale": "",
+          "ui_checks": { "U1-U7": ["npm", "run", "test:ui"] },
+          "deps": ["03-01"],
+          "files_to_modify": ["src/report/island.ts", "src/report/submit.ts", "src/write/decide-report.ts", "src/write/report-handler.ts", "tests/unit/decide-report.test.ts"],
+          "implementation_notes": "Use example-based real-I/O acceptance tests. Put universal duplicate, quota and validation laws in fast-check unit tests through the production decision port with the TypeScript state-delta universe. The online event and backoff ladder remain F-WORKS-WITH-NO-SIGNAL scope."
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "name": "Slice-04: the call is revealed only after arrival",
+      "description": "The report response renders either the honest comparison and counter or the honest no-comparison sentence. A direct visit never produces a reveal.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "04-01",
+          "name": "Render the compared receipt from the real report response",
+          "criteria": [
+            "After a report arrives, the receipt shows what we said, what the surfer saw, the correctly directed signed difference and the response count.",
+            "Both halves use the canonical report vocabulary and the count never claims stronger storage truth than its display contract.",
+            "The receipt remains forecast-free before the send and has no route back to edit the label."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/the-call-is-revealed-only-after-arrival.feature",
+          "scenario_name": "A surfer sees how the call did after sending their label",
+          "slice_id": "slice-04",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/only-after-the-label-is-locked-and-sent-does-the-site-say-what-it-had-predicted-we-said-82.md",
+          "u8_observation": "La tarjeta deja claro de un vistazo lo que dijimos y lo que vi yo. La diferencia se entiende sin calcular nada y no hay espacios vacíos ni movimiento molesto.",
+          "non_visual_rationale": "",
+          "ui_checks": { "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-04 and @ui-u1"], "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-04 and @ui-u2"], "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-04 and @ui-u3"], "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-04 and @ui-u4"], "U5-U7": ["npm", "run", "test:ui"] },
+          "deps": ["03-02"],
+          "files_to_modify": ["src/report/island.ts", "src/report/reveal.ts", "src/write/decide-report.ts", "tests/unit/report-reveal.test.ts"],
+          "implementation_notes": "The reveal comes only from the production report response. Do not add a reveal read route, client cache or fallback calculation. Use real published-call artifacts for the acceptance example."
+        },
+        {
+          "id": "04-02",
+          "name": "Tell the truth when no call can be found",
+          "criteria": [
+            "A real missing call produces the settled Spanish no-comparison sentence and no invented number or partial card.",
+            "The acceptance suite names the predicted-null path independently.",
+            "Direct opening of the reported screen has only general thanks, never a comparison."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/the-call-is-revealed-only-after-arrival.feature",
+          "scenario_name": "A surfer is told plainly when there is no call to compare; A visitor without a sent report receives no comparison",
+          "slice_id": "slice-04",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/only-after-the-label-is-locked-and-sent-does-the-site-say-what-it-had-predicted-we-said-82.md",
+          "u8_observation": "Si no hay con qué comparar, la frase es completa y honesta. No queda un cero, guion o hueco que parezca una comparación rota.",
+          "non_visual_rationale": "",
+          "ui_checks": { "U1-U7": ["npm", "run", "test:ui"] },
+          "deps": ["04-01"],
+          "files_to_modify": ["src/report/reveal.ts", "src/write/published-call-reader.ts", "src/write/decide-report.ts", "tests/unit/published-call-reader.test.ts"],
+          "implementation_notes": "The missing-call example must arise from the real lookup's bounded walk-back, not a forged response. Keep this layer example-based; property exploration stays in the reader and decision units."
+        }
+      ]
+    },
+    {
+      "id": "05",
+      "name": "Slice-05: a wrong clock explains itself and keeps the label",
+      "description": "A report outside the plausibility window is refused plainly, remains visible and never retries itself. A fresh report after a corrected clock can arrive.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "05-01",
+          "name": "Show the real clock refusal without dropping the label",
+          "criteria": [
+            "The real handler's out-of-window refusal becomes plain Spanish on the report screen, retaining the three chosen answers.",
+            "The refusal reveals no forecast and offers no fourth time-selection control.",
+            "The walking skeleton controls only the device clock and never substitutes the handler's received time or response."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/a-wrong-clock-keeps-the-label.feature",
+          "scenario_name": "A surfer with a badly wrong clock keeps the label and understands the refusal",
+          "slice_id": "slice-05",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/a-phone-with-a-badly-wrong-clock-is-told-plainly-why-its-report-was-refused-and-keeps-the-label.md",
+          "u8_observation": "El rechazo explica qué pasó sin regañar. Mis tres respuestas siguen a la vista, no hay pronóstico y el estado se siente terminado a 390 px.",
+          "non_visual_rationale": "",
+          "ui_checks": { "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-05 and @ui-u1"], "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-05 and @ui-u2"], "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-05 and @ui-u3"], "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-us-what-you-saw-cold and @slice-05 and @ui-u4"], "U5-U7": ["npm", "run", "test:ui"] },
+          "deps": ["03-02"],
+          "files_to_modify": ["src/report/island.ts", "src/report/refusal.ts", "src/write/decide-report.ts", "tests/unit/report-refusal.test.ts"],
+          "implementation_notes": "The server owns the plausibility window and response details. Browser clock control is allowed only to exercise the real boundary. No clock-refusal mock is valid acceptance evidence."
+        },
+        {
+          "id": "05-02",
+          "name": "Keep a clock refusal settled and allow a corrected fresh report",
+          "criteria": [
+            "Waiting after a refusal does not send the report again or change the message.",
+            "After the surfer corrects the clock, a fresh report follows the normal arrival journey.",
+            "Quota waiting stays distinct from a clock refusal in both wording and behavior."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/a-wrong-clock-keeps-the-label.feature",
+          "scenario_name": "A refused report does not keep trying by itself; A fresh report can arrive after the surfer corrects the clock",
+          "slice_id": "slice-05",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/a-phone-with-a-badly-wrong-clock-is-told-plainly-why-its-report-was-refused-and-keeps-the-label.md",
+          "u8_observation": "Esperar no cambia nada cuando la hora está mal. Al corregirla y mandar un reporte nuevo, el recorrido vuelve a sentirse normal sin borrar el anterior.",
+          "non_visual_rationale": "",
+          "ui_checks": { "U1-U7": ["npm", "run", "test:ui"] },
+          "deps": ["05-01"],
+          "files_to_modify": ["src/report/island.ts", "src/report/refusal.ts", "tests/unit/report-refusal.test.ts"],
+          "implementation_notes": "Real-I/O sad paths stay named examples. Add property coverage for window boundaries at the decision layer, using the state-delta port for port-exposed receipt and queue observations."
         }
       ]
     }

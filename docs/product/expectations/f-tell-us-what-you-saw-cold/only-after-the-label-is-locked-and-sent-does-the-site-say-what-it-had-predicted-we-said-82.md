@@ -24,6 +24,17 @@ reached, INDETERMINATE, never a PASS by absence.
    navigation to the reported screen, back and forward, reload). There must be no address that
    hands out a reveal.
 
+## JIT DISTILL recipe (2026-08-10)
+Set `REPORT_ACCEPTANCE_ORIGIN` to the real Slice-03 report journey, never a mock or intercepted
+request. The compared walk uses a genuinely published call; the no-comparison walk uses a real
+hour without a matching published call. The prerequisite is intentionally external: the test must
+not forge either response. Slice-03 must be green first, and the guarded write deployment
+prerequisites in feature-delta rows 2, 5 and 6 remain explicit before any deployed observation.
+
+The call and no-call examples need separately prepared real published artifacts. Until their
+owners supply those environments, their verdict is INDETERMINATE, never a forged response and
+never a substitute endpoint.
+
 ## Charter
 Explore the reveal as the surfer who wants to know how the site did. The heart of the walk is the
 order and the honesty: your answer first, our number after, and when there is nothing to compare,
