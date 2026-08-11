@@ -8,7 +8,7 @@ export interface ReportReceipt {
 
 export type SubmissionOutcome =
   | { readonly kind: 'received'; readonly receipt: ReportReceipt }
-  | { readonly kind: 'refused'; readonly message: string };
+  | { readonly kind: 'refused'; readonly message: string; readonly credentialInvalid: boolean };
 
 export interface SavedReportStore {
   discard(reportId: string): Promise<void>;
@@ -33,11 +33,24 @@ export async function sendSavedReport(
     body: savedBytes,
   });
   const body = await response.json().catch(() => undefined);
-  if (!response.ok) return { kind: 'refused', message: plainRefusal(body) };
+  if (!response.ok) return { kind: 'refused', message: plainRefusal(body), credentialInvalid: response.status === 401 };
   const receipt = receiptFrom(body);
   return receipt === undefined
-    ? { kind: 'refused', message: 'No pudimos confirmar el reporte ahora.' }
+    ? { kind: 'refused', message: 'No pudimos confirmar el reporte ahora.', credentialInvalid: false }
     : { kind: 'received', receipt };
+}
+
+/** A stale browser credential gets exactly one invisible remint and replay. */
+export async function sendWithCredentialRecovery(
+  savedBytes: string,
+  credential: { get(): Promise<string>; invalidate(): Promise<void> },
+  fetcher: Fetcher = fetch,
+  reportEndpoint: string | undefined = undefined,
+): Promise<SubmissionOutcome> {
+  const first = await sendSavedReport(savedBytes, await credential.get(), fetcher, reportEndpoint);
+  if (first.kind !== 'refused' || !first.credentialInvalid) return first;
+  await credential.invalidate();
+  return sendSavedReport(savedBytes, await credential.get(), fetcher, reportEndpoint);
 }
 
 /** A durable label leaves the queue only once its own receipt is valid and matches. */

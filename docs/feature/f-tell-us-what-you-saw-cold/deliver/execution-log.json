@@ -498,6 +498,34 @@
       "s": "EXECUTED",
       "d": "PASS: endpoint adapter implementation commit 97e122483a0559c13f1dc9e933f004ab4a1ba6e8 after independent iteration-2 review APPROVED with zero defects. Configured and absent-endpoint browser paths, typecheck, unit, infra, build, leak/budget, and synth gates were green. No deploy performed; deployed Function-URL/CORS and external write gates remain INDETERMINATE.",
       "t": "2026-08-11T14:53:29Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "REVALIDATION",
+      "s": "EXECUTED",
+      "d": "PASS: corrective audit found stale stored credentials had no one-time recovery. The repaired transport now invalidates browser identity, remints once after a 401, and replays the exact saved bytes; focused unit proof is green. This is current corrective evidence, not a retroactive claim about the missing original phase events.",
+      "t": "2026-08-11T15:45:08Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS: new local real-I/O Chromium scenario failed semantically because reopening reportar made no anonymous permission request for the already saved offline label. The browser had real IndexedDB and the production-local filesystem-backed write composition; no test helper posted the report.",
+      "t": "2026-08-11T15:42:00Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: reopening reportar with signal now drains the existing same-spot queued bytes through the page, receives its matching real local receipt, and renders one arrival. Local Chromium selection: 2 scenarios, 58 steps. Focused/full report units, typecheck, infra, build, leak, budget and synth are green; deployed Function-URL CORS/no-store, quota/device and deployed spot-index gates remain INDETERMINATE.",
+      "t": "2026-08-11T15:45:08Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: corrective implementation commit 8b054162bc4e2e897c063cac3575203ad2057e7b. Independent review resolved both credential recovery and queued-open drain defects; local Chromium 2 scenarios/58 steps, scoped report units, typecheck, infra, build, report-leak, page-budget, and synth gates were green. No deploy performed; deployed Function-URL CORS/no-store, quota/device, and deployed spot-index gates remain INDETERMINATE.",
+      "t": "2026-08-11T15:48:00Z"
     }
   ]
 }

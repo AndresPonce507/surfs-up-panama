@@ -102,6 +102,8 @@ function fakeStorage(seed: ReadonlyMap<string, string>, initial: Fault, token: s
       rows.delete(key);
       return Promise.resolve();
     },
+    entries: (): Promise<readonly { readonly key: string; readonly value: string }[]> =>
+      Promise.resolve([...rows.entries()].map(([key, value]) => ({ key, value }))),
   };
 
   return {

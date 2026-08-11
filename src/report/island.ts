@@ -26,7 +26,7 @@
 
 import { composeReportRecord, type ReportAnswers } from './report-record';
 import { createCredentialProvider, type CredentialProvider } from './mint';
-import { finalizeSavedReport, sendSavedReport } from './submit';
+import { finalizeSavedReport, sendWithCredentialRecovery, type SubmissionOutcome } from './submit';
 import {
   SENTINEL_KEY_PREFIX,
   openReportQueue,
@@ -215,7 +215,24 @@ function storeFrom(db: IDBDatabase): QueueStore {
       runRequest(db, 'readwrite', (store) => store.put(toStorable(key, value), key)).then(() => undefined),
     get: (key) => runRequest(db, 'readonly', (store) => store.get(key)).then(fromStorable),
     remove: (key) => runRequest(db, 'readwrite', (store) => store.delete(key)).then(() => undefined),
+    entries: () => listStoredEntries(db),
   };
+}
+
+function listStoredEntries(db: IDBDatabase): Promise<readonly { readonly key: string; readonly value: string }[]> {
+  return new Promise((resolve, reject) => {
+    const transaction = db.transaction(STORE_NAME, 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const keys = store.getAllKeys();
+    const values = store.getAll();
+    transaction.oncomplete = () => resolve(
+      keys.result.flatMap((key, index) => {
+        const value = fromStorable(values.result[index]);
+        return typeof key === 'string' && value !== undefined ? [{ key, value }] : [];
+      }),
+    );
+    transaction.onerror = () => reject(transaction.error ?? new Error('report queue: indexedDB list failed'));
+  });
 }
 
 function runRequest(
@@ -443,13 +460,7 @@ async function submitReport(
     return;
   }
   try {
-    const submission = await finalizeSavedReport(
-      outcome.report_id,
-      await sendSavedReport(savedBytes, await credential.get(), fetch, reportEndpoint),
-      {
-        discard: (reportId) => queue.discardSavedRecord?.(reportId) ?? Promise.reject(new Error('report queue cannot discard receipt')),
-      },
-    );
+    const submission = await sendQueuedReport(queue, credential, reportEndpoint, outcome.report_id, savedBytes);
     if (submission.kind === 'refused') {
       showNotice(elements.notice, submission.message);
       return;
@@ -463,6 +474,22 @@ async function submitReport(
     // A missing signal preserves the actual queue and its settled local confirmation.
     applyCommitUi(decideCommitUi(outcome, links), elements);
   }
+}
+
+async function sendQueuedReport(
+  queue: ReportQueue,
+  credential: CredentialProvider,
+  reportEndpoint: string,
+  reportId: string,
+  savedBytes: string,
+): Promise<SubmissionOutcome> {
+  return finalizeSavedReport(
+    reportId,
+    await sendWithCredentialRecovery(savedBytes, credential, fetch, reportEndpoint),
+    {
+      discard: (candidateId) => queue.discardSavedRecord?.(candidateId) ?? Promise.reject(new Error('report queue cannot discard receipt')),
+    },
+  );
 }
 
 async function activate(elements: IslandElements, spotId: string, locale: Locale, spotName: string): Promise<void> {
@@ -497,6 +524,37 @@ async function activate(elements: IslandElements, spotId: string, locale: Locale
       showNotice(elements.notice, STORAGE_REFUSED_MESSAGE);
     });
   });
+
+  if (credential !== undefined && endpoints !== undefined) {
+    void flushWaitingReport(opened.queue, credential, endpoints.report, spotId, links, elements).catch(() => {
+      // A missing signal keeps the durable label and its settled local state.
+    });
+  }
+}
+
+async function flushWaitingReport(
+  queue: ReportQueue,
+  credential: CredentialProvider,
+  reportEndpoint: string,
+  spotId: string,
+  links: ConfirmationLinks,
+  elements: IslandElements,
+): Promise<void> {
+  const pending = await queue.pendingRecords?.() ?? [];
+  const waiting = pending.find(({ bytes }) => {
+    try {
+      return (JSON.parse(bytes) as { spot_id?: unknown }).spot_id === spotId;
+    } catch {
+      return false;
+    }
+  });
+  if (waiting === undefined) return;
+  const submission = await sendQueuedReport(queue, credential, reportEndpoint, waiting.report_id, waiting.bytes);
+  if (submission.kind === 'received' && submission.receipt.report_id === waiting.report_id) {
+    applyReceivedUi(links, elements);
+    return;
+  }
+  if (submission.kind === 'refused') showNotice(elements.notice, submission.message);
 }
 
 function configuredWriteEndpoints(form: HTMLFormElement): { readonly mint: string; readonly report: string } | undefined {
@@ -518,6 +576,7 @@ function configuredWriteEndpoint(value: string | undefined): string | undefined 
 function browserCredentialStore(queue: ReportQueue): {
   read(): Promise<{ readonly deviceId: string; readonly credential: string } | undefined>;
   write(value: { readonly deviceId: string; readonly credential: string }): Promise<void>;
+  clear(): Promise<void>;
 } {
   return {
     read: async () => {
@@ -533,6 +592,14 @@ function browserCredentialStore(queue: ReportQueue): {
     write: async (value) => {
       await queue.identity?.write(value);
       rememberCredential(value);
+    },
+    clear: async () => {
+      await queue.identity?.clear();
+      try {
+        localStorage.removeItem(LOCAL_CREDENTIAL_KEY);
+      } catch {
+        // The queue remains authoritative if the optional mirror refuses removal.
+      }
     },
   };
 }
