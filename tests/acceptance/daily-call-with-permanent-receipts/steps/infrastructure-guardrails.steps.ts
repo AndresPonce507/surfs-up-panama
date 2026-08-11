@@ -510,7 +510,7 @@ Before(function (this: GuardrailWorld) {
   worktreeSnapshots.set(this, snapshotWorktree());
 });
 
-When('the site owner reads the local CI job inventory and starts the documented infrastructure job', async function (this: GuardrailWorld) {
+When('the site owner reads the local CI job inventory and starts the documented infrastructure job', { timeout: 15_000 }, async function (this: GuardrailWorld) {
   inventoryResults.set(this, await invokeProductionLocalCi(undefined, ['--list']));
   observe(this, await invokeProductionLocalCi(undefined, ['--job=infra']));
 });

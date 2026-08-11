@@ -269,6 +269,7 @@ function bundleDay(date: string, calls: readonly CallRow[]): BundleDay {
 
 /** Every field is that day's own value; nothing here is shared with the other day. */
 function daySummary(call: CallRow): BundleDaySummary {
+  const weakestLinkSubscore = publishedWeakestLinkSubscore(call);
   return {
     spot_id: call.spot_id,
     score_q: call.score_q,
@@ -279,7 +280,24 @@ function daySummary(call: CallRow): BundleDaySummary {
     wind_state: call.wind_state,
     best_window: call.best_window,
     weakest_link: call.weakest_link,
+    ...(weakestLinkSubscore === undefined ? {} : { weakest_link_subscore: weakestLinkSubscore }),
   };
+}
+
+/**
+ * The producer-only selection point for the raw score accompanying a named
+ * culprit. This runs while the exact scored row is still in scope, so no
+ * reader can reselect a factor or infer a value from hourly data.
+ */
+export function publishedWeakestLinkSubscore(
+  call: Pick<CallRow, 'weakest_link' | 'sub'>,
+): number | undefined {
+  if (call.weakest_link === null) return undefined;
+  const scalar = call.sub[call.weakest_link];
+  if (typeof scalar !== 'number' || !Number.isFinite(scalar) || scalar < 0 || scalar > 1) {
+    throw new Error(`publish refused: weakest_link ${call.weakest_link} has no finite raw sub-score in [0, 1]`);
+  }
+  return scalar;
 }
 
 /**
@@ -294,6 +312,7 @@ function daySummary(call: CallRow): BundleDaySummary {
 type FreshSurfaceCall = SurfaceCall & Required<Pick<SurfaceCall, 'weakest_link' | 'confidence_reason'>>;
 
 function surfaceCall(call: CallRow): FreshSurfaceCall {
+  const weakestLinkSubscore = publishedWeakestLinkSubscore(call);
   return {
     spot_id: call.spot_id,
     score_q: call.score_q,
@@ -302,6 +321,7 @@ function surfaceCall(call: CallRow): FreshSurfaceCall {
     size_band: call.size_band,
     size_range_m: call.size_range_m,
     weakest_link: call.weakest_link,
+    ...(weakestLinkSubscore === undefined ? {} : { weakest_link_subscore: weakestLinkSubscore }),
     confidence_reason: call.confidence_reason,
     // wind_state and best_window are optional on the wire (SurfaceCall),
     // never null: an unknown wind reading, or a day with no genuine peak,

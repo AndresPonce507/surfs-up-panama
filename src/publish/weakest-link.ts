@@ -43,7 +43,12 @@ export type SurfaceDayIndex = 0 | 1;
  * "we do not know" or the reverse.
  */
 export type WeakestLinkReading =
-  | { readonly kind: 'named'; readonly factor: FactorToken }
+  | {
+    readonly kind: 'named';
+    readonly factor: FactorToken;
+    /** Raw score from this exact published row's factor; absent on legacy rows. */
+    readonly weakest_link_subscore?: number;
+  }
   | { readonly kind: 'clean' }
   | { readonly kind: 'unknown' };
 
@@ -60,15 +65,17 @@ export function resolveWeakestLink(
   day: SurfaceDayIndex,
 ): WeakestLinkReading {
   const row = rowsForDay(surface, day).find((call) => call.spot_id === spotId);
-  return row === undefined ? { kind: 'unknown' } : readingFor(row.weakest_link);
+  return row === undefined ? { kind: 'unknown' } : readingFor(row);
 }
 
 function rowsForDay(surface: PublishedSurfaceUpdate, day: SurfaceDayIndex): readonly SurfaceCall[] {
   return day === 0 ? surface.calls : surface.days[1].spots;
 }
 
-function readingFor(weakestLink: FactorToken | null | undefined): WeakestLinkReading {
-  if (weakestLink === undefined) return { kind: 'unknown' };
-  if (weakestLink === null) return { kind: 'clean' };
-  return { kind: 'named', factor: weakestLink };
+function readingFor(row: SurfaceCall): WeakestLinkReading {
+  if (row.weakest_link === undefined) return { kind: 'unknown' };
+  if (row.weakest_link === null) return { kind: 'clean' };
+  return typeof row.weakest_link_subscore === 'number'
+    ? { kind: 'named', factor: row.weakest_link, weakest_link_subscore: row.weakest_link_subscore }
+    : { kind: 'named', factor: row.weakest_link };
 }

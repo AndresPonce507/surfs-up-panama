@@ -11,19 +11,29 @@
 // section 10, decision 18). When a spot has no structured size or window yet,
 // the page says so in words rather than showing nothing or a raw value.
 import Base from '../layouts/Base.astro';
+import CopyControl from './CopyControl.astro';
+import ShareControls from './ShareControls.astro';
 import { forecast, type DaySummary } from '../data/forecast';
 import { spotById } from '../data/region';
 import { strings, type Locale } from '../i18n/strings';
 import { paths } from '../i18n/routes';
 import { formatBestWindowEs, formatSizeEs, formatUpdatedAtEs } from '../publish/display-format';
+import type { LinkAnnouncement } from '../share/link-announcement';
 import WeakestLink from './WeakestLink.astro';
+import TrackRecordBox from './TrackRecordBox.astro';
 
 interface Props {
   locale: Locale;
   spotId: string;
+  announcement: LinkAnnouncement;
+  shareCall?: string;
+  shareHref?: string;
 }
 
-const { locale, spotId } = Astro.props;
+const { locale, spotId, announcement, shareCall, shareHref } = Astro.props;
+if ((shareCall === undefined) !== (shareHref === undefined)) {
+  throw new Error('SpotDetail: el llamado y su enlace deben llegar juntos');
+}
 const t = strings[locale];
 const spot = spotById(spotId);
 if (spot === undefined) {
@@ -57,9 +67,10 @@ const tomorrow = summaryFor(1);
   locale={locale}
   title={spot.name}
   currentPath={paths.spot(locale, spotId)}
+  announcement={announcement}
 >
   <h1>{spot.name}</h1>
-  <p>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</p>
+  <p><time datetime={forecast.published_at}>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</time></p>
   <nav>
     <a data-field="back-to-list" href={paths.home(locale)}>Volver a la lista</a>
   </nav>
@@ -93,7 +104,27 @@ const tomorrow = summaryFor(1);
       )
     }
   </section>
+  <TrackRecordBox spotId={spotId} />
+  {
+    shareCall !== undefined && shareHref !== undefined ? (
+      <section class="spot-share" aria-label="Compartir este llamado">
+        <h2>Compartir este llamado</h2>
+        <ShareControls href={shareHref} label="Mandar el llamado por WhatsApp" />
+        <CopyControl call={shareCall} />
+      </section>
+    ) : null
+  }
   <p>
     <a class="cta" href={paths.report(locale, spotId)}>{t.spot.reportCta}</a>
   </p>
 </Base>
+
+<style is:global>
+  .spot-share .share-controls {
+    margin-top: 0;
+  }
+
+  .spot-share .copy-control {
+    margin-top: var(--sp-3);
+  }
+</style>

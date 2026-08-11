@@ -1,7 +1,7 @@
 import type { WindStateToken } from '../data/report-vocab';
 import type { SizeBandToken } from '../data/size-bands';
 import type { ConfidenceResult } from '../scoring/confidence';
-import type { FactorToken } from './factor-vocab';
+import { FACTOR_TOKENS, type FactorToken } from './factor-vocab';
 
 /** Spot-local `HH:MM` strings, precomputed at publish time; pages never compute them. */
 export type BestWindow = {
@@ -78,6 +78,25 @@ export type SurfaceCall = {
    * which is exactly where the failure belongs.
    */
   readonly weakest_link?: FactorToken | null;
+  /**
+   * Raw score from the exact row's already-published `weakest_link`.
+   *
+   * This scalar is neither a second factor selection nor Slice-04's
+   * four-factor record. It is optional only for legacy named rows published
+   * before this field existed; when present it is finite and within [0, 1].
+   */
+  readonly weakest_link_subscore?: number;
+  /**
+   * Producer-decided model score without this row's named weakest link.
+   *
+   * The page receives this integer verbatim and never computes it. It is
+   * optional only for legacy named rows; a fresh named row carries either a
+   * strictly higher score or the mutually exclusive equality marker below.
+   * This is not Slice-04's damage disclosure.
+   */
+  readonly counterfactual_score_q?: number;
+  /** A fresh named row's valid rounded-equality suppression marker. */
+  readonly counterfactual_suppression?: 'rounded_equal';
   /** Same backward-compatibility reason as `weakest_link`: every freshly
    * built call sets this key, older committed surfaces may not have it. */
   readonly confidence_reason?: ConfidenceReason;
@@ -192,7 +211,39 @@ function isSurfaceCall(value: unknown): value is SurfaceCall {
   return isRecord(value)
     && typeof value.spot_id === 'string'
     && typeof value.score_q === 'number'
-    && typeof value.call_es === 'string';
+    && typeof value.call_es === 'string'
+    && hasValidWeakestLinkSubscore(value)
+    && hasValidCounterfactual(value);
+}
+
+function hasValidWeakestLinkSubscore(value: Record<string, unknown>): boolean {
+  if (!Object.hasOwn(value, 'weakest_link_subscore')) return true;
+  const scalar = value.weakest_link_subscore;
+  return isFactorToken(value.weakest_link)
+    && typeof scalar === 'number'
+    && Number.isFinite(scalar)
+    && scalar >= 0
+    && scalar <= 1;
+}
+
+function hasValidCounterfactual(value: Record<string, unknown>): boolean {
+  const hasScore = Object.hasOwn(value, 'counterfactual_score_q');
+  const hasSuppression = Object.hasOwn(value, 'counterfactual_suppression');
+  if (!hasScore && !hasSuppression) return true;
+  if (!isFactorToken(value.weakest_link) || (hasScore && hasSuppression)) return false;
+  if (hasSuppression) return value.counterfactual_suppression === 'rounded_equal';
+  const score = value.counterfactual_score_q;
+  const rowScore = value.score_q;
+  return typeof score === 'number'
+    && typeof rowScore === 'number'
+    && Number.isInteger(score)
+    && score >= 0
+    && score <= 100
+    && score > rowScore;
+}
+
+function isFactorToken(value: unknown): value is FactorToken {
+  return typeof value === 'string' && FACTOR_TOKENS.includes(value as FactorToken);
 }
 
 function sameRankedCalls(left: readonly SurfaceCall[], right: readonly SurfaceCall[]): boolean {

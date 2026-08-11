@@ -162,6 +162,279 @@
       "s": "EXECUTED",
       "d": "PASS",
       "t": "2026-08-10T12:51:14Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T19:58:02Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T19:58:02Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T19:58:02Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: non-visual step; UI N/A because this step establishes the completed-call copy core and browser Clipboard adapter only. Named browser acceptance, typecheck, build, 22-file/85-test unit suite, and slice-01 regression passed.",
+      "t": "2026-08-10T20:02:19Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T20:03:48Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: loaded delivery and functional testing guidance, verified current copy port, component, shared composer, roadmap scope, and non-visual rationale.",
+      "t": "2026-08-10T20:08:21Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: targeted active acceptance scenario failed for the intended AssertionError: denied clipboard left no visible Spanish failure notice.",
+      "t": "2026-08-10T20:08:21Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: focused fast-check property failed as intended because the rejected Clipboard port error escaped instead of producing the required failure outcome.",
+      "t": "2026-08-10T20:08:41Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: denied Clipboard becomes the plain Spanish notice \"No se pudo copiar. M\u00e1ndalo por WhatsApp.\"; target acceptance, focused 2-property unit suite, full 22-file/86-test unit suite, typecheck, build, and slice-01 regression passed. UI N/A: roadmap classifies this recovery behavior non-visual; combined visible gate is step 02-03.",
+      "t": "2026-08-10T20:10:37Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: committed the verified 02-02 recovery behavior; future 02-04 no-JavaScript acceptance remains intentionally RED and was not advanced.",
+      "t": "2026-08-10T20:10:47Z"
+    },
+    {
+      "sid": "02-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: slice acceptance 6 scenarios/77 steps; 22 unit files/86 tests; typecheck; build; page-weight (home 4515 B gz of 14336 B); UI gate; and slice-01 regression all passed. CHECKPOINT_PENDING: U1-U7 verification and current source-blind U8 examiner PASS.",
+      "t": "2026-08-10T20:38:30Z"
+    },
+    {
+      "sid": "02-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T20:38:40Z"
+    },
+    {
+      "sid": "02-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 1980b57748e6e390c8e9f32114121e656abc31d6. Current native-Chrome Vera PASS physically pasted the exact five-line WhatsApp-equivalent call after Llamado copiado.; U1-U7 sealed by des-verify-ui; acceptance, units, typecheck, build, byte, UI, and slice-01 regression passed.",
+      "t": "2026-08-10T20:52:11Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: confirmed 03-01 depends only on shipped 01-04; loaded the authored acceptance mappings and the existing pure share-message/address seams.",
+      "t": "2026-08-10T20:54:03Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: the two mapped active scenarios failed for the intended AssertionErrors: no announced metadata exists, so the page cannot name the shared spot/score or declare a configured-site preview address.",
+      "t": "2026-08-10T20:54:21Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: corrected controlled 03-01 RED failed for the intended AssertionErrors because composeLinkAnnouncement is absent from its owned pure boundary.",
+      "t": "2026-08-10T21:05:46Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the 03-01 direct pure-boundary acceptance passes for Spanish spot-and-score text and configured-site URL derivation. UI N/A: this roadmap step adds an unmounted pure composer only; its first user-visible publication is separately contracted in 03-02.",
+      "t": "2026-08-10T21:06:59Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: test budget checked. Two distinct direct port behaviors are covered by the two distilled acceptance scenarios; no additional unit test was needed for this small pure boundary.",
+      "t": "2026-08-10T21:06:59Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: 03-02 JIT acceptance collected two scenarios and failed one semantic AssertionError because Base.astro did not publish the prepared og:title, og:description, og:url, or og:locale; the no-announcement head scenario already passed.",
+      "t": "2026-08-10T21:07:46Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: Base.astro publishes all four provided Open Graph values and preserves the existing head when announcement is absent. UI N/A by roadmap: this shared-head seam has no page supplying it yet; source-blind preview examination belongs to the home integration in 03-03.",
+      "t": "2026-08-10T21:08:12Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: test budget checked. The two direct Base publication acceptance scenarios cover the supplied-announcement and no-announcement behaviors; no additional unit test is needed for this thin adapter seam.",
+      "t": "2026-08-10T21:08:12Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: prior RED observation is preserved in distill/red-classification.md: `npm run test:at -- --tags \"@feature-f-paste-the-call-into-the-group and @slice-03\" > /tmp/paste03-red.log 2>&1; echo \"REAL_EXIT=$?\"` returned REAL_EXIT=1, with 5 scenarios (5 failed), 56 steps (45 passed, 6 skipped, 5 failed), and zero BROKEN. The five failures reached the missing-announcement or missing-clean-address assertions. This entry reports that committed historical evidence; it does not claim a new RED run.",
+      "t": "2026-08-10T21:11:48Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: post-commit revalidation on the present working tree ran `PASTE_JIT=1 npm run test:at -- --tags '@feature-f-paste-the-call-into-the-group and @jit-03-03'`: 5 scenarios (5 passed), 71 steps (71 passed), 0m 10.945s executing. `npm run typecheck` and `npm run build` both exited 0; the build's page-weight gate measured home at 4,733 B gz of 14,336 B. PASTE_JIT=1 is required because the scenarios intentionally skip without it. These current reruns validate the slice contract but are not represented as a historical run at 408331a. The authenticated WhatsApp chat-card observation remains NOT_EXECUTED under 03-03-whatsapp-preview-external-verification.md.",
+      "t": "2026-08-10T22:52:05Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: `git show --format= --name-status 408331a41dcad7b1053743573a82d5ef97789840` verifies the 2026-08-10 17:52:43-05:00 commit `feat(paste): close the home preview journey - step 03-03`, with Step-Id: 03-03, changed only src/pages/index.astro, src/components/RankedList.astro, and src/layouts/Base.astro. The external WhatsApp chat-card observation remains NOT_EXECUTED and is not represented as an owned acceptance result.",
+      "t": "2026-08-10T22:52:25Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "EVIDENCE_CORRECTION",
+      "s": "INVALIDATED",
+      "d": "CORRECTION: the 03-03 GREEN and COMMIT entries introduced by d9ffb68 at 2026-08-10T22:52:05Z and 2026-08-10T22:52:25Z are invalid as post-commit evidence because both predate 408331a's 2026-08-10T22:52:43Z commit time. They are preserved for append-only auditability and must not be used as verification. The historical RED source remains the separate distill/red-classification.md record.",
+      "t": "2026-08-11T02:23:44Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: current verification began 2026-08-11T02:23:26Z and completed 2026-08-11T02:23:44Z. `PASTE_JIT=1 npm run test:at -- --tags '@feature-f-paste-the-call-into-the-group and @jit-03-03'` passed 5 scenarios and 71 steps in 0m 15.577s executing; `npm run typecheck` exited 0; `npm run build` exited 0 and its page-weight gate measured home at 4,733 B gz of 14,336 B. These commands ran against the present tree after 408331a existed; they do not assert that the current tree is byte-identical to that commit.",
+      "t": "2026-08-11T02:23:44Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: current `git show --format= --name-status 408331a41dcad7b1053743573a82d5ef97789840` at 2026-08-11T02:23:44Z verifies existing commit 408331a41dcad7b1053743573a82d5ef97789840, subject `feat(paste): close the home preview journey - step 03-03`, and only src/components/RankedList.astro, src/layouts/Base.astro, and src/pages/index.astro changed. It is an inspection of an existing commit, not a claim to have created it now.",
+      "t": "2026-08-11T02:23:44Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS: `PASTE_JIT=1 npm run test:at -- --tags '@feature-f-paste-the-call-into-the-group and @jit-04-03'` collected 4 scenarios and failed all 4 with semantic AssertionErrors: the home declared no image card, a new morning had no announced card to compare, and two incomplete spots did not share the generic recovery face. No collection, import, build or environment failure occurred.",
+      "t": "2026-08-11T02:08:32Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the restored `@jit-04-03` real-I/O command passed 4 scenarios and 64 steps. Full Slice-04 passed 7 scenarios and 107 steps with PASTE_JIT=1; `npm test` passed 86/86; `npm run typecheck`, `npm run build`, `npm run budget`, and `npm run test:ui` all exited 0. Build emitted an absolute stamped og:image, 1200x630 JPEGs below 60 KB, and a 4,768 B gz home with no preview-card first-flight asset. Controlled falsification removed only the new og:image block and made 3 of 4 scenarios fail on the intended missing-card AssertionError; the block was restored before the passing rerun. Test budget: 4 behaviors x 2 = 8 unit tests; 0 new unit tests because the real-I/O acceptance scenarios directly cover them.",
+      "t": "2026-08-11T02:29:04Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "COMMIT",
+      "s": "SKIPPED",
+      "d": "CHECKPOINT_PENDING: independent review found the implementation correct but requested the phase evidence now recorded above. Vera's first source-blind observation was INDETERMINATE only because no authorized WhatsApp chat could be exercised; the architecture-defined public handoff and its external-client boundary are recorded in 04-03-whatsapp-card-external-verification.md. Awaiting the scoped Vera correction and independent re-review before a commit is permitted.",
+      "t": "2026-08-11T02:34:00Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS: focused acceptance initially failed for the intended missing selected-spot WhatsApp action.",
+      "t": "2026-08-11T02:35:10Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: focused real-browser acceptance passed 13/13; no-JavaScript companion passed 11/11; first-flight scenario passed 12/12; units 86/86; typecheck, build, budget, and test:ui passed. At 390 px, source-blind browser observation found one 358x47 Mariatos WhatsApp action, no horizontal overflow, and a Mariatos 69 message ending in its stamped URL. Home-summary substitution falsified the selected-score assertion and was restored before rerun. Test budget: 1 behavior x 2 = 2 unit tests; 0 new tests because the real-I/O acceptance covers the route.",
+      "t": "2026-08-11T02:38:41Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 28f352d is `feat(paste): share the selected spot's call - step 05-01` and changes only src/share/day-summary.ts and src/pages/spots/[slug]/index.astro. Full Slice-05 retained four expected 05-02 REDs for copy and per-spot Open Graph publication.",
+      "t": "2026-08-11T02:39:21Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS: direct copy and selected-announcement acceptance scenarios failed with the intended semantic AssertionErrors: no spot copy action, then no Open Graph announcement. Both reached the built page without setup, import, or environment failure.",
+      "t": "2026-08-11T02:43:26Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: full Slice-05 acceptance passed 7 scenarios and 82 steps, including exact copy parity, no-JavaScript WhatsApp, selected-spot announcement, and light/dark reduced-motion U1-U7 variants. Units passed 86/86; typecheck, build, budget, and test:ui passed. The 390 px Mariatos page had 48 px copy and 47 px WhatsApp controls, no overflow or CTA overlap, clean Mariatos canonical/og:url, and stamped Mariatos og:image. Home-announcement falsification made the selected-announcement assertion reject Playa Guánico, then was restored. Test budget: 3 behaviors x 2 = 6 unit tests; 0 new tests because real-I/O acceptance covers route composition.",
+      "t": "2026-08-11T02:47:07Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: b3b65d8 is `feat(paste): close the spot sharing journey - step 05-02`, changing only src/pages/spots/[slug]/index.astro, src/components/SpotDetail.astro, and scoped RED/GREEN evidence. It preserves Base/index ordering and leaves external WhatsApp chat delivery outside the local contract.",
+      "t": "2026-08-11T02:49:30Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "EVIDENCE_CORRECTION",
+      "s": "INVALIDATED",
+      "d": "CORRECTION: the earlier 05-02 RED entry combined two separately selected scenarios. It is retained only as an audit transcript and is not valid canonical phase proof because this step permits exactly one active RED acceptance scenario.",
+      "t": "2026-08-11T02:56:26Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS: canonical JIT RED was exactly one active authored scenario, `scenario_name` selected by `npm run test:at -- --name 'Copiar en la página del spot copia el llamado de ese spot'`, before b3b65d8. It collected one scenario and failed one semantic AssertionError because the spot page offered no copy action, with no collection, build, import, or environment failure. The companion no-JavaScript and phone-quality mappings remained unselected until GREEN/full-slice verification. Historical source inspection corroborates the captured RED: 28f352d's SpotDetail mounts ShareControls but has no CopyControl, while b3b65d8 adds the copy action.",
+      "t": "2026-08-11T02:56:26Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "VALIDATION",
+      "s": "EXECUTED",
+      "d": "PASS: correction rerun: the focused `scenario_name` command passed 1 scenario and 12 steps; the full Slice-05 tag command exited 0; `npm test` passed 22 files and 86 tests; typecheck, build, budget, and test:ui passed. The rebuilt home was the heaviest measured document at 4,768 B gz of 14,336 B; UI checks U2, U4, U6, and U7 passed.",
+      "t": "2026-08-11T02:58:30Z"
     }
   ]
 }

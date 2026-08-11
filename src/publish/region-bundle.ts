@@ -53,6 +53,8 @@ export type BundleDaySummary = {
   readonly best_window: BestWindow | null;
   /** null means no factor cost this day any score; never a fabricated culprit. */
   readonly weakest_link: Factor | null;
+  /** Raw score for this row's named weakest_link; absent only on a clean row. */
+  readonly weakest_link_subscore?: number;
 };
 
 export type BundleDay = {

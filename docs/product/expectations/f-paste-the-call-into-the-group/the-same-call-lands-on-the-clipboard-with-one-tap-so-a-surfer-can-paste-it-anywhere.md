@@ -7,7 +7,7 @@ Un toque copia el llamado completo al portapapeles, con confirmación clara, y e
 ## Preconditions
 Usar Node 22, npm y un navegador local. No usar credenciales ni servicios de nube. Toda observación empieza desde el árbol real indicado abajo. Si el navegador abre otra copia, descartar esa sesión y empezar de nuevo.
 
-1. `cd /Users/andres/panama-surf`
+1. `cd /Users/andres/psb-paste`
 2. Ejecutar `npm ci` solamente si las dependencias todavía no están instaladas.
 3. Ejecutar `npm run build`.
 4. Ejecutar `npm run preview` y anotar la dirección local que muestra, normalmente `http://localhost:4321`.
@@ -32,3 +32,8 @@ Diferido, fuera de este slice: la vista previa del enlace pertenece a slice-03 y
 ## Session log (append-only)
 | date | examiner | verdict | observations |
 |------|----------|---------|--------------|
+| 2026-08-10 | Vera | FAIL | At 390px, the 48px Copiar el llamado button showed Llamado copiado. after one tap, but the browser clipboard was empty immediately afterward. WhatsApp stayed present, JS-off retained WhatsApp and removed copy, and both light normal and dark reduced-motion layouts were legible and aligned. Clipboard-denied notice could not be observed because the available browser surface does not expose a safe permission-denial control. |
+| 2026-08-10 | Vera | FAIL | Recheck at 390px: one tap now wrote the full SURF block, including the ?b= URL, to the browser clipboard and it matched WhatsApp. However no Spanish success confirmation appeared after the tap. WhatsApp remained available, JS-off retained WhatsApp and removed copy, and light normal plus dark reduced-motion layouts were legible and aligned. Clipboard-denied notice was not observable because the available browser surface does not expose a safe permission-denial control. |
+| 2026-08-10 | Vera | FAIL | Final 390px walk: the page showed Llamado copiado. after one tap, but the actual browser clipboard was empty, so it did not match WhatsApp and was a false success. WhatsApp remained available, JS-off retained WhatsApp and removed copy, and light normal plus dark reduced-motion layouts were legible and aligned. |
+| 2026-08-10 | Vera | FAIL | Fresh rebuilt 390px walk: Llamado copiado. appeared after one tap, but the real browser clipboard was empty and did not byte-match the WhatsApp block. WhatsApp remained available, JS-off retained WhatsApp and removed copy, and light normal plus dark reduced-motion layouts were legible and aligned. |
+| 2026-08-10 | Vera | PASS | Native Chrome confirmation: after Llamado copiado. appeared, a physical paste into a multiline field in the same browser profile produced the exact five-line WhatsApp-equivalent call, including the absolute ?b= URL. Earlier in-app clipboard reads were automation isolation. The 390px layout and fallback observations remain covered by the preceding examination. |

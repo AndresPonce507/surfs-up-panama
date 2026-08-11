@@ -40,8 +40,11 @@ const JOBS = [
     steps: [['semgrep scan', 'semgrep', ['scan', '--config', 'p/default', '--severity', 'ERROR', '--error', '--metrics=off', '--quiet']]],
   },
   {
+    // Acceptance. Excluded from --fast, which is the gate the pre-push hook
+    // runs on a feature branch. See fastSkip below for why.
     name: 'at',
     default: true,
+    fastSkip: true,
     needs: ['npm'],
     steps: [['cucumber acceptance', 'npm', ['run', 'test:at']]],
   },
@@ -65,11 +68,26 @@ const JOBS = [
     steps: [['build + page weight', 'npm', ['run', 'build', '--', '--outDir', '.ci-local-logs/budget-dist']]],
   },
   {
+    // Browser acceptance. Same category as `at`, so same exclusion: a DISTILL
+    // branch's browser scenarios are red for the same by-design reason.
     name: 'e2e',
     default: true,
     heavy: true,
+    fastSkip: true,
     needs: ['npm'],
     steps: [['browser acceptance', 'npm', ['run', 'test:e2e']]],
+  },
+  {
+    // It needs a real emitted site, so this is serial with the page-weight
+    // build and uses its own output directory.
+    name: 'leak',
+    default: true,
+    serial: true,
+    needs: ['npm'],
+    steps: [
+      ['build + report leak', 'npm', ['run', 'build', '--', '--outDir', '.ci-local-logs/leak-dist']],
+      ['report leak isolation', 'node', ['scripts/check-report-leak.mjs', '--dist', '.ci-local-logs/leak-dist']],
+    ],
   },
   {
     name: 'infra',
@@ -350,9 +368,19 @@ export async function runLocalCi({
     return 0;
   }
 
+  // --fast is the feature-branch gate the pre-push hook runs; the trunk gate
+  // (merge:pr, which invokes this with no arguments) always runs everything.
+  //
+  // Acceptance jobs are excluded from --fast because this project writes
+  // acceptance tests JIT, one slice at a time: a DISTILL branch is red by
+  // design and stays red until its DELIVER steps land. Gating the push on it
+  // means work that is correct and complete for its wave can never reach the
+  // remote. An explicit --job=at still runs it, and nothing merges to a trunk
+  // without it.
   const selected = wanted.length
     ? JOBS.filter((job) => wanted.includes(job.name))
-    : JOBS.filter((job) => (has('--all') ? true : job.default));
+    : JOBS.filter((job) => (has('--all') ? true : job.default))
+      .filter((job) => !(fast && job.fastSkip));
 
   if (!selected.length) {
     outputError(output, 'No matching job. Try --list.');

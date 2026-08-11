@@ -1,0 +1,597 @@
+{
+  "roadmap": {
+    "project_id": "f-tell-us-what-you-saw-cold",
+    "created_at": "2026-08-09T23:20:00Z",
+    "total_steps": 10,
+    "quality_contract_version": 1
+  },
+  "phases": [
+    {
+      "id": "01",
+      "name": "Slice-01: three taps lock the label on the phone, server-free",
+      "description": "The report island lands server-free: three answers, ULID mint, durable IndexedDB commit, then history.replaceState, then the saved confirmation. The sentinel probe, the anti-leak gate and the dead /en/ prop fix ship here. Two Spanish strings remain open copy items (feature-delta Pre-requisite 8).",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "01-01",
+          "name": "Pure report record composer and ULID mint",
+          "criteria": [
+            "Pure function composes the full P2-shaped record from three canonical answers, spot id and an injected clock; no I/O, no ambient reads.",
+            "Record carries report_id ULID, observed_at and submitted_at ISO8601 UTC, size_band_schema 1, trigger organic, photo_ids empty list.",
+            "Property: label tokens come only from src/data/report-vocab and src/data/size-bands; no placeholder wording for any input.",
+            "Property: every mint is 26 Crockford base32 characters; distinct mints give distinct identities from injected randomness."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/three-taps-locks-the-label.feature",
+          "scenario_name": "What the phone keeps is exactly what the surfer said, in the shared vocabulary",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Pure record composition and identity mint; the visible surface ships in 01-03 onward, which carry the charter and the U1-U7 checks.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/report/report-record.ts",
+            "src/report/ulid.ts",
+            "tests/unit/report-record.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): unit tests are property-based with fast-check (house style: tests/unit/scoring-laws.test.ts); example-based tests are fallback only with a documented reason; integration/E2E stay single-example. Adapted from the Hypothesis wording because this repo is TypeScript + fast-check. DISPATCH: project CLAUDE.md selects @nw-functional-software-crafter for every DELIVER step; the agent field uses the schema-valid name, the orchestrator maps it. SEAMS (import-only, never modify - src/data/** is a forbidden write lane): WIND_STATE_TOKENS and QUALITY_TOKENS from src/data/report-vocab.ts, sizeBands from src/data/size-bands.ts (Pre-requisite 1 closed 2026-08-09: canon clean|choppy|blown_out and bad|ok|good|epic). RECORD SHAPE = the P2 request body (application-architecture.md section 7 row P2) plus photo_ids: [] which the acceptance oracle asserts: report_id, spot_id, observed_at, submitted_at, size_band, size_band_schema: 1, wind, quality, trigger: 'organic', photo_ids: []. device_id and the credential are NOT in this slice (mint is slice-03; domain-model section 8). The queued record replays byte-identical the day the endpoint exists (domain-model section 7.4), which is why only canonical tokens may ever be composed. ULID is HAND-ROLLED (~30 lines, Crockford base32, timestamp + injected randomness): no npm ulid package, for the 5 KB island budget and the zero-new-dependency rule; the acceptance oracle checks shape only (26 Crockford chars) and identity freshness, so monotonicity within a millisecond is not required."
+        },
+        {
+          "id": "01-02",
+          "name": "IndexedDB queue adapter with sentinel probe",
+          "criteria": [
+            "probe() writes, reads back and deletes a sentinel through the injected storage factory before any form activation.",
+            "Refusal returns a refused outcome, never an unhandled throw; commit never runs after refusal; no silent queue that drops labels.",
+            "commit appends the record durably keyed by report_id; the stored row replays byte-identical (domain-model 7.4).",
+            "Zero new npm dependencies; dependencies passed in, functional house style."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/three-taps-locks-the-label.feature",
+          "scenario_name": "The same three taps work with the signal cut, because the label lives on the phone",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Driven storage adapter behind the island; its observable behaviour surfaces in 01-03 and 01-05, which carry the charter and the U1-U7 checks.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/report/queue.ts",
+            "tests/unit/report-queue.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): property-based with fast-check as in 01-01 for the pure outcome-mapping and record round-trip laws; the IndexedDB-touching paths are integration-shaped and stay single-example against a minimal injected in-memory fake (do NOT add fake-indexeddb - no new npm dependency; real IndexedDB behaviour is exercised by the acceptance suite in real Chromium). EARNED TRUST (application-architecture.md section 12): the probe is write + read + delete of a sentinel BEFORE the form activates; a queue that cannot prove durability must refuse loudly, never accept a label it would drop. CRITICAL SEAM, verified in steps/support/world.ts: the refusal fixture models storage refusal with Object.defineProperty(window, 'indexedDB', { get: () => { throw DOMException } }) - PROPERTY ACCESS ITSELF THROWS. The adapter must take the IDBFactory as an injected thunk/parameter and guard the access in try/catch, not only open() failures; an adapter that touches window.indexedDB bare at module scope crashes the island as a pageerror, which the 'nothing reads as an error' oracle also catches. The stored row is the exact composed record from 01-01, no rewriting at flush time ever (offline-ness derives server-side later from received_at minus submitted_at; no queued flag exists - application-architecture section 8 end note)."
+        },
+        {
+          "id": "01-03",
+          "name": "Island activates form; Mandar commits, swaps, renders",
+          "criteria": [
+            "Static document still ships Mandar disabled; the island enables submission only after a passing sentinel probe.",
+            "Tap order fixed: durable commit, then history.replaceState to the reportado address, then confirmation render (section 8 L3).",
+            "Confirmation shows the settled queued copy verbatim, no digits, no forecast language, no editable control, no link into reportar.",
+            "Island holds no forecast data, fetches nothing, POSTs nothing; the slice is server-free."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/three-taps-locks-the-label.feature",
+          "scenario_name": "A surfer walking off Playa Venao locks a label in three taps",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/a-surfer-walking-off-playa-venao-opens-the-report-screen-answers-how-big-how-the-wind-was-and.md",
+          "u8_observation": "En la pantalla del reporte de Playa Venao respondo las tres preguntas con una mano, toco Mandar y la pantalla cambia a la confirmación guardada: sin puntaje, sin pronóstico, sin camino de vuelta al formulario. Se ve terminada a 390 px en tema claro y oscuro, y con movimiento reducido activado nada se anima.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u3"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u7"
+            ]
+          },
+          "deps": [
+            "01-01",
+            "01-02"
+          ],
+          "files_to_modify": [
+            "src/report/island.ts",
+            "src/components/ReportCapture.astro",
+            "src/pages/spots/[slug]/reportar.astro",
+            "tests/unit/report-island.test.ts",
+            "src/pages/spots/[slug]/reportado.astro"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: DOM orchestration wiring, single-shot by nature; compensated by the property-based tests on record (01-01) and queue (01-02); the unit render test covers state transitions example-based with a documented reason. The island is the ONLY script the reportar document may load (application-architecture section 6 budgets it at 5.0 KB gz; 01-09 asserts it). Wire it as a script in ReportCapture.astro. FLOW after a passing probe: enable Mandar (the static HTML keeps disabled - progressive enhancement, 01-06 pins it); on tap with all three answered: compose record (01-01, clock and crypto injected at the composition root), commit (01-02), history.replaceState to paths.reported('es', spotId) (import src/i18n/routes read-only), then render the confirmation INTO THE CURRENT DOCUMENT (no navigation, no reload, no fetch): remove the form entirely (oracle counts form/input/select/textarea and must find 0), render the settled queued sentence and one link back to the spot page only (no a[href*=\"/reportar\"]). COPY, deliberate: the confirmation uses the settled queued variant 'Guardado. Cuando vuelva la señal lo mandamos y te decimos cómo nos fue.' verbatim (application-architecture section 10) in BOTH online and offline walks - slice-01 never sends anything, so it is the only settled sentence that is true; slice-03 introduces the online arrival state. It contains no digits, which the no-forecast oracle requires (no /\\d/ anywhere in body text - render no counter, no numbers of any kind). If src/i18n/strings.ts already exports this string, import it read-only; otherwise define it once in src/report/copy.ts and FLAG the future consolidation (src/i18n/** is another lane's file, never edit it). OPEN COPY ITEM (Pre-requisite 8b), do not build: the section 14 note 'Nota: aquí no te mostramos el pronóstico. Primero lo tuyo, después el nuestro.' is NOT settled shipping copy and no scenario asserts it; render nothing, record it for Andres via the cousin's crew channel. Playwright's waitForURL sees replaceState, so the world's tapMandar observes the swap.",
+          "scope_widening_note": "Widened by the orchestrator 2026-08-10. No step in this roadmap owned src/pages/spots/[slug]/reportado.astro, so the confirmation route was never assigned an owner and shipped unable to render itself on a cold load. Vera caught it: reload, fresh tab or bookmark showed a blank page seconds after a surfer submitted a report. This step is named \"Mandar commits, swaps, renders\" and that render IS the confirmation, so the route belongs here."
+        },
+        {
+          "id": "01-04",
+          "name": "Back lands on spot page; new visits start blank",
+          "criteria": [
+            "Back from the confirmation lands on the spot page at every moment, never an editable form.",
+            "Reopening reportar starts blank: no prefilled answer, no persisted form state, fresh report_id at next commit.",
+            "Two separate saved reports commit two records with two distinct identities at the queue port."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/three-taps-locks-the-label.feature",
+          "scenario_name": "Back never returns to an editable form and a new report starts blank",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/a-surfer-walking-off-playa-venao-opens-the-report-screen-answers-how-big-how-the-wind-was-and.md",
+          "u8_observation": "Desde la confirmación, el botón atrás me deja en la página del spot, nunca en un formulario editable; al abrir el reporte otra vez todo empieza en blanco, y contestar de nuevo guarda un segundo reporte aparte del primero.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u3"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u7"
+            ]
+          },
+          "deps": [
+            "01-03"
+          ],
+          "files_to_modify": [
+            "src/report/island.ts",
+            "tests/unit/report-island.test.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: back-stack semantics are browser-history wiring, single-shot; compensated by 01-01's identity-freshness property. The mechanism is already fixed by 01-03's ordering: because replaceState swapped the reportar history entry BEFORE the confirmation rendered, goBack from the confirmation reaches the spot page - there is no mid-render window (application-architecture section 8 L3). This step proves it end to end and closes the leftovers: (a) the island persists NO form state anywhere (no localStorage, no sessionStorage, no prefill) so every reportar load is blank by construction - the static document is already blank, so the island must simply never add persistence; (b) identity is minted at COMMIT (01-01), never cached at module scope, so two visits commit two records with two distinct ULIDs; (c) nothing in the island listens to popstate to resurrect the form. The acceptance oracle observes the durable queue through the driven storage port (IndexedDB dump in world.ts queuedReports), so both records must be report-shaped (report_id + size_band + wind + quality) to be counted."
+        },
+        {
+          "id": "01-05",
+          "name": "Probe refusal told plainly, never claims saved",
+          "criteria": [
+            "On probe refusal a visible [data-storage-notice] renders before any answer: plain surfer Spanish, no technical vocabulary.",
+            "Refused state never claims Guardado and never navigates to the reportado address; Mandar stays inert this slice.",
+            "The notice string lives in one swappable constant; wording is an open copy item (Pre-requisite 8a), behaviour is fixed."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/three-taps-locks-the-label.feature",
+          "scenario_name": "A phone that cannot keep the label is told plainly before answering",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/a-surfer-walking-off-playa-venao-opens-the-report-screen-answers-how-big-how-the-wind-was-and.md",
+          "u8_observation": "En un teléfono que no puede guardar, antes de contestar aparece un aviso claro en español sencillo de que el reporte no se puede guardar en este teléfono; después de tocar Mandar la pantalla nunca dice Guardado ni cambia a la confirmación.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u3"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u7"
+            ]
+          },
+          "deps": [
+            "01-03"
+          ],
+          "files_to_modify": [
+            "src/report/island.ts",
+            "src/components/ReportCapture.astro",
+            "tests/unit/report-island.test.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: a single designed UI state; compensated by 01-02's property-based refusal-outcome mapping. The [data-storage-notice] seam mirrors the shipped [data-reveal-shell] mount-point convention and is what the acceptance oracle locates. The oracle is BEHAVIOURAL on purpose (red-classification, open Spanish strings note): notice visible before answering, non-empty, and containing NONE of: IndexedDB, Error, undefined, NaN, storage, JSON. OPEN COPY ITEM (Pre-requisite 8a): the exact Spanish is pending Andres via the cousin's crew; the crafter writes one plain surfer-Spanish sentence (neutral register, no em dashes, no technical words - something in the spirit of telling the surfer this phone cannot keep the report right now), holds it in ONE exported constant next to the queued-copy constant so sign-off is a one-line swap, and does not invent flowery product copy. Behaviour under refusal: form may render but Mandar STAYS disabled (the honest 'submit-only-with-signal' fallback of application-architecture section 12 has no live submit path until slice-03, and a Mandar that claims Guardado without a durable commit is the exact silent label drop the probe exists to prevent); the screen never navigates to reportado and never shows the word Guardado. The world's refusal fixture throws on any indexedDB property access - see the 01-02 seam note."
+        },
+        {
+          "id": "01-06",
+          "name": "JavaScript off stays honest and inert",
+          "criteria": [
+            "Static HTML keeps the form inert: no action, no method, Mandar disabled without JavaScript.",
+            "The verbatim noscript sentence renders on the report screen; the spot page reads fine without JavaScript.",
+            "The island is additive enhancement only; disabling JavaScript changes nothing else in the emitted documents."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/nothing-of-ours-before-yours.feature",
+          "scenario_name": "With JavaScript off, reporting says so plainly and reading still works",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/a-surfer-walking-off-playa-venao-opens-the-report-screen-answers-how-big-how-the-wind-was-and.md",
+          "u8_observation": "Con JavaScript apagado la pantalla del reporte dice exactamente 'Para mandar reportes hace falta JavaScript. Para leer el pronóstico no.', no existe ninguna forma de mandar un reporte, y la página del spot se sigue leyendo perfectamente.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u3"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u7"
+            ]
+          },
+          "deps": [
+            "01-03"
+          ],
+          "files_to_modify": [
+            "src/components/ReportCapture.astro",
+            "src/report/island.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: regression guard on a designed no-JS state; nothing here is an invariant a property can quantify beyond what the acceptance oracle already pins. This scenario is one of the three ALREADY_SATISFIED guards in the recorded RED classification and must STAY green while 01-03 wires the island: the trap is 01-03 or 01-05 'helpfully' removing the disabled attribute from the static HTML or adding a form action/method for symmetry. The contract: the STATIC document is exactly as honest as today (Mandar disabled, form with no action and no method, verbatim noscript copy from strings.ts read-only); only the island, at runtime, after a passing probe, flips Mandar live. If the crafter finds this already true after 01-03 and 01-05, this step is the explicit falsifiability pass: break it deliberately (remove disabled in source), watch the JS-off scenario fail for the right reason, revert, verify the revert with git diff (project CLAUDE.md: prove every negative falsifiable)."
+        },
+        {
+          "id": "01-07",
+          "name": "Drop dead English altPath props from report components",
+          "criteria": [
+            "ReportCapture.astro line 44 and ReportShell.astro line 32 no longer pass altPath into the removed English tree.",
+            "Emitted HTML for both report routes is unchanged; the English-twin guard scenario stays green.",
+            "Base.astro is not edited; altPath is optional in its Props, so plain omission compiles."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/nothing-of-ours-before-yours.feature",
+          "scenario_name": "The built report screens carry no path into the removed English tree",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Source-debt removal with provably unchanged emitted HTML: Base.astro never renders altPath, so there is no pixel delta to observe; the English-twin guard scenario pins the artifact.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/components/ReportCapture.astro",
+            "src/components/ReportShell.astro"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: two-line prop deletion guarded by an existing acceptance regression scenario; no logic to property-test. The guard passes TODAY only because Base.astro declares altPath (line 28, verified altPath?: string - optional) and never renders it; the props are source debt that any future Base change would turn into broken /en/ links (HANDOFF section 6 item 3, scaffold audit). Delete the altPath={paths.report(...)} / altPath={paths.reported(...)} lines from both components; do NOT touch src/layouts/Base.astro (forbidden lane) and do NOT edit src/i18n/routes.ts. After the deletion, verify the built documents are unchanged on the alternate-link surface (npm run build, diff the two report route documents against the pre-change build). The guard's matcher was proven non-vacuous at DISTILL against a synthetic /en/ alternate link, so if a future change reintroduces the props AND Base starts rendering them, this scenario fires."
+        },
+        {
+          "id": "01-08",
+          "name": "Anti-leak gate CLI, import rule, local gate entry",
+          "criteria": [
+            "scripts/check-report-leak.mjs takes a dist directory argument, scans report routes plus referenced assets, exits 1 naming route and leaked marker.",
+            "Clean run exits 0 naming what it checked; report-flow source importing any forecast module, directly or transitively, is refused.",
+            "Gate registered in the default local gate job list; refusal messages carry WHAT, WHY and HOW.",
+            "Poisoned-fixture proof runs against a contained copy only; repository build output stays byte-unchanged."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/nothing-of-ours-before-yours.feature",
+          "scenario_name": "A deliberately poisoned page cannot slip past the leak gate",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "CLI gate and CI wiring emit terminal output only; the charter-grade observation is the gate refusing the poisoned copy, which the acceptance scenario drives over the CLI protocol.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "scripts/check-report-leak.mjs",
+            ".dependency-cruiser.cjs",
+            "scripts/ci-local-core.mjs",
+            "scripts/ci-local.mjs",
+            "tests/unit/report-leak-gate.test.ts"
+          ],
+          "implementation_notes": "TEST PARADIGM (mandatory, adapted): the marker-detection core is a pure function over (document text, marker list) - property-test it with fast-check (any document containing any marker on a report route is refused; any marker-free document passes); the CLI wrapper stays single-example. MARKER LIST mirrors FORECAST_MARKERS in steps/support/world.ts exactly: score_q, size_range_m, wind_state, conf_level, confidence_reason, weakest_link, best_window, predicted, data-forecast. size_band is deliberately NOT a marker - the capture form legitimately carries the seven band tokens. SCOPE: dist/spots/*/reportar.html and reportado.html plus every asset each references. CLI PROTOCOL (the acceptance scenario invokes it as a subprocess, active-RED convention): argument = dist root (defaults to ./dist), exit 0 clean naming what it checked, exit 1 leak naming the report route and the leaked marker, WHAT/WHY/HOW in the refusal. The scenario feeds a CONTAINED poisoned copy, so the directory argument is load-bearing; the gate must never write into or rebuild the repository dist/. BOUNDARY CONFLICT, FLAGGED LOUDLY: application-architecture section 9 names dependency-cruiser, but dependency-cruiser is NOT in package.json (verified), and package.json/package-lock.json are OUTSIDE this lane's file boundary with other lanes live. Do not touch package.json. Instead: (a) the gate implements the import rule natively - resolve relative imports recursively from src/report/** and the two report components, refuse when the walk reaches src/data/forecast, src/publish/ or src/pipeline/; (b) ship .dependency-cruiser.cjs carrying the equivalent declared forbidden rule so the real tool drops in unchanged the day the devDependency lands; (c) FLAG to the orchestrator: adding dependency-cruiser as a devDependency is a one-line serialized package.json follow-up for whoever owns that file. CI WIRING: add the gate as a job entry in scripts/ci-local-core.mjs (and the ci-local.mjs surface if the runner needs it); this lane owns that entry. FLAG, do not fix: project CLAUDE.md says 'Ten jobs' - that sentence goes stale at eleven; CLAUDE.md is not in this lane's boundary."
+        },
+        {
+          "id": "01-09",
+          "name": "Island fits the beach byte ceilings",
+          "criteria": [
+            "Everything reportar loads beyond its document stays at or under 5120 B gzipped, the island budget.",
+            "Documents hold their ceilings: reportar at most 6144 B gzipped, reportado at most 4096 B gzipped.",
+            "Zero runtime npm dependencies in the island; ULID stays hand-rolled; npm run build page-weight gate green."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/nothing-of-ours-before-yours.feature",
+          "scenario_name": "The report screens stay light enough for one bar of signal",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Byte ceilings are measured by the build page-weight gate and the ceiling acceptance scenario against built dist; there is no rendered state to observe beyond what 01-03 already charters.",
+          "ui_checks": {},
+          "deps": [
+            "01-03"
+          ],
+          "files_to_modify": [
+            "src/report/island.ts",
+            "src/report/queue.ts",
+            "src/report/ulid.ts"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: a measured NFR over built artifacts; the acceptance ceiling scenario and the build gate are the oracles. Pre-island baseline from the recorded RED classification: reportar 3042 B gz against 6144, reportado 2709 B gz against 4096, island budget trivially green with zero referenced scripts - it starts biting the moment 01-03 ships. Budget the whole bundle (island + record composer + ULID + queue adapter, whatever Astro emits for the reportar route beyond the document) at or under 5120 B gz. Discipline that keeps it honest: no runtime npm imports in src/report/**, hand-rolled ULID (01-01), no framework runtime - a vanilla script or an Astro script block both fit (application-architecture section 6: the crafter chooses inside the caps). If the bundle lands near the ceiling, trim before inventing a second script: the ceiling scenario counts EVERYTHING the route loads beyond its document. This step is where the trim happens if 01-03 through 01-05 overshot; if already inside the ceilings, it is the explicit measurement pass with the numbers recorded in the step evidence."
+        },
+        {
+          "id": "01-10",
+          "name": "Whole journey leaks nothing; slice suite green",
+          "criteria": [
+            "Reloading mid flow restarts a blank report; nothing the route shows or loads carries any forecast marker.",
+            "The confirmation carries no digit and no forecast language at any moment of the journey.",
+            "Full slice-01 tag run exits 0, exit code captured by redirect then $?, never through a pipeline.",
+            "After GREEN: npm run build, inspect the rendered dist report documents, then the UI verification records."
+          ],
+          "test_file": "tests/acceptance/f-tell-us-what-you-saw-cold/nothing-of-ours-before-yours.feature",
+          "scenario_name": "No forecast reaches the report screens at any moment before the label is saved",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/a-surfer-walking-off-playa-venao-opens-the-report-screen-answers-how-big-how-the-wind-was-and.md",
+          "u8_observation": "Camino el flujo entero a 390 px: en ningún momento, ni en la pantalla uno, ni recargando a mitad del camino, ni en la confirmación, aparece un puntaje, una banda de hoy, una palabra de viento de hoy ni ninguna pista del pronóstico; la confirmación se lee tranquila y sin números.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u3"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u5"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-tell-us-what-you-saw-cold and @slice-01 and @ui-u7"
+            ]
+          },
+          "deps": [
+            "01-03",
+            "01-04",
+            "01-05",
+            "01-06",
+            "01-07",
+            "01-08",
+            "01-09"
+          ],
+          "files_to_modify": [
+            "src/report/island.ts",
+            "src/components/ReportCapture.astro"
+          ],
+          "implementation_notes": "EXEMPT FROM PARADIGM: end-to-end integration verification; E2E stays single-example by design (the paradigm directive: E2E verifies wiring, not invariants). This scenario's anti-leak and reload steps already pass against the clean scaffold; its RED oracle is the confirmation render, fixed by 01-03 - so this step is the whole-journey proof that the ISLAND kept the closure: the island imports no forecast module (01-08's rule watches it), fetches nothing, and the in-place confirmation introduces no digits and no forecast vocabulary (the assertNoForecastOnConfirmation oracle greps body text for /\\d/ and for Dijimos, puntos, confianza, Ventana). Reload mid flow serves the static form again and the island holds no persisted state (01-04), so blank restart is by construction. GATE DISCIPLINE (repo has committed over a red gate through a pipeline before): run npm run test:at -- --tags \"@feature-f-tell-us-what-you-saw-cold and @slice-01\" with output redirected to a file, capture $?, then read the file; expected 10 scenarios, 0 failed, real exit 0. Then npm run build and INSPECT the rendered dist report documents (project rule: green tests do not mean it works; the conf_level bug shipped green). AFTER GREEN: the orchestrator runs des-verify-ui, then dispatches the source-blind examiner with only the charter and its start recipe; COMMIT is refused until both records pass. The three recorded regression guards (English twin, JS off, byte ceilings) must all still pass inside the same run - a guard that went red mid-slice is a stop, not a note."
+        }
+      ]
+    }
+  ],
+  "implementation_scope": {
+    "source_directories": [
+      "src/report/",
+      "src/components/",
+      "src/pages/spots/",
+      "scripts/"
+    ],
+    "test_directories": [
+      "tests/unit/"
+    ],
+    "excluded_patterns": [
+      "src/pipeline/**",
+      "src/publish/**",
+      "src/share/**",
+      "src/i18n/**",
+      "src/data/**",
+      "src/styles/**",
+      "src/layouts/**",
+      "src/components/RankedList.astro",
+      "src/components/SpotDetail.astro",
+      "src/pages/index.astro",
+      "infra/**",
+      "public/**",
+      "package.json",
+      "package-lock.json",
+      "tests/acceptance/**"
+    ]
+  },
+  "validation": {
+    "status": "pending",
+    "reviewer": "orchestrator quality gate (des-verify-integrity --roadmap-only run below)",
+    "approved_at": ""
+  }
+}

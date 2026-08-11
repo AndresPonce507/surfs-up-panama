@@ -1,7 +1,13 @@
 ---
 import type { GetStaticPaths } from 'astro';
 import SpotDetail from '../../../components/SpotDetail.astro';
+import { forecast } from '../../../data/forecast';
 import { region } from '../../../data/region';
+import { composeLinkAnnouncement } from '../../../share/link-announcement';
+import { shareDaySummaryFor, stampedSpotShareLink } from '../../../share/day-summary';
+import { selectPreviewCard } from '../../../share/preview-card';
+import { whatsAppShareHref } from '../../../share/share-link';
+import { composeWhatsAppCallMessage } from '../../../share/whatsapp-call-message';
 
 export const getStaticPaths = (() =>
   region.spots.map((spot) => ({
@@ -12,6 +18,54 @@ const { slug } = Astro.params;
 if (slug === undefined) {
   throw new Error('spots/[slug]: slug param missing');
 }
+const spot = region.spots.find((candidate) => candidate.spot_id === slug);
+if (spot === undefined) {
+  throw new Error(`spots/[slug]: no hay identidad para "${slug}"`);
+}
+const selectedToday = forecast.days[0].find((summary) => summary.spot_id === slug);
+if (selectedToday === undefined) {
+  throw new Error(`spots/[slug]: ${spot.name} no tiene llamado publicado para hoy`);
+}
+const configuredSite = Astro.site;
+if (configuredSite === undefined) {
+  throw new Error('spots/[slug]: astro.config.mjs no declara site y el mensaje no puede llevar una dirección absoluta');
+}
+const stampedSpotLink = stampedSpotShareLink(configuredSite.toString(), forecast.published_at, slug);
+const selectedShareSummary = shareDaySummaryFor(forecast.published_at, spot.name, selectedToday);
+const completedCall = selectedShareSummary === undefined
+  ? undefined
+  : composeWhatsAppCallMessage(selectedShareSummary, stampedSpotLink);
+const spotPreviewSelection = selectPreviewCard({
+  spot_id: slug,
+  spot_name: spot.name,
+  score_q: selectedToday.score_q,
+  size_band: selectedToday.size_band,
+  size_range_m: selectedToday.size_range_m,
+  wind_state: selectedToday.wind_state,
+  conf_level: selectedToday.conf_level,
+});
+const previewImage = new URL(
+  spotPreviewSelection.kind === 'spot'
+    ? `/og/${spotPreviewSelection.spot_id}.jpg`
+    : '/og/generica.jpg',
+  configuredSite,
+);
+previewImage.search = new URL(stampedSpotLink).search;
+const spotAnnouncement = {
+  ...composeLinkAnnouncement({
+    spotName: spot.name,
+    score: selectedToday.score_q,
+    site: configuredSite.toString(),
+    image: previewImage.toString(),
+  }),
+  url: new URL(`/spots/${slug}/`, configuredSite).toString(),
+};
 ---
 
-<SpotDetail locale="es" spotId={slug} />
+<SpotDetail
+  locale="es"
+  spotId={slug}
+  announcement={spotAnnouncement}
+  shareCall={completedCall}
+  shareHref={completedCall === undefined ? undefined : whatsAppShareHref(completedCall)}
+/>

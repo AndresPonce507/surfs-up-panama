@@ -8,10 +8,13 @@
 // published surface and no second vocabulary, so the message can never tell a
 // different story than the card above it.
 import RankedList from '../components/RankedList.astro';
+import CopyControl from '../components/CopyControl.astro';
 import ShareControls from '../components/ShareControls.astro';
 import { forecast } from '../data/forecast';
 import { spotById } from '../data/region';
 import { stampedShareLink, whatsAppShareHref } from '../share/share-link';
+import { composeLinkAnnouncement } from '../share/link-announcement';
+import { selectPreviewCard } from '../share/preview-card';
 import {
   composeWhatsAppCallMessage,
   type ShareDaySummary,
@@ -96,15 +99,43 @@ if (configuredSite === undefined) {
   throw new Error('home: astro.config.mjs no declara site y el mensaje no puede llevar una dirección absoluta');
 }
 
-const shareHref = whatsAppShareHref(
-  composeWhatsAppCallMessage(
-    shareSummary(forecast.published_at),
-    stampedShareLink(configuredSite.toString(), forecast.published_at),
-  ),
+const homeShareSummary = shareSummary(forecast.published_at);
+const stampedHomeLink = stampedShareLink(configuredSite.toString(), forecast.published_at);
+const completedCall = composeWhatsAppCallMessage(
+  homeShareSummary,
+  stampedHomeLink,
 );
+
+const shareHref = whatsAppShareHref(completedCall);
+const homePreviewSelection = selectPreviewCard({
+  spot_id: forecast.days[0][0]!.spot_id,
+  spot_name: homeShareSummary.spotName,
+  score_q: homeShareSummary.scoreQ,
+  size_band: forecast.days[0][0]!.size_band,
+  size_range_m: forecast.days[0][0]!.size_range_m,
+  wind_state: forecast.days[0][0]!.wind_state,
+  conf_level: forecast.days[0][0]!.conf_level,
+});
+const previewImage = new URL(
+  homePreviewSelection.kind === 'spot'
+    ? `/og/${homePreviewSelection.spot_id}.jpg`
+    : '/og/generica.jpg',
+  configuredSite,
+);
+// The crawler card has the exact same morning identity as the link that
+// WhatsApp opens. A new publication therefore asks the crawler for a new
+// asset without contaminating the surfer's permanent canonical URL.
+previewImage.search = new URL(stampedHomeLink).search;
+const homeAnnouncement = composeLinkAnnouncement({
+  spotName: homeShareSummary.spotName,
+  score: homeShareSummary.scoreQ,
+  site: configuredSite.toString(),
+  image: previewImage.toString(),
+});
 ---
 
-<RankedList locale="es" day={0}>
+<RankedList locale="es" day={0} announcement={homeAnnouncement}>
+  <CopyControl slot="top-card-action" call={completedCall} />
   <ShareControls
     slot="top-card-action"
     href={shareHref}

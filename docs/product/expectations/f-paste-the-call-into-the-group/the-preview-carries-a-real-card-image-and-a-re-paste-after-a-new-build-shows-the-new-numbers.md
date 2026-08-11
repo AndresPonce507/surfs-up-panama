@@ -7,7 +7,7 @@ La vista previa deja de ser solo texto: trae una imagen de tarjeta con el spot, 
 ## Preconditions
 Usar Node 22, npm y un navegador local. No usar credenciales para la parte local. Toda observación empieza desde el árbol real indicado abajo.
 
-1. `cd /Users/andres/panama-surf`
+1. `cd /Users/andres/psb-paste`
 2. Ejecutar `npm ci` solamente si las dependencias todavía no están instaladas.
 3. Ejecutar `npm run build`.
 4. Publicar la vista previa: `node scripts/preview/publish-preview.mjs` y usar `https://d1j9u9fxnap4es.cloudfront.net`. El rastreador de WhatsApp no puede leer localhost. Sin publicación, registrar la parte de WhatsApp como no ejecutada.
@@ -31,3 +31,5 @@ Diferido, fuera de este slice: compartir desde la página del spot pertenece a s
 ## Session log (append-only)
 | date | examiner | verdict | observations |
 |------|----------|---------|--------------|
+| 2026-08-10 | Vera | INDETERMINATE | En la publicación CloudFront a 390px, la página mostró Playa Guánico, 70, Cintura a pecho y Confianza baja; su OG:image pública (1200x630) se vio entera, legible y con esos mismos valores, sin imagen rota. Una recarga observada no pidió /og/ en el primer vuelo. No hubo chat de WhatsApp de prueba disponible y no se pudieron observar dos publicaciones con sellos ?b= distintos ni números nuevos; por eso no se pudo comprobar el repaste/caché ni la tarjeta genérica de un spot sin campos. |
+| 2026-08-10 | Vera | PASS | Corrección de alcance del handoff público: a 390px, la página publicada mostró Playa Guánico, 70, Cintura a pecho y Confianza baja; los metadatos OG y la imagen 1200x630 pública estuvieron presentes, completos, legibles, sin recorte ni imagen rota, y coincidieron con la página. WhatsApp autenticado, su render y el tiempo de caché quedan NOT_EXECUTED, sin inferencia. |

@@ -42,7 +42,8 @@ const RANGE_DASH = '–';
  * the i18n owner once that lane opens.
  */
 export const WEAKEST_LINK_SENTENCE_ES = {
-  named: (word: FactorWord): string => `Lo que lo tumba: ${word.article} ${word.noun}.`,
+  named: (word: FactorWord, subscore?: number): string =>
+    `Lo que lo tumba: ${word.article} ${word.noun}${subscore === undefined ? '' : `, a ${subscore.toFixed(2)}`}.`,
   clean: 'Este día no tuvo ningún punto débil: nada le bajó el puntaje.',
   unknown: 'Esta mañana no trajo ese dato: no sabemos qué lo habría tumbado.',
 } as const;
@@ -54,7 +55,9 @@ export const WEAKEST_LINK_SENTENCE_ES = {
  * and never composes the wording inline.
  */
 export function formatWeakestLinkEs(reading: WeakestLinkReading): string {
-  return reading.kind === 'named' ? WEAKEST_LINK_SENTENCE_ES.named(factorWord(reading.factor)) : WEAKEST_LINK_SENTENCE_ES[reading.kind];
+  return reading.kind === 'named'
+    ? WEAKEST_LINK_SENTENCE_ES.named(factorWord(reading.factor), reading.weakest_link_subscore)
+    : WEAKEST_LINK_SENTENCE_ES[reading.kind];
 }
 
 /**

@@ -22,6 +22,7 @@ import {
   type DeclaredMember,
   type EffectiveSpotParams,
   type MemberRow,
+  type ScoreResult,
   type SpotSeed,
   type SubScores,
   type TideObs,
@@ -65,6 +66,35 @@ function close(actual: number, expected: number, tolerance: number, explanation:
     Math.abs(actual - expected) <= tolerance,
     `${explanation}. Expected ${expected} within ${tolerance}; got ${actual}.`,
   );
+}
+
+function scoreClose(actual: ScoreResult, expected: ScoreResult, explanation: string): void {
+  const tolerance = 1e-12;
+  close(actual.q, expected.q, tolerance, `${explanation}: q`);
+  close(actual.q_final, expected.q_final, tolerance, `${explanation}: q_final`);
+  close(actual.h_eff_m, expected.h_eff_m, tolerance, `${explanation}: h_eff_m`);
+  assert.equal(actual.score, expected.score, `${explanation}: rounded score`);
+  assert.deepEqual(actual.missing, expected.missing, `${explanation}: missing factors`);
+  assert.equal(actual.weakest_link, expected.weakest_link, `${explanation}: weakest link`);
+  assert.deepEqual(actual.correction, expected.correction, `${explanation}: correction`);
+
+  for (const factor of ['dir', 'size', 'wind', 'tide'] as const) {
+    const actualValue = actual.sub[factor];
+    const expectedValue = expected.sub[factor];
+    if (actualValue === null || expectedValue === null) {
+      assert.equal(actualValue, expectedValue, `${explanation}: ${factor} availability`);
+    } else {
+      close(actualValue, expectedValue, tolerance, `${explanation}: ${factor}`);
+    }
+  }
+
+  assert.equal(actual.damages.length, expected.damages.length, `${explanation}: damage count`);
+  actual.damages.forEach((damage, index) => {
+    const expectedDamage = expected.damages[index];
+    assert.ok(expectedDamage !== undefined, `${explanation}: expected damage ${index}`);
+    assert.equal(damage.factor, expectedDamage.factor, `${explanation}: damage factor ${index}`);
+    close(damage.damage, expectedDamage.damage, tolerance, `${explanation}: damage value ${index}`);
+  });
 }
 
 function scoreFor(
@@ -336,7 +366,7 @@ describe('scoring engine laws', () => {
           { speed_kt: 12, dir_deg: rotate(windDir, rotation) },
           tide,
         );
-        assert.deepEqual(rotated, initial, 'Rotating swell, wind, shore normal, and swell window together must leave every score output unchanged so no Panama-specific direction is hardcoded.');
+        scoreClose(rotated, initial, 'Rotating swell, wind, shore normal, and swell window together must leave every score output unchanged so no Panama-specific direction is hardcoded');
       }),
       { numRuns: 100 },
     );

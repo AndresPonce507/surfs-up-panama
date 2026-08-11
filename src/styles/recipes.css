@@ -58,21 +58,6 @@ details.conf[open] > summary::after {
   transition: opacity var(--dur-2) var(--ease);
 }
 
-/* ---- accuracy scorecard block (decisions 13, 19). A quiet card: the
-   product's honesty lives here, so it reads as body text, not as ornament */
-.scorecard {
-  margin-bottom: var(--sp-3);
-  padding: var(--sp-4);
-  border: 1px solid var(--hairline);
-  border-radius: var(--r-m);
-  background: var(--surface);
-}
-
-.scorecard .counter {
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-}
-
 /* ---- breakdown bars (decision 17). Track/fill are non-text UI:
    fill 7.91:1 day, 8.14:1 dark on --sunken; the weakest-link fill uses
    --danger (6.75:1 day, 6.02:1 dark on --sunken) AND the arrow + words
@@ -104,15 +89,6 @@ details.conf[open] > summary::after {
 
 .bar.weakest .fill {
   background: var(--danger);
-}
-
-/* ---- day-one empty state (decision 19): same card voice as .scorecard,
-   counter big and tabular. Never a blank. */
-.state-empty {
-  padding: var(--sp-4);
-  border: 1px dashed var(--ctrl);
-  border-radius: var(--r-m);
-  color: var(--ink);
 }
 
 /* ---- image frames (map, report photos): space reserved via aspect-ratio,

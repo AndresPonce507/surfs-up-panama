@@ -1,0 +1,1 @@
+{"d": "PASS: named poisoned-route subprocess acceptance failed for the intended missing scripts/check-report-leak.mjs, at its behaviour assertion rather than a test import failure.", "p": "RED_ACCEPTANCE", "s": "EXECUTED", "sid": "01-08", "t": "2026-08-10T20:04:19Z"}

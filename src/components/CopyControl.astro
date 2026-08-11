@@ -1,0 +1,56 @@
+---
+interface Props {
+  /** The completed call composed for the adjacent WhatsApp action. */
+  call: string;
+}
+
+const { call } = Astro.props;
+---
+
+<div class="copy-control" data-copy-control>
+  <button class="copy-call" type="button" data-copy-call={call}>Copiar el llamado</button>
+  <p data-copy-notice aria-live="polite" hidden></p>
+</div>
+
+<!-- Clipboard access needs the deferred browser enhancement.  When scripts are
+     disabled, hide this control so the always-ready WhatsApp anchor remains
+     the only offered action. -->
+<noscript><style>.copy-control { display: none; }</style></noscript>
+
+<script>
+  import { writeClipboardWithFallback } from '../share/browser-copy';
+  import { copyCall } from '../share/copy-call';
+
+  function copySelectedText(text: string): void {
+    const source = document.createElement('textarea');
+    source.value = text;
+    source.setAttribute('readonly', '');
+    source.style.position = 'fixed';
+    source.style.opacity = '0';
+    document.body.append(source);
+    source.select();
+    source.setSelectionRange(0, text.length);
+    const copied = document.execCommand('copy');
+    source.remove();
+    if (!copied) throw new Error('clipboard write failed');
+  }
+
+  for (const control of document.querySelectorAll<HTMLElement>('[data-copy-control]')) {
+    const button = control.querySelector<HTMLButtonElement>('[data-copy-call]');
+    const notice = control.querySelector<HTMLParagraphElement>('[data-copy-notice]');
+    if (button === null || notice === null) continue;
+
+    button.addEventListener('click', async () => {
+      const call = button.dataset.copyCall;
+      if (call === undefined) return;
+
+      const nativeWrite = navigator.clipboard?.writeText.bind(navigator.clipboard);
+      const writeClipboard = (text: string) =>
+        writeClipboardWithFallback(text, nativeWrite, copySelectedText);
+      const outcome = await copyCall(call, writeClipboard);
+      notice.textContent = outcome.notice;
+      notice.dataset.copyOutcome = outcome.kind;
+      notice.hidden = false;
+    });
+  }
+</script>

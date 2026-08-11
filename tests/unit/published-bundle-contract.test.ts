@@ -170,11 +170,23 @@ describe('published region bundle contract', () => {
 
     for (const [index, day] of days.entries()) {
       for (const summary of day.spots) {
+        const expectedFields = summary.weakest_link === null
+          ? [...DAY_SUMMARY_FIELDS]
+          : [...DAY_SUMMARY_FIELDS, 'weakest_link_subscore'];
         assert.deepEqual(
           Object.keys(summary).sort(),
-          [...DAY_SUMMARY_FIELDS],
+          expectedFields.sort(),
           `Day ${index} summary for ${String(summary.spot_id)} must carry exactly the settled day fields, so neither reading lane guesses a name nor finds a surprise one.`,
         );
+        if (summary.weakest_link !== null) {
+          assert.ok(
+            typeof summary.weakest_link_subscore === 'number'
+              && Number.isFinite(summary.weakest_link_subscore)
+              && summary.weakest_link_subscore >= 0
+              && summary.weakest_link_subscore <= 1,
+            `Day ${index} ${summary.spot_id}: named weakest link must carry its own finite raw score.`,
+          );
+        }
         assert.ok(
           Object.hasOwn(spotDetail, String(summary.spot_id)),
           `Every ranked spot must resolve to one identity in spot_detail; ${String(summary.spot_id)} does not.`,

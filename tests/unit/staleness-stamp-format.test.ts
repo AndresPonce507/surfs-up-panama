@@ -18,23 +18,45 @@
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 
-import { describe, it } from 'vitest';
+import { afterAll, describe, it } from 'vitest';
 
 const PROJECT_ROOT = process.cwd();
+
+// This test builds into its own directory, never the shared `dist/`. Astro
+// clears its output directory at the start of a build, and the CI gate sends
+// `test` and `build` out in the same parallel wave, both against the same
+// worktree. Sharing `dist/` meant the two builds raced: one wiped the tree the
+// other was mid-write on, and the symptoms were ENOENT on `dist/index.html`
+// here and ERR_MODULE_NOT_FOUND on a `.prerender` chunk over in the ui job.
+// Neither is a product defect, and neither reproduces when a job runs alone,
+// which is what made it look like flake. The page-weight gate reads whatever
+// `--outDir` emitted (see astro.config.mjs), so it still runs on this build.
+const OUT_DIR = mkdtempSync(join(tmpdir(), 'surfs-up-staleness-'));
 
 const ISO_TIMESTAMP = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z/;
 const PANAMA_CLOCK_STAMP = /Actualizado (?:[0-9]|1[0-2]):[0-5][0-9] (?:a\.m\.|p\.m\.)/;
 
 function readBuiltPage(relativePath: string): string {
-  return readFileSync(resolve(PROJECT_ROOT, 'dist', relativePath), 'utf8');
+  return readFileSync(resolve(OUT_DIR, relativePath), 'utf8');
 }
+
+/** Text a surfer can read. Machine metadata in element attributes is the
+ * deliberate companion truth of the rendered plain-clock stamp. */
+function visibleText(html: string): string {
+  return html.replace(/<[^>]*>/g, ' ');
+}
+
+afterAll(() => {
+  rmSync(OUT_DIR, { recursive: true, force: true });
+});
 
 describe('the staleness stamp on a built page', () => {
   it('never prints a machine ISO timestamp to a surfer, and always prints the settled Panama-local clock form', () => {
-    const build = spawnSync('npm', ['run', 'build'], {
+    const build = spawnSync('npm', ['run', 'build', '--', '--outDir', OUT_DIR], {
       cwd: PROJECT_ROOT,
       encoding: 'utf8',
     });
@@ -51,10 +73,14 @@ describe('the staleness stamp on a built page', () => {
     };
 
     for (const [name, html] of Object.entries(pages)) {
+      // Falsification guard: this oracle must still fail if an ISO reaches
+      // visible text. It must not confuse the required datetime metadata with
+      // text a surfer sees.
+      assert.match(visibleText(`<p>${forecastPublishedAt(html)}</p>`), ISO_TIMESTAMP);
       assert.doesNotMatch(
-        html,
+        visibleText(html),
         ISO_TIMESTAMP,
-        `${name} must never print a machine timestamp: technical text on the Spanish surface is forbidden outright. Found ${JSON.stringify(html.match(ISO_TIMESTAMP)?.[0])}.`,
+        `${name} must never print a machine timestamp: technical text on the Spanish surface is forbidden outright. Found ${JSON.stringify(visibleText(html).match(ISO_TIMESTAMP)?.[0])}.`,
       );
       assert.match(
         html,
@@ -64,3 +90,9 @@ describe('the staleness stamp on a built page', () => {
     }
   }, 60_000);
 });
+
+function forecastPublishedAt(html: string): string {
+  const publishedAt = /<time datetime="([^"]+)"/.exec(html)?.[1];
+  assert.ok(publishedAt, 'test bug: a reading document has no publish moment metadata to protect');
+  return publishedAt;
+}

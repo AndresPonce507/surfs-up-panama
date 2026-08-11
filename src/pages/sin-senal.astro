@@ -1,0 +1,49 @@
+---
+// The precached offline fallback: what a surfer with nothing kept on their
+// phone lands on when there is no signal to fetch a live page
+// (application-architecture.md section 4, route `/sin-senal`). Ships today;
+// the second settled sentence, "Los reportes que mandes quedan guardados.",
+// is FALSE until slice-03 builds the report queue, so it is deliberately
+// absent here -- no step in this roadmap may add it before then.
+//
+// THE HOUR (revised after the source-blind FAIL on the first pass). The
+// first pass shipped the sentence with no hour clause at all, reasoning that
+// this document is built once and so any baked timestamp would report "when
+// the SITE was published", not "when this PHONE last saw a forecast". That
+// reasoning did not hold up: a baked `published_at` is not a lie today (it
+// is a real, measured publish time, same as every other staleness stamp on
+// this site, never invented), and it gets MORE precise once the offline
+// helper ships (a later step) and precaches this document into each phone's
+// own cache -- from then on the value a given phone shows ages with that
+// phone's own last successful sync, the same honesty guarantee section 12
+// states for every cached document ("the stamp travels inside the document
+// it describes... true for a SW-served stale copy"). So it uses the same
+// source and formatter every other staleness stamp in this codebase uses
+// (`forecast.published_at` via `formatPanamaTime`,
+// src/publish/reading-state.ts) rather than inventing a second way to say a
+// time, and is honest today without waiting on that later step.
+//
+// `forecast.published_at` is a required, always-present build input
+// (src/publish/static-surface.ts throws at import time if it is missing), so
+// there is no reachable state in this document where it is absent. If that
+// ever changes, the honest fallback is an explicit sentence saying the hour
+// is not known -- never a placeholder token, a blank slot, or a zero.
+//
+// h1 carries the plain headline; the hour/staleness clause lives in the
+// following <p>, the same split every other page on this site uses for its
+// own staleness stamp, and the exact slot src/styles/base.css's `h1 + p`
+// rule already styles ("the staleness line directly under a page title: an
+// honesty element, always present").
+import Base from '../layouts/Base.astro';
+import { paths } from '../i18n/routes';
+import { forecast } from '../data/forecast';
+import { formatPanamaTime } from '../publish/reading-state';
+---
+
+<Base locale="es" title="Sin señal" currentPath={paths.offline()}>
+  <h1>Sin señal.</h1>
+  <p>Esto es lo último que vimos, de las {formatPanamaTime(forecast.published_at)}</p>
+  <nav>
+    <a data-field="back-to-home" href={paths.home('es')}>Volver al inicio</a>
+  </nav>
+</Base>

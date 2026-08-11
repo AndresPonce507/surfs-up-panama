@@ -16,6 +16,7 @@
 // anything visual"). Reversal trigger: authored CSS > 8 KB gz → split into a
 // hashed cached stylesheet (design doc §11).
 import type { Locale } from '../i18n/strings';
+import type { LinkAnnouncement } from '../share/link-announcement';
 import tokens from '../styles/tokens.css?raw';
 import base from '../styles/base.css?raw';
 import components from '../styles/components.css?raw';
@@ -24,11 +25,13 @@ interface Props {
   locale: Locale;
   title: string;
   currentPath: string;
+  /** Optional publish-time Open Graph story for a page's shared link. */
+  announcement?: LinkAnnouncement;
   /** Deferred until the English tree ships with its own feature. */
   altPath?: string;
 }
 
-const { locale, title, currentPath } = Astro.props;
+const { locale, title, currentPath, announcement } = Astro.props;
 
 // Build-time CSS minifier: comments out, whitespace collapsed. Safe for this
 // codebase by construction: no CSS strings/content values contain spaces or
@@ -55,9 +58,28 @@ const inlineCss = minify(`${tokens}\n${base}\n${components}`);
     <meta name="theme-color" content="#10141A" media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="alternate" hreflang="es" href={currentPath} />
+    {announcement !== undefined && (
+      <>
+        <link rel="canonical" href={announcement.url} />
+        <meta property="og:title" content={announcement.title} />
+        <meta property="og:description" content={announcement.description} />
+        <meta property="og:url" content={announcement.url} />
+        <meta property="og:locale" content={announcement.locale} />
+        {announcement.image !== undefined && (
+          <>
+            <meta property="og:image" content={announcement.image} />
+            <meta property="og:image:width" content="1200" />
+            <meta property="og:image:height" content="630" />
+          </>
+        )}
+      </>
+    )}
     <Fragment set:html={`<style>${inlineCss}</style>`} />
   </head>
   <body>
     <slot />
+    <script>
+      if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+    </script>
   </body>
 </html>

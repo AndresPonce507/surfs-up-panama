@@ -244,6 +244,30 @@ section strong {
   margin-right: var(--sp-1);
 }
 
+/* ---- accuracy scorecard block (decisions 13, 19). A quiet card: the
+   product's honesty lives here, so it reads as body text, not as ornament */
+.scorecard {
+  margin-bottom: var(--sp-3);
+  padding: var(--sp-4);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-m);
+  background: var(--surface);
+}
+
+.scorecard .counter {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* ---- day-one empty state (decision 19): same card voice as .scorecard,
+   counter big and tabular. Never a blank. */
+.state-empty {
+  padding: var(--sp-4);
+  border: 1px dashed var(--ctrl);
+  border-radius: var(--r-m);
+  color: var(--ink);
+}
+
 /* ---- report CTA: glass surface #2, the tray. Fixed in the thumb zone
    (decision 23). The button itself is solid --go: the primary action is
    never translucent. */
