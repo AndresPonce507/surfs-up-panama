@@ -1,0 +1,9 @@
+{
+  "purpose": "Accepted X11 seed-only orientation-diagram inputs, not geographic imagery or page markup.",
+  "policy": "seed-only-orientation-diagram",
+  "spots": [
+    {"spot_id":"playa-venao","shore_normal_deg":175,"coordinate_attribution":"OpenStreetMap, registro de semilla","orientation_attribution":"Registro de semilla"},
+    {"spot_id":"santa-catalina-la-punta","shore_normal_deg":210,"coordinate_attribution":"Registro de semilla","orientation_attribution":"Registro de semilla"}
+  ],
+  "refusal": "Missing, contested, invalid, or attribution-less input refuses its own asset."
+}
