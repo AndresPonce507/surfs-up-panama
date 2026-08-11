@@ -1,0 +1,13 @@
+{
+  "step_id": "01-09",
+  "timestamp": "2026-08-11T15:08:18Z",
+  "kind": "commit",
+  "result": "PASS",
+  "commit": "4878e57",
+  "review": "fresh approval after UTC-midnight seam correction",
+  "evidence": {
+    "contract": "One planned send and one planned spot-local date write per spot/subscriber/local day.",
+    "gates": "Focused planner properties 3/3 and npm run typecheck passed before commit.",
+    "scope": "Only planner, focused property, and lifecycle evidence changed."
+  }
+}
