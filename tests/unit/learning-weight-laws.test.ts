@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
+import { readReporterOverrides } from '../../src/learning/inputs';
 import {
   applyReporterOverrides,
   collapseDeviceDayMedian,
@@ -15,6 +16,13 @@ import {
   winsorizeSpotDayResiduals,
   type DeviceDaySample,
 } from '../../src/learning/weights';
+
+function overrideStore(body: string | null) {
+  return {
+    list: async () => [],
+    get: async () => body,
+  };
+}
 
 function sample(value: number): DeviceDaySample {
   return {
@@ -136,6 +144,30 @@ describe('selection propensity', () => {
 });
 
 describe('incident reporter overrides', () => {
+  it('reads every finite zero-to-one reporter entry from the flat incident file', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.dictionary(
+          fc.constantFrom('d_keep_a', 'd_keep_b', 'd_excise'),
+          fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true }),
+        ),
+        async (overrides) => {
+          assert.deepEqual(
+            await readReporterOverrides(overrideStore(JSON.stringify(overrides))),
+            Object.fromEntries(Object.entries(overrides)),
+          );
+        },
+      ),
+      { numRuns: 50 },
+    );
+  });
+
+  it('treats an absent, malformed, or non-flat incident file as the all-one default', async () => {
+    for (const body of [null, '{not-json', JSON.stringify({ d_excise: -1 }), JSON.stringify(['d_excise'])]) {
+      assert.deepEqual(await readReporterOverrides(overrideStore(body)), {});
+    }
+  });
+
   it('removes only reporters set to zero and leaves every absent override at full weight', () => {
     fc.assert(
       fc.property(
