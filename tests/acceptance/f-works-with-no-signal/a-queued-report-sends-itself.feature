@@ -7,7 +7,8 @@ Feature: A queued report sends itself
   filed, never re-minting its name and never touching its times; a throttled
   or failing door leaves the entry queued and waiting politely, never showing
   the surfer a failure; any answer that counts as received deletes the entry;
-  and a refusal with a reason is surfaced, kept, and never hammered. Signal
+  and a refusal with a reason is kept and never hammered until the surfer
+  explicitly opens the sin señal queue surface, where that reason belongs. Signal
   is worst exactly where reports happen, so nothing on the phone ever decides
   a report "already went": the phone replays, and the site decides.
 
@@ -51,22 +52,25 @@ Feature: A queued report sends itself
     And nothing the surfer sees reads as a failure
 
   @slice-03 @driving_port @real-io @error @covers-R24
-  Scenario: A report the site refuses is kept, explained, and never hammered
+  Scenario: A report the site refuses stays on the phone and is never hammered
     Given a surfer has read the home page with signal
     And a report is waiting on the phone because it was filed with no signal
     And the site is refusing sends with a reason
     When the signal comes back
-    Then the surfer is shown the site's reason in plain Spanish
-    And the label stays on the phone
+    Then the label stays on the phone
     And the phone does not try the same send again by itself
 
-  @slice-03 @driving_port @real-io @covers-R26 @covers-R38 @covers-R41
-  Scenario: The sin señal page finally makes its second promise, and counts what is waiting
+  @slice-03 @driving_port @real-io @error @covers-R24 @covers-R26 @covers-R38 @covers-R41
+  Scenario: A refused report waits openly on the sin señal page
     Given a surfer has read the home page with signal
     And a report is waiting on the phone because it was filed with no signal
-    When the signal drops and the surfer opens a spot they have never opened
+    And the site is refusing sends with a reason
+    When the report is refused and the surfer opens a spot they have never opened without signal
     Then the sin señal page now promises that reports get saved
     And the page counts one waiting report in the settled words
+    And the sin señal page shows the site's reason in plain Spanish
+    And the label stays on the phone
+    And the phone does not try the same send again by itself
     And nothing on the page is English, machine text or a raw timestamp
 
   @slice-03 @driving_port @real-io @covers-R27

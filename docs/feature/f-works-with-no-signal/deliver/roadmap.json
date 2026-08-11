@@ -660,43 +660,42 @@
         },
         {
           "id": "03-04",
-          "name": "A refusal is kept, explained, never retried",
+          "name": "A refusal is kept and never retried",
           "criteria": [
-            "A 4xx other than 401/429 surfaces the site's reason in plain Spanish, keeps the label on the phone, and retries nothing.",
-            "The reason renders where the waiting report is shown; the label is never silently dropped."
+            "A 4xx other than 401/429 keeps the label on the phone and stops automatic retries; 401 remains the background mint-and-retry branch.",
+            "This is the worker-policy prerequisite for 03-05, not a releasable user surface. The retained reason is observed only by 03-05 on /sin-senal."
           ],
           "test_file": "tests/acceptance/f-works-with-no-signal/a-queued-report-sends-itself.feature",
-          "scenario_name": "A report the site refuses is kept, explained, and never hammered",
+          "scenario_name": "A report the site refuses stays on the phone and is never hammered",
           "slice_id": "slice-03",
           "surface_classification": "non-visual",
           "charter_path": "",
           "u8_observation": "",
-          "non_visual_rationale": "Mostly policy; the one rendered artifact (the reason line) lands on the queue surface 03-05 charters. Serial with 03-05 on the same file.",
+          "non_visual_rationale": "This proves retained-label and no-retry policy at the queue and door ports. It must not add copy to Base or home: the only refusal view is the /sin-senal queue surface owned and chartered by 03-05.",
           "ui_checks": {},
           "deps": [
             "03-01"
           ],
           "files_to_modify": [
-            "src/offline/flush.ts",
-            "src/pages/sin-senal.astro",
             "tests/unit/offline-flush.test.ts"
           ],
-          "implementation_notes": "P2's client contract, verbatim (application-architecture section 7; 07 section 5): a record the site refused for its shape will not become valid by waiting, so mechanical retry is banned; the reason is shown, the label kept. The site's refusals arrive self-explaining ({error:{code, what, why, how}}, gate:self-explaining-what-why-how) — render the \"what\" as the reason line; never invent copy for it, never show the code. 401 is NOT this branch: it goes to background mint-and-retry (f-tell's mint, no user-visible step). Where the reason renders: the queue surface on the sin señal page (03-05's box) is the one queue-visible surface this feature owns; the reason line renders there and is walked by 03-05's charter. Serial with 03-05 on sin-senal.astro."
+          "implementation_notes": "P2's client contract, verbatim (application-architecture section 7; 07 section 5): a record the site refused for its shape will not become valid by waiting, so mechanical retry is banned and the label stays. 401 is NOT this branch: it goes to background mint-and-retry (f-tell's mint, no user-visible step). This step is the RED/unit-policy prerequisite only. It MUST NOT add a Base/home bridge, a toast, or any rendered copy, and it MUST NOT commit a partial worker change by itself. 03-05 is its required dependent vertical: one GREEN/COMMIT there implements this policy and exposes the server's self-explaining `error.what` only in the /sin-senal queue box. The no-retry unit proof written here is consumed by that atomic delivery."
         },
         {
           "id": "03-05",
-          "name": "The sin señal page makes its second promise",
+          "name": "The sin señal page makes its second promise and explains a kept refusal",
           "criteria": [
             "The page renders the verbatim second sentence and the settled queue box counting real entries.",
             "The count is live queue truth: zero entries, no box; one entry, the settled singular words.",
+            "After a 4xx refusal has kept a report, an explicit offline navigation to /sin-senal shows the site's plain-Spanish `what` beside that waiting report, without retrying or losing it.",
             "The slice-01 scenario asserting the sentence's absence is amended in the same change, per the pre-authorized edit in the notes."
           ],
           "test_file": "tests/acceptance/f-works-with-no-signal/a-queued-report-sends-itself.feature",
-          "scenario_name": "The sin señal page finally makes its second promise, and counts what is waiting",
+          "scenario_name": "A refused report waits openly on the sin señal page",
           "slice_id": "slice-03",
           "surface_classification": "user-visible",
           "charter_path": "docs/product/expectations/f-works-with-no-signal/a-report-filed-with-no-signal-sends-itself-when-the-surfer-walks-back-into-coverage-the-queue.md",
-          "u8_observation": "Abro la página sin señal con un reporte guardado y leo las dos frases completas: que no hay señal con su hora, y que los reportes que mande quedan guardados. Debajo, la caja dice 1 reporte guardado. Se manda al volver la señal. Nada se lee como error ni como promesa vacía; se ve terminada en ambos temas a 390 px y nada se anima con movimiento reducido activado.",
+          "u8_observation": "Hago que el sitio rechace un reporte, vuelvo a quedarme sin señal y abro una ruta nueva hasta llegar a la página sin señal. Leo las dos frases completas y, debajo, la caja con 1 reporte guardado, la razón en español que mandó el sitio y que se manda al volver la señal. La razón no aparece en inicio. Nada se lee como error ni como promesa vacía; se ve terminada en ambos temas a 390 px y nada se anima con movimiento reducido activado.",
           "non_visual_rationale": "",
           "ui_checks": {
             "U1": [
@@ -707,7 +706,7 @@
               "--tags",
               "@feature-f-works-with-no-signal and @slice-03",
               "--name",
-              "The sin señal page finally makes its second promise, and counts what is waiting"
+              "A refused report waits openly on the sin señal page"
             ],
             "U2": [
               "npm",
@@ -722,7 +721,7 @@
               "--tags",
               "@feature-f-works-with-no-signal and @slice-03",
               "--name",
-              "The sin señal page finally makes its second promise, and counts what is waiting"
+              "A refused report waits openly on the sin señal page"
             ],
             "U4": [
               "npm",
@@ -737,7 +736,7 @@
               "--tags",
               "@feature-f-works-with-no-signal and @slice-03",
               "--name",
-              "The sin señal page finally makes its second promise, and counts what is waiting"
+              "A refused report waits openly on the sin señal page"
             ],
             "U6": [
               "npm",
@@ -753,15 +752,19 @@
           "deps": [
             "01-01",
             "01-09",
-            "03-01"
+            "03-01",
+            "03-04"
           ],
           "files_to_modify": [
             "public/sw.js",
+            "src/offline/flush.ts",
             "src/pages/sin-senal.astro",
             "tests/acceptance/f-works-with-no-signal/the-last-forecast-still-reads.feature",
-            "tests/acceptance/f-works-with-no-signal/steps/offline-reading.steps.ts"
+            "tests/acceptance/f-works-with-no-signal/steps/offline-reading.steps.ts",
+            "tests/acceptance/f-works-with-no-signal/steps/queue-flush.steps.ts",
+            "tests/unit/offline-flush.test.ts"
           ],
-          "implementation_notes": "HONESTY STAGING CLOSES HERE: \"Los reportes que mandes quedan guardados.\" becomes true the moment a real queue holds real labels, and the page owes it the same moment — both sentences verbatim section 10, the box verbatim section 14 (\"1 reporte guardado. Se manda al volver la señal.\"). THE COUNT IS SERVE-TIME TRUTH, same mechanism as the hour (01-09): the helper composes the served body with the real entry count read from the queue; a baked count is a lie by construction, and a count the page computes needs JS the route does not have (section 4: 0 JS). Zero entries render no box. PLURAL GAP, recorded not invented: section 14 settles only the singular; no plural string exists in any settled document. Render the settled singular for exactly one; for two or more, the mechanical Spanish plural (\"N reportes guardados. Se mandan al volver la señal.\") is the obvious candidate but it is INVENTED copy — route it through the cousin's crew with the other pending strings before shipping it; until confirmed, the scenario pins only the singular case and the box may render the singular sentence only when the count is one. PRE-AUTHORIZED ACCEPTANCE AMENDMENT (DISTILL, Quinn, 2026-08-10) — the ONLY acceptance-test edit permitted in this phase, and the reason two test files appear in files_to_modify despite the standing exclusion (coordinator lifts it for exactly this edit, or DISTILL executes it at this step's GREEN): in the-last-forecast-still-reads.feature, scenario \"With nothing saved for what they asked for, no signal lands on plain Spanish words\", DELETE the line \"And the page does not promise that reports get saved\"; then remove the now-unused step definition of that Then from offline-reading.steps.ts. Nothing else in either file may change; the absence assertion was slice-01's truth and this slice makes it false by making the promise true (requirement-checklist R4 note, feature-delta plan note \"Offline copy lands in two honest stages\")."
+          "implementation_notes": "THIS IS THE 03-04/03-05 ATOMIC VERTICAL. 03-04 provides the red no-retry/retention proof; this dependent step alone GREENs and COMMITS both the worker refusal state and its only user-visible surface. A 4xx other than 401/429 retains the record and response `error.what`; after that refusal, the acceptance journey deliberately goes offline and navigates to an unvisited route so the real /sin-senal surface is served, then reads the reason there. Do not test or render the reason on home, and do not add a Base/home bridge, toast, or parallel surface. Render the supplied `what`, never the code and never invented copy. HONESTY STAGING CLOSES HERE: \"Los reportes que mandes quedan guardados.\" becomes true the moment a real queue holds real labels, and the page owes it the same moment — both sentences verbatim section 10, the box verbatim section 14 (\"1 reporte guardado. Se manda al volver la señal.\"). THE COUNT IS SERVE-TIME TRUTH, same mechanism as the hour (01-09): the helper composes the served body with the real entry count read from the queue; a baked count is a lie by construction, and a count the page computes needs JS the route does not have (section 4: 0 JS). Zero entries render no box. PLURAL GAP, recorded not invented: section 14 settles only the singular; no plural string exists in any settled document. Render the settled singular for exactly one; for two or more, the mechanical Spanish plural (\"N reportes guardados. Se mandan al volver la señal.\") is the obvious candidate but it is INVENTED copy — route it through the cousin's crew with the other pending strings before shipping it; until confirmed, the scenario pins only the singular case and the box may render the singular sentence only when the count is one. PRE-AUTHORIZED ACCEPTANCE AMENDMENT (DISTILL, Quinn, 2026-08-10) — the ONLY acceptance-test edit permitted in this phase, and the reason two test files appear in files_to_modify despite the standing exclusion (coordinator lifts it for exactly this edit, or DISTILL executes it at this step's GREEN): in the-last-forecast-still-reads.feature, scenario \"With nothing saved for what they asked for, no signal lands on plain Spanish words\", DELETE the line \"And the page does not promise that reports get saved\"; then remove the now-unused step definition of that Then from offline-reading.steps.ts. Nothing else in either file may change; the absence assertion was slice-01's truth and this slice makes it false by making the promise true (requirement-checklist R4 note, feature-delta plan note \"Offline copy lands in two honest stages\")."
         },
         {
           "id": "03-06",
