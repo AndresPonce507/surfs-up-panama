@@ -3,6 +3,8 @@ export type LinkAnnouncementInput = Readonly<{
   spotName: string;
   score: number;
   site: string;
+  /** Absolute crawler-only card address, when this announcement has one. */
+  image?: string;
 }>;
 
 /** The Open Graph values a layout can publish without re-composing the call. */
@@ -11,6 +13,7 @@ export type LinkAnnouncement = Readonly<{
   description: string;
   url: string;
   locale: 'es_PA';
+  image?: string;
 }>;
 
 /**
@@ -23,5 +26,6 @@ export function composeLinkAnnouncement(input: LinkAnnouncementInput): LinkAnnou
     description: `${input.spotName} tiene ${input.score} puntos para hoy.`,
     url: new URL('/', input.site).toString(),
     locale: 'es_PA',
+    ...(input.image === undefined ? {} : { image: input.image }),
   };
 }

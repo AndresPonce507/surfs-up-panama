@@ -65,6 +65,13 @@ const inlineCss = minify(`${tokens}\n${base}\n${components}`);
         <meta property="og:description" content={announcement.description} />
         <meta property="og:url" content={announcement.url} />
         <meta property="og:locale" content={announcement.locale} />
+        {announcement.image !== undefined && (
+          <>
+            <meta property="og:image" content={announcement.image} />
+            <meta property="og:image:width" content="1200" />
+            <meta property="og:image:height" content="630" />
+          </>
+        )}
       </>
     )}
     <Fragment set:html={`<style>${inlineCss}</style>`} />

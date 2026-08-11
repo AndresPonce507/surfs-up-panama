@@ -351,6 +351,27 @@
       "s": "EXECUTED",
       "d": "PASS: current `git show --format= --name-status 408331a41dcad7b1053743573a82d5ef97789840` at 2026-08-11T02:23:44Z verifies existing commit 408331a41dcad7b1053743573a82d5ef97789840, subject `feat(paste): close the home preview journey - step 03-03`, and only src/components/RankedList.astro, src/layouts/Base.astro, and src/pages/index.astro changed. It is an inspection of an existing commit, not a claim to have created it now.",
       "t": "2026-08-11T02:23:44Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS: `PASTE_JIT=1 npm run test:at -- --tags '@feature-f-paste-the-call-into-the-group and @jit-04-03'` collected 4 scenarios and failed all 4 with semantic AssertionErrors: the home declared no image card, a new morning had no announced card to compare, and two incomplete spots did not share the generic recovery face. No collection, import, build or environment failure occurred.",
+      "t": "2026-08-11T02:08:32Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the restored `@jit-04-03` real-I/O command passed 4 scenarios and 64 steps. Full Slice-04 passed 7 scenarios and 107 steps with PASTE_JIT=1; `npm test` passed 86/86; `npm run typecheck`, `npm run build`, `npm run budget`, and `npm run test:ui` all exited 0. Build emitted an absolute stamped og:image, 1200x630 JPEGs below 60 KB, and a 4,768 B gz home with no preview-card first-flight asset. Controlled falsification removed only the new og:image block and made 3 of 4 scenarios fail on the intended missing-card AssertionError; the block was restored before the passing rerun. Test budget: 4 behaviors x 2 = 8 unit tests; 0 new unit tests because the real-I/O acceptance scenarios directly cover them.",
+      "t": "2026-08-11T02:29:04Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "COMMIT",
+      "s": "SKIPPED",
+      "d": "CHECKPOINT_PENDING: independent review found the implementation correct but requested the phase evidence now recorded above. Vera's first source-blind observation was INDETERMINATE only because no authorized WhatsApp chat could be exercised; the architecture-defined public handoff and its external-client boundary are recorded in 04-03-whatsapp-card-external-verification.md. Awaiting the scoped Vera correction and independent re-review before a commit is permitted.",
+      "t": "2026-08-11T02:34:00Z"
     }
   ]
 }
