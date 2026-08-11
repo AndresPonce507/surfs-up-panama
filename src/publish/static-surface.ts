@@ -73,6 +73,17 @@ export type SurfaceCall = {
    * before this field existed; when present it is finite and within [0, 1].
    */
   readonly weakest_link_subscore?: number;
+  /**
+   * Producer-decided model score without this row's named weakest link.
+   *
+   * The page receives this integer verbatim and never computes it. It is
+   * optional only for legacy named rows; a fresh named row carries either a
+   * strictly higher score or the mutually exclusive equality marker below.
+   * This is not Slice-04's damage disclosure.
+   */
+  readonly counterfactual_score_q?: number;
+  /** A fresh named row's valid rounded-equality suppression marker. */
+  readonly counterfactual_suppression?: 'rounded_equal';
   /** Same backward-compatibility reason as `weakest_link`: every freshly
    * built call sets this key, older committed surfaces may not have it. */
   readonly confidence_reason?: ConfidenceReason;
@@ -188,7 +199,8 @@ function isSurfaceCall(value: unknown): value is SurfaceCall {
     && typeof value.spot_id === 'string'
     && typeof value.score_q === 'number'
     && typeof value.call_es === 'string'
-    && hasValidWeakestLinkSubscore(value);
+    && hasValidWeakestLinkSubscore(value)
+    && hasValidCounterfactual(value);
 }
 
 function hasValidWeakestLinkSubscore(value: Record<string, unknown>): boolean {
@@ -199,6 +211,22 @@ function hasValidWeakestLinkSubscore(value: Record<string, unknown>): boolean {
     && Number.isFinite(scalar)
     && scalar >= 0
     && scalar <= 1;
+}
+
+function hasValidCounterfactual(value: Record<string, unknown>): boolean {
+  const hasScore = Object.hasOwn(value, 'counterfactual_score_q');
+  const hasSuppression = Object.hasOwn(value, 'counterfactual_suppression');
+  if (!hasScore && !hasSuppression) return true;
+  if (!isFactorToken(value.weakest_link) || (hasScore && hasSuppression)) return false;
+  if (hasSuppression) return value.counterfactual_suppression === 'rounded_equal';
+  const score = value.counterfactual_score_q;
+  const rowScore = value.score_q;
+  return typeof score === 'number'
+    && typeof rowScore === 'number'
+    && Number.isInteger(score)
+    && score >= 0
+    && score <= 100
+    && score > rowScore;
 }
 
 function isFactorToken(value: unknown): value is FactorToken {

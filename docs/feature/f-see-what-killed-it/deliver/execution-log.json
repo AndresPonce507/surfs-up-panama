@@ -554,6 +554,34 @@
       "s": "EXECUTED",
       "d": "PASS: a477d0a is the genuine 02-05 implementation commit. This subsequent evidence-only audit commit closes the accidentally omitted COMMIT event; .develop-progress.json remains unstaged external dirt.",
       "t": "2026-08-11T03:10:03Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: Slice-02 closure approved; X8 schema authority accepted in adr-weakest-link-scalar-and-counterfactual-projections.md. Slice-03 remains mapped-only, so no future JIT acceptance scenario was authored or enabled for this non-visual validator step.",
+      "t": "2026-08-11T03:13:00Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: new strict-surface property failed 1/13 for the right business reason: a clean row carrying counterfactual_score_q was accepted instead of rejected; no collection/import failures.",
+      "t": "2026-08-11T03:13:57Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: targeted 13/13; full units 114/114; typecheck; build; ci:local 10/10. Equality mutation score >= score_q failed 1/13 with semantic expected rejected, received accepted, then reverted.",
+      "t": "2026-08-11T03:15:33Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: review D1 fixed without adding a test: one property now iterates every malformed representation, including missing link and a below-range -1 score over malformed row score -2. Removing score >= 0 fails 1/13 with semantic expected rejected, received accepted; reverted. Fresh targeted 13/13, full units 114/114, typecheck, build and ci:local 10/10 pass.",
+      "t": "2026-08-11T03:20:00Z"
     }
   ]
 }
