@@ -265,6 +265,131 @@ describe('SurfaceCall.weakest_link: the reading-surface half of the day summary'
   });
 });
 
+// ------------------------------------------------------- culprit scalar --
+//
+// Slice-02, step 02-01: this is deliberately the strict wire-validator
+// boundary, not scoring.  The scalar is a raw score for the already-published
+// factor, never a second choice of factor and never Slice-04's four-score
+// record.
+
+type ValidatorState = {
+  readonly suppliedCall: unknown;
+  readonly dayOrdering: readonly string[];
+  readonly validation: 'pending' | 'accepted' | 'rejected';
+};
+
+/**
+ * State-delta universe for this pure boundary: the supplied call and day
+ * ordering are read-only inputs; only the observable validation outcome may
+ * change.  Keeping the full universe here prevents a scalar guard from
+ * silently changing the existing two-day contract.
+ */
+function captureValidatorState(
+  surface: PublishedSurfaceUpdate,
+  suppliedCall: unknown,
+  validation: ValidatorState['validation'],
+): ValidatorState {
+  return {
+    suppliedCall: structuredClone(suppliedCall),
+    dayOrdering: surface.days.map((day) => day.date),
+    validation,
+  };
+}
+
+function assertValidatorStateDelta(
+  before: ValidatorState,
+  after: ValidatorState,
+  expectedValidation: Exclude<ValidatorState['validation'], 'pending'>,
+): void {
+  assert.deepEqual(after.suppliedCall, before.suppliedCall, 'validator mutated the supplied call');
+  assert.deepEqual(after.dayOrdering, before.dayOrdering, 'scalar changed the two-day ordering');
+  assert.equal(after.validation, expectedValidation, 'validator returned the wrong observable result');
+}
+
+function withWeakestLinkSubscore(call: SurfaceCall, weakestLinkSubscore: unknown): SurfaceCall {
+  return { ...call, weakest_link_subscore: weakestLinkSubscore } as SurfaceCall;
+}
+
+function namedSurfaceWithScalar(score: number, token: FactorToken): PublishedSurfaceUpdate {
+  const surface = buildValidSurface(1, 0, ['token'], ['token'], [token], [token]);
+  const calls = surface.calls.map((call) => withWeakestLinkSubscore(call, score));
+  const tomorrowSpots = surface.days[1].spots.map((call) => withWeakestLinkSubscore(call, score));
+  return {
+    ...surface,
+    calls,
+    days: [
+      { ...surface.days[0]!, spots: calls },
+      { ...surface.days[1]!, spots: tomorrowSpots },
+    ],
+  };
+}
+
+type InvalidScalarPairing = 'missing-link' | 'null-link' | 'nan' | 'infinity' | 'below-zero' | 'above-one';
+
+function surfaceWithInvalidScalar(pairing: InvalidScalarPairing, token: FactorToken): PublishedSurfaceUpdate {
+  const surface = namedSurfaceWithScalar(0.5, token);
+  const original = surface.calls[0]!;
+  const { weakest_link: _namedLink, ...withoutLink } = original;
+  const invalid = pairing === 'missing-link'
+    ? withWeakestLinkSubscore(withoutLink as SurfaceCall, 0.5)
+    : pairing === 'null-link'
+      ? withWeakestLinkSubscore({ ...original, weakest_link: null }, 0.5)
+      : pairing === 'nan'
+        ? withWeakestLinkSubscore(original, Number.NaN)
+        : pairing === 'infinity'
+          ? withWeakestLinkSubscore(original, Number.POSITIVE_INFINITY)
+          : pairing === 'below-zero'
+            ? withWeakestLinkSubscore(original, -0.01)
+            : withWeakestLinkSubscore(original, 1.01);
+  return {
+    ...surface,
+    calls: [invalid],
+    days: [
+      { ...surface.days[0]!, spots: [invalid] },
+      surface.days[1]!,
+    ],
+  };
+}
+
+describe('SurfaceCall.weakest_link_subscore: raw value paired with the published culprit', () => {
+  it('preserves every finite named raw scalar in the inclusive range without changing other surface state', () => {
+    fc.assert(
+      fc.property(
+        tokenArb,
+        fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true }),
+        (token, scalar) => {
+          const surface = namedSurfaceWithScalar(scalar, token);
+          const before = captureValidatorState(surface, surface.calls[0], 'pending');
+          const outcome = tryValidate(surface);
+          const after = captureValidatorState(surface, surface.calls[0], outcome.threw ? 'rejected' : 'accepted');
+
+          assertValidatorStateDelta(before, after, 'accepted');
+          assert.ok(!outcome.threw, outcome.threw ? outcome.message : 'valid scalar must validate');
+          assert.equal(outcome.value.calls[0]?.weakest_link_subscore, scalar, 'today scalar changed during validation');
+          assert.equal(outcome.value.days[1]?.spots[0]?.weakest_link_subscore, scalar, 'tomorrow scalar changed during validation');
+        },
+      ),
+    );
+  });
+
+  it('refuses every scalar that lacks a named culprit or is not a finite inclusive raw score', () => {
+    fc.assert(
+      fc.property(
+        tokenArb,
+        fc.constantFrom<InvalidScalarPairing>('missing-link', 'null-link', 'nan', 'infinity', 'below-zero', 'above-one'),
+        (token, pairing) => {
+          const surface = surfaceWithInvalidScalar(pairing, token);
+          const before = captureValidatorState(surface, surface.calls[0], 'pending');
+          const outcome = tryValidate(surface);
+          const after = captureValidatorState(surface, surface.calls[0], outcome.threw ? 'rejected' : 'accepted');
+
+          assertValidatorStateDelta(before, after, 'rejected');
+        },
+      ),
+    );
+  });
+});
+
 // --------------------------------------------------- weakest-link reader --
 //
 // Slice-01, step 01-03: `resolveWeakestLink()` is the publish-side reader
