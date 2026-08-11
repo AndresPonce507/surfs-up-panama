@@ -72,6 +72,12 @@ import type { PipelineWorld } from '../../daily-call-with-permanent-receipts/ste
 import '../../daily-call-with-permanent-receipts/steps/support/world';
 import { venaoSeed } from '../../daily-call-with-permanent-receipts/steps/support/fixtures';
 import { publishedWeakestLinkSubscore } from '../../../../src/pipeline/build';
+import {
+  decideStaticMapAssets,
+  parseStaticMapPolicy,
+  type StaticMapDecision,
+  type StaticMapPolicy,
+} from '../../../../src/publish/static-map-policy';
 
 const projectRoot = process.cwd();
 
@@ -2575,6 +2581,138 @@ Then('el desglose publicado no deja cálculo ni código en el teléfono', functi
     'resolver la hora, los cuatro valores y la fila marcada en la publicación, y enviar al teléfono solo el resultado ya escrito: sin isla, sin fetch, sin reloj y sin telemetría.',
   );
 });
+
+// ------------------------------------------- slice-05: the static break map --
+//
+// The map behaviours drive two surfaces, never a third: the real map-asset
+// build port (a pure decision over the tracked policy, plus the generator that
+// writes bytes), and the already-built emitted `dist/` this file serves over
+// HTTP. No scenario here contacts a tile server, a provider, or the network:
+// there is no provider. X11 settled the launch path as an orientation-only
+// diagram drawn from the human-owned seed, so every input these steps use is
+// on disk and citable.
+//
+// BLOCKED, DELIBERATELY: X12 (the service-worker cache grant owned by
+// F-WORKS-WITH-NO-SIGNAL) is not granted, so nothing here asserts cache-first
+// behaviour or edits public/sw.js. The native reserved-frame degrade, which
+// the roadmap requires independently of the cache owner, is asserted instead.
+
+type MapDecisionsUnderTest = {
+  readonly tracked: readonly StaticMapDecision[];
+  readonly withoutCredit: readonly StaticMapDecision[];
+  readonly strippedSpotId: string;
+};
+
+const URL_SCHEME = /https?:\/\//iu;
+const RAW_DEGREE = /\d\s*(?:°|deg\b|grados\b)/iu;
+
+/** The tracked artefacts, read from the worktree. Never written by a test. */
+function loadStaticMapPolicy(): StaticMapPolicy {
+  return parseStaticMapPolicy(
+    JSON.parse(readFileSync(join(projectRoot, 'data/maps/pa-pacific-map-policy.json'), 'utf8')),
+  );
+}
+
+function loadLaunchSpotIds(): readonly string[] {
+  const launch = JSON.parse(
+    readFileSync(join(projectRoot, 'data/spots/pa-pacific-launch-v1.json'), 'utf8'),
+  ) as { launch_spot_ids: readonly string[] };
+  return launch.launch_spot_ids;
+}
+
+function decisionsUnderTest(): MapDecisionsUnderTest {
+  const policy = loadStaticMapPolicy();
+  const launchSpotIds = loadLaunchSpotIds();
+  const strippedSpotId = launchSpotIds[0]!;
+  const stripped: StaticMapPolicy = {
+    ...policy,
+    spots: Object.fromEntries(
+      Object.entries(policy.spots).map(([spotId, record]) => (
+        spotId === strippedSpotId
+          ? [spotId, { ...record, coordinate_attribution: '' }]
+          : [spotId, record]
+      )),
+    ),
+  };
+  return {
+    tracked: decideStaticMapAssets(policy, launchSpotIds),
+    withoutCredit: decideStaticMapAssets(stripped, launchSpotIds),
+    strippedSpotId,
+  };
+}
+
+type Slice05World = Slice01World & { killedItMapDecisions?: MapDecisionsUnderTest };
+
+Given('la política de mapas que este proyecto sí puede mostrar', function (this: PipelineWorld) {
+  // The tracked policy is the Given. It is read, never written: a test that
+  // planted its own policy would prove nothing about what ships.
+  const policy = loadStaticMapPolicy();
+  assert.equal(policy.path, 'orientation-only', 'test fixture error: X11 settled the orientation-only path');
+});
+
+When(
+  'la construcción decide playa por playa, junto a una copia sin el crédito de una playa',
+  function (this: PipelineWorld) {
+    (world01(this) as Slice05World).killedItMapDecisions = decisionsUnderTest();
+  },
+);
+
+Then(
+  'cada playa aprobada trae su crédito visible en español, la playa sin fuente de orientación queda fuera, y la copia sin crédito se niega antes de dibujar',
+  function (this: PipelineWorld) {
+    const decided = (world01(this) as Slice05World).killedItMapDecisions;
+    assert.ok(decided, 'test fixture error: the map decision was never taken');
+    const findings: string[] = [];
+    const launchSpotIds = loadLaunchSpotIds();
+
+    if (decided.tracked.length !== launchSpotIds.length) {
+      findings.push(`la política decidió ${decided.tracked.length} playas de ${launchSpotIds.length}`);
+    }
+    const approved = decided.tracked.filter((decision) => decision.kind === 'approved');
+    if (approved.length === 0) findings.push('ninguna playa quedó aprobada, así que no hay mapa que mostrar');
+
+    for (const decision of approved) {
+      const caption = decision.caption;
+      if (!caption.includes(decision.coordinate_attribution)) {
+        findings.push(`${decision.spot_id} no muestra de dónde salió su ubicación`);
+      }
+      if (!caption.includes(decision.orientation_attribution)) {
+        findings.push(`${decision.spot_id} no muestra de dónde salió su orientación`);
+      }
+      if (EM_DASH.test(caption)) findings.push(`${decision.spot_id} usa un guión largo en su crédito`);
+      if (URL_SCHEME.test(caption)) findings.push(`${decision.spot_id} muestra una dirección cruda en su crédito`);
+      if (RAW_DEGREE.test(caption)) findings.push(`${decision.spot_id} muestra grados crudos en su crédito`);
+      if (CODE_LEAK.test(caption)) findings.push(`${decision.spot_id} filtra una palabra del código en su crédito`);
+    }
+
+    // The two Chiriquí beaches carry `orientation_source: null` in the human-
+    // owned seed: no source states their facing. Drawing an arrow for them
+    // would be the exact invention this product forbids.
+    const refusedIds = decided.tracked
+      .filter((decision) => decision.kind === 'refused')
+      .map((decision) => decision.spot_id);
+    for (const spotId of ['playa-la-barqueta', 'las-lajas']) {
+      if (!refusedIds.includes(spotId)) {
+        findings.push(`${spotId} recibió un mapa aunque ninguna fuente dice hacia dónde mira`);
+      }
+    }
+
+    const strippedDecision = decided.withoutCredit.find((decision) => decision.spot_id === decided.strippedSpotId);
+    if (strippedDecision?.kind !== 'refused') {
+      findings.push('una playa sin crédito de ubicación igual recibió su mapa');
+    }
+    const unchanged = decided.withoutCredit.filter((decision) => decision.spot_id !== decided.strippedSpotId);
+    const before = decided.tracked.filter((decision) => decision.spot_id !== decided.strippedSpotId);
+    if (JSON.stringify(unchanged) !== JSON.stringify(before)) {
+      findings.push('quitarle el crédito a una playa cambió la decisión de otra');
+    }
+
+    assertBehavior(
+      findings,
+      'aprobar solo las playas cuya ubicación y orientación tienen fuente citable, componer su crédito visible en español desde esa fuente, y negar el mapa de la playa a la que le falta, sin tocar a las demás.',
+    );
+  },
+);
 
 // ---------------------------------------------------------------- cleanup --
 

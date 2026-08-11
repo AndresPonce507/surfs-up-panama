@@ -217,3 +217,9 @@ Feature: La playa dice qué fue lo que la tumbó
       | tema   | movimiento |
       | claro  | normal     |
       | oscuro | reducido   |
+
+  @slice-05 @driving_port @real-io @adapter-integration @negative @error @covers-R20
+  Scenario: Cada playa recibe un mapa con una fuente que sí podemos mostrar
+    Given la política de mapas que este proyecto sí puede mostrar
+    When la construcción decide playa por playa, junto a una copia sin el crédito de una playa
+    Then cada playa aprobada trae su crédito visible en español, la playa sin fuente de orientación queda fuera, y la copia sin crédito se niega antes de dibujar
