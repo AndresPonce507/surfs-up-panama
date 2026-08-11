@@ -36,46 +36,6 @@ append-only, in the keystone's format
 
 ## Entries
 
-### slices 04 and 05 — breakdown and orientation diagram (2026-08-11)
-
-Author: explicit DISTILL opening on `build/f2-deltas-distill-45`, base `20f40cf`.
-Artefacts: the shared feature file; `steps/slice-04-05.steps.ts`; two producer-shaped fixtures;
-two source-blind expectation charters; and `distill/slice-04-05-acceptance-bindings.md`.
-
-**Commands observed.**
-
-```
-npm run typecheck
-REAL_EXIT=0
-
-npm run test:at -- --dry-run --tags "@feature-f-see-what-killed-it and (@slice-04 or @slice-05)"
-REAL_EXIT=0
-12 scenarios (12 skipped); 126 steps (126 skipped); 0 undefined, 0 ambiguous
-
-npm run test:at -- --tags "@feature-f-see-what-killed-it and (@slice-04 or @slice-05)"
-REAL_EXIT=1
-12 scenarios (12 failed); 126 steps (114 passed, 12 failed)
-```
-
-The copied production input is advanced to Panama's current civil date before
-`npm run build`; build verification passes, emitted files are served over real
-local HTTP, and Chromium reads a 390 px spot page. The original sample is a
-previous-day receipt, so this adjustment is fixture hygiene, not a production
-or rendering change. No scenario failed in import, fixture construction, step
-matching, build, server startup or browser startup.
-
-| Steps | Visible behavior oracle reached | Honest classification |
-|---|---|---|
-| 04-01 to 04-04 | emitted page has no `[data-field="breakdown"]` or required selected-row marker | `BLOCKED_BY_DEPENDENCY: X9` |
-| 04-05 to 04-06 | emitted 390 px page has no breakdown component | `BLOCKED_BY_DEPENDENCY: X10` (and X9 input) |
-| 05-01 to 05-04 | emitted page has no `[data-field="orientation-diagram"]` | `MISSING_FUNCTIONALITY` after accepted X11; policy/asset/component are absent |
-| 05-05 to 05-06 | emitted 390 px page has no lazy diagram or reserved frame | `BLOCKED_BY_DEPENDENCY: X12` for worker cache, plus missing host/component |
-
-This is intentionally not called a passing RED. The exact selectors named in
-the failure output are the public document contract that DELIVER must make
-visible. A zero-selection Cucumber run was prevented by the dry run count of
-12 scenarios and 126 matched steps.
-
 ### slice-03 — "Sin ese punto débil marcaría", day-aware counterfactual (2026-08-10)
 
 Author: JIT DISTILL on `build/f2-deltas`, worktree `/Users/andres/psb-deltas`.
