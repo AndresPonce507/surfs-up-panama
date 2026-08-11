@@ -34,7 +34,7 @@ async function choose(self: unknown, raw: number | undefined): Promise<void> {
   w(self).decision = result.value; note(self, result.absence);
 }
 async function later(self: unknown, score: number): Promise<void> {
-  const result = await callDeclared<Plan>('planNotifications', { now: '2026-08-10T07:25:00-05:00', spots: [VENAO], scores: { [VENAO.spot_id]: score }, subscriptions: w(self).decision?.stored ?? [], run_cap: 10_000 });
+  const result = await callDeclared<Plan>('planNotifications', { now: '2026-08-10T07:25:00-05:00', spots: [VENAO], scores: { [VENAO.spot_id]: score }, subscriptions: w(self).decision?.stored ?? [], default_threshold_score: 70, run_cap: 10_000 });
   w(self).plan = result.value; note(self, result.absence);
 }
 

@@ -421,6 +421,55 @@
       "s": "EXECUTED",
       "d": "PASS: eee3a0b committed with Step-ID: 01-16. Test budget: 1 browser-port behavior × 2 = 2; one focused test added. The broad slice tag sweep reached future UI/click work and a sandbox IPC restriction, so this slice records only its exact active scenario.",
       "t": "2026-08-10T20:27:09Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: restored accepted 4d05439/9f8ced9 Slice-04 contracts without touching generated data; 04-01 is non-visual and has no shared SW, Spot, or UI seam.",
+      "t": "2026-08-11T05:15:58Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: the pre-authored three-example stored-bar acceptance was active and green; a controlled production mutation that stored null instead of the requested bar made all three examples fail on the exact stored value, then was restored.",
+      "t": "2026-08-11T05:15:58Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: no unit was added because the active distilled acceptance already reaches GREEN. Test budget: 1 behavior x 2 = 2; 0 new tests.",
+      "t": "2026-08-11T05:15:58Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: restored acceptance 3/3, focused push-decide-subscribe units 10/10, full units excluding stale-format check 101/101, and typecheck passed. npm run build correctly refused the preserved user-owned static surface dated 2026-08-10 rather than Panama's 2026-08-11; that generated-surface gate is qualified. No production diff remains.",
+      "t": "2026-08-11T05:16:35Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: review correction supplied planNotifications.default_threshold_score=70 in the driving-port acceptance step. A new 100-run public-port state-delta property freezes input state, verifies the complete returned subscription universe, exact selected bar, preserved dates, and untouched unrelated row. Acceptance 3/3, focused units 11/11, full qualified units 102/102, and typecheck passed.",
+      "t": "2026-08-11T05:22:19Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: the new state-delta property failed for the right reason when the production upsert was controlled to store null: fast-check shrank to selected bar 0 and raised AssertionError because received null did not equal 0. The production line was restored unchanged. Test budget: 3 behaviors x 2 = 6; 1 new unit test.",
+      "t": "2026-08-11T05:22:55Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: after restoration acceptance 3/3, focused units 11/11, typecheck, and rerun qualified full units 102/102 passed. The first full-unit attempt had one unrelated page-weight property failure, then its immediate identical rerun passed; generated-surface build remains qualified by preserved stale user data. Test budget remains 3 behaviors x 2 = 6; 1 new unit test.",
+      "t": "2026-08-11T05:23:06Z"
     }
   ]
 }

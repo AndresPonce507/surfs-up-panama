@@ -190,6 +190,56 @@ describe('decideSubscribe', () => {
     );
   });
 
+  // covers: Slice-04 04-01 / R43, R44
+  it('keeps the complete stored-subscription universe intact while a re-ask replaces only its matching row with each exact whole-number bar', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 100 }),
+        lang,
+        identifier,
+        isoDate,
+        isoDate,
+        (selectedBar, nextLang, nextDevice, notifiedBefore, followupBefore) => {
+          const spotId = 'playa-venao';
+          const endpoint = 'https://fcm.googleapis.com/fcm/send/threshold-property-device';
+          const matching: StoredSub = {
+            spot_id: spotId,
+            endpoint_hash: createHash('sha256').update(endpoint).digest('hex').slice(0, 32),
+            lang: 'es',
+            threshold_score: 67,
+            last_notified_date: notifiedBefore,
+            followup_date: followupBefore,
+            device_id: 'device-before',
+          };
+          const unrelated: StoredSub = {
+            spot_id: 'otro-spot',
+            endpoint_hash: 'hash-de-otro-suscriptor',
+            lang: 'en',
+            threshold_score: 42,
+            last_notified_date: '2026-08-01',
+            followup_date: '2026-08-09',
+            device_id: 'dispositivo-ajeno',
+          };
+          const existing = [matching, unrelated];
+          const before = structuredClone(existing);
+          const decision = decideSubscribe({
+            ...requestFor(spotId, endpoint, { lang: nextLang, threshold_score: selectedBar, device_id: nextDevice, now: '2026-08-10T07:25:00-05:00' }),
+            existing,
+          });
+
+          assert.equal(decision.outcome, 'subscribed', 'A valid selected bar must be accepted.');
+          assert.deepEqual(existing, before, 'The declared input universe must not be mutated in place.');
+          assert.deepEqual(
+            decision.stored,
+            [{ ...matching, lang: nextLang, threshold_score: selectedBar, device_id: nextDevice }, unrelated],
+            'Only the matching subscriber may change; its exact bar and both retained dates must be visible in the returned universe.',
+          );
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
   // covers: contract:declared-inputs-not-ambient-reads
   it('is a deterministic pure function of its declared inputs: identical declared inputs always produce a bit-identical decision', () => {
     fc.assert(

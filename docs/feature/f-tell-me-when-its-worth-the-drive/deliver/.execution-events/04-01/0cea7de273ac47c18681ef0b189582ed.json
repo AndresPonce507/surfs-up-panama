@@ -1,0 +1,11 @@
+{
+  "step_id": "04-01",
+  "timestamp": "2026-08-11T05:16:35Z",
+  "kind": "quality-gates",
+  "result": "QUALIFIED_PASS",
+  "evidence": {
+    "full_units": "npm test -- --exclude tests/unit/staleness-stamp-format.test.ts => 101 passed",
+    "build": "npm run build => expected fail: publish-surface refused stale 2026-08-10 static surface for Panama 2026-08-11",
+    "scope": "Generated data and unrelated dirt were not edited or staged."
+  }
+}

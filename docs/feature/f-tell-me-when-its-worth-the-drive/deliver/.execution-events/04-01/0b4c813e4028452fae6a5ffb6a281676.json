@@ -1,0 +1,13 @@
+{
+  "step_id": "04-01",
+  "timestamp": "2026-08-11T05:15:58Z",
+  "kind": "red-green",
+  "result": "PASS",
+  "evidence": {
+    "acceptance": "npm run test:at -- --name 'La surfista guarda exactamente la barra que eligió y una mañana por debajo no la despierta' => 3 scenarios passed after restoration; controlled threshold_score:null mutation => 3 scenarios failed on exact stored bar",
+    "unit": "npm test -- --run tests/unit/push-decide-subscribe.test.ts => 10 passed",
+    "typecheck": "npm run typecheck => passed",
+    "test_budget": "1 behavior x 2 = 2; 0 new tests because the pre-authored acceptance was already green",
+    "qualification": "No generated data was modified. Full generated-surface verification is qualified by preserved user-owned stale generated dirt."
+  }
+}

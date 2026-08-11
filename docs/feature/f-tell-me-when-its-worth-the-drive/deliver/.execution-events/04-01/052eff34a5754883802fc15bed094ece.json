@@ -1,0 +1,13 @@
+{
+  "step_id": "04-01",
+  "timestamp": "2026-08-11T05:22:19Z",
+  "kind": "review-revision-green",
+  "result": "PASS",
+  "evidence": {
+    "revision": "Acceptance planner call now declares default_threshold_score: 70. Added one fast-check public-port state-delta property with an immutable before-state.",
+    "acceptance": "3 scenarios, 39 steps passed",
+    "focused_unit": "tests/unit/push-decide-subscribe.test.ts: 11 passed",
+    "qualified_full_units": "102 passed excluding stale-format check",
+    "typecheck": "passed"
+  }
+}
