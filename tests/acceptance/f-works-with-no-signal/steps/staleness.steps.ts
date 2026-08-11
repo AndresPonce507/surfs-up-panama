@@ -41,6 +41,9 @@ const AGE_SCRIPT_CEILING_BYTES = Math.round(0.3 * 1024);
 /** Just past the three-hour flip, with margin so the boundary is unambiguous. */
 const HOURS_LATER_MS = Math.round(3.4 * 60 * 60 * 1000);
 
+/** Unambiguously fresh while leaving room on both sides of the threshold. */
+const FRESH_AGE_MS = 60 * 60 * 1000;
+
 /** The publish moment captured before time moved, per scenario. */
 const rememberedMoments = new WeakMap<object, string | null>();
 
@@ -90,14 +93,33 @@ Given(
 // ---------- Whens ----------
 
 When(
+  'the phone is still within three hours of the published forecast',
+  { timeout: 120_000 },
+  async function (this: object) {
+    const state = scenarioState(this);
+    const moment = await publishMomentUnderneath(state);
+    assert.ok(moment !== null && !Number.isNaN(Date.parse(moment)), 'test bug: the fresh-clock fixture needs the emitted publish moment');
+    const page = await phonePage(state);
+    try {
+      await page.clock.install({ time: new Date(Date.parse(moment) + FRESH_AGE_MS) });
+    } catch (error) {
+      state.failures.push({ label: "place the phone's clock inside the fresh window", error });
+    }
+    await goTo(state, '/', 'look at the forecast while it is still fresh');
+  },
+);
+
+When(
   'more than three hours pass and the surfer looks at the forecast again',
   { timeout: 120_000 },
   async function (this: object) {
     const state = scenarioState(this);
     rememberedMoments.set(this, await publishMomentUnderneath(state));
+    const moment = rememberedMoments.get(this);
+    assert.ok(moment !== null && moment !== undefined, 'test bug: the stale-clock fixture needs the emitted publish moment');
     const page = await phonePage(state);
     try {
-      await page.clock.install();
+      await page.clock.install({ time: new Date(moment) });
       await page.clock.fastForward(HOURS_LATER_MS);
     } catch (error) {
       state.failures.push({ label: "move the phone's clock past three hours", error });
@@ -112,9 +134,11 @@ When(
   async function (this: object) {
     const state = scenarioState(this);
     rememberedMoments.set(this, await publishMomentUnderneath(state));
+    const moment = rememberedMoments.get(this);
+    assert.ok(moment !== null && moment !== undefined, 'test bug: the offline stale-clock fixture needs the emitted publish moment');
     const page = await phonePage(state);
     try {
-      await page.clock.install();
+      await page.clock.install({ time: new Date(moment) });
       await page.clock.fastForward(HOURS_LATER_MS);
     } catch (error) {
       state.failures.push({ label: "move the phone's clock past three hours", error });

@@ -273,8 +273,19 @@ async function contrastFindings(page: Page): Promise<ContrastAudit> {
     // accepts ~6.92 for that pairing, i.e. AA, not AAA) rather than the
     // stricter 7:1 body floor that only the hero's primary call text and
     // every --ink-toned element carry.
+    const paintsOwnText = (element) => [...element.childNodes]
+      .some((node) => node.nodeType === Node.TEXT_NODE && (node.textContent || '').trim().length > 0);
     const elements = [...document.querySelectorAll('ol.ranked > li a, ol.ranked > li strong, ol.ranked > li p, ol.ranked > li details.confidence > summary, ol.ranked > li details.confidence > div')]
-      .filter((el) => (el.textContent || '').trim().length > 0);
+      .filter((el) => paintsOwnText(el));
+    const opaqueBackdropOf = (element) => {
+      let node = element;
+      while (node !== null && node !== hero) {
+        const own = parseColor(getComputedStyle(node).backgroundColor);
+        if ((own[3] ?? 0) >= 1) return own.slice(0, 3);
+        node = node.parentElement;
+      }
+      return null;
+    };
     const findings = [];
     for (const el of elements) {
       const tag = el.tagName.toLowerCase();
@@ -287,9 +298,11 @@ async function contrastFindings(page: Page): Promise<ContrastAudit> {
       let worstRatio;
       let worstBgHex;
       if (isHero) {
+        const ownBackdrop = opaqueBackdropOf(el);
+        const backdrops = ownBackdrop === null ? samples : [ownBackdrop];
         worstRatio = Infinity;
         worstBgHex = '';
-        for (const bg of samples) {
+        for (const bg of backdrops) {
           const ratio = contrast(fg, bg);
           if (ratio < worstRatio) { worstRatio = ratio; worstBgHex = rgbToHex(bg); }
         }
@@ -688,9 +701,14 @@ Then('la portada publicada llega lista con su ranking, sin una espera, vacío o 
     ready: document.readyState,
     rows: document.querySelectorAll('ol.ranked > li').length,
     busy: document.querySelectorAll('[aria-busy="true"]').length,
-    visibleErrors: [...document.querySelectorAll('body *')]
+    visibleErrors: [...document.querySelectorAll('body *:not(script):not(style)')]
       .filter((element) => (element as HTMLElement).offsetParent !== null)
-      .map((element) => element.textContent?.trim() ?? '')
+      .map((element) => [...element.childNodes]
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent ?? '')
+        .join(' ')
+        .trim())
+      .filter((text) => text.length > 0)
       .filter((text) => /\b(error|loading|cargando)\b/i.test(text)),
   }));
   assert.equal(state.ready, 'complete', `la portada no llegó lista: ${state.ready}`);

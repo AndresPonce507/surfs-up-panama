@@ -21,6 +21,7 @@ Feature: An old forecast says so
   @slice-02 @driving_port @real-io @covers-R15
   Scenario: A fresh forecast is never called old
     Given a surfer has read the home page with signal
+    When the phone is still within three hours of the published forecast
     Then the page carries its publish stamp as a plain clock time
     And the page keeps the exact publish moment underneath where the phone can read it
     And the page does not call the forecast old

@@ -52,7 +52,7 @@ type OpenedReportSurfaces = {
   revealAudit: ReportAudit;
   reportState: ReportState;
 };
-type PublishedRouteKind = 'spot' | 'ayer' | 'manana' | 'reportar' | 'reportado' | 'unknown';
+type PublishedRouteKind = 'spot' | 'ayer' | 'manana' | 'reportar' | 'reportado' | 'unknown' | 'offline';
 type PublishedRoute = { file: string; url: string; kind: PublishedRouteKind };
 type PublishedAudit = { route: PublishedRoute; findings: string[] };
 type PublishedSweep = {
@@ -229,6 +229,7 @@ function emittedHtmlFiles(directory: string): string[] {
 function kindOfPublishedRoute(file: string): PublishedRouteKind {
   if (file === 'manana.html') return 'manana';
   if (file === '404.html') return 'unknown';
+  if (file === 'sin-senal.html') return 'offline';
   if (/^spots\/[^/]+\.html$/.test(file)) return 'spot';
   if (/^spots\/[^/]+\/ayer\.html$/.test(file)) return 'ayer';
   if (/^spots\/[^/]+\/reportar\.html$/.test(file)) return 'reportar';
@@ -282,7 +283,10 @@ async function auditPublishedPage(page: Page, route: PublishedRoute, expected: P
     const body = getComputedStyle(document.body);
     if (body.fontFamily !== resolveType('font-family', '--font') || body.fontSize !== resolveType('font-size', '--text-body') || body.lineHeight !== resolveType('line-height', '--leading-body')) findings.push('no conserva la escala, el ritmo y la familia tipográfica del producto');
     const emittedCss = [...document.querySelectorAll('style')].map((style) => style.textContent || '').join('\\n');
-    for (const token of ['--font', '--text-body', '--leading-body', '--ink', '--bg', '--sp-3', '--sp-4', '--r-m', '--shadow-1', '--dur-1', '--tap']) {
+    const requiredTokens = ${JSON.stringify(route.kind === 'offline'
+      ? ['--font', '--text-body', '--leading-body', '--ink', '--bg', '--sp-3', '--sp-4', '--tap']
+      : ['--font', '--text-body', '--leading-body', '--ink', '--bg', '--sp-3', '--sp-4', '--r-m', '--shadow-1', '--dur-1', '--tap'])};
+    for (const token of requiredTokens) {
       if (!root.getPropertyValue(token).trim() || !emittedCss.includes('var(' + token + ')')) findings.push('no usa el token de diseño ' + token);
     }
     const words = compact(document.body.innerText || '');
@@ -336,7 +340,7 @@ async function openPublishedSweep(world: SurfaceWorld, theme: string): Promise<v
     await page.goto(`${base}${route.url}`, { waitUntil: 'load' });
     audits.push(await auditPublishedPage(page, route, homePalette));
   }
-  const counts: Record<PublishedRouteKind, number> = { spot: 0, ayer: 0, manana: 0, reportar: 0, reportado: 0, unknown: 0 };
+  const counts: Record<PublishedRouteKind, number> = { spot: 0, ayer: 0, manana: 0, reportar: 0, reportado: 0, unknown: 0, offline: 0 };
   for (const route of routes) counts[route.kind] += 1;
   publishedSweeps.set(world, { root: fixture.root, preview, browser, page, audits, counts });
 }
@@ -348,7 +352,7 @@ function assertedPublishedSweep(world: SurfaceWorld): PublishedSweep {
 }
 
 function assertPublishedPopulation(counts: Record<PublishedRouteKind, number>): void {
-  const required: PublishedRouteKind[] = ['spot', 'ayer', 'manana', 'reportar', 'reportado', 'unknown'];
+  const required: PublishedRouteKind[] = ['spot', 'ayer', 'manana', 'reportar', 'reportado', 'unknown', 'offline'];
   const total = Object.values(counts).reduce((sum, count) => sum + count, 0);
   assert.ok(total > 0, 'WHAT: el recorrido inspeccionó cero pantallas. HOW: publicar al menos una página HTML antes de anunciar el recorrido.');
   for (const kind of required) assert.ok(counts[kind] > 0, `WHAT: el recorrido no encontró ninguna pantalla de ${kind}. HOW: enumerar los documentos emitidos antes de comprobar la paleta.`);
@@ -513,21 +517,25 @@ async function placeForecastOracle(page: Page, forecastValues: string[]): Promis
 }
 
 async function reportState(page: Page): Promise<ReportState> {
+  await page.waitForFunction(() => document.querySelector('form[data-report-form]')?.getAttribute('data-storage-ready') === 'true');
   return page.evaluate(`(() => {
     const findings = [];
-    const choice = document.querySelector('input[type="radio"]');
+    const choices = ['size_band', 'wind', 'quality'].map((name) => document.querySelector('input[name="' + name + '"]'));
+    const [choice, secondChoice, thirdChoice] = choices;
     const label = choice?.closest('label');
     const action = document.querySelector('button[type="submit"]');
-    if (!(choice instanceof HTMLInputElement) || !(label instanceof HTMLLabelElement)) {
+    if (!(choice instanceof HTMLInputElement) || !(secondChoice instanceof HTMLInputElement) || !(thirdChoice instanceof HTMLInputElement) || !(label instanceof HTMLLabelElement) || !(action instanceof HTMLButtonElement)) {
       findings.push('la pantalla de reportar no ofrece una selección visible');
       return { selectionIsVisible: false, disabledActionIsVisible: false, findings };
     }
+    const disabledBeforeAnswers = action.disabled;
     const before = {
       borderColor: getComputedStyle(label).borderColor,
       backgroundColor: getComputedStyle(label).backgroundColor,
       boxShadow: getComputedStyle(label).boxShadow,
     };
     choice.click();
+    const disabledAfterOneAnswer = action.disabled;
     const after = {
       borderColor: getComputedStyle(label).borderColor,
       backgroundColor: getComputedStyle(label).backgroundColor,
@@ -536,9 +544,14 @@ async function reportState(page: Page): Promise<ReportState> {
     const nativeMark = getComputedStyle(choice).appearance !== 'none';
     const labelChanged = before.borderColor !== after.borderColor || before.backgroundColor !== after.backgroundColor || before.boxShadow !== after.boxShadow;
     const selectionIsVisible = choice.checked && nativeMark && labelChanged && label.getBoundingClientRect().height >= 44;
-    const disabledActionIsVisible = action instanceof HTMLButtonElement && action.disabled && action.getBoundingClientRect().height >= 44;
+    secondChoice.click();
+    const disabledAfterTwoAnswers = action.disabled;
+    thirdChoice.click();
+    const enabledAfterThreeAnswers = !action.disabled;
+    const disabledActionIsVisible = disabledBeforeAnswers && disabledAfterOneAnswer && disabledAfterTwoAnswers
+      && enabledAfterThreeAnswers && action.getBoundingClientRect().height >= 44 && (action.textContent || '').trim().length > 0;
     if (!selectionIsVisible) findings.push('la selección de reportar depende solo del color o no se puede tocar');
-    if (!disabledActionIsVisible) findings.push('la acción todavía no disponible no se entiende ni se puede leer');
+    if (!disabledActionIsVisible) findings.push('Mandar no permanece indisponible con cero, una o dos respuestas, o no se habilita al completar la tercera');
     return { selectionIsVisible, disabledActionIsVisible, findings };
   })()`) as Promise<ReportState>;
 }
@@ -706,7 +719,7 @@ Then('el recorrido nombra cuántas pantallas de playa, ayer, mañana, reportar, 
   const sweep = assertedPublishedSweep(this);
   assertPublishedPopulation(sweep.counts);
   const total = Object.values(sweep.counts).reduce((sum, count) => sum + count, 0);
-  console.log(`BARRIDO SLICE-03: ${total} pantallas inspeccionadas (playa ${sweep.counts.spot}, ayer ${sweep.counts.ayer}, mañana ${sweep.counts.manana}, reportar ${sweep.counts.reportar}, reportado ${sweep.counts.reportado}, dirección desconocida ${sweep.counts.unknown}).`);
+  console.log(`BARRIDO SLICE-03: ${total} pantallas inspeccionadas (playa ${sweep.counts.spot}, ayer ${sweep.counts.ayer}, mañana ${sweep.counts.manana}, reportar ${sweep.counts.reportar}, reportado ${sweep.counts.reportado}, sin señal ${sweep.counts.offline}, dirección desconocida ${sweep.counts.unknown}).`);
 });
 
 Then('ninguna pantalla publicada queda fuera del recorrido', function (this: SurfaceWorld) {

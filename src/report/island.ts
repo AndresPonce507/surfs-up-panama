@@ -274,7 +274,7 @@ function showNotice(notice: HTMLElement, message: string): void {
 
 function applyProbeUi(decision: ProbeUiDecision, elements: IslandElements): void {
   if (decision.kind === 'ready') {
-    elements.button.disabled = false;
+    elements.form.dataset.storageReady = 'true';
     return;
   }
   showNotice(elements.notice, decision.message);
@@ -424,6 +424,15 @@ async function activate(elements: IslandElements, spotId: string, locale: Locale
     backHref: paths.spot(locale, spotId),
     backLabel: spotName,
   };
+
+  // A passing storage probe makes reporting available, but Mandar is not an
+  // honest action until all three answers exist. Keep the static disabled
+  // state until the form carries one canonical value for every question.
+  const syncSubmitAvailability = () => {
+    elements.button.disabled = parseAnswers(readRawAnswers(elements.form)) === undefined;
+  };
+  elements.form.addEventListener('change', syncSubmitAvailability);
+  syncSubmitAvailability();
 
   elements.form.addEventListener('submit', (event) => {
     event.preventDefault();

@@ -634,7 +634,12 @@ Then('el llamado cumple las siete comprobaciones visuales de la superficie publi
   if (audit.moving.length > 0) findings.push(`U4: el movimiento reducido deja transiciones en ${audit.moving.join(', ')}`);
   if (audit.loadingCount !== 0) findings.push('U5: una lectura ya publicada muestra carga artificial');
   if (audit.scoreFontPx < 48 || audit.reasonFontPx < 16 || audit.reasonScrollHeight > audit.reasonHeight + 1) findings.push('U6: la escala o el ajuste del texto español no conserva la jerarquía completa');
-  const heroRule = audit.heroStyleSource.match(/ol\.ranked li:first-child\{([^}]*)\}/)?.[1] ?? '';
+  // tokens.css and components.css both own part of the hero recipe. Astro
+  // inlines them as two exact rules, so inspect the complete cascade rather
+  // than only the first matching declaration block.
+  const heroRule = [...audit.heroStyleSource.matchAll(/ol\.ranked li:first-child\{([^}]*)\}/g)]
+    .map((match) => match[1] ?? '')
+    .join(';');
   const requiredHeroTokens = [
     ['fondo', /background:var\(--hero-grad\)/],
     ['espaciado exterior', /margin-bottom:var\(--sp-4\)/],
