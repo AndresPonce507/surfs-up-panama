@@ -70,6 +70,14 @@ export type ScoreResult = {
   correction: { delta_q: number; gate: CorrectionGate };
 };
 
+/** A correction-aware score from the same model with its named weakness removed. */
+export type CounterfactualScore = {
+  /** Unrounded [0, 1] model score, kept in the scoring core for law checks. */
+  q_without: number;
+  /** Published integer counterpart on the existing score_q scale. */
+  score_q: number;
+};
+
 export type BlendResult =
   | { kind: 'ok'; swell: SwellTrain; members_used: number; members_null: number }
   | { kind: 'no_usable_members'; members_null: number };
@@ -234,6 +242,93 @@ export function combine(sub: SubScores, p: EffectiveSpotParams, delta_q: number)
     weakest_link: weakest,
     correction: { delta_q, gate: 'no_file' },
   };
+}
+
+/**
+ * Forms the producer-only counterfactual while the exact damages and
+ * correction remain in scope. A missing named weakness has no candidate.
+ */
+export function counterfactualScore(
+  result: Pick<ScoreResult, 'sub' | 'damages' | 'weakest_link' | 'correction'>,
+): CounterfactualScore | undefined {
+  const damages = result.damages;
+  const deltaQ = result.correction.delta_q;
+  if (!Number.isFinite(deltaQ) || damages.some((item) => !isValidDamage(item))) {
+    throw new Error('counterfactual requires non-negative scored damages and finite correction');
+  }
+  if (new Set(damages.map((item) => item.factor)).size !== damages.length) {
+    throw new Error('counterfactual requires each scored factor at most once');
+  }
+  if (!hasExpectedDamageFactors(damages, result.sub)) {
+    throw new Error('counterfactual requires the complete scored-factor receipt for its sub-scores');
+  }
+  if (!isL10DamageOrder(damages)) {
+    throw new Error('counterfactual requires L10-ranked damage receipt');
+  }
+  const leadingDamage = damages[0]?.damage ?? 0;
+  if (result.weakest_link === null) {
+    if (leadingDamage > 0) {
+      throw new Error('counterfactual requires a named weakest factor for positive damage');
+    }
+    return undefined;
+  }
+  if (leadingDamage <= 0) {
+    throw new Error('counterfactual requires no named weakest factor for all-zero damage');
+  }
+  if (damages[0]?.factor !== result.weakest_link) {
+    throw new Error('counterfactual requires the named weakest factor to lead its damage receipt');
+  }
+  const namedDamage = damages.find((item) => item.factor === result.weakest_link);
+  if (namedDamage === undefined) {
+    throw new Error('counterfactual requires the named weakest factor in its damage receipt');
+  }
+  const totalDamage = damages.reduce((sum, item) => sum + item.damage, 0);
+  const remainingDamage = Number.isFinite(totalDamage) && Number.isFinite(namedDamage.damage)
+    ? totalDamage - namedDamage.damage
+    : damages
+      .filter((item) => item.factor !== result.weakest_link)
+      .reduce((sum, item) => sum + item.damage, 0);
+  const q_without = clamp(Math.exp(-remainingDamage) + deltaQ, 0, 1);
+  return { q_without, score_q: Math.round(100 * q_without) };
+}
+
+function isValidDamage(value: { factor: Factor; damage: number }): boolean {
+  return FACTOR_ORDER.includes(value.factor) && !Number.isNaN(value.damage) && value.damage >= 0;
+}
+
+function hasExpectedDamageFactors(
+  damages: readonly { factor: Factor; damage: number }[],
+  sub: SubScores,
+): boolean {
+  const expected = expectedDamageFactors(sub);
+  return damages.length === expected.length && expected.every((factor) => damages.some((item) => item.factor === factor));
+}
+
+function expectedDamageFactors(sub: SubScores): readonly Factor[] {
+  if (!isValidSubScore(sub.dir) || !isValidSubScore(sub.size)
+    || (sub.wind !== null && !isValidSubScore(sub.wind))
+    || (sub.tide !== null && !isValidSubScore(sub.tide))) {
+    throw new Error('counterfactual requires finite unit sub-scores');
+  }
+  return [
+    'dir',
+    'size',
+    ...(sub.wind === null ? [] : ['wind' as const]),
+    ...(sub.tide === null ? [] : ['tide' as const]),
+  ];
+}
+
+function isValidSubScore(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1;
+}
+
+function isL10DamageOrder(damages: readonly { factor: Factor; damage: number }[]): boolean {
+  return damages.every((item, index) => {
+    const previous = damages[index - 1];
+    if (previous === undefined) return true;
+    return previous.damage > item.damage
+      || (previous.damage === item.damage && FACTOR_ORDER.indexOf(previous.factor) < FACTOR_ORDER.indexOf(item.factor));
+  });
 }
 
 export function blend(members: DeclaredMember[]): BlendResult {
