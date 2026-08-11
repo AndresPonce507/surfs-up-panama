@@ -8,12 +8,10 @@ Feature: The last forecast still reads when the signal drops
   site with no account, no deployed resource and no live origin: the signal is
   cut at the server, which is what an unreachable origin looks like to a phone.
 
-  One thing is deliberately absent and must stay absent. The settled offline
-  copy is two sentences, and the second one, "Los reportes que mandes quedan
-  guardados.", promises a queue that does not exist until slice-03 builds it.
-  No slice ships a sentence that is untrue at the moment it ships, so sentence
-  one lands here and sentence two lands with the queue. The scenario below
-  asserts its absence on purpose. Do not "fix" it by adding the sentence.
+  The settled offline copy arrives in two honest stages. Sentence one lands
+  with the reading fallback; slice-03 adds "Los reportes que mandes quedan
+  guardados." only after the phone has a real queue. With zero reports waiting,
+  the promise remains but there is no invented queue box to show.
 
   @slice-01 @walking_skeleton @driving_port @real-io @covers-R1 @covers-R2 @covers-R14 @covers-R38
   Scenario: A surfer parked at Venao with one bar still reads the last forecast that loaded
@@ -32,12 +30,12 @@ Feature: The last forecast still reads when the signal drops
     And the same forecast is on the screen, with the time stamp it already carried
     And nothing on the screen is a browser error page
 
-  @slice-01 @driving_port @real-io @error @covers-R3 @covers-R4 @covers-R38 @covers-R41
+  @slice-01 @slice-03 @driving_port @real-io @error @covers-R3 @covers-R4 @covers-R38 @covers-R41
   Scenario: With nothing saved for what they asked for, no signal lands on plain Spanish words
     Given a surfer has read the home page with signal
     When the signal drops and the surfer opens a spot they have never opened
     Then the sin señal page reads the settled first sentence with the hour we last saw
-    And the page does not promise that reports get saved
+    And no queue box is shown when no report is waiting
     And nothing on the page is English, machine text or a raw timestamp
     And nothing on the screen is a browser error page
 

@@ -10,7 +10,6 @@ import assert from 'node:assert/strict';
 
 import {
   OFFLINE_SENTENCE_ONE_PREFIX,
-  OFFLINE_SENTENCE_TWO,
   READING_SESSION_REQUEST_CEILING,
   UNVISITED_SPOT,
   VISITED_SPOT,
@@ -290,17 +289,16 @@ Then(
   },
 );
 
-Then('the page does not promise that reports get saved', { timeout: 60_000 }, async function (this: object) {
+Then('no queue box is shown when no report is waiting', { timeout: 60_000 }, async function (this: object) {
   const state = scenarioState(this);
-  const now = await screenText(state);
-  assert.ok(
-    !now.includes(OFFLINE_SENTENCE_TWO),
-    `WHAT: the page says ${JSON.stringify(OFFLINE_SENTENCE_TWO)} and that is not true yet. `
-      + 'WHY: no report can be saved until the queue exists, and no slice ships a sentence that '
-      + 'is untrue at the moment it ships. This is deliberate staging, not a missing string: '
-      + 'sentence one lands here, sentence two lands with the queue in slice-03, both word for '
-      + 'word from application-architecture.md section 10. '
-      + `HOW: render sentence one only until the queue is real.${failureContext(state)}`,
+  const page = await phonePage(state);
+  const queueBox = await page.locator('[data-field="queued-report"]').count();
+  assert.equal(
+    queueBox,
+    0,
+    'WHAT: the sin señal page shows a waiting-report box even though the phone queue is empty. '
+      + 'WHY: a baked or invented count is false reassurance when there is nothing to send. '
+      + `HOW: compose the box only from the queue the helper reads at serve time.${failureContext(state)}`,
   );
 });
 

@@ -505,6 +505,111 @@
       "s": "EXECUTED",
       "d": "PASS: revision commit 267c06e (feat(signal): back off queued report retries - step 03-03) contains the bounded retry implementation, direct worker timer proof, and preceding RED/GREEN evidence. G7 PASS: all mapped pre-commit gates were green before the resulting revision was created.",
       "t": "2026-08-11T02:45:00Z"
+    },
+    {
+      "sid": "03-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: scoped GREEN independently rerun. Cucumber exact scenarios 2/2, 32/32 steps: 03-04 keeps a 4xx refusal without automatic retry; 03-05 drives real Chromium offline to an unvisited spot and observes the served /sin-senal surface, not home, through the /sin-senal-only settled second sentence plus the live one-report box and Spanish error.what. Focused offline-flush unit tests 3/3; typecheck PASS; production build PASS, including /sin-senal at 2,862 B gz under 3,072 B ceiling. No skips.",
+      "t": "2026-08-11T03:07:13Z"
+    },
+    {
+      "sid": "03-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-11T03:09:39Z"
+    },
+    {
+      "sid": "03-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-11T03:23:55Z"
+    },
+    {
+      "sid": "03-05",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "FAIL: direct-worker later returned-signal trigger posted retained 400 error.what refusal again (2 !== 1).",
+      "t": "2026-08-11T03:24:06Z"
+    },
+    {
+      "sid": "03-05",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "FAIL: real Chromium navigation to an unvisited route with signal cut reaches /sin-senal but the required second settled sentence is absent.",
+      "t": "2026-08-11T03:25:21Z"
+    },
+    {
+      "sid": "03-05",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "FAIL: the worker does not retain the 400 response error.what beside the queued label.",
+      "t": "2026-08-11T03:25:21Z"
+    },
+    {
+      "sid": "03-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: baseline policy verification: a refused report remains queued and is not automatically sent again.",
+      "t": "2026-08-11T03:25:21Z"
+    },
+    {
+      "sid": "03-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-11T03:25:58Z"
+    },
+    {
+      "sid": "03-04/03-05",
+      "p": "MIGRATE_LEGACY_PHASE_RECORD",
+      "s": "EXECUTED",
+      "d": "SUPERSEDES NONE: the earlier unordered 03-04/03-05 records remain as historical observations, not a valid phase chronology. This fresh atomic replay is the canonical evidence for the one vertical that combines worker policy and its only rendered surface. The two acceptance-strengthening assertions below are authorized by independent review because they cover roadmap criteria that the earlier pre-authorized sentence-removal amendment did not prove: zero queue means no box, and refusal reason has no home/toast bridge.",
+      "t": "2026-08-11T04:25:08Z"
+    },
+    {
+      "sid": "03-04/03-05",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: active scope is public/sw.js, sin-senal, the authored queue/offline acceptance scenarios, offline-flush unit proof, and this execution log. Exact active acceptance set: refusal stays queued and off home; refused report reaches /sin-senal; empty queue reaches /sin-senal with no box. No acceptance assertion was weakened or skipped.",
+      "t": "2026-08-11T04:25:08Z"
+    },
+    {
+      "sid": "03-04/03-05",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: temporary production-only mutation made queuedReportBox return no markup; the real-Chromium refused-report journey failed semantically at the settled one-report-box assertion. Restored without touching the scenario or step assertion.",
+      "t": "2026-08-11T04:25:08Z"
+    },
+    {
+      "sid": "03-04/03-05",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: temporary production-only mutation removed the retained-refusal exclusion from the worker flush filter; the shipped-worker proof failed semantically twice with 2 !== 1, for supplied error.what and missing error.what. Restored without touching the unit assertions.",
+      "t": "2026-08-11T04:25:08Z"
+    },
+    {
+      "sid": "03-04/03-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: restored worker and exact built surface. Target real-Chromium acceptance 3 scenarios/47 steps covers refusal kept off home, refusal shown only after offline navigation to /sin-senal, and zero queue with no box. Full units 107/107, focused worker units 4/4, typecheck, and build/page-weight pass; /sin-senal is 2,862 B gz under its 3,072 B ceiling. No skips in these gates. Test budget: 2 worker behaviors x 2 = 4, 4 focused worker tests.",
+      "t": "2026-08-11T04:25:42Z"
+    },
+    {
+      "sid": "03-05",
+      "p": "UI_CHECKS",
+      "s": "EXECUTED",
+      "d": "PASS: roadmap U1-U7 commands are green: target Chromium acceptance supplies the rendered journey checks and npm run test:ui supplies emitted-build U2/U4/U6/U7 checks. Source-blind local Chromium U8 passed against the emitted worktree at 390x844 in light and dark with reduced motion: live refused queue shows the settled singular words and Spanish reason, no horizontal overflow, no animations, no console/page errors.",
+      "t": "2026-08-11T04:25:42Z"
+    },
+    {
+      "sid": "03-04/03-05",
+      "p": "FULL_SLICE_AUDIT",
+      "s": "BLOCKED",
+      "d": "OUT_OF_SCOPE BLOCK: full @feature-f-works-with-no-signal and @slice-03 run has 6 passing scenarios and 2 failing chained capture scenarios (111 passed, 1 skipped, 2 failed). Both failures begin at the f-tell owned static report form: Mandar times out and the required Guardado state never exists, so the subsequent flush has no report. This atomic worker/offline-surface change neither owns nor modifies capture. Scoped 03-04/03-05 acceptance and every applicable unit/build/UI gate remain green; this is not represented as a passing full-slice result.",
+      "t": "2026-08-11T04:27:30Z"
     }
   ]
 }
