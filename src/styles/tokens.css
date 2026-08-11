@@ -103,6 +103,24 @@
   --tap: 44px;
 }
 
+/* The hero is an existing component surface. Its content resolves through
+   the named token scope here, so the palette remains the sole colour source
+   and components.css remains a consumer rather than a second palette. */
+:root ol.ranked li:first-child {
+  --ink: var(--hero-ink);
+  --ink-2: var(--hero-ink-2);
+  color: var(--hero-ink);
+}
+
+:root ol.ranked li:first-child > p {
+  color: var(--hero-ink-2);
+}
+
+:root ol.ranked li:first-child > details.confidence > summary,
+:root ol.ranked li:first-child > details.confidence > div {
+  --ink: var(--hero-ink-2);
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     /* colour — night. Values from adr-blue-tropical-glass-palette.md
