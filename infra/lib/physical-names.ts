@@ -19,6 +19,8 @@ export const functionNames = {
   'photo-presign': 'surfs-up-panama-photo-presign',
   resize: 'surfs-up-panama-resize',
   breaker: 'surfs-up-panama-breaker',
+  'learning-nightly': 'surfs-up-panama-learning-nightly',
+  'learning-monthly': 'surfs-up-panama-learning-monthly',
 } as const;
 
 export const opsAlarmTopicName = 'surfs-up-panama-alarms';

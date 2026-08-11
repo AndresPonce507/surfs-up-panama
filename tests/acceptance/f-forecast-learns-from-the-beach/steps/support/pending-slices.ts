@@ -22,7 +22,6 @@
 import { Before } from '@cucumber/cucumber';
 
 const PENDING_SLICES = [
-  'slice-06',
   'slice-07',
 ] as const;
 

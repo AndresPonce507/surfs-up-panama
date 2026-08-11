@@ -91,3 +91,16 @@ export const costAllocationTag = {
   'cost-allocation-tag-key': 'Project',
   'cost-allocation-tag-value': 'surfs-up-panama',
 } as const;
+
+// Slice-06 (F-FORECAST-LEARNS-FROM-THE-BEACH): the learning jobs. The write
+// boundary is enforced by IAM, never by discipline (06-learning-layer.md
+// section 7): the nightly fit may write exactly its two shelves, the monthly
+// evaluation exactly its metrics shelf, and the complement is denied to both.
+export const learningJobDeclarations = {
+  'learning-nightly-schedule': 'daily-after-observation-export',
+  'learning-monthly-schedule': 'monthly-first-morning',
+  'learning-function-memory-mb': '1024',
+  'learning-nightly-write-scope': 'learned/corrections/v1/current/,learned/corrections/v1/history/',
+  'learning-monthly-write-scope': 'learned/metrics/v1/',
+  'learning-write-complement-denied': 'predictions/,log/,data/spots/,data/config/,learned/overrides/',
+} as const;

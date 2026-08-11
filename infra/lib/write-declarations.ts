@@ -26,8 +26,9 @@ export const breakerAlarmPeriodSeconds = 300;
 export const defaultReservedConcurrency = 2;
 
 // The sum every deploy actually reserves, counted from the synthesized
-// templates of the four real stacks: fetch 2 + build 2 (ingest), report 2 +
-// mint 1 + push 1 + photo-presign 1 + resize 2 + breaker 2 (write).
+// templates of the real stacks: fetch 2 + build 2 (ingest), nightly 1 +
+// monthly 1 (learning), report 2 + mint 1 + push 1 + photo-presign 1 +
+// resize 2 + breaker 2 (write).
 //
 // AWS rejects any reservation that would push the account's unreserved pool
 // below its minimum, so the rule is `quota - sum >= floor`. Both numbers are
@@ -51,7 +52,7 @@ export const defaultReservedConcurrency = 2;
 // 07-write-path section 7.2 item 0.15 no longer applies; the reservations
 // stay exactly as declared because they are the cost control.
 // See aws-permission-inventory.md sections 1.2 and 9.
-export const reservedConcurrencySum = 13;
+export const reservedConcurrencySum = 15;
 
 // Observed, never assumed. Update only from a real API read.
 // Quota re-read 2026-08-10 (lookup role). The floor was last OBSERVED as 10

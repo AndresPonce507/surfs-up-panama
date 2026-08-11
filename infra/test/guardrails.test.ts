@@ -11,6 +11,7 @@ import {
   createGuardrailStack,
   app,
   ingestStack,
+  learningStack,
   observabilityStack,
   siteStack,
   stack,
@@ -20,6 +21,7 @@ import {
   archiveBucketVersioning,
   costAllocationTag,
   guardrailDeclarations,
+  learningJobDeclarations,
   lifecycleRules,
   predictionLifecyclePolicy,
 } from '../lib/guardrail-declarations.js';
@@ -34,6 +36,11 @@ import {
   metricNamespace,
   siteOriginExportName,
 } from '../lib/physical-names.js';
+import {
+  learningReservedConcurrency,
+  learningScheduleExpressions,
+  learningTimeoutSeconds,
+} from '../lib/learning-stack.js';
 import {
   BUILD_SUCCESS_EVENT,
   INGEST_SUCCESS_EVENT,
@@ -453,6 +460,7 @@ const cloudAssembly = app.synth();
 const realStacks = {
   site: Template.fromStack(siteStack),
   ingest: Template.fromStack(ingestStack),
+  learning: Template.fromStack(learningStack),
   observability: Template.fromStack(observabilityStack),
   write: Template.fromStack(writeStack),
 } as const;
@@ -477,6 +485,8 @@ const declaredRealTimeouts: Readonly<Record<string, number>> = {
   [functionNames['photo-presign']]: 5,
   [functionNames.resize]: 60,
   [functionNames.breaker]: 10,
+  [functionNames['learning-nightly']]: learningTimeoutSeconds,
+  [functionNames['learning-monthly']]: learningTimeoutSeconds,
 };
 
 const declaredRealReservedConcurrency: Readonly<Record<string, number>> = {
@@ -488,6 +498,8 @@ const declaredRealReservedConcurrency: Readonly<Record<string, number>> = {
   [functionNames['photo-presign']]: writeReservedConcurrency['photo-presign'],
   [functionNames.resize]: 2,
   [functionNames.breaker]: 2,
+  [functionNames['learning-nightly']]: learningReservedConcurrency,
+  [functionNames['learning-monthly']]: learningReservedConcurrency,
 };
 
 function allRealResources(type: string): SynthesizedResource[] {
@@ -504,7 +516,7 @@ describe('real stack guardrails: Lambda cost caps (guardrails 1 and 2)', () => {
       reserved: numberProperty(properties, 'ReservedConcurrentExecutions'),
     }));
 
-  it('deploys exactly the eight declared functions, no strays', () => {
+  it('deploys exactly the declared functions, no strays', () => {
     expect(functions.map(({ name }) => name).sort())
       .toEqual(Object.keys(declaredRealTimeouts).sort());
   });
@@ -523,7 +535,7 @@ describe('real stack guardrails: Lambda cost caps (guardrails 1 and 2)', () => {
     }
   });
 
-  it('keeps the account-wide reservation sum at the documented 13, so quota >= 113 is the deploy precondition', () => {
+  it('keeps the account-wide reservation sum at the documented value, so quota >= 115 is the deploy precondition', () => {
     const sum = functions.reduce((total, fn) => total + fn.reserved, 0);
     expect(sum).toBe(reservedConcurrencySum);
   });
@@ -533,6 +545,89 @@ describe('real stack guardrails: Lambda cost caps (guardrails 1 and 2)', () => {
     expect(logGroups.length).toBe(functions.length);
     for (const logGroup of logGroups) {
       expect(numberProperty(logGroup.properties, 'RetentionInDays'), logGroup.logicalId).toBe(declaredLogRetention);
+    }
+  });
+});
+
+describe('real stack guardrails: declaration-stage learning jobs', () => {
+  const functions = synthesizedResources('AWS::Lambda::Function', realTemplates.learning)
+    .map(({ logicalId, properties }) => ({
+      logicalId,
+      name: stringProperty(properties, 'FunctionName'),
+      memory: numberProperty(properties, 'MemorySize'),
+      reserved: numberProperty(properties, 'ReservedConcurrentExecutions'),
+      architecture: properties.Architectures,
+    }));
+  const allPolicies = synthesizedResources('AWS::IAM::Policy', realTemplates.learning)
+    .map(({ properties }) => JSON.stringify(properties));
+
+  it('declares both 1024 MB ARM64 jobs, and every value matches the controlled fixture contract', () => {
+    expect(learningJobDeclarations).toEqual({
+      'learning-nightly-schedule': 'daily-after-observation-export',
+      'learning-monthly-schedule': 'monthly-first-morning',
+      'learning-function-memory-mb': '1024',
+      'learning-nightly-write-scope': 'learned/corrections/v1/current/,learned/corrections/v1/history/',
+      'learning-monthly-write-scope': 'learned/metrics/v1/',
+      'learning-write-complement-denied': 'predictions/,log/,data/spots/,data/config/,learned/overrides/',
+    });
+    expect(functions).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: functionNames['learning-nightly'],
+        memory: 1024,
+        reserved: learningReservedConcurrency,
+        architecture: ['arm64'],
+      }),
+      expect.objectContaining({
+        name: functionNames['learning-monthly'],
+        memory: 1024,
+        reserved: learningReservedConcurrency,
+        architecture: ['arm64'],
+      }),
+    ]));
+  });
+
+  it('schedules nightly after the export and monthly on the first morning, enabled with no retries', () => {
+    const schedules = synthesizedResources('AWS::Scheduler::Schedule', realTemplates.learning);
+    expect(schedules).toHaveLength(2);
+    expect(schedules.map(({ properties }) => ({
+      expression: stringProperty(properties, 'ScheduleExpression'),
+      description: stringProperty(properties, 'Description'),
+      state: stringProperty(properties, 'State'),
+      retries: ((properties.Target as Readonly<Record<string, unknown>>).RetryPolicy as Readonly<Record<string, unknown>>).MaximumRetryAttempts,
+    }))).toEqual(expect.arrayContaining([
+      {
+        expression: learningScheduleExpressions.nightly,
+        description: learningJobDeclarations['learning-nightly-schedule'],
+        state: 'ENABLED',
+        retries: 0,
+      },
+      {
+        expression: learningScheduleExpressions.monthly,
+        description: learningJobDeclarations['learning-monthly-schedule'],
+        state: 'ENABLED',
+        retries: 0,
+      },
+    ]));
+  });
+
+  it('allows only each job\'s declared write shelves and explicitly denies the protected complement', () => {
+    const allowPolicies = allPolicies.filter((policy) => policy.includes('"Effect":"Allow"') && policy.includes('s3:PutObject'));
+    const denyPolicies = allPolicies.filter((policy) => policy.includes('"Effect":"Deny"') && policy.includes('s3:PutObject'));
+    expect(allowPolicies.some((policy) => (
+      policy.includes('learned/corrections/v1/current/*')
+      && policy.includes('learned/corrections/v1/history/*')
+      && !policy.includes('learned/metrics/v1/*')
+    ))).toBe(true);
+    expect(allowPolicies.some((policy) => (
+      policy.includes('learned/metrics/v1/*')
+      && !policy.includes('learned/corrections/v1/current/*')
+      && !policy.includes('learned/corrections/v1/history/*')
+    ))).toBe(true);
+    expect(denyPolicies).toHaveLength(2);
+    for (const policy of denyPolicies) {
+      for (const prefix of ['predictions/', 'log/', 'data/spots/', 'data/config/', 'learned/overrides/']) {
+        expect(policy).toContain(`${prefix}*`);
+      }
     }
   });
 });

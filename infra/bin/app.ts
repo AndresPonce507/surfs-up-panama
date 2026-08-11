@@ -12,6 +12,7 @@ import {
   predictionLifecyclePolicy,
 } from '../lib/guardrail-declarations.js';
 import { IngestStack } from '../lib/ingest-stack.js';
+import { LearningStack } from '../lib/learning-stack.js';
 import { ObservabilityStack } from '../lib/observability-stack.js';
 import { projectAccountId, projectRegion } from '../lib/physical-names.js';
 import { SiteStack } from '../lib/site-stack.js';
@@ -122,16 +123,18 @@ export function createGuardrailStack(
 
 export const stack = createGuardrailStack(app);
 
-// The four real stacks (system-architecture.md section 11). Deploy order is
-// mandated: site, ingest, observability first (read side), write LAST. Synth
+// The real stacks. Deploy order is mandated: site, ingest, observability and
+// learning first (read side), write LAST. The learning member is declaration
+// only until its two external deployment prerequisites are cleared. Synth
 // stays credential-free: no lookups, environment pinned by literal.
 const env = { account: projectAccountId, region: projectRegion };
 export const siteStack = new SiteStack(app, 'SurfsUpPanamaSite', { env });
 export const ingestStack = new IngestStack(app, 'SurfsUpPanamaIngest', { env });
 export const observabilityStack = new ObservabilityStack(app, 'SurfsUpPanamaObservability', { env });
+export const learningStack = new LearningStack(app, 'SurfsUpPanamaLearning', { env });
 export const writeStack = new WriteStack(app, 'SurfsUpPanamaWrite', { env });
 
-for (const realStack of [siteStack, ingestStack, observabilityStack, writeStack]) {
+for (const realStack of [siteStack, ingestStack, observabilityStack, learningStack, writeStack]) {
   Tags.of(realStack).add(
     costAllocationTag['cost-allocation-tag-key'],
     costAllocationTag['cost-allocation-tag-value'],
