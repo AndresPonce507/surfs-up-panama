@@ -379,6 +379,13 @@
       "s": "EXECUTED",
       "d": "PASS: se_gate = max(se_sample, 0.5 * sigma_eff / sqrt(n)) is pure, gate-returned, and persisted for height and score; focused acceptance/unit evidence 20/20 passes",
       "t": "2026-08-11T15:16:25Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: approved implementation committed as 3be9a7bdfeff94a18094dcd3b5cfdfff26a7bae5 (feat(learning): floor gate errors at physical noise)",
+      "t": "2026-08-11T15:19:52Z"
     }
   ]
 }
