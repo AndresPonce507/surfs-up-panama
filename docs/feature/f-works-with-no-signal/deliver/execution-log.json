@@ -666,6 +666,90 @@
       "s": "EXECUTED",
       "d": "PASS: approved Slice-05 revision b840d24 (feat(signal): install as an app - steps 05-01..05-03) contains only the manifest, two favicon-derived PNG icons, additive Base manifest link, staged footer seam and hint markup, and preceding evidence. G7 PASS: independent review approved the reproducible current-fixture run: Slice-05 acceptance 3 scenarios/34 steps, 107/107 units with the narrow temporary wind contract, typecheck, build/page-weight, test:ui, and source-blind Chromium U8 all green. The temporary data and test support were restored before staging and are excluded.",
       "t": "2026-08-11T05:26:10Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: clean isolated base 65933fbd64410f2c916ac57990bb9b5718269cf7 already contains the accepted local idempotent receipt boundary. Scope is the shipped worker, authored Slice-04 contracts, focused worker proof, and durable evidence only. No deployed Function URL or physical-device proof is claimed.",
+      "t": "2026-08-11T14:26:46Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "INHERITED_GREEN: the active real-local Chromium scenario 'The phone never decides a report already went; it asks, and the site answers' passed 1 scenario, 24 steps, and 3 hooks. It proves every queued record is asked about and a site-owned duplicate receipt leaves no phone entry. The contract was already active and no acceptance, unit, or production edit was required.",
+      "t": "2026-08-11T14:26:46Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "INHERITED_GREEN: the active real-local Chromium scenario 'A report the site already had is answered exactly like the first time' passed 1 scenario, 24 steps, and 3 hooks. The accepted pre-renderer oracle is success receipt, no queued label, one stored record, and no failure words; word-for-word reveal equality remains the documented f-tell Slice-04 amendment. test:ui and test:e2e passed, including the mobile contrast/touch audit. Source-blind U8 initially encountered concurrent-build contention, then passed serially: 1 scenario, 24 steps, and 3 hooks. No external proof is claimed.",
+      "t": "2026-08-11T14:26:46Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "RED_FALSIFIABILITY",
+      "s": "EXECUTED",
+      "d": "PASS: after rebuilding the emitted worker, a temporary production-only mutation made the final replay filter select no queued records. The lost-answer Chromium scenario failed semantically at 'the site was asked 0 time(s); this journey needs exactly two' (0 !== 2). The exact filter was restored without touching the authored scenario.",
+      "t": "2026-08-11T14:26:46Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: restored lost-answer scenario passed 1 scenario, 26 steps, and 3 hooks; git diff --check and the public/sw.js scoped diff were clean. The full active Slice-04 set then passed 3 scenarios, 74 steps, and 3 hooks. Focused public-worker proof tests/unit/offline-flush.test.ts passed 4/4 and executes public/sw.js through the worker message port. Test budget: 3 behaviors x 2 = 6 maximum; 4 focused worker tests, no new tests.",
+      "t": "2026-08-11T14:26:46Z"
+    },
+    {
+      "sid": "04-01..04-03",
+      "p": "FULL_GATE",
+      "s": "BLOCKED",
+      "d": "OUT_OF_SCOPE BLOCK: npm run ci:local reported the inherited TypeScript TS18046 at tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/steps/glass-fallback-first.steps.ts:285 and six historical gitleaks findings. Its Signal-relevant unit, UI, dependency, and infrastructure jobs passed before the prior session interruption. No owned path was modified to mask either baseline failure.",
+      "t": "2026-08-11T14:26:46Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "RED",
+      "s": "INHERITED_GREEN",
+      "d": "NOT_APPLICABLE: the DISTILL-authored real-local acceptance contract was already active and green on the release candidate. No behavior was changed in this closure, so manufacturing a failing test would be false evidence. The accepted prerequisite is the local idempotent receipt boundary: queued_duplicate returns the original receipt without another stored record.",
+      "t": "2026-08-11T15:54:58Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "RED",
+      "s": "INHERITED_GREEN",
+      "d": "NOT_APPLICABLE: the authored duplicate-reveal acceptance was already green on cadc46a. It stays unmodified. The current local Chromium recheck is recorded under GREEN, and the source-blind check is recorded separately when complete.",
+      "t": "2026-08-11T15:54:58Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS: production-only controlled falsification changed the final replay filter to select no records. After emitted-worker build, the authored lost-ack scenario failed semantically: the site was asked 0 time(s), expected exactly 2 (0 !== 2). The test was not edited.",
+      "t": "2026-08-11T15:54:58Z"
+    },
+    {
+      "sid": "04-01..04-03",
+      "p": "GREEN_RECHECK",
+      "s": "EXECUTED",
+      "d": "PASS on release candidate cadc46a: after npm ci, real-local Chromium Slice-04 acceptance passed 3 scenarios, 74 steps, and 3 hooks. Focused public-worker tests passed 4/4. After restoration, the exact lost-ack scenario passed 1 scenario, 26 steps, and 3 hooks; build and the public/sw.js scoped diff check passed.",
+      "t": "2026-08-11T15:54:58Z"
+    },
+    {
+      "sid": "04-01..04-03",
+      "p": "FULL_GATE_RECHECK",
+      "s": "NOT_MET",
+      "d": "npm run ci:local on cadc46a ran to completion. Typecheck, gitleaks, supply-chain, deps, UI, and 354 unit/in-process tests passed. Global Cucumber reported 232 passed, 18 skipped, and 40 failed of 290 scenarios. Failures are outside Signal: Docker is unavailable for active Infra, active Push lacks planSendReactions export, and Report scenarios require a deployed Function URL. This lane neither modified those paths nor deployed, so the full repository gate is truthfully not green.",
+      "t": "2026-08-11T15:54:58Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "U8",
+      "s": "EXECUTED",
+      "d": "PASS: source-blind rerun on quiet cadc46a executed only the exact duplicate-receipt Chromium scenario, passing 1 scenario, 24 steps, and 3 hooks in 2.429s. A 390x844 post-hydration local surface showed the surf heading, day navigation, 20 ranked calls, and no browser-visible error. Examiner read no source, tests, diffs, logs, or git material and made no edits. Deployed Function URL and physical-device proof remain unclaimed.",
+      "t": "2026-08-11T15:55:00Z"
     }
   ]
 }
