@@ -77,4 +77,42 @@ describe('scorecard projection rebuild — immutable log contract', () => {
       }),
     );
   });
+
+  it('keeps every pairable stored report in the display counter while nonzero trust rules gate claims only', () => {
+    const reports: SurfReport[] = [
+      ...Array.from({ length: 10 }, (_, index) => ({
+        spot_id: 'playa-venao',
+        device_id: `veteran-${index}`,
+        observed_at: `2026-08-${String(index + 1).padStart(2, '0')}T12:00:00Z`,
+        size_band: 'waist_chest',
+        quality: 'good',
+        credential_issued_at: '2026-07-01T00:00:00Z',
+        received_at: `2026-08-${String(index + 1).padStart(2, '0')}T12:00:00Z`,
+        predicted: { score_q: 70 },
+      })),
+      {
+        spot_id: 'playa-venao',
+        device_id: 'young-reporter',
+        observed_at: '2026-08-20T12:00:00Z',
+        size_band: 'waist_chest',
+        quality: 'good',
+        credential_issued_at: '2026-08-20T11:00:00Z',
+        received_at: '2026-08-20T12:00:00Z',
+        predicted: { score_q: 70 },
+      },
+    ];
+    const sourcePredictions = predictionsFor(reports);
+    const result = projection.projectScorecard({
+      predictions: [...sourcePredictions, ...sourcePredictions.map((prediction) => ({ ...prediction, source: 'dwd_gwam' }))],
+      reports,
+      trustConfig: { min_credential_age_days: 7, min_prior_reports: 0, min_prior_spots: 2 },
+      resolveReporter: (deviceId) => deviceId,
+      asOf: '2026-08-30T12:00:00Z',
+    });
+
+    const block = result.blocks['playa-venao'];
+    assert.ok(block, 'a spot with pairable stored reports has a display block even when trust filtering removes samples from claim evidence');
+    assert.equal(block.n_obs, reports.length, 'the display counter counts all pairable stored reports, including trust-ineligible ones');
+    assert.equal(block.n_reporters, 10, 'only trust-eligible reporters contribute to the claim gate');
+  });
 });

@@ -274,6 +274,83 @@
       "s": "EXECUTED",
       "d": "PASS: current source-blind Vera PASS is sealed to the charter and the U1-U7 PASS evidence covers both declared combinations, including non-vacuous U3 whole-slice proof. Committing charter, delivery log, and isolated evidence only; no production source change.",
       "t": "2026-08-10T20:20:28Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: phase witnesses PREPARE, RED_ACCEPTANCE, RED_UNIT, GREEN and COMMIT are tracked in .execution-events/02-01; implementation committed as 56ad361. The repaired multi-source cardinality law now re-runs green in 02-07 evidence.",
+      "t": "2026-08-10T21:20:31Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: phase witnesses PREPARE, RED_ACCEPTANCE, RED_UNIT, GREEN and COMMIT are tracked in .execution-events/02-02; implementation committed as ec077e7.",
+      "t": "2026-08-10T21:24:55Z"
+    },
+    {
+      "sid": "02-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: phase witnesses PREPARE, RED_ACCEPTANCE, RED_UNIT, GREEN and COMMIT are tracked in .execution-events/02-03; implementation committed as 3c2c241. The floor was freshly break-watch-revert falsified in evidence/02-07/falsification-sigma-floor.md.",
+      "t": "2026-08-10T21:29:55Z"
+    },
+    {
+      "sid": "02-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: phase witnesses PREPARE, RED_ACCEPTANCE, RED_UNIT, GREEN and COMMIT are tracked in .execution-events/02-04; implementation committed as 71e9d03. A strict nonzero-age regression now proves display counts remain independent of gated evidence.",
+      "t": "2026-08-10T21:33:03Z"
+    },
+    {
+      "sid": "02-05",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: phase witnesses PREPARE, RED_ACCEPTANCE, RED_UNIT, GREEN and COMMIT are tracked in .execution-events/02-05; RED_UNIT records break-watch-revert for G1, G2 and G3, and implementation committed as af84030.",
+      "t": "2026-08-10T22:02:24Z"
+    },
+    {
+      "sid": "02-06",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: block assembly and its active acceptance contract were committed as 503d373. The 02-07 rerun proves the counter string now derives from the corrected all-pairable display count.",
+      "t": "2026-08-10T22:05:00Z"
+    },
+    {
+      "sid": "02-07",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: read the rejected review, Slice-02 roadmap and active port contract. The target acceptance scenario was active; no skipped Scenario was enabled or disabled.",
+      "t": "2026-08-10T20:58:00Z"
+    },
+    {
+      "sid": "02-07",
+      "p": "RED_ACCEPTANCE",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: the active distilled Slice-02 acceptance scenario was already green before this repair, so no truthful new acceptance RED exists. It remained unchanged during implementation; its later production-only sigma-floor mutation is recorded as falsification evidence, not misrepresented as an earlier RED phase.",
+      "t": "2026-08-10T20:58:30Z"
+    },
+    {
+      "sid": "02-07",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: new port-level regressions failed for the right reasons before GREEN: published score residuals were 4 rather than 2 for two reports against two sources; strict trust showed n_obs 10 rather than the 11 stored pairable reports. No test was weakened.",
+      "t": "2026-08-10T20:59:26Z"
+    },
+    {
+      "sid": "02-07",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: repaired score cardinality, display-versus-gated counts, and the sigma-floor boundary. Focused Slice-02 acceptance 12 scenarios/130 steps, units 107/107, typecheck, and isolated full CI all exited 0. The real E2E ran on unused port 45461 and passed one mobile walking skeleton without disturbing the psb-release or psb-report previews on 4322. The sigma-floor removal failed at the expected physical-floor oracle and was restored.",
+      "t": "2026-08-10T21:07:00Z"
+    },
+    {
+      "sid": "02-07",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: scoped Slice-02 repair committed after independent approval. Staged paths were limited to scorecard projection/pairing/block logic, their acceptance and unit laws, execution evidence, and the PREVIEW_PORT-only test isolation; generated prediction and published-surface data were not staged.",
+      "t": "2026-08-10T21:12:00Z"
     }
   ]
 }

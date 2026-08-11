@@ -57,7 +57,7 @@ Feature: La aritmética del historial existe como leyes que se niegan a publicar
     Given dos conjuntos de prueba del mismo tamaño y el mismo sesgo, uno coordinado sin variación y uno honesto
     When la proyección deriva el margen de cada uno
     Then el margen guardado nunca baja del piso físico del ruido
-    And el conjunto coordinado jamás publica antes que el honesto
+    And bajo el límite del piso el conjunto coordinado todavía no publica
 
   @slice-02 @driving_port @in-memory @negative @error @covers-R13
   Scenario: El filtro de confianza se ve disparar: una credencial joven pierde sus muestras

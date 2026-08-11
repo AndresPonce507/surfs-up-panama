@@ -41,6 +41,8 @@ export type ScorecardBlock = {
  */
 export type BlockInputs = {
   readonly pairedObservations: number;
+  /** The surfer-facing counter counts pairable stored reports, not gated evidence. */
+  readonly displayObservations?: number;
   readonly distinctTrustEligibleReporters: number;
   readonly biasClause: ClauseResult;
 };
@@ -48,11 +50,12 @@ export type BlockInputs = {
 /** Builds the block from already-counted inputs and the gate's decision. */
 export const decideScorecardBlock = (inputs: BlockInputs): ScorecardBlock => {
   const decision = decidePublishGate(inputs);
+  const displayObservations = inputs.displayObservations ?? inputs.pairedObservations;
   return {
-    n_obs: inputs.pairedObservations,
+    n_obs: displayObservations,
     n_reporters: inputs.distinctTrustEligibleReporters,
     threshold: REPORTS_REQUIRED,
-    counter: `${inputs.pairedObservations} / ${REPORTS_REQUIRED}`,
+    counter: `${displayObservations} / ${REPORTS_REQUIRED}`,
     claim_ok: decision.claimOk,
   };
 };
