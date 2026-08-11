@@ -1,0 +1,1143 @@
+{
+  "roadmap": {
+    "project_id": "f-works-with-no-signal",
+    "created_at": "2026-08-09T00:00:00Z",
+    "total_steps": 29,
+    "quality_contract_version": 1
+  },
+  "phases": [
+    {
+      "id": "01",
+      "name": "Slice-01: the last forecast still reads when the signal drops",
+      "description": "The offline helper and the sin senal page land together. One step owns all three shipped-gate amendments plus the page, because the weight gate refuses an undeclared document from inside astro build. The Base.astro registration snippet is recorded, not built: it is the REACH lane's seam.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "01-01",
+          "name": "Sin senal page lands and the weight gate counts it",
+          "criteria": [
+            "The build emits a sin-senal document carrying the settled first sentence in plain Spanish, no English, no machine text, no raw timestamp.",
+            "The document never promises that reports get saved; the second settled sentence is absent by design until a queue exists.",
+            "The build page-weight measurement names the route with its bytes and its 3 KB ceiling, and no longer lists it as unbuilt.",
+            "No placeholder token is visible in any served state; a hour baked at build time is forbidden.",
+            "npm run build stays green: the declared route ceiling lands in the same commit as the emitted document."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/the-helper-keeps-its-discipline.feature",
+          "scenario_name": "The weight gate counts the sin señal page instead of calling it unbuilt",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-works-with-no-signal/a-surfer-parked-at-venao-with-one-bar-still-reads-the-last-forecast-that-loaded-and-with.md",
+          "u8_observation": "Abro la página sin señal a 390 px y leo, en español sencillo, que no hay señal y que esto es lo último que vimos. No aparece ni una palabra en inglés, ni un código, ni una fecha de máquina, y en ningún momento promete que los reportes queden guardados. Se ve terminada en tema claro y oscuro, y con movimiento reducido activado nada se anima.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-works-with-no-signal and @slice-01",
+              "--name",
+              "The weight gate counts the sin señal page instead of calling it unbuilt"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:ui"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-works-with-no-signal and @slice-01",
+              "--name",
+              "The weight gate counts the sin señal page instead of calling it unbuilt"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:ui"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-works-with-no-signal and @slice-01",
+              "--name",
+              "The weight gate counts the sin señal page instead of calling it unbuilt"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:ui"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:ui"
+            ]
+          },
+          "deps": [],
+          "files_to_modify": [
+            "src/pages/sin-senal.astro",
+            "src/i18n/routes.ts",
+            "scripts/page-weight-core.mjs",
+            "tests/acceptance/daily-call-with-permanent-receipts/steps/page-weight.steps.ts"
+          ],
+          "implementation_notes": "THREE GATE AMENDMENTS, ATOMIC WITH THE PAGE, VERIFIED AGAINST SOURCE. scripts/page-weight-core.mjs:257 refuses any emitted document that no declared route ceiling covers, and that check runs INSIDE astro build. The moment src/pages/sin-senal.astro exists without edit 1, npm run build fails outright and all 12 scenarios in this suite turn BROKEN rather than RED. All three edits therefore land in THIS step, in one commit with the page. (1) scripts/page-weight-core.mjs DECLARED_ROUTES (array ends line 62): add { shape: '/sin-senal', pattern: /^sin-senal\\.html$/, route: () => '/sin-senal', label: '3 KB', bytes: 3 * KB, reading: true }. (2) scripts/page-weight-core.mjs:68: remove '/sin-senal (3 KB), ' from DECLARED_BUT_UNBUILT; the sentence becomes false the moment the page is built and a gate that states a falsehood about its own coverage is worse than one that fails. (3) tests/acceptance/daily-call-with-permanent-receipts/steps/page-weight.steps.ts:88: DECLARED_BUT_UNBUILT_ROUTES becomes ['/acerca'] as const, consumed at line 591 which asserts each named route appears in the measurement's unbuilt line; edit 2 breaks that assertion until edit 3 lands. EDIT 3 IS KEYSTONE-OWNED TEST SURFACE AND IS A SERIALIZED CROSS-LANE DEPENDENCY: it is outside this lane's ordinary write boundary, it must be taken with the keystone lane's agreement and held for the shortest possible window, same convention f-tell slice-02 declared for the F-BILL guardrail files. Do not start this step while a keystone lane run is touching page-weight.steps.ts. COPY. The settled first sentence is 'Sin señal. Esto es lo último que vimos, de las ' plus the hour, word for word from application-architecture.md section 10. The SECOND settled sentence, 'Los reportes que mandes quedan guardados.', is FALSE until slice-03 builds the queue and a scenario asserts its ABSENCE on purpose. NO STEP IN THIS ROADMAP MAY ADD THAT SENTENCE. src/i18n/strings.ts is OUTSIDE this lane's file boundary, so the sentence lives in the page for now; FLAG the consolidation into strings.ts as owed to whoever owns that file. THE HOUR. Do not bake an hour at build time: that reports when the site was published, not when this phone last saw a forecast, which is a different and less honest claim. The document ships the sentence and a slot the helper fills at serve time (01-09). Constraint, not mechanism: no served state may show a placeholder token, an English word, a raw ISO timestamp or an em dash. If the crafter cannot fill the slot, the honest online fallback is the sentence without the hour clause, never a token. The scenario asserts the outcome, a plain clock hour after 'de las ', and never the mechanism. ROUTE. src/i18n/routes.ts gains the offline path builder; the page is 0 JS per application-architecture.md section 4. VISIBLE GATE. This is the only step in the slice that renders a NEW surface, so it is the only user-visible step. U2/U4/U6/U7 bind to npm run test:ui, which is scripts/check-ui-quality.mjs walking the whole dist and therefore covering sin-senal.html the moment it exists. ESTABLISH THE test:ui BASELINE BEFORE GREEN: it walks every document, so a pre-existing failure elsewhere would fail four mandates for reasons outside this slice. U1 (contrast), U3 (44 px targets) and U5 (honest empty state) need rendered geometry, which check-ui-quality.mjs explicitly disclaims, and NO SCENARIO IN THIS FEATURE CARRIES A @ui-uN TAG: DISTILL authored none. A tag-scoped run would select zero scenarios and exit 0, a vacuous PASS, which section 9's check:unfired-is-not-evidence clause forbids. Those three therefore bind to the real slice run, which exercises the page in Chromium at 390 px and can genuinely fail, but does not assert the mandate specifically. BLOCKER, escalate to the coordinator: DISTILL owes @ui-u1/@ui-u3/@ui-u5 scenarios and the charter file at docs/product/expectations/f-works-with-no-signal/ (feature-delta Pre-requisite 9b). des-verify-ui and the source-blind Vera pass cannot be honest until both land. THE CHARTER SLUG ABOVE IS DERIVED BY CONVENTION FROM THE THREE SIBLING WORKSPACES, NOT ATTESTED: no charter file exists for this feature. Whoever creates it must reconcile this charter_path in the same edit, or full-mode des-verify-integrity and the source-blind pass will both refuse the step for a missing charter. UI VERIFICATION IS DEFERRED TO THE END OF THE SLICE. Do NOT run des-verify-ui for this step after its own GREEN. U1, U3 and U5 bind to the whole-slice tag run, which cannot pass until the registration seam closes and every step lands, so an early run fails all three by construction and is evidence of nothing. Run des-verify-ui for 01-01 exactly once, after 01-12, with the seam closed. Cost note: each of the seven commands triggers a full npm run build and the three tag runs each drive the 90 second Chromium suite, so budget 10 to 15 minutes.",
+          "ui_checks_narrowing_note": "U1/U3/U5 were authored against the whole @slice-01 tag, which binds 13 scenarios across 12 steps. Only this step is implemented, so the unnarrowed filter failed for reasons outside this step and was evidence of nothing. Narrowed to this step's own scenario by the orchestrator 2026-08-10. The full-slice run still happens at 01-12, unchanged."
+        },
+        {
+          "id": "01-02",
+          "name": "Helper file, router table, write path never cached",
+          "criteria": [
+            "One helper file registers install, activate and fetch as independent listeners and dispatches every request through one pure router table.",
+            "The table matches application-architecture section 12 row for row; the write path POST is network-only and never written to or read from any cache.",
+            "The answer to a report that got through comes from the site, and nothing about that send is left on the phone.",
+            "A unit test drives the real shipped helper source, not a copy, so the tested table cannot drift from the served one."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/the-helper-keeps-its-discipline.feature",
+          "scenario_name": "A report that got through is answered by the site and left nowhere on the phone",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A request router inside the service worker. It changes where bytes come from, never a pixel; the only new rendered surface in this slice is the sin senal document, which carries the charter and the U1-U7 checks in 01-01.",
+          "ui_checks": {},
+          "deps": [],
+          "files_to_modify": [
+            "public/sw.js",
+            "tests/unit/sw-router-table.test.ts"
+          ],
+          "implementation_notes": "WHERE THE FILE LIVES, AND WHY THERE IS NO CHOICE. A service worker's scope defaults to its own directory, and overriding it needs a Service-Worker-Allowed header the static S3 origin cannot send. Astro emits imported assets under /_astro/ with hashed names, which would scope the helper to /_astro/. public/ is copied verbatim to the origin root, so public/sw.js is the ONLY zero-config path to scope '/'. astro.config.mjs and package.json are outside this lane's file boundary, so no bundling step is available; the helper is one self-contained classic worker script with no import and no export, which is also the widest iOS compatibility. src/sw/** stays empty unless the crafter can prove an emitted artifact lands at /sw.js without touching those two files. TESTING IT WITHOUT A SECOND COPY. The unit test reads the real public/sw.js text and evaluates it against a fabricated self that records the listener registrations, then invokes the captured fetch listener with fabricated requests. One router table on disk, no drift, and the DoD row 2 unit test is satisfied by the file that actually ships. ROUTER TABLE, verbatim from application-architecture.md section 12: reading HTML network-first with a 3 s timeout falling back to cache (01-04, 01-05); report screen 1 cache-first, its document being forecast-free by construction so staleness is harmless (01-07); hashed assets cache-first immutable (01-06); map and photo thumbs cache-first LRU capped around 5 MB; write path POST network-only, NEVER cached; reveal network-only no-store. THE WRITE-PATH ROW IS A FIXED CROSS-FEATURE CONTRACT (section 12 closure L4, and f-tell's delta plan note): it ships NOW, before any write path exists, because f-tell depends on the row and never edits this file. Any edit to that row by any lane is a contract violation, not a refactor. STRUCTURE FOR THE PUSH SEAT (01-11): one router table plus independent event-listener registrations, so a later push listener is a pure append. NO npm dependency, no framework, no build step; the whole file has a 3.0 KB gzipped ceiling measured in 01-12. Zero AWS and zero network beyond localhost: nothing in this slice may require an account, a deployed resource or a live origin."
+        },
+        {
+          "id": "01-03",
+          "name": "A planted answer is refused, never handed back",
+          "criteria": [
+            "With the signal gone, a send attempt is never answered from the phone, even when a matching answer sits planted in cache storage under the write path address.",
+            "The refusal is a property of the router table, not of an empty cache: the poisoned fixture is planted first and the gate is watched refusing it.",
+            "A unit test plants the same poisoned entry against the real helper source and pins the refusal."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/the-helper-keeps-its-discipline.feature",
+          "scenario_name": "With the signal gone, a planted answer is never handed back as if the report went out",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A refusal inside the request router with no write path on the surface yet. Its honest proof is the poisoned fixture being refused, which the acceptance scenario drives through the helper, not through any rendered state.",
+          "ui_checks": {},
+          "deps": [
+            "01-02"
+          ],
+          "files_to_modify": [
+            "public/sw.js",
+            "tests/unit/sw-router-table.test.ts"
+          ],
+          "implementation_notes": "THIS IS THE section 9 check:unfired-is-not-evidence PROOF, and the RED classification records that the plant itself already succeeds: the poisoned entry is real and present on the surface, waiting to be refused. A gate never seen firing proves nothing, so do not settle for 'the cache was empty anyway'. The scenario is deliberately built so the phone HAS a plausible cached answer under the write-path address and must still refuse to serve it. Falsifiability pass, per project CLAUDE.md: after green, weaken the write-path row deliberately, watch this scenario fail for the right reason, revert, and verify the revert with git diff. Two tests in this repository have already passed for accidental reasons. The write-path row must never be relaxed to make anything else pass; it is a contract with f-tell, which will send real reports through it in its slice-03."
+        },
+        {
+          "id": "01-04",
+          "name": "Cached forecast serves when the origin is unreachable",
+          "criteria": [
+            "Reading HTML is network-first: with signal the site answers, and the helper keeps the answer for next time.",
+            "With the origin unreachable the same forecast is on the screen, carrying the time stamp it already carried.",
+            "Nothing on the screen is a browser error page in any offline reading state.",
+            "The helper adds no header tricks: the age the surfer reads comes from the document itself."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/the-last-forecast-still-reads.feature",
+          "scenario_name": "A surfer parked at Venao with one bar still reads the last forecast that loaded",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The offline home page renders exactly the pixels the online home page rendered; this step changes the source of the bytes, not the design. No new visual surface is added, and src/pages/index.astro is outside this lane.",
+          "ui_checks": {},
+          "deps": [
+            "01-02"
+          ],
+          "files_to_modify": [
+            "public/sw.js",
+            "tests/unit/sw-router-table.test.ts"
+          ],
+          "implementation_notes": "THE WALKING SKELETON, and the one scenario whose first Then is 'the offline helper is running on their phone'. BLOCKED ON THE RECORDED SEAM: nothing installs until the registration snippet lands in the Base.astro head, which this lane may not write. See the cross_lane_seams block at the end of this roadmap. Every scenario in this suite except 01-01's depends on that one line; plan the work, expect RED until the coordinator clears the seam, and never fake a registration from another document to get green. HARNESS FACTS from the recorded RED, so the crafter reads failures correctly: the suite runs the real npm run build, serves the emitted dist over real HTTP with the static-host build.format 'file' mapping, and drives real Chromium at 390 px. astro preview is deliberately not used. The signal is cut AT THE SERVER: blackout destroys the socket on arrival, which is what an unreachable origin looks like to a phone, and Chromium's own offline emulation is not used because its propagation to service-worker fetches is the thing under test. Every response carries Cache-Control: no-store, so the browser's own HTTP cache cannot impersonate the helper and turn this scenario green with nothing installed. STAMP HONESTY: section 12 rules out signalling age through response headers, truth lives in the document. This step serves the cached document unchanged, so the stamp it already carried is the stamp the surfer reads. The relative age and the amber Viejo chip are slice-02 and are gated on the concurrent stamp BUGFIX lane; do not build them here."
+        },
+        {
+          "id": "01-05",
+          "name": "A stalled network gives up after three seconds",
+          "criteria": [
+            "A navigation against a server that accepts and never answers is abandoned at three seconds and served from cache instead.",
+            "The forecast is on the screen inside six seconds, carrying the time stamp it already carried.",
+            "The timeout races the network rather than waiting on it, and a fast network is never delayed by the guard.",
+            "A unit test drives the timeout with an injected clock, never with a real three second sleep."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/the-last-forecast-still-reads.feature",
+          "scenario_name": "A network that stalls gives up after three seconds and shows what we already had",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A timing guard inside the router. What the surfer sees afterwards is the same cached document 01-04 already serves; the observable here is elapsed time, measured by the harness, not a rendered difference.",
+          "ui_checks": {},
+          "deps": [
+            "01-04"
+          ],
+          "files_to_modify": [
+            "public/sw.js",
+            "tests/unit/sw-router-table.test.ts"
+          ],
+          "implementation_notes": "The recorded RED for this row is precise: the stalled network kept the surfer waiting 8003 ms and the page never arrived, because nothing gives up at three seconds. The harness stall condition ACCEPTS the connection and never answers, which is the only condition under which a three-second timeout can be watched firing; a blackout would short-circuit and prove nothing. Race the fetch against a timer and take whichever settles first, falling back to cache on timeout. The six-second acceptance window is the oracle, not the three-second number, so do not tune the timer to the window: three seconds is the settled section 12 value. Keep the clock injectable in the unit harness so the test costs milliseconds; a unit test that really sleeps three seconds will be deleted by the next person in a hurry. Do not let the abandoned request keep running unbounded, and never let a slow-but-alive network get a cached answer when the real one arrives inside the window."
+        },
+        {
+          "id": "01-06",
+          "name": "The small parts come from the phone offline",
+          "criteria": [
+            "Install precaches the small shared parts every route asks for on a first visit.",
+            "With the origin unreachable those parts are served from the phone, and the origin's cache storage is not empty.",
+            "Hashed assets are cache-first and treated as immutable; nothing is revalidated needlessly.",
+            "The precache list is explicit and small; it never grows to swallow the whole site."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/the-last-forecast-still-reads.feature",
+          "scenario_name": "The small parts the page draws itself with come from the phone when the signal is gone",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Cache population and asset strategy. Success looks identical on screen to a fully online visit, which is the point; the observable is the origin's cache storage contents and a real asset fetch with the origin down.",
+          "ui_checks": {},
+          "deps": [
+            "01-02"
+          ],
+          "files_to_modify": [
+            "public/sw.js",
+            "tests/unit/sw-router-table.test.ts"
+          ],
+          "implementation_notes": "The recorded RED is 'the phone is holding nothing at all ([])', and the oracle also does a real fetch of /favicon.svg with the origin unreachable, so the favicon is in the precache list by name. THE SIN SENAL DOCUMENT IS PRECACHED HERE TOO (application-architecture.md section 4, 3 KB, 0 JS): precaching is also what makes the offline page immune to the S3 URL-form trap HANDOFF.md section 10 records, where directory links 403 on the REST origin. The helper serves it from its own cache by name, never from the origin, so the emitted file name and the cached key must agree with the static-host build.format 'file' mapping the harness serves. Keep the list explicit and versioned with the cache name so activate can drop the old generation; public/ is inside this lane, so any asset the list names must actually exist in the build output. Request-count discipline (01-10) is a product property, not an aside: a precache list that grows inflates first-visit requests and regresses F-BILL-STAYS-ZERO-AND-STAYS-UP even with every byte gate green."
+        },
+        {
+          "id": "01-07",
+          "name": "Report screen opens with no signal, once opened with signal",
+          "criteria": [
+            "The report screen is cache-first: opened once with signal, it opens again with the signal gone.",
+            "The offline screen asks the same questions it asked with signal.",
+            "Nothing on the screen is a browser error page.",
+            "Staleness is harmless here by construction: the report document carries no forecast, so an old copy makes no false claim."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/the-last-forecast-still-reads.feature",
+          "scenario_name": "The report screen opens with no signal once it has been opened with signal",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A cache strategy row for a document another feature owns and renders. This step adds no markup and no styling; the oracle compares the offline text against the same route's online text.",
+          "ui_checks": {},
+          "deps": [
+            "01-02"
+          ],
+          "files_to_modify": [
+            "public/sw.js",
+            "tests/unit/sw-router-table.test.ts"
+          ],
+          "implementation_notes": "Cache-first is the settled section 12 row for report screen 1 precisely because that document is forecast-free by construction, so serving an old copy cannot dress an old score up as a new call. The recorded RED shows the expected/actual diff carrying the full online text, so the oracle is a content comparison: the offline screen must carry the same three settled questions. src/components/** and src/report/** are outside this lane and must not be touched; this step only decides how the helper answers for that route. Do not confuse this row with the write path: the report SCREEN document is cache-first, the report SEND is network-only and never cached (01-02, 01-03). Getting those two rows the wrong way round would let a phone answer a send from cache, which is the exact failure 01-03 exists to refuse."
+        },
+        {
+          "id": "01-08",
+          "name": "An unvisited route lands on sin senal, never an error",
+          "criteria": [
+            "With the origin unreachable, a navigation to a route the phone never opened is answered with the sin senal document.",
+            "This holds for a spot never opened and for a report screen never opened.",
+            "Nothing on the screen is a browser error page: the raw navigation failure never reaches the surfer.",
+            "The fallback answers navigations only; a missing asset or a send is never answered with a page."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/the-last-forecast-still-reads.feature",
+          "scenario_name": "A report screen never opened before lands on the sin señal words, never an error",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Navigation fallback routing. The document it serves is the one 01-01 renders and charters; this step decides when the helper reaches for it, which is observable as which document arrives, not as a new design.",
+          "ui_checks": {},
+          "deps": [
+            "01-01",
+            "01-07"
+          ],
+          "files_to_modify": [
+            "public/sw.js",
+            "tests/unit/sw-router-table.test.ts"
+          ],
+          "implementation_notes": "The recorded RED names the real navigation failure this row replaces: net::ERR_EMPTY_RESPONSE on /spots/punta-chame/reportar, which is exactly the raw browser error the surfer must never see. Serve the precached sin senal document (01-06) for any failed NAVIGATION request with no cached match, and only for navigations: answering a failed asset or a failed POST with an HTML page would corrupt the write path row and confuse the request-count oracle. OPEN COPY GAP, recorded not invented (feature-delta Pre-requisite 6a): section 12's report-screen-1 row says the offline-uncached branch lands on sin senal 'with a line saying the report form needs one first online visit', and NO SUCH SPANISH STRING EXISTS in section 10 or strings.ts. Do not invent product copy. The branch is testable without the line, both scenarios that drive it assert only the settled sentence, and the line waits for Andres via the cousin's crew channel. Route it there with the other pending strings; ship the branch now."
+        },
+        {
+          "id": "01-09",
+          "name": "Sin senal reads the settled sentence with the hour",
+          "criteria": [
+            "The served sin senal page carries the settled first sentence followed by a plain clock hour.",
+            "The hour is the moment this phone last saw a forecast, taken from the copy it is holding, never a build time.",
+            "The page does not promise that reports get saved; the second settled sentence stays absent.",
+            "Nothing on the page is English, machine text or a raw timestamp, and no placeholder token is ever visible."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/the-last-forecast-still-reads.feature",
+          "scenario_name": "With nothing saved for what they asked for, no signal lands on plain Spanish words",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Filling one hour into the document 01-01 renders and charters. The layout, type, contrast and motion of that page are gated there; this step changes a few characters of text content, not the surface.",
+          "ui_checks": {},
+          "deps": [
+            "01-01",
+            "01-08"
+          ],
+          "files_to_modify": [
+            "public/sw.js",
+            "tests/unit/sw-hour-format.test.ts"
+          ],
+          "implementation_notes": "THE DESIGN TENSION, named at DISTILL so it is not resolved by weakening a test. R4 asks this route for the hour the phone last saw the forecast, and section 4 gives the route 0 JS. Those are only in tension if the hour is read as something the DOCUMENT computes. The implementation left open is the helper composing the served body: the precached document plus the published_at of the forecast copy the phone is holding. Section 12's 'the SW adds no header tricks: truth lives in the document' rules out signalling age through response headers; it does not rule out the helper filling the hour in the body of the page it serves, which is still truth living in the document the surfer reads. THE WRONG RESOLUTION IS AN HOUR BAKED AT BUILD TIME: that reports when the site was published, not when this phone last saw a forecast, which is a different and less honest claim. The scenario asserts the outcome, a plain clock hour after 'de las ', and never the mechanism. DRIFT GUARD, MANDATORY. public/ is copied verbatim and the helper is a classic worker script with no imports, so it CANNOT import formatPanamaTime from src/publish/reading-state.ts. The formatter is therefore duplicated inline in the helper, and a unit test in tests/unit/ MUST pin the helper's output against formatPanamaTime on shared fixtures across the day, including midnight, noon and the a.m./p.m. boundary, so the two cannot drift. Without that guard this plants exactly the class of bug this repository's CLAUDE.md opens with: two copies of one truth, both passing, one wrong. src/publish/reading-state.ts is inside this lane if the formatter needs exporting; do not change its behaviour. HONESTY STAGING IS LOCKED: the second settled sentence, 'Los reportes que mandes quedan guardados.', is FALSE until slice-03 builds the queue, a scenario asserts its absence, and no step may add it. When the phone holds no forecast at all there is no honest hour to show: render the sentence without the hour clause, never a token, never a zero, never a guess."
+        },
+        {
+          "id": "01-10",
+          "name": "A whole morning's reading stays at ten requests or fewer",
+          "criteria": [
+            "Reading the home page, opening a spot and coming back asks the site for ten things or fewer with the helper in charge.",
+            "The helper never revalidates an immutable hashed asset and never double-fetches a document it just served.",
+            "Request count is measured at the server the harness runs, not estimated."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/the-last-forecast-still-reads.feature",
+          "scenario_name": "A whole morning's reading asks the site for ten things or fewer",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A measured cost property counted at the harness server across a three-page walk. There is nothing to look at: the surfer sees the same pages either way, which is why the count has to be gated rather than eyeballed.",
+          "ui_checks": {},
+          "deps": [
+            "01-04",
+            "01-06",
+            "01-07"
+          ],
+          "files_to_modify": [
+            "public/sw.js",
+            "tests/unit/sw-router-table.test.ts"
+          ],
+          "implementation_notes": "Section 12's table exists to keep a typical session at roughly 8 to 10 CloudFront requests (research 08 section 12.4: requests per session, not bytes, are the binding cost constraint). A helper change that inflates request count is a regression against F-BILL-STAYS-ZERO-AND-STAYS-UP even when every byte gate stays green. The recorded RED deliberately guards this count behind the helper-installed assertion, because with no helper the count is trivially small and would report a false green; do not relax that guard to get an early pass. The realistic overspend to watch for: a network-first document that also warms the cache with a second request for the same URL, a precache list that grew in 01-06, and revalidation of hashed assets that are immutable by name. This is the step where the whole table is measured together rather than row by row."
+        },
+        {
+          "id": "01-11",
+          "name": "The push seat holds: alerts append without touching a line",
+          "criteria": [
+            "A later alerts feature adds its own listeners at the end of the helper and not one line the helper already had changes.",
+            "After that append the helper still installs and still serves the cached forecast with its own time stamp.",
+            "The seat is a documented structural property: one router table plus independent listener registrations."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/the-helper-keeps-its-discipline.feature",
+          "scenario_name": "A later alerts feature is added to the helper without touching a line of what it already does",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A structural property of one source file, asserted as a line-level diff over the emitted helper. It has no surface at all: the alerts feature that will occupy the seat ships in another feature entirely.",
+          "ui_checks": {},
+          "deps": [
+            "01-04",
+            "01-06",
+            "01-07"
+          ],
+          "files_to_modify": [
+            "public/sw.js",
+            "tests/unit/sw-router-table.test.ts"
+          ],
+          "implementation_notes": "THE PUSH SEAT, and the answer to 'say where that seat is': the seat is the END OF public/sw.js, after every existing listener registration and after the router table. F-TELL-ME-WHEN-ITS-WORTH-THE-DRIVE appends exactly two new registrations there, a push listener and a notificationclick listener, touching zero existing router rows and zero existing listeners. That lane edits this file for those two registrations only, coordinated as a serial append, never concurrently with a SIGNAL slice in flight. THIS SLICE SHIPS ZERO PUSH CODE. What this step owes is the structure that makes the append safe and the scenario that proves it: no giant single fetch handler with inlined branches, no shared mutable module state a new listener could disturb, no ordering dependency between listeners, and the router table reachable as data rather than as control flow scattered through the handler. The scenario appends listeners to the emitted helper and asserts not one prior line changed, then re-walks the offline reading path, so the append must not need a version bump, a cache-name change or a reordering. Background Sync is never load-bearing anywhere in this feature: its iOS availability is UNVERIFIED in the research corpus, section 12 makes it progressive enhancement only, and no scenario or DoD row may depend on it."
+        },
+        {
+          "id": "01-12",
+          "name": "Everything this slice adds stays inside its weight",
+          "criteria": [
+            "The emitted helper weighs 3 KB gzipped or less.",
+            "The sin senal document weighs 3 KB gzipped or less.",
+            "The line that starts the helper weighs 0.2 KB or less.",
+            "Measurements come from the real gzipped build output and name route, measured bytes and ceiling on failure.",
+            "The whole slice tag run is captured by redirect then dollar-question, never through a pipeline."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/the-helper-keeps-its-discipline.feature",
+          "scenario_name": "Everything this slice adds stays inside the weight it was given",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Byte ceilings measured over gzipped dist output. There is no rendered state to observe beyond what 01-01 already charters; this step trims bytes if the earlier steps overshot.",
+          "ui_checks": {},
+          "deps": [
+            "01-01",
+            "01-02",
+            "01-03",
+            "01-04",
+            "01-05",
+            "01-06",
+            "01-07",
+            "01-08",
+            "01-09",
+            "01-10",
+            "01-11"
+          ],
+          "files_to_modify": [
+            "public/sw.js",
+            "src/pages/sin-senal.astro"
+          ],
+          "implementation_notes": "Budgets are contractual, booked in DESIGN, not headroom: helper 3.0 KB gz (application-architecture.md section 5 line item 4), sin senal document 3 KB gz (section 4 route table), registration 0.2 KB inline (section 6). Measurements over the real gzipped dist, never estimates, failing with route, measured bytes and ceiling per the section 5 gate convention. THE THIRD ASSERTION CANNOT PASS IN THIS LANE: the line that starts the helper is the Base.astro head snippet, which is the recorded cross-lane seam; until it lands there is no line to weigh and this scenario stays RED for that reason alone. Do not fabricate a registration elsewhere to satisfy the measurement. If the helper lands near its ceiling, trim before splitting the file: a second script would add a request and regress 01-10, and it would break the single-file push seat 01-11 depends on. GATE DISCIPLINE, this repository has committed over a red gate through a pipeline before: run npm run test:at with the tag expression redirected to a file, capture the exit status directly, then read the file. Never pipe a gate into tail, head or grep. Expected at the end of this step: 12 scenarios, 0 failed, real exit 0, with the registration seam closed. AFTER GREEN, per project CLAUDE.md: run npm run build and INSPECT the rendered dist documents; green tests do not mean it works, and the worst bug this project shipped passed all ten CI jobs. Then des-verify-ui for 01-01 and the source-blind examiner against the slice charter, both of which are currently blocked on the DISTILL gaps recorded in 01-01."
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "name": "Slice-02: an old forecast says so",
+      "description": "The staleness honesty surface: a machine-readable publish moment inside every reading document, the amber Viejo flip past three hours, the original moment never rewritten, all inside a 0.3 KB script budget. Pre-requisite 1 (the raw ISO stamp fix) LANDED at 6b02fe0; this slice consumes it.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "02-01",
+          "name": "The reading page carries its publish moment underneath",
+          "criteria": [
+            "Every reading document embeds its machine-readable publish moment; the visible stamp stays the settled plain clock time.",
+            "A fresh forecast is never called old: no Viejo wording under three hours.",
+            "The embedded moment and the visible stamp render one truth; a unit test pins them against shared fixtures so they cannot drift."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/an-old-forecast-says-so.feature",
+          "scenario_name": "A fresh forecast is never called old",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Adds a machine-readable attribute beside a stamp the page already renders; no new pixels. The visible amber chip lands in 02-02, which carries the slice charter.",
+          "ui_checks": {},
+          "deps": [],
+          "files_to_modify": [
+            "src/components/RankedList.astro",
+            "src/components/SpotDetail.astro",
+            "tests/unit/staleness-stamp.test.ts"
+          ],
+          "implementation_notes": "WHERE THE STAMP LIVES, verified by grep: formatUpdatedAtEs from src/publish/display-format.ts renders in src/components/RankedList.astro and src/components/SpotDetail.astro; those two files ARE the reading surface and were removed from the roadmap exclusions for this phase (they were excluded while slice-01 had no business there — coordinate with the coordinator if any other lane claims them). Wrap the existing stamp in a time element carrying datetime={published_at} (or an equivalent data slot): the acceptance step reads time[datetime] or [data-published-at]. THE VISIBLE TEXT DOES NOT CHANGE: the corrected plain-clock stamp (BUGFIX 6b02fe0) is already the settled honest rendering; a raw ISO instant must NEVER become visible text (copy rule, R41) — machine truth lives in the attribute, human truth in the words. The scenario also guards the inverse honesty: no Viejo under three hours. Section 12 speaks of upgrading to a relative age; NO settled Spanish string for the relative form exists in section 10 — do not invent it. Under three hours the settled absolute stamp IS the honest rendering; the relative nicety waits for its string (routed to Andres via the cousin's crew with the other pending strings, same channel as Pre-requisite 6a)."
+        },
+        {
+          "id": "02-02",
+          "name": "Past three hours the amber line says Viejo",
+          "criteria": [
+            "Past three hours the stamp flips to the verbatim Viejo line: the hour we last saw and the no-new-data sentence, whole.",
+            "Under three hours the line never appears.",
+            "The flip is computed from the document's own embedded moment against the phone's clock, in an inline script in the document.",
+            "A unit test drives the flip and the boundary with an injected clock; no real three-hour wait anywhere."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/an-old-forecast-says-so.feature",
+          "scenario_name": "Three hours later the same page admits it is old",
+          "slice_id": "slice-02",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-works-with-no-signal/a-forecast-served-from-cache-is-honest-about-its-age-the-page-shows-its-own-original-publish.md",
+          "u8_observation": "Abro el pronóstico cuando ya pasaron más de tres horas y la línea ámbar me lo dice de frente: Viejo, la hora en que lo vimos, y que no pudimos sacar datos nuevos. Se lee como un aviso honesto, no como un error, a 390 px, en tema claro y oscuro, sin que nada se mueva con movimiento reducido activado. Un pronóstico fresco nunca lleva esa línea.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-works-with-no-signal and @slice-02",
+              "--name",
+              "Three hours later the same page admits it is old"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:ui"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-works-with-no-signal and @slice-02",
+              "--name",
+              "Three hours later the same page admits it is old"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:ui"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-works-with-no-signal and @slice-02",
+              "--name",
+              "Three hours later the same page admits it is old"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:ui"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:ui"
+            ]
+          },
+          "deps": [
+            "02-01"
+          ],
+          "files_to_modify": [
+            "src/components/RankedList.astro",
+            "src/components/SpotDetail.astro",
+            "tests/unit/staleness-flip.test.ts"
+          ],
+          "implementation_notes": "THE LINE IS VERBATIM section 10: \"Viejo. Lo último que vimos fue a las {hora}. No pudimos sacar datos nuevos esta mañana.\" with {hora} in the same plain-clock format every stamp uses (formatPanamaTime shape). The amber is the section 11 amber TOKEN pair (7A5200 day / E3A83B dawn are the computed pairs, but reference the token, never a raw hex outside src/styles — U7). The chip must read as an honesty notice, not an error state, and nothing may animate on flip (reduced motion, U4). MECHANISM: an inline script comparing the embedded publish moment against Date.now(); the acceptance harness moves the phone's clock with Playwright's clock API, so read the clock at render time, never capture a load-time constant and sleep. The script's weight is gated in 02-05 (0.3 KB gz, section 5 line item 1). SERVER-SIDE STALE STATE ALREADY EXISTS: src/publish/reading-state.ts composes the same notice at build time for the ayer route; do NOT duplicate its string — one settled sentence, sources shared or pinned against each other in the unit test, the same drift-guard discipline 01-09 demands for the hour formatter."
+        },
+        {
+          "id": "02-03",
+          "name": "An old copy served offline still admits its age",
+          "criteria": [
+            "With the signal gone, the kept copy past three hours shows the Viejo line and its original stamp.",
+            "The embedded publish moment offline is identical to the one the document carried online; nothing rewrites it.",
+            "The helper serves the kept document unchanged; age is the document's own knowledge, never a header trick."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/an-old-forecast-says-so.feature",
+          "scenario_name": "An old forecast served with no signal looks old, never fresh",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The same chip 02-02 charters; this step changes the source of the bytes (helper-served kept copy) and proves the moment survives the trip. No new surface.",
+          "ui_checks": {},
+          "deps": [
+            "02-02",
+            "01-04"
+          ],
+          "files_to_modify": [
+            "public/sw.js",
+            "tests/unit/sw-router-table.test.ts"
+          ],
+          "implementation_notes": "THIS IS THE COMPOSITE THE SLICE EXISTS FOR: a stale cached copy must LOOK stale, never pass for fresh. If 01-04 serves the kept document unchanged and 02-02's script computes age client-side, this step may go green with zero new code — that outcome is CORRECT and confirms the walking skeleton was well designed; verify, do not pad. What it guards against forever: any helper \"freshening\" (rewriting the stamp, stripping the script, adding a header that a future script trusts over the document). Section 12 is explicit: the SW adds no header tricks, truth lives in the document. Like every offline scenario, RED until the Base.astro registration seam closes (cross_lane_seams); do not fake a registration to get green."
+        },
+        {
+          "id": "02-04",
+          "name": "With no JavaScript the true hour still shows",
+          "criteria": [
+            "With scripting off the absolute stamp renders true and no machine text appears anywhere.",
+            "This guard consumes the landed stamp BUGFIX (6b02fe0) and must stay green through every later step of this phase."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/an-old-forecast-says-so.feature",
+          "scenario_name": "With no JavaScript the page still tells the true hour",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A guard over an existing rendering with scripts off; it ships no pixels of its own and modifies no production files. Green by construction at DISTILL; the crafter proves it falsifiable, never implements.",
+          "ui_checks": {},
+          "deps": [
+            "02-01"
+          ],
+          "files_to_modify": [],
+          "implementation_notes": "ALREADY GREEN AT DISTILL, deliberately: red-classification records it as GUARD_ALREADY_TRUE. The crafter's job is falsifiability, not implementation: break the stamp on purpose once (render the raw instant), watch this scenario fail for the right reason, revert, verify the revert with git diff — this repository has had tests pass for accidental reasons twice, and a guard never seen firing proves nothing (section 9, check:unfired-is-not-evidence). Then leave it green. If 02-02's script ever replaces the absolute stamp in the DOM instead of progressive-enhancing it, THIS is the scenario that catches the regression."
+        },
+        {
+          "id": "02-05",
+          "name": "The age script stays inside its 0.3 KB",
+          "criteria": [
+            "All inline script on a reading document beyond the helper registration weighs 0.3 KB gzipped or less.",
+            "Measured over the real gzipped build output, failing with measured bytes and the ceiling."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/an-old-forecast-says-so.feature",
+          "scenario_name": "Admitting age costs almost nothing to carry",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A byte ceiling over gzipped dist output; nothing renders. This step trims 02-02's script if it overshot.",
+          "ui_checks": {},
+          "deps": [
+            "02-02"
+          ],
+          "files_to_modify": [
+            "src/components/RankedList.astro",
+            "src/components/SpotDetail.astro"
+          ],
+          "implementation_notes": "Budget booked in DESIGN: section 5 line item 1 carries the staleness upgrade script inside the reading document's inline allowance; section 6 row 4 names ≤0.3 KB. The measurement excludes the helper registration snippet (that line has its own 0.2 KB ceiling, weighed in 01-12). If the flip script lands heavy, trim before externalizing: a separate script file would add a request and regress 01-10's ten-request morning. The flip needs one comparison, one settled string and one class toggle; anything more is scope creep."
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "name": "Slice-03: a queued report sends itself",
+      "description": "The flush half of the write path: online-return and helper-arrival triggers, byte-identical replay, polite backoff, keep-and-explain on refusal, delete on any 200, and the sin señal page's second sentence plus queue box, both finally true. Blocked cross-feature on f-tell slices 01 and 03.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "03-01",
+          "name": "The queue flushes when the signal returns",
+          "criteria": [
+            "A committed record flushes on the signal's return with no user action; any 200 deletes the entry.",
+            "The replay is byte-identical: the name never re-minted, the observation time never touched, wind and quality only ever the settled words.",
+            "The flush registers no background errand; every trigger works with Background Sync absent."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/a-queued-report-sends-itself.feature",
+          "scenario_name": "A report filed with no signal sends itself when the signal comes back",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A background send. The surfer sees nothing new; the observables are the site hearing the record and the queue emptying, both at ports.",
+          "ui_checks": {},
+          "deps": [
+            "01-02"
+          ],
+          "files_to_modify": [
+            "public/sw.js",
+            "src/offline/flush.ts",
+            "src/layouts/Base.astro",
+            "tests/unit/offline-flush.test.ts"
+          ],
+          "implementation_notes": "THE QUEUE SEAM, LOUD: the queue module is f-tell slice-01's deliverable and DOES NOT EXIST. The acceptance harness plants committed records at tests/acceptance/f-works-with-no-signal/steps/support/queue-seam.ts, which PROPOSES IndexedDB database \"surf-reports\", store \"queue\", keyPath \"report_id\" — proposed, not settled. RECONCILE IN THE SAME CHANGE as whichever side ships first: if f-tell's module names differ, queue-seam.ts follows; if this lands first, f-tell inherits. One name, two consumers, zero drift. THE TRIGGER'S HOME: the online event fires in page context, never in the worker. This step owns one additive listener in the existing Base.astro body script: on `online`, it posts the flush nudge to the helper or runs the flush module. It is a declared shared-file seam, not an implied coordinator follow-up: serialize it after Paste 03-03's OG block and before Signal 05-01, preserve Paste's `og:title`, `og:description`, `og:url`, `og:locale`, and clean canonical unchanged, and touch no other Base line. The existing registration stays intact. The flush logic itself lives in src/offline/flush.ts (new directory, added to scope) and/or the helper; keep listener registrations independent (push seat, 01-11). MINT ORDER: 07 section 5 fixes mint-before-flush; the mint is f-tell slice-03's /api/mint. Until it ships, the harness accepts an uncredentialed send; when it lands, mint must complete before the first replay — leave the seam visible in the flush module. ZERO AWS: the live endpoint is deploy-blocked (CloudFormation writes are denied to the CLI identity today, HANDOFF section 6 item 6, and the write stack does not exist — f-tell Pre-requisite 5); everything here is authorable and provable against the harness, and NOTHING in this phase may require an account, a deployed resource or a live origin. Background Sync: never load-bearing, iOS availability UNVERIFIED; the acceptance step asserts zero sync registrations."
+        },
+        {
+          "id": "03-02",
+          "name": "The helper's arrival flushes what predates it",
+          "criteria": [
+            "A queue committed before any helper existed flushes when the helper first activates with signal.",
+            "The entry leaves the queue only on the site's answer, the same discipline as every flush."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/a-queued-report-sends-itself.feature",
+          "scenario_name": "A report waiting on a phone that never noticed the signal return still goes out",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "An activation-time flush inside the helper; nothing renders. The observable is the site hearing the record after the helper's first install.",
+          "ui_checks": {},
+          "deps": [
+            "03-01"
+          ],
+          "files_to_modify": [
+            "public/sw.js",
+            "tests/unit/offline-flush.test.ts"
+          ],
+          "implementation_notes": "The activate listener reads the queue (a worker can open IndexedDB) and flushes what it finds — this is the section 12 trigger that catches a phone whose tab never fires online: reports queued by the capture island before the helper ever installed, or while an old tab slept. The harness models it honestly: it withholds /sw.js (404) for the first visit, plants the committed record, then releases the helper and lets a fresh visit install it; activation must flush. Keep the activate registration independent of the router and of install (push seat, 01-11): a later push listener append must not reorder or wrap it. Do not double-send when both triggers fire close together: the flush must tolerate concurrent invocation, one send per entry — the unit test drives that race with an injected clock, not a sleep."
+        },
+        {
+          "id": "03-03",
+          "name": "A throttled door means wait, never failure",
+          "criteria": [
+            "On 429, 5xx or timeout the entry stays queued with exponential backoff: base 30 s, doubling, jitter, capped at one hour.",
+            "Waiting renders as the same calm pending state as no signal; never an error, never red.",
+            "No tight retry loop: within the ten-second acceptance window the door hears exactly one knock.",
+            "The backoff ladder is unit-tested with an injected clock, never a real wait."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/a-queued-report-sends-itself.feature",
+          "scenario_name": "A throttled door keeps the report waiting patiently, never as a failure",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Retry policy inside the flush. The surfer's screen deliberately does NOT change, which is the point; the observables are arrival counts at the door and the queue's contents.",
+          "ui_checks": {},
+          "deps": [
+            "03-01"
+          ],
+          "files_to_modify": [
+            "src/offline/flush.ts",
+            "tests/unit/offline-backoff.test.ts"
+          ],
+          "implementation_notes": "The ladder is settled: 30s×2^n plus jitter, cap 1 h (07 sections 4.3 and 5). 429 IS NOT AN ERROR STATE anywhere in the UI — research 15 section 5.5 is a hard constraint; the pending state is the same state as no signal, because a surfer who sees failure re-taps and re-taps are the duplicates slice-04 exists to prevent. The acceptance oracle is deliberately coarse (one knock inside the window, entry still queued, no failure words on screen); the precise ladder — doubling, jitter bounds, cap — is the UNIT test's, with an injected clock: a unit test that really sleeps thirty seconds will be deleted by the next person in a hurry, the same rule 01-05 recorded. Bursts from one device on re-sync are normal traffic by decision 26; the backoff is politeness toward a throttled door, never an abuse signal."
+        },
+        {
+          "id": "03-04",
+          "name": "A refusal is kept and never retried",
+          "criteria": [
+            "A 4xx other than 401/429 keeps the label on the phone and stops automatic retries; 401 remains the background mint-and-retry branch.",
+            "This is the worker-policy prerequisite for 03-05, not a releasable user surface. The retained reason is observed only by 03-05 on /sin-senal."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/a-queued-report-sends-itself.feature",
+          "scenario_name": "A report the site refuses stays on the phone and is never hammered",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "This proves retained-label and no-retry policy at the queue and door ports. It must not add copy to Base or home: the only refusal view is the /sin-senal queue surface owned and chartered by 03-05.",
+          "ui_checks": {},
+          "deps": [
+            "03-01"
+          ],
+          "files_to_modify": [
+            "tests/unit/offline-flush.test.ts"
+          ],
+          "implementation_notes": "P2's client contract, verbatim (application-architecture section 7; 07 section 5): a record the site refused for its shape will not become valid by waiting, so mechanical retry is banned and the label stays. 401 is NOT this branch: it goes to background mint-and-retry (f-tell's mint, no user-visible step). This step is the RED/unit-policy prerequisite only. It MUST NOT add a Base/home bridge, a toast, or any rendered copy, and it MUST NOT commit a partial worker change by itself. 03-05 is its required dependent vertical: one GREEN/COMMIT there implements this policy and exposes the server's self-explaining `error.what` only in the /sin-senal queue box. The no-retry unit proof written here is consumed by that atomic delivery."
+        },
+        {
+          "id": "03-05",
+          "name": "The sin señal page makes its second promise and explains a kept refusal",
+          "criteria": [
+            "The page renders the verbatim second sentence and the settled queue box counting real entries.",
+            "The count is live queue truth: zero entries, no box; one entry, the settled singular words.",
+            "After a 4xx refusal has kept a report, an explicit offline navigation to /sin-senal shows the site's plain-Spanish `what` beside that waiting report, without retrying or losing it.",
+            "The slice-01 scenario asserting the sentence's absence is amended in the same change, per the pre-authorized edit in the notes."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/a-queued-report-sends-itself.feature",
+          "scenario_name": "A refused report waits openly on the sin señal page",
+          "slice_id": "slice-03",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-works-with-no-signal/a-report-filed-with-no-signal-sends-itself-when-the-surfer-walks-back-into-coverage-the-queue.md",
+          "u8_observation": "Hago que el sitio rechace un reporte, vuelvo a quedarme sin señal y abro una ruta nueva hasta llegar a la página sin señal. Leo las dos frases completas y, debajo, la caja con 1 reporte guardado, la razón en español que mandó el sitio y que se manda al volver la señal. La razón no aparece en inicio. Nada se lee como error ni como promesa vacía; se ve terminada en ambos temas a 390 px y nada se anima con movimiento reducido activado.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-works-with-no-signal and @slice-03",
+              "--name",
+              "A refused report waits openly on the sin señal page"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:ui"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-works-with-no-signal and @slice-03",
+              "--name",
+              "A refused report waits openly on the sin señal page"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:ui"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-works-with-no-signal and @slice-03",
+              "--name",
+              "A refused report waits openly on the sin señal page"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:ui"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:ui"
+            ]
+          },
+          "deps": [
+            "01-01",
+            "01-09",
+            "03-01",
+            "03-04"
+          ],
+          "files_to_modify": [
+            "public/sw.js",
+            "src/offline/flush.ts",
+            "src/pages/sin-senal.astro",
+            "tests/acceptance/f-works-with-no-signal/the-last-forecast-still-reads.feature",
+            "tests/acceptance/f-works-with-no-signal/steps/offline-reading.steps.ts",
+            "tests/acceptance/f-works-with-no-signal/steps/queue-flush.steps.ts",
+            "tests/unit/offline-flush.test.ts"
+          ],
+          "implementation_notes": "THIS IS THE 03-04/03-05 ATOMIC VERTICAL. 03-04 provides the red no-retry/retention proof; this dependent step alone GREENs and COMMITS both the worker refusal state and its only user-visible surface. A 4xx other than 401/429 retains the record and response `error.what`; after that refusal, the acceptance journey deliberately goes offline and navigates to an unvisited route so the real /sin-senal surface is served, then reads the reason there. Do not test or render the reason on home, and do not add a Base/home bridge, toast, or parallel surface. Render the supplied `what`, never the code and never invented copy. HONESTY STAGING CLOSES HERE: \"Los reportes que mandes quedan guardados.\" becomes true the moment a real queue holds real labels, and the page owes it the same moment — both sentences verbatim section 10, the box verbatim section 14 (\"1 reporte guardado. Se manda al volver la señal.\"). THE COUNT IS SERVE-TIME TRUTH, same mechanism as the hour (01-09): the helper composes the served body with the real entry count read from the queue; a baked count is a lie by construction, and a count the page computes needs JS the route does not have (section 4: 0 JS). Zero entries render no box. PLURAL GAP, recorded not invented: section 14 settles only the singular; no plural string exists in any settled document. Render the settled singular for exactly one; for two or more, the mechanical Spanish plural (\"N reportes guardados. Se mandan al volver la señal.\") is the obvious candidate but it is INVENTED copy — route it through the cousin's crew with the other pending strings before shipping it; until confirmed, the scenario pins only the singular case and the box may render the singular sentence only when the count is one. PRE-AUTHORIZED ACCEPTANCE AMENDMENT (DISTILL, Quinn, 2026-08-10) — the ONLY acceptance-test edit permitted in this phase, and the reason two test files appear in files_to_modify despite the standing exclusion (coordinator lifts it for exactly this edit, or DISTILL executes it at this step's GREEN): in the-last-forecast-still-reads.feature, scenario \"With nothing saved for what they asked for, no signal lands on plain Spanish words\", DELETE the line \"And the page does not promise that reports get saved\"; then remove the now-unused step definition of that Then from offline-reading.steps.ts. Nothing else in either file may change; the absence assertion was slice-01's truth and this slice makes it false by making the promise true (requirement-checklist R4 note, feature-delta plan note \"Offline copy lands in two honest stages\")."
+        },
+        {
+          "id": "03-06",
+          "name": "Filed on the sand, sent from the road",
+          "criteria": [
+            "The whole journey holds across its two chained scenarios: filed offline through the real form, told Guardado, then sent itself on coverage and gone from the queue.",
+            "Green requires f-tell slice-01's capture journey; blocked is the honest state until it ships."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/a-queued-report-sends-itself.feature",
+          "scenario_name": "Sent from the road",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "An integration walk across two features' shipped surfaces; every rendered state it crosses is chartered by its owning slice (f-tell's capture screens, this slice's queue surface at 03-05).",
+          "ui_checks": {},
+          "deps": [
+            "03-01",
+            "03-02",
+            "03-05"
+          ],
+          "files_to_modify": [],
+          "implementation_notes": "THE TWO FEATURES MEETING, as one story told in two chained scenarios (split per the Sentinel review 2026-08-10, one When per scenario): \"Filed on the sand, the report is saved for the road\" (file offline, see Guardado) and this step's \"Sent from the road\", whose Given replays the first scenario's whole journey through the same step functions (Pillar-2 composition). f-tell slice-01's capture (the form, the durable commit at Mandar, the Guardado screen) followed by this slice's flush. This lane implements NOTHING for it — no file in files_to_modify is deliberate: if the walk stays red once 03-01..03-05 are green, the missing half is f-tell's and the step is BLOCKED, recorded in the execution log by the coordinator, never faked. Do not stub the capture, do not plant instead of filing (the planted-record scenarios already cover the flush alone), and never weaken the Guardado assertion — it is settled section 10 copy and the integration checkpoint between the features. The report form EXISTS today as a static screen (the three questions render, verified in this suite's RED: the Mandar tap times out because no island exists); the recorded RED names exactly that seam."
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "name": "Slice-04: once, and only once",
+      "description": "The client half of dedup on re-sync: replay every waiting record, trust the site's memory of the report's name, accept the original answer as the answer, and survive the lost-answer branch with one reveal and one counter, ever. Server-side idempotence itself is f-tell slice-03's.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "04-01",
+          "name": "The phone replays; the site decides",
+          "criteria": [
+            "Every waiting record is replayed on flush; the client never skips one as already sent.",
+            "A replay landing on the site's memory is answered with the original reveal and deletes the entry; the site holds each report exactly once."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/it-sends-once-and-only-once.feature",
+          "scenario_name": "The phone never decides a report already went; it asks, and the site answers",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Replay policy; nothing renders. The observables are the site's arrival log and the queue's contents, both at ports.",
+          "ui_checks": {},
+          "deps": [
+            "03-01"
+          ],
+          "files_to_modify": [
+            "src/offline/flush.ts",
+            "tests/unit/offline-flush.test.ts"
+          ],
+          "implementation_notes": "THE EPIC SENTENCE, made structural: signal is worst exactly where reports happen, so dedup is SERVER-SIDE on re-sync, never client-side trust. The client carries no \"already sent\" memory beyond the queue itself: if an entry exists, it replays, byte-identical, and report_id decides on the site (07 section 4.4: conditional put, dedup key report_id alone, quota untouched on the duplicate branch — all f-tell slice-03's to implement server-side; the harness plays that settled contract meanwhile). FORBIDDEN SHAPES, name them to refuse them: a client-side sent-ids set, a \"skip if response was seen\" cache, marking entries sent-pending-confirmation. The queue entry IS the only state, deleted on ack, kept otherwise. queued_duplicate is a SUCCESS (P3): treated exactly like compared for queue purposes."
+        },
+        {
+          "id": "04-02",
+          "name": "Already-had-it is answered like the first time",
+          "criteria": [
+            "A queued_duplicate answer is accepted exactly like a first ack: entry deleted, nothing reads as failure.",
+            "What the surfer is shown carries no trace of a second report: no second confirmation, no second count.",
+            "When f-tell slice-04's reveal renderer ships, the oracle strengthens to word-for-word rendering equality; that amendment is owed and recorded here."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/it-sends-once-and-only-once.feature",
+          "scenario_name": "A report the site already had is answered exactly like the first time",
+          "slice_id": "slice-04",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-works-with-no-signal/the-queued-report-sends-itself-once-and-only-once-a-retry-that-raced-an-earlier-success-is.md",
+          "u8_observation": "Veo llegar la respuesta de un reporte que ya había llegado antes y no distingo nada raro: la misma respuesta de la primera vez, un solo conteo, ningún duplicado y ninguna palabra de error. La pantalla se ve terminada a 390 px en tema claro y oscuro y nada se anima con movimiento reducido activado.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-works-with-no-signal and @slice-04",
+              "--name",
+              "A report the site already had is answered exactly like the first time"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:ui"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-works-with-no-signal and @slice-04",
+              "--name",
+              "A report the site already had is answered exactly like the first time"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:ui"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-works-with-no-signal and @slice-04",
+              "--name",
+              "A report the site already had is answered exactly like the first time"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:ui"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:ui"
+            ]
+          },
+          "deps": [
+            "04-01"
+          ],
+          "files_to_modify": [
+            "src/offline/flush.ts",
+            "tests/unit/offline-flush.test.ts"
+          ],
+          "implementation_notes": "The reveal inside a queued_duplicate answer is the ORIGINAL one, rebuilt server-side from the stored item (07 section 4.3) — the client renders whatever arrives and must render it IDENTICALLY to a first ack: same path, same components, no \"duplicate\" banner, no different words. The surfer never learns a replay happened; boring sameness is the pass condition. TODAY'S HONEST ORACLE: the reveal renderer is f-tell slice-04's and does not exist, so the acceptance scenario pins the idempotent ack (entry deleted, no failure words, one stored record) and the U8 charter walks the sameness a human can see. AMENDMENT OWED, at f-tell slice-04's landing: strengthen the Then to word-for-word equality between the duplicate rendering and a first-ack rendering (the step \"the phone accepts the site's first answer as the answer\" grows the comparison; DISTILL executes or pre-authorizes it then). Never render from the queue entry: the reveal is the POST response and nothing else (adr-report-flow-leak-isolation; no reveal URL exists to cache, by design)."
+        },
+        {
+          "id": "04-03",
+          "name": "The lost answer never becomes a second report",
+          "criteria": [
+            "After an answer dies mid-air the entry stays queued; the next trigger replays the identical bytes.",
+            "The site ends holding exactly one record; the counter moved once, ever.",
+            "The falsifiability pass is run: weaken the replay deliberately, watch this fail for the right reason, revert, verify with git diff."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/it-sends-once-and-only-once.feature",
+          "scenario_name": "An answer lost on the way back never becomes a second report",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The ugliest timing branch of the replay policy; the pass condition is that the surfer notices nothing at all. The rendered sameness is chartered at 04-02.",
+          "ui_checks": {},
+          "deps": [
+            "04-02"
+          ],
+          "files_to_modify": [
+            "src/offline/flush.ts",
+            "tests/unit/offline-flush.test.ts"
+          ],
+          "implementation_notes": "THE NASTIEST BRANCH, in scope by design (feature-delta slice-04 row): network dies after the server stored the report but before the phone heard the answer. The phone heard NOTHING, so the entry stays queued — deleting on send instead of on ack is the bug this scenario exists to make impossible, and the recorded RED already proves the harness stages the branch (the socket dies after the store). Next coverage: replay, identical bytes, and the site answers from memory; the surfer sees one reveal and one counter increment, ever. The unit test drives the same branch against the flush module with a fake transport; the acceptance walk drives it end to end. FALSIFIABILITY, per project CLAUDE.md: after green, make the flush delete-on-send once, watch THIS scenario fail (a second stored record appears), revert, verify the revert with git diff. Two tests in this repository have already passed for accidental reasons."
+        }
+      ]
+    },
+    {
+      "id": "05",
+      "name": "Slice-05: it opens like an app",
+      "description": "Installability with the settled identity: manifest, both icons derived from the favicon mark, byte lines 5 and 6 honoured. The A2HS hint ships STAGED DARK: its avisos wording must not render before a live subscribe path exists; the alerts lane flips it visible and amends the guard scenario together.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "05-01",
+          "name": "The settled identity makes the site installable",
+          "criteria": [
+            "The manifest ships the settled identity: display standalone, start_url /, lang es, theme colours per theme, both icon sizes real files.",
+            "The head names the manifest through this step's declared, serialized Base.astro seam; existing theme-colour, OG and canonical declarations remain unchanged.",
+            "Both icons are derived from the existing favicon mark and flagged for Andres's eye, not his hands."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/it-opens-like-an-app.feature",
+          "scenario_name": "The site offers itself to the home screen with its settled identity",
+          "slice_id": "slice-05",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-works-with-no-signal/a-surfer-adds-the-site-to-their-home-screen-and-it-opens-like-an-app-installable-with-the.md",
+          "u8_observation": "Agrego el sitio a la pantalla de inicio y se abre como una app: a pantalla completa, en español, empezando por la portada, con su ícono nítido y no una letra gris. En la página no aparece ninguna promesa de avisos todavía. Todo se ve terminado a 390 px en tema claro y oscuro y nada se anima con movimiento reducido activado.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-works-with-no-signal and @slice-05",
+              "--name",
+              "The site offers itself to the home screen with its settled identity"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:ui"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-works-with-no-signal and @slice-05",
+              "--name",
+              "The site offers itself to the home screen with its settled identity"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:ui"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-works-with-no-signal and @slice-05",
+              "--name",
+              "The site offers itself to the home screen with its settled identity"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:ui"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:ui"
+            ]
+          },
+          "deps": [
+            "01-02"
+          ],
+          "files_to_modify": [
+            "public/manifest.webmanifest",
+            "public/icon-192.png",
+            "public/icon-512.png",
+            "src/layouts/Base.astro"
+          ],
+          "implementation_notes": "The identity is section 12 verbatim: display standalone (the installed context IS the future push context — research 12 section 4: iOS 16.4+ allows Web Push only for PWAs added to the Home Screen, no automatic prompt exists), start_url \"/\", lang \"es\", both icon sizes, theme colours per theme (manifest theme_color plus the existing per-theme meta in Base.astro). THE HEAD SEAM: this step owns one additive manifest link in the Base.astro head. It runs only after Paste 03-03's OG block and Signal 03-01's online-listener line; preserve Paste's `og:title`, `og:description`, `og:url`, `og:locale`, clean canonical, and the existing light/dark theme-colour meta unchanged. The acceptance scenario reads the identity from the built home head, so it stays RED until that one line lands; never fabricate a link elsewhere to get green. ICONS (Pre-requisite 6b): public/ holds only favicon.svg; derive 192 and 512 PNGs from the same mark (PNG, not SVG: manifest-icon SVG support is uneven and an install must never gamble), commit them, and flag the rendered result for Andres's eyeball — his eye, not his hands. Icons are fetched at INSTALL time only: zero bytes on any visit (section 5 line item 6, gated in 05-03). The page-weight document gate ignores non-HTML files, so the manifest's ceiling is enforced by this slice's own weight scenario, not the build gate."
+        },
+        {
+          "id": "05-02",
+          "name": "No promise of avisos before avisos exist",
+          "criteria": [
+            "The settled hint markup ships staged dark; its avisos wording renders nowhere on the public surface.",
+            "The guard scenario stays green through this phase and after; the alerts lane flips the hint and amends the guard in one change."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/it-opens-like-an-app.feature",
+          "scenario_name": "No promise of avisos before avisos exist",
+          "slice_id": "slice-05",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Ships no pixels by design: the hint stays dark and the scenario asserts an absence. The install surface itself is chartered at 05-01.",
+          "ui_checks": {},
+          "deps": [
+            "05-01"
+          ],
+          "files_to_modify": [
+            "src/pages/index.astro"
+          ],
+          "implementation_notes": "THE OWNERSHIP CALL, recorded so nobody re-litigates it: the A2HS hint was claimed by two committed plans — this slice, and the alerts feature's (F-TELL-ME-WHEN-ITS-WORTH-THE-DRIVE) slice-02, per the epic's plan documents. Those plan documents are unrecoverable (feature-delta Pre-requisite 8) and no competing workspace exists on disk (verified 2026-08-10: zero A2HS/avisos hits outside this feature and the settled sections). THE CALL: the hint ships HERE, slice-05, with one binding condition — the avisos wording (\"¿Quieres avisos? En iPhone: Compartir, y luego Añadir a pantalla de inicio. Sin eso, iPhone no deja avisar.\") never renders publicly before a live subscribe path exists, because a promise of avisos with no way to ask for them is a sentence that is untrue at the moment it ships, the exact rule that staged the offline copy. The alerts lane does NOT re-ship the hint: it flips it visible in the same change that brings its subscribe path live, and amends the guard scenario (\"No promise of avisos before avisos exist\" becomes the render assertion: verbatim section 10 words, a pure details disclosure, 0 JS, home footer; the spot-page slot follows keystone slice-06 per section 6 row 6) — that amendment is that lane's, pre-agreed here. STAGING MECHANISM: keep the hint OUT of the served DOM (a build-time flag or commented island of markup) — never CSS-hidden, because hidden text still reads to screen readers and still ships bytes. This step's scenario is green by design at DISTILL (the guard); the crafter's work is the staged markup plus falsifiability: render the hint once deliberately, watch the guard fail, revert, git diff."
+        },
+        {
+          "id": "05-03",
+          "name": "Installability costs nothing on a normal visit",
+          "criteria": [
+            "Manifest plus favicon weigh 1.5 KB gzipped or less; failure names measured bytes and the ceiling.",
+            "A watched normal visit fetches neither icon; install time is the only moment they travel."
+          ],
+          "test_file": "tests/acceptance/f-works-with-no-signal/it-opens-like-an-app.feature",
+          "scenario_name": "Opening like an app costs almost nothing on a normal visit",
+          "slice_id": "slice-05",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Byte ceilings and a request-count guard over the served site; nothing renders.",
+          "ui_checks": {},
+          "deps": [
+            "05-01"
+          ],
+          "files_to_modify": [
+            "public/manifest.webmanifest"
+          ],
+          "implementation_notes": "Section 5 line items 5 and 6, contractual: manifest plus favicon ≤ 1.5 KB gz on first visit; app icons 0 bytes on ANY visit (fetched at install only). The acceptance scenario counts a real watched visit at the harness server and weighs the real gzipped files — measurements, never estimates, failing with route, bytes and ceiling per the section 5 gate convention. If the manifest lands heavy, strip it: name, short_name, lang, display, start_url, theme colours, two icon entries — nothing else earns its bytes. Do not preload, prefetch or link the icons from any document."
+        }
+      ]
+    }
+  ],
+  "cross_lane_seams": [
+    {
+      "seam": "Base.astro head, service worker registration snippet",
+      "status": "RECORDED, NOT BUILT BY THIS LANE",
+      "where": "src/layouts/Base.astro, inside the existing <head> block (lines 50 to 59), appended AFTER f-paste slice-03's OG meta block",
+      "what": "The inline registration snippet, 0.2 KB or less, registering /sw.js at scope '/'. The site works fully unregistered; the helper is enhancement only.",
+      "ordering": "Serializes behind f-paste slice-03's OG meta block, which lands first and alone (feature-delta Pre-requisite 5). src/layouts/Base.astro is outside this lane's declared write boundary.",
+      "owner": "coordinator, handing the head to this lane once the REACH lane's meta block has landed",
+      "consequence": "11 of the 12 slice-01 scenarios cannot reach green until this one line lands, because every one of them depends on the helper being installed. Only 01-01, the weight gate and the emitted document, can go green without it. Base.astro has a single default <slot /> and no named slots, so there is no in-lane path to the head."
+    },
+    {
+      "seam": "public/sw.js, push and notificationclick listeners",
+      "status": "RECORDED, NOT BUILT BY THIS LANE",
+      "where": "the END of public/sw.js, after every listener registration this slice ships and after the router table",
+      "what": "Two new event-listener registrations added by F-TELL-ME-WHEN-ITS-WORTH-THE-DRIVE. Zero edits to existing router rows and zero edits to existing listeners.",
+      "ordering": "A serial append, never concurrent with a SIGNAL slice in flight. Step 01-11 ships the structure and the scenario that keeps the seat honest.",
+      "owner": "the PUSH lane, coordinated as a serial append",
+      "consequence": "This slice ships zero push code. Background Sync is never load-bearing: iOS availability is UNVERIFIED and section 12 makes it progressive enhancement only."
+    },
+    {
+      "seam": "Base.astro: page-context flush trigger (03-01) and manifest identity link (05-01)",
+      "status": "EXECUTABLE SERIAL SHARED SEAM",
+      "where": "src/layouts/Base.astro: the existing body script receives the 03-01 online listener; the head receives the 05-01 manifest link. The existing per-theme theme-color meta remains in place.",
+      "what": "03-01 adds only the page-context online listener that nudges the flush; 05-01 adds only `<link rel=\"manifest\" href=\"/manifest.webmanifest\">`. Both stay inside the booked section 5/6 budgets.",
+      "ordering": "Paste 03-03 owns and lands its OG block first and alone. Then Signal 03-01 may append its online listener. Then Signal 05-01 may append its manifest link. These are serial writes to Base.astro only; their non-Base work remains independently schedulable.",
+      "owner": "Coordinator schedules the shared file. Paste owns `og:title`, `og:description`, `og:url`, `og:locale`, and the clean canonical; Signal owns only the two named additive lines and must preserve every existing declaration.",
+      "consequence": "The existing acceptance scenarios remain strict against the built home document: 03-01 proves the online-trigger path and 05-01 proves the manifest link. Neither may be made green by a substitute document or weakened oracle."
+    },
+    {
+      "seam": "IndexedDB queue module naming (f-tell slice-01 <-> this lane's flush)",
+      "status": "PROPOSED BY THIS LANE, RECONCILIATION OWED",
+      "where": "tests/acceptance/f-works-with-no-signal/steps/support/queue-seam.ts (proposal: database \"surf-reports\", store \"queue\", keyPath \"report_id\") versus the queue module f-tell slice-01 will ship",
+      "what": "One queue, two consumers: f-tell's capture commits, this lane's flush drains. The names must be identical or the flush reads an empty store forever.",
+      "ordering": "Whichever side lands first fixes the names; the other follows in its landing change. Record the reconciliation in both features' execution logs.",
+      "owner": "f-tell lane and this lane, jointly; coordinator arbitrates if both are in flight",
+      "consequence": "Until reconciled, slice-03/04 scenarios plant into the proposed store; a rename after either side ships is a breaking edit to the other."
+    },
+    {
+      "seam": "A2HS hint flip (alerts lane occupies the staged seat)",
+      "status": "STAGED DARK BY SLICE-05, FLIPPED BY THE ALERTS LANE",
+      "where": "home footer markup staged in src/pages/index.astro (05-02), plus the guard scenario \"No promise of avisos before avisos exist\" in it-opens-like-an-app.feature",
+      "what": "F-TELL-ME-WHEN-ITS-WORTH-THE-DRIVE, in the same change that brings its subscribe path live: render the hint (verbatim section 10, pure details disclosure, 0 JS) and amend the guard scenario into the render assertion.",
+      "ordering": "Only after a live subscribe path exists. Never earlier, by anyone.",
+      "owner": "the alerts lane, with the amendment pre-agreed in step 05-02",
+      "consequence": "The hint ownership dispute between the two plans is settled: it ships here, staged; the alerts lane flips it. Rendering it early is a copy-rule violation, not a head start."
+    }
+  ],
+  "implementation_scope": {
+    "source_directories": [
+      "public/",
+      "src/pages/",
+      "src/i18n/",
+      "src/publish/",
+      "scripts/",
+      "src/offline/",
+      "src/components/",
+      "src/layouts/Base.astro"
+    ],
+    "test_directories": [
+      "tests/unit/",
+      "tests/acceptance/daily-call-with-permanent-receipts/steps/",
+      "tests/acceptance/f-works-with-no-signal/"
+    ],
+    "excluded_patterns": [
+      "src/pipeline/**",
+      "src/share/**",
+      "src/report/**",
+      "src/data/**",
+      "src/i18n/strings.ts",
+      "infra/**",
+      "vitest.config.ts",
+      "astro.config.mjs",
+      "package.json",
+      "package-lock.json"
+    ]
+  },
+  "validation": {
+    "status": "pending",
+    "reviewer": "orchestrator quality gate (des-verify-integrity --roadmap-only)",
+    "approved_at": ""
+  }
+}
