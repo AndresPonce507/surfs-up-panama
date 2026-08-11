@@ -456,6 +456,34 @@
       "s": "EXECUTED",
       "d": "PASS: approved acceptance-evidence slice committed as 26ab7bc9ac016ee5ec4911b8a1367f764f1eacc7 (test(learning): prove stored differences stay in corridor)",
       "t": "2026-08-11T15:28:45Z"
+    },
+    {
+      "sid": "01-14",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: recovered the accepted 01-14 step from recover/learning-build's roadmap, verified 01-13 is sealed and no competing Learning worktree owns residuals.ts, and confirmed the shipped score former already omits a forecast-less morning",
+      "t": "2026-08-11T18:00:53Z"
+    },
+    {
+      "sid": "01-14",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: a controlled mutation of src/learning/residuals.ts that enters a forecast-less morning as a zero-valued score sample fails the acceptance property semantically with 'mornings with no captured forecast must not be counted behind the score move'. Inherited production itself is already green; the initial oracle ordering was corrected so each assertion owns its own falsifying mutation, and no production red is claimed.",
+      "t": "2026-08-11T18:00:53Z"
+    },
+    {
+      "sid": "01-14",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: added a fast-check law over formScoreResidualSamples requiring deep equality of the surviving sample list, which fails under the same zero-sample mutation with 'must contribute no score sample at all, not a zero-valued one'",
+      "t": "2026-08-11T18:00:53Z"
+    },
+    {
+      "sid": "01-14",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: 20 generated run-pairs each keep score_delta byte-identical while the height count rises one for one; focused acceptance/unit 7/7 passes with no production edit. Full vitest 382/382 across 73 files, typecheck and build pass. UI checks N/A: non-visual step, no rendered surface.",
+      "t": "2026-08-11T18:00:53Z"
     }
   ]
 }
