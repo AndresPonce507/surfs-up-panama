@@ -1,0 +1,24 @@
+{
+  "id": "01-18",
+  "name": "Every difference is forecast against what someone saw",
+  "delivery_mode": "current-equivalence/acceptance-evidence",
+  "accepted_context": "recover/learning-build:docs/feature/f-forecast-learns-from-the-beach/deliver/roadmap.json",
+  "dependencies": ["01-15"],
+  "surface_classification": "non-visual",
+  "non_visual_rationale": "Three generated laws over stored numbers and a stored prefix; the observable is fast-check's counterexample in terminal output, with no rendered surface at any point. U1-U8 and a Vera walk are therefore N/A.",
+  "criteria": [
+    "Raising every forecast raises the difference the fit stores, because the difference is forecast minus observed.",
+    "Shuffling which person reported which morning changes nothing stored, because nobody has any history yet.",
+    "Reporting a bigger size lowers the stored difference."
+  ],
+  "owned_paths": [
+    "src/learning/residuals.ts",
+    "tests/unit/learning-residual-laws.test.ts",
+    "tests/acceptance/f-forecast-learns-from-the-beach/differences-are-forecast-against-what-was-seen.test.ts"
+  ],
+  "production_change": false,
+  "blocker_resolution": "The accepted roadmap records this step BLOCKED AND NOT PLANNABLE TO GREEN, on the third criterion. That blocker is a property of ONE cucumber fixture builder, syntheticMornings on recover/learning-build, which computes forecastEffectiveHeightM = bandMid(band) - biggerThanForecastM + deviation and therefore moves the forecast with the reported band, cancelling r_height exactly. That helper does not exist on this branch, and the roadmap names the fix itself: decouple the forecast from the reported band. This step's own fixture holds the prediction row FIXED while only the reported band moves, which is that fix. Nothing was weakened: no assertion was softened, no feature file or shared fixture was edited, and no band-sensitive residual was implemented - the roadmap forbids all three, and the third would contradict 06 section 5.1 and red the sealed 01-08 and 01-13 oracles. Measured directly through the port: mid(head_overhead) - mid(chest_head) = 0.65 m, and with the forecast fixed the stored difference falls by exactly that.",
+  "acceptance": "Twenty generated cases drive four isolated runLearningFitOnce executions each over 10-30 mornings from 5-7 people. Baseline; every prediction row lifted 0.05-0.5 m with the reports untouched; the reported band raised chest_head to head_overhead with the forecast held fixed; and the device assignment rotated over the same set of people. The oracle asserts the stored difference rises by exactly the forecast lift, falls by exactly the band-midpoint rise derived from src/data/size-bands.ts, and that the whole stored record is byte-identical under the reporter shuffle. It rejects three controlled mutations, one per law.",
+  "red_evidence": "src/learning/residuals.ts was mutated to subtract a fixed reference midpoint instead of mid(band_i) - the naive alternative the roadmap names. The 01-18 acceptance failed semantically ('the drop must be exactly the rise in reported midpoint 0.6499999999999999; it was 2.7755575615628914e-17'), together with the pre-existing residual-form unit law. The mutation was reverted and `git diff --stat src/` confirmed empty before the gate was re-run.",
+  "scope_note": "The roadmap lists tests/unit/learning-residual-laws.test.ts among files_to_modify. No unit law was added: that file already carries 'the residual form is r_height = H_eff_pred - mid(band)' quantified over every band and swell height, which entails both the forecast-monotonicity and band-anti-monotonicity laws, and the reporter-shuffle determinism is already carried by 01-15's emitter law. Adding mirrors would be test duplication rather than coverage."
+}

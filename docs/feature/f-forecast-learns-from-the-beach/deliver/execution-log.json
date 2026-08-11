@@ -596,6 +596,34 @@
       "s": "EXECUTED",
       "d": "PASS: approved acceptance-evidence slice committed as 84e5523afd516534316230fccc445e9f189a0851 (test(learning): watch the trust gate actually drop a credential)",
       "t": "2026-08-11T18:16:25Z"
+    },
+    {
+      "sid": "01-18",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified declared dependency 01-15 is sealed, and re-examined the roadmap's recorded blocker. It is a property of the cucumber syntheticMornings builder on recover/learning-build, which does not exist on this branch; measured through the port, a fixed forecast against a raised band moves r_height by exactly mid(head_overhead) - mid(chest_head) = 0.65 m, so all three laws are plannable here.",
+      "t": "2026-08-11T18:19:45Z"
+    },
+    {
+      "sid": "01-18",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: mutating src/learning/residuals.ts to subtract a fixed reference midpoint instead of mid(band_i) - the naive alternative the roadmap names - fails the acceptance semantically with 'the drop must be exactly the rise in reported midpoint 0.6499999999999999; it was 2.7755575615628914e-17'. Inherited production itself is already green; no production red is claimed.",
+      "t": "2026-08-11T18:19:45Z"
+    },
+    {
+      "sid": "01-18",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: tests/unit/learning-residual-laws.test.ts already carries the residual-form law quantified over every band and swell height, which entails both the forecast and band directions, and 01-15's emitter law already carries the shuffle determinism. The existing law failed under the same fixed-reference mutation, so no new unit was needed to drive GREEN and a mirror would be duplication.",
+      "t": "2026-08-11T18:19:45Z"
+    },
+    {
+      "sid": "01-18",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: 20 generated cases prove all THREE laws, including the one the accepted roadmap recorded as blocked - the stored difference rises by exactly the forecast lift, falls by exactly the 0.65 m band-midpoint rise with the forecast held fixed, and is byte-identical under a reporter shuffle. No assertion weakened, no shared fixture or feature file edited, no band-sensitive residual implemented. Focused acceptance 1/1 passes with no production edit. Full vitest 393/393 across 78 files, typecheck and build pass. UI checks N/A: non-visual step whose observable is a fast-check counterexample.",
+      "t": "2026-08-11T18:19:45Z"
     }
   ]
 }
