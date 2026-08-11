@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "record_type": "post_release_repair_execution",
+  "feature_id": "f-works-with-no-signal",
+  "scope": "2026-08-10 offline reload remediation; does not modify the original DES history",
+  "events": [
+    {
+      "phase": "RED",
+      "worker_fallback": "/sin-senal",
+      "command": "npm run build && PREVIEW_PORT=4911 npx playwright test tests/e2e/f-works-with-no-signal/offline-reload.spec.ts",
+      "status": "FAIL",
+      "failure": "expect(precacheKeys).toContain('/sin-senal/'): received [/favicon.svg, /sin-senal] after navigator.serviceWorker.ready and a non-null controller",
+      "exit_code": 1
+    },
+    {
+      "phase": "GREEN",
+      "worker_fallback": "/sin-senal/",
+      "command": "npm run build && PREVIEW_PORT=4912 npx playwright test tests/e2e/f-works-with-no-signal/offline-reload.spec.ts",
+      "status": "PASS",
+      "result": "1 passed: fresh context became controlled, cache held /sin-senal/, and offline reload showed a cached reading or fallback heading",
+      "exit_code": 0
+    },
+    {
+      "phase": "VERIFY",
+      "command": "npm test && npm run typecheck && npm run build",
+      "status": "PASS",
+      "result": "44 Vitest files and 212 tests passed; typecheck and production build passed",
+      "exit_code": 0
+    },
+    {
+      "phase": "COMMIT",
+      "command": "git commit",
+      "status": "PASS",
+      "result": "10ac76d test(offline): cover fresh-profile reload",
+      "exit_code": 0
+    }
+  ]
+}
