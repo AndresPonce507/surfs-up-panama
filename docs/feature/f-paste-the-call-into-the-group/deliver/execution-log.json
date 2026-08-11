@@ -332,6 +332,48 @@
       "t": "2026-08-10T22:52:25Z"
     },
     {
+      "sid": "04-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: corrected 04-01 JIT acceptance collected two direct selection scenarios and failed two semantic AssertionErrors because src/share/preview-card.ts lacks selectPreviewCard.",
+      "t": "2026-08-10T21:26:56Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: selectPreviewCard preserves the spot choice for complete P7 data and returns the generic choice with missing field names otherwise. UI N/A by roadmap: this pure selection is not mounted; the image card is examined in 04-03.",
+      "t": "2026-08-10T21:27:25Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: test budget checked. The two direct public-boundary scenarios cover complete and incomplete P7 selection; no additional unit test is needed for this small pure port.",
+      "t": "2026-08-10T21:27:25Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: 04-02 JIT acceptance collected one scenario and failed one semantic AssertionError because publication emitted zero preview cards for 20 published spots.",
+      "t": "2026-08-10T21:27:44Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the real publication emits 20 spot JPEG cards plus the declared generic recovery card. The 04-02 JIT acceptance passes; typecheck and build pass; every emitted card is 1200x630 and 46,097-53,990 B, below the 60 KB ceiling. UI N/A by roadmap: the crawler-only asset is examined as a shared journey in 04-03.",
+      "t": "2026-08-10T21:58:36Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: test budget checked. One real publication behavior permits two unit tests; the sealed real-I/O acceptance already verifies it, so no additional unit test was added. Full unit suite passes 86/86 on rerun after an unrelated randomized page-weight property flake.",
+      "t": "2026-08-10T21:58:36Z"
+    },
+    {
       "sid": "03-03",
       "p": "EVIDENCE_CORRECTION",
       "s": "INVALIDATED",
@@ -368,6 +410,13 @@
     },
     {
       "sid": "04-03",
+      "p": "REVIEW",
+      "s": "EXECUTED",
+      "d": "APPROVED: fresh independent read-only review of release 1e79185679657c3e8b2fcd1293f525bf6347d672 approved 04-03 closure. It verified existing commit 4e799e23 with Step-Id 04-03, the owned public handoff, and the retained NOT_EXECUTED third-party WhatsApp-renderer boundary. No implementation or test change was requested.",
+      "t": "2026-08-11T04:19:00Z"
+    },
+    {
+      "sid": "04-03",
       "p": "COMMIT",
       "s": "SKIPPED",
       "d": "CHECKPOINT_PENDING: independent review found the implementation correct but requested the phase evidence now recorded above. Vera's first source-blind observation was INDETERMINATE only because no authorized WhatsApp chat could be exercised; the architecture-defined public handoff and its external-client boundary are recorded in 04-03-whatsapp-card-external-verification.md. Awaiting the scoped Vera correction and independent re-review before a commit is permitted.",
@@ -377,42 +426,42 @@
       "sid": "05-01",
       "p": "RED",
       "s": "EXECUTED",
-      "d": "PASS: focused acceptance initially failed for the intended missing selected-spot WhatsApp action.",
+      "d": "PASS: `npm run test:at -- --name 'Desde la página de un spot se comparte el llamado de ese spot'` collected one scenario and failed with the intended semantic AssertionError: the selected spot page offered no WhatsApp action. No collection, build, or environment failure occurred.",
       "t": "2026-08-11T02:35:10Z"
     },
     {
       "sid": "05-01",
       "p": "GREEN",
       "s": "EXECUTED",
-      "d": "PASS: focused real-browser acceptance passed 13/13; no-JavaScript companion passed 11/11; first-flight scenario passed 12/12; units 86/86; typecheck, build, budget, and test:ui passed. At 390 px, source-blind browser observation found one 358x47 Mariatos WhatsApp action, no horizontal overflow, and a Mariatos 69 message ending in its stamped URL. Home-summary substitution falsified the selected-score assertion and was restored before rerun. Test budget: 1 behavior x 2 = 2 unit tests; 0 new tests because the real-I/O acceptance covers the route.",
+      "d": "PASS: focused real-browser acceptance passed 13/13; its no-JavaScript companion passed 11/11 and the spot first-flight scenario passed 12/12. `npm test` passed 86/86, and typecheck, build, budget, and test:ui all exited 0. At 390 px the independent source-blind browser observation found exactly one 358x47 WhatsApp action for Mariatos, no horizontal overflow, and a decoded Mariatos 69 message ending in that spot's stamped URL. Controlled falsification substituting the home entry made the selected-score assertion fail; the source was restored before the green rerun. Test budget: 1 behavior x 2 = 2 unit tests; 0 new tests because the real-I/O acceptance covers the route.",
       "t": "2026-08-11T02:38:41Z"
     },
     {
       "sid": "05-01",
       "p": "COMMIT",
       "s": "EXECUTED",
-      "d": "PASS: 28f352d is `feat(paste): share the selected spot's call - step 05-01` and changes only src/share/day-summary.ts and src/pages/spots/[slug]/index.astro. Full Slice-05 retained four expected 05-02 REDs for copy and per-spot Open Graph publication.",
+      "d": "PASS: `git show --format= --name-status 28f352d84b4700a51b9318b4c288c2888db8c6f9` verifies commit `feat(paste): share the selected spot's call - step 05-01`, changing only src/share/day-summary.ts and src/pages/spots/[slug]/index.astro. The full Slice-05 rerun retained four expected 05-02 REDs for spot copy and per-spot Open Graph publication; none is represented as a 05-01 success.",
       "t": "2026-08-11T02:39:21Z"
     },
     {
       "sid": "05-02",
       "p": "RED",
       "s": "EXECUTED",
-      "d": "PASS: direct copy and selected-announcement acceptance scenarios failed with the intended semantic AssertionErrors: no spot copy action, then no Open Graph announcement. Both reached the built page without setup, import, or environment failure.",
+      "d": "PASS: the direct copy and selected-announcement acceptance scenarios each failed with their intended semantic AssertionError: the spot page offered no copy action, then no Open Graph announcement. Both collected one scenario, reached the built page, and had no setup, import, or environment failure.",
       "t": "2026-08-11T02:43:26Z"
     },
     {
       "sid": "05-02",
       "p": "GREEN",
       "s": "EXECUTED",
-      "d": "PASS: full Slice-05 acceptance passed 7 scenarios and 82 steps, including exact copy parity, no-JavaScript WhatsApp, selected-spot announcement, and light/dark reduced-motion U1-U7 variants. Units passed 86/86; typecheck, build, budget, and test:ui passed. The 390 px Mariatos page had 48 px copy and 47 px WhatsApp controls, no overflow or CTA overlap, clean Mariatos canonical/og:url, and stamped Mariatos og:image. Home-announcement falsification made the selected-announcement assertion reject Playa Guánico, then was restored. Test budget: 3 behaviors x 2 = 6 unit tests; 0 new tests because real-I/O acceptance covers route composition.",
+      "d": "PASS: full Slice-05 acceptance passed 7 scenarios and 82 steps, including exact copy parity, no-JavaScript WhatsApp, selected-spot announcement, light and dark/reduced-motion U1-U7 variants. Units passed 86/86; typecheck, build, budget, and test:ui passed. The built 390 px Mariatos page showed a 48 px copy action and 47 px WhatsApp action, no overflow or CTA overlap, a clean Mariatos canonical/og:url, and a stamped Mariatos og:image. Controlled falsification routed the announcement through the home spot and made the selected-announcement assertion reject Playa Guánico; it was restored before the green rerun. Test budget: 3 behaviors x 2 = 6 unit tests; 0 new tests because the real-I/O contract covers the route composition.",
       "t": "2026-08-11T02:47:07Z"
     },
     {
       "sid": "05-02",
       "p": "COMMIT",
       "s": "EXECUTED",
-      "d": "PASS: b3b65d8 is `feat(paste): close the spot sharing journey - step 05-02`, changing only src/pages/spots/[slug]/index.astro, src/components/SpotDetail.astro, and scoped RED/GREEN evidence. It preserves Base/index ordering and leaves external WhatsApp chat delivery outside the local contract.",
+      "d": "PASS: `git show --format= --name-status b3b65d8` verifies commit `feat(paste): close the spot sharing journey - step 05-02`, changing only src/pages/spots/[slug]/index.astro, src/components/SpotDetail.astro, and this scoped RED/GREEN evidence. It preserves the shared Base/index ordering and keeps external WhatsApp chat delivery outside the local contract.",
       "t": "2026-08-11T02:49:30Z"
     },
     {
@@ -435,6 +484,41 @@
       "s": "EXECUTED",
       "d": "PASS: correction rerun: the focused `scenario_name` command passed 1 scenario and 12 steps; the full Slice-05 tag command exited 0; `npm test` passed 22 files and 86 tests; typecheck, build, budget, and test:ui passed. The rebuilt home was the heaviest measured document at 4,768 B gz of 14,336 B; UI checks U2, U4, U6, and U7 passed.",
       "t": "2026-08-11T02:58:30Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: strict release closure inspected existing commit 4e799e23b7c6b61216716b3715c3aeec879165a9, `feat(paste): close the fresh preview card journey - step 04-03`, whose Step-Id is 04-03 and which is an ancestor of release 1e79185679657c3e8b2fcd1293f525bf6347d672. Fresh release evidence: PASTE_JIT=1 Slice-04 passed 7 scenarios and 107 steps; npm test passed 45 files and 229 tests; typecheck, build, budget, and test:ui exited 0. A fresh independent review approved the owned public handoff. The source-blind 390 px public page exposed matching Playa Guánico 70 OG title, description, absolute stamped image and clean canonical URL with no horizontal overflow. Authenticated WhatsApp rendering and cache timing remain NOT_EXECUTED under 04-03-whatsapp-card-external-verification.md; no chat-card result is inferred.",
+      "t": "2026-08-11T04:19:00Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "RED",
+      "s": "SKIPPED",
+      "d": "NOT_RECONSTRUCTED: this strict audit began after the independently approved release already existed. No contemporaneous 05-03 RED record or pre-GREEN source revision was available, and the audit did not alter production or tests merely to manufacture one. This is verification-only evidence, not a claim that the historic RED gate ran.",
+      "t": "2026-08-11T04:19:00Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: strict release closure at 1e79185679657c3e8b2fcd1293f525bf6347d672 ran `PASTE_JIT=1 npm run test:at -- --name 'La página del spot con su acción de compartir sigue liviana'` (1 scenario, 12 steps), the activated Slice-05 suite (7 scenarios, 82 steps), and activated Slice-01 regression floor (8 scenarios, 97 steps), all passing. `npm test` passed 45 files and 229 tests; typecheck, build, budget, and test:ui exited 0. Source-blind public inspection at 390 px found Mariatos 69, exact selected-spot WhatsApp text and stamped route, 46.95 px WhatsApp and 48 px copy controls, matching selected-spot OG metadata, and no horizontal overflow. Test budget: 1 behavior x 2 = 2; 0 new unit tests, because this verification-only budget/regression step adds no production behavior. The browser clipboard bridge returned empty after the visible copy confirmation, so this record does not claim a manual paste round-trip.",
+      "t": "2026-08-11T04:19:00Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "REVIEW",
+      "s": "EXECUTED",
+      "d": "PARTIAL_APPROVAL: fresh independent read-only review approved 05-03 GREEN and its test budget, but blocked COMMIT EXECUTED because no commit with Step-Id: 05-03 exists. Its result is recorded without weakening the unexecuted manual clipboard or third-party WhatsApp observations.",
+      "t": "2026-08-11T04:19:00Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "COMMIT",
+      "s": "SKIPPED",
+      "d": "BLOCKED_BY_EVIDENCE: fresh independent review approved GREEN but found no existing commit with Step-Id: 05-03. No new implementation commit was created by this docs-only audit, and recording COMMIT EXECUTED without a corresponding commit would be false. The step remains pending only for a properly scoped commit or an upstream-approved workflow disposition.",
+      "t": "2026-08-11T04:19:00Z"
     }
   ]
 }
