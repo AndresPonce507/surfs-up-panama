@@ -330,6 +330,27 @@
       "s": "EXECUTED",
       "d": "PASS: `git show --format= --name-status 408331a41dcad7b1053743573a82d5ef97789840` verifies the 2026-08-10 17:52:43-05:00 commit `feat(paste): close the home preview journey - step 03-03`, with Step-Id: 03-03, changed only src/pages/index.astro, src/components/RankedList.astro, and src/layouts/Base.astro. The external WhatsApp chat-card observation remains NOT_EXECUTED and is not represented as an owned acceptance result.",
       "t": "2026-08-10T22:52:25Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "EVIDENCE_CORRECTION",
+      "s": "INVALIDATED",
+      "d": "CORRECTION: the 03-03 GREEN and COMMIT entries introduced by d9ffb68 at 2026-08-10T22:52:05Z and 2026-08-10T22:52:25Z are invalid as post-commit evidence because both predate 408331a's 2026-08-10T22:52:43Z commit time. They are preserved for append-only auditability and must not be used as verification. The historical RED source remains the separate distill/red-classification.md record.",
+      "t": "2026-08-11T02:23:44Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: current verification began 2026-08-11T02:23:26Z and completed 2026-08-11T02:23:44Z. `PASTE_JIT=1 npm run test:at -- --tags '@feature-f-paste-the-call-into-the-group and @jit-03-03'` passed 5 scenarios and 71 steps in 0m 15.577s executing; `npm run typecheck` exited 0; `npm run build` exited 0 and its page-weight gate measured home at 4,733 B gz of 14,336 B. These commands ran against the present tree after 408331a existed; they do not assert that the current tree is byte-identical to that commit.",
+      "t": "2026-08-11T02:23:44Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: current `git show --format= --name-status 408331a41dcad7b1053743573a82d5ef97789840` at 2026-08-11T02:23:44Z verifies existing commit 408331a41dcad7b1053743573a82d5ef97789840, subject `feat(paste): close the home preview journey - step 03-03`, and only src/components/RankedList.astro, src/layouts/Base.astro, and src/pages/index.astro changed. It is an inspection of an existing commit, not a claim to have created it now.",
+      "t": "2026-08-11T02:23:44Z"
     }
   ]
 }
