@@ -91,6 +91,13 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
             {index === 0 ? `VE A ${nameOf(summary.spot_id)}` : nameOf(summary.spot_id)}
           </a>
           <strong>{summary.score_q}</strong>
+          <div class="bars" aria-hidden="true">
+            <div class="bar">
+              <div class="track">
+                <div class="fill" style={`width: ${summary.score_q}%`}></div>
+              </div>
+            </div>
+          </div>
           <p>{index === 0 ? repeatableCall(summary) : summary.call[locale]}</p>
           {summary.conf_level !== undefined && <Confidence level={summary.conf_level} />}
           {/* The one action the big card offers, handed in by the route so this
