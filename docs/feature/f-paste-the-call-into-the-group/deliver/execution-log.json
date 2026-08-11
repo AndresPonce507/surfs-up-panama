@@ -414,6 +414,27 @@
       "s": "EXECUTED",
       "d": "PASS: b3b65d8 is `feat(paste): close the spot sharing journey - step 05-02`, changing only src/pages/spots/[slug]/index.astro, src/components/SpotDetail.astro, and scoped RED/GREEN evidence. It preserves Base/index ordering and leaves external WhatsApp chat delivery outside the local contract.",
       "t": "2026-08-11T02:49:30Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "EVIDENCE_CORRECTION",
+      "s": "INVALIDATED",
+      "d": "CORRECTION: the earlier 05-02 RED entry combined two separately selected scenarios. It is retained only as an audit transcript and is not valid canonical phase proof because this step permits exactly one active RED acceptance scenario.",
+      "t": "2026-08-11T02:56:26Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS: canonical JIT RED was exactly one active authored scenario, `scenario_name` selected by `npm run test:at -- --name 'Copiar en la página del spot copia el llamado de ese spot'`, before b3b65d8. It collected one scenario and failed one semantic AssertionError because the spot page offered no copy action, with no collection, build, import, or environment failure. The companion no-JavaScript and phone-quality mappings remained unselected until GREEN/full-slice verification. Historical source inspection corroborates the captured RED: 28f352d's SpotDetail mounts ShareControls but has no CopyControl, while b3b65d8 adds the copy action.",
+      "t": "2026-08-11T02:56:26Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "VALIDATION",
+      "s": "EXECUTED",
+      "d": "PASS: correction rerun: the focused `scenario_name` command passed 1 scenario and 12 steps; the full Slice-05 tag command exited 0; `npm test` passed 22 files and 86 tests; typecheck, build, budget, and test:ui passed. The rebuilt home was the heaviest measured document at 4,768 B gz of 14,336 B; UI checks U2, U4, U6, and U7 passed.",
+      "t": "2026-08-11T02:58:30Z"
     }
   ]
 }

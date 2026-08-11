@@ -453,7 +453,7 @@
           },
           "deps": ["05-01"],
           "files_to_modify": ["src/pages/spots/[slug]/index.astro", "src/components/SpotDetail.astro", "src/components/ShareControls.astro"],
-          "implementation_notes": "Serialized spot seam: SpotDetail owns the route surface and receives the route's share content without duplicating the home path."
+          "implementation_notes": "Serialized spot seam: SpotDetail owns the route surface and receives the route's share content without duplicating the home path. JIT RED activates only scenario_name through Cucumber --name; the remaining mapped no-JavaScript and phone-quality scenarios stay unchanged for GREEN/full-slice verification. ShareControls is listed as the consumed integration seam, but is intentionally reused unchanged: its no-JavaScript, single-anchor, and phone-quality contract was already established by 01-03 and 02-03; 05-02 owns route composition."
         },
         {
           "id": "05-03",
