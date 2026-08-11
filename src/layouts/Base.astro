@@ -21,6 +21,7 @@ import tokens from '../styles/tokens.css?raw';
 import base from '../styles/base.css?raw';
 import components from '../styles/components.css?raw';
 import offline from '../styles/offline.css?raw';
+import { darkChromeColor, lightChromeColor } from '../styles/chrome-colors';
 
 interface Props {
   locale: Locale;
@@ -59,8 +60,8 @@ const inlineCss = minify(
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
-    <meta name="theme-color" content="#FFFFFF" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#10141A" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content={lightChromeColor} media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content={darkChromeColor} media="(prefers-color-scheme: dark)" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="alternate" hreflang="es" href={currentPath} />
