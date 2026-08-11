@@ -1,0 +1,21 @@
+{
+  "id": "01-10",
+  "name": "Shipped source declares two residual forms only",
+  "delivery_mode": "current-equivalence/acceptance-evidence",
+  "accepted_context": "recover/learning-build:docs/feature/f-forecast-learns-from-the-beach/deliver/roadmap.json",
+  "dependencies": ["01-02", "01-09"],
+  "criteria": [
+    "Examining the shipped src finds exactly the residual forms r_height and r_score, and no third.",
+    "No noise floor for wind is declared anywhere in the shipped source.",
+    "Noise floors for height and score are declared with the reasoning each was derived from.",
+    "The examination still reports no violation over the shipped source."
+  ],
+  "owned_paths": [
+    "src/learning/residuals.ts",
+    "src/learning/constants.ts",
+    "tests/unit/learning-declarations.test.ts",
+    "tests/acceptance/f-forecast-learns-from-the-beach/shipped-residual-inventory.test.ts"
+  ],
+  "production_change": false,
+  "acceptance": "The real evaluateLearningDeclarations port examines shipped src, returns exactly r_height/r_score, height/score floors with their derivations, no wind floor, and no violations. Controlled third-residual and wind-floor report mutations are rejected by the acceptance oracle."
+}
