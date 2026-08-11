@@ -390,6 +390,147 @@ describe('SurfaceCall.weakest_link_subscore: raw value paired with the published
   });
 });
 
+// ----------------------------------------------- counterfactual surface --
+//
+// Slice-03, step 03-01: the reading surface carries a producer-decided
+// counterfactual score, never enough material for a page to calculate one.
+// The `rounded_equal` marker preserves the distinction between a fresh,
+// deliberately suppressed equality and a compatible legacy named row.
+
+type CounterfactualRepresentation =
+  | { readonly counterfactual_score_q: number }
+  | { readonly counterfactual_suppression: 'rounded_equal' }
+  | Record<never, never>;
+
+function withCounterfactual(
+  call: SurfaceCall,
+  scoreQ: number,
+  representation: CounterfactualRepresentation,
+): SurfaceCall {
+  return { ...call, score_q: scoreQ, ...representation };
+}
+
+function namedSurfaceWithCounterfactual(
+  scoreQ: number,
+  representation: CounterfactualRepresentation,
+  token: FactorToken,
+): PublishedSurfaceUpdate {
+  const surface = buildValidSurface(1, 0, ['token'], ['token'], [token], [token]);
+  const calls = surface.calls.map((call) => withCounterfactual(call, scoreQ, representation));
+  const tomorrowSpots = surface.days[1].spots.map((call) => withCounterfactual(call, scoreQ, representation));
+  return {
+    ...surface,
+    calls,
+    days: [
+      { ...surface.days[0]!, spots: calls },
+      { ...surface.days[1]!, spots: tomorrowSpots },
+    ],
+  };
+}
+
+type InvalidCounterfactualPairing =
+  | 'clean-score'
+  | 'clean-marker'
+  | 'missing-link'
+  | 'equal'
+  | 'lower'
+  | 'fractional'
+  | 'below-range'
+  | 'above-range'
+  | 'both'
+  | 'bad-marker';
+
+const INVALID_COUNTERFACTUAL_PAIRINGS: readonly InvalidCounterfactualPairing[] = [
+  'clean-score', 'clean-marker', 'missing-link', 'equal', 'lower',
+  'fractional', 'below-range', 'above-range', 'both', 'bad-marker',
+];
+
+function invalidCounterfactualSurface(
+  pairing: InvalidCounterfactualPairing,
+  token: FactorToken,
+  scoreQ: number,
+): PublishedSurfaceUpdate {
+  const base = namedSurfaceWithCounterfactual(scoreQ, {}, token);
+  const named = base.calls[0]!;
+  const { weakest_link: _namedLink, ...withoutLink } = named;
+  const score = pairing === 'above-range'
+    ? 101
+    : pairing === 'below-range'
+      ? -1
+      : pairing === 'fractional'
+        ? scoreQ + 0.5
+        : Math.max(0, scoreQ - 1);
+  const invalid = pairing === 'clean-score'
+    ? { ...named, weakest_link: null, counterfactual_score_q: scoreQ + 1 }
+    : pairing === 'clean-marker'
+      ? { ...named, weakest_link: null, counterfactual_suppression: 'rounded_equal' }
+      : pairing === 'missing-link'
+        ? { ...withoutLink, counterfactual_score_q: scoreQ + 1 }
+        : pairing === 'equal'
+          ? { ...named, counterfactual_score_q: scoreQ }
+          : pairing === 'lower' || pairing === 'fractional' || pairing === 'below-range' || pairing === 'above-range'
+            ? { ...named, counterfactual_score_q: score }
+            : pairing === 'both'
+              ? { ...named, counterfactual_score_q: Math.min(100, scoreQ + 1), counterfactual_suppression: 'rounded_equal' }
+              : { ...named, counterfactual_suppression: 'not-rounded-equal' };
+  return {
+    ...base,
+    calls: [invalid as SurfaceCall],
+    days: [
+      { ...base.days[0]!, spots: [invalid as SurfaceCall] },
+      base.days[1]!,
+    ],
+  };
+}
+
+describe('SurfaceCall.counterfactual_score_q: producer-decided honest score without the named weakness', () => {
+  it('retains a strictly higher integer, an explicit equality marker, or a legacy omission without changing other surface state', () => {
+    fc.assert(
+      fc.property(
+        tokenArb,
+        fc.integer({ min: 0, max: 99 }),
+        fc.constantFrom<'higher' | 'rounded-equal' | 'legacy'>('higher', 'rounded-equal', 'legacy'),
+        (token, scoreQ, mode) => {
+          const representation: CounterfactualRepresentation = mode === 'higher'
+            ? { counterfactual_score_q: scoreQ + 1 }
+            : mode === 'rounded-equal'
+              ? { counterfactual_suppression: 'rounded_equal' }
+              : {};
+          const surface = namedSurfaceWithCounterfactual(scoreQ, representation, token);
+          const before = captureValidatorState(surface, surface.calls[0], 'pending');
+          const outcome = tryValidate(surface);
+          const after = captureValidatorState(surface, surface.calls[0], outcome.threw ? 'rejected' : 'accepted');
+
+          assertValidatorStateDelta(before, after, 'accepted');
+          assert.ok(!outcome.threw, outcome.threw ? outcome.message : 'valid counterfactual representation must validate');
+          assert.deepEqual(outcome.value.calls[0], surface.calls[0], 'today counterfactual row changed during validation');
+          assert.deepEqual(outcome.value.days[1]?.spots[0], surface.days[1]?.spots[0], 'tomorrow counterfactual row changed during validation');
+        },
+      ),
+    );
+  });
+
+  it('refuses non-higher, non-integral, malformed, clean-day, or double counterfactual representations', () => {
+    fc.assert(
+      fc.property(
+        tokenArb,
+        fc.integer({ min: 1, max: 99 }),
+        (token, scoreQ) => {
+          for (const pairing of INVALID_COUNTERFACTUAL_PAIRINGS) {
+            const rowScoreQ = pairing === 'below-range' ? -2 : scoreQ;
+            const surface = invalidCounterfactualSurface(pairing, token, rowScoreQ);
+            const before = captureValidatorState(surface, surface.calls[0], 'pending');
+            const outcome = tryValidate(surface);
+            const after = captureValidatorState(surface, surface.calls[0], outcome.threw ? 'rejected' : 'accepted');
+
+            assertValidatorStateDelta(before, after, 'rejected');
+          }
+        },
+      ),
+    );
+  });
+});
+
 // --------------------------------------------------- weakest-link reader --
 //
 // Slice-01, step 01-03: `resolveWeakestLink()` is the publish-side reader
