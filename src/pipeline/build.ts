@@ -13,6 +13,8 @@
 // The build never fetches; the log is the only contract with the fetch run.
 
 import type { BuildDeps, BuildOutcome } from './ports';
+import { planStaticPublication } from './static-publication';
+import { selectNewestEligibleSnapshots } from './snapshot-selection';
 import { confidence } from '../scoring/confidence';
 import { loadLaunchSpotSeeds } from '../data/launch-spots';
 import { sizeBands, type SizeBandToken } from '../data/size-bands';
@@ -118,7 +120,7 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
   const date = regionalCivilDate(now, spots[0]?.timezone ?? 'America/Panama');
   const hour = now.toISOString().slice(11, 13);
   const dates = [date, followingCivilDate(date)] as const;
-  const rows = await predictionRows(deps, dates);
+  const rows = await predictionRows(deps, dates, now);
   const calls = spots.flatMap((spot) => callsForSpot(spot, rows, dates, hour));
   if (calls.length === 0) return { published: false, reason: 'no usable wave members' };
 
@@ -157,21 +159,27 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
     },
   };
   await deps.store.putBundle(`pub/v1/regions/${deps.region_id}/bundle.json`, JSON.stringify(bundle));
+  if (deps.store.publishStaticSite !== undefined) {
+    await deps.store.publishStaticSite(planStaticPublication(build_id, bundle.publish_surface));
+  }
   await deps.store.putManifest('pub/v1/manifest.json', JSON.stringify({ build_id }));
+  if (deps.store.probePublicPublication !== undefined) {
+    await deps.store.probePublicPublication(build_id);
+  }
   return { published: true, build_id };
 }
 
-async function predictionRows(deps: BuildDeps, dates: readonly string[]): Promise<PredictionRow[]> {
+async function predictionRows(deps: BuildDeps, dates: readonly string[], buildTime: Date): Promise<PredictionRow[]> {
   const keys = (await Promise.all(dates.map((date) => deps.store.listPredictions(`predictions/v1/dt=${date}/`)))).flat();
-  const rows: PredictionRow[] = [];
+  const rows: Array<PredictionRow & { tie_breaker: string }> = [];
   for (const key of keys) {
     const body = await deps.store.getPrediction(key);
     if (body === null) continue;
-    for (const line of body.split('\n')) {
-      if (line !== '') rows.push(JSON.parse(line) as PredictionRow);
+    for (const [lineIndex, line] of body.split('\n').entries()) {
+      if (line !== '') rows.push({ ...(JSON.parse(line) as PredictionRow), tie_breaker: `${key}#${lineIndex}` });
     }
   }
-  return rows;
+  return selectNewestEligibleSnapshots(rows, buildTime).map(({ tie_breaker: _tie_breaker, ...row }) => row);
 }
 
 function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: PredictionRow[], dates: readonly string[], hour: string): CallRow[] {

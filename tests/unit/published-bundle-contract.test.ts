@@ -89,7 +89,7 @@ function predictionLines(spot_id: string, date: string, height_m: number): strin
     .map((source, index) => JSON.stringify({
       spot_id,
       source,
-      run_ts: `${date}T06:00Z`,
+      run_ts: `${TODAY}T06:00Z`,
       valid_ts: `${date}T18:00Z`,
       lead_h: 12,
       swell_h_m: height_m + index * 0.02,

@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig } from 'astro/config';
+import { defineConfig, passthroughImageService } from 'astro/config';
 
 import { pageWeightBudgetIntegration } from './scripts/page-weight-core.mjs';
 
@@ -24,9 +24,22 @@ export default defineConfig({
   // message until the domain lands (HANDOFF.md section 10).
   site: 'https://d1j9u9fxnap4es.cloudfront.net',
   output: 'static',
+  // The published surface only serves authored SVG/static assets and never
+  // invokes `astro:assets` transforms. Keep that contract explicit so the
+  // Lambda renderer needs no native Sharp binary at runtime.
+  image: {
+    service: passthroughImageService(),
+  },
   build: {
     format: 'file',
+    assets: 'assets',
   },
+  // The deployed build Lambda mounts its package read-only. Its renderer sets
+  // this to a unique /tmp path for Vite's entirely disposable dependency
+  // cache; local development keeps Astro's conventional node_modules path.
+  ...(process.env.SURFS_UP_VITE_CACHE_DIR === undefined
+    ? {}
+    : { vite: { cacheDir: process.env.SURFS_UP_VITE_CACHE_DIR } }),
   // The measurement is written straight to the streams rather than through
   // Astro's logger: the route-by-route list is the artefact a reader (and the
   // acceptance suite) parses, and a log prefix would corrupt it.

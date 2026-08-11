@@ -16,7 +16,7 @@
 // so scoring's null-tide branch (sTide, confidence capped at 0.7) runs
 // honestly instead.
 
-import type { Clock, ForecastSource, MemberSeries, SourceFailure, SourceResult, TideHour, WindHour } from '../ports';
+import type { Clock, ForecastSource, MemberSeries, ReceivedSourcePayload, SourceResult, TideHour, WindHour } from '../ports';
 import type { SpotCoordinate } from './spot-coordinates';
 
 const WAVE_MODELS = ['ncep_gfswave016', 'ncep_gfswave025', 'meteofrance_wave', 'dwd_gwam'] as const;
@@ -45,35 +45,41 @@ export class OpenMeteoForecastSource implements ForecastSource {
     private readonly forecastDays = 2,
   ) {}
 
-  async fetchWaveMembers(spot_id: string): Promise<SourceResult<MemberSeries[]>> {
+  async fetchWavePayload(spot_id: string): Promise<ReceivedSourcePayload> {
     const spot = this.requireSpot(spot_id);
-    const fetched = await this.get(marineUrl(spot, this.forecastDays));
-    if (!fetched.ok) return fetched;
+    return this.get(marineUrl(spot, this.forecastDays));
+  }
+
+  parseWaveMembers(verbatim: string): SourceResult<MemberSeries[]> {
     try {
-      const data = parseMarineResponse(JSON.parse(fetched.verbatim) as unknown, this.clock.now());
-      return { ok: true, verbatim: fetched.verbatim, data };
+      return { ok: true, data: parseMarineResponse(JSON.parse(verbatim) as unknown, this.clock.now()) };
     } catch {
       return { ok: false, reason: 'malformed' };
     }
   }
 
-  async fetchWind(spot_id: string): Promise<SourceResult<WindHour[]>> {
+  async fetchWindPayload(spot_id: string): Promise<ReceivedSourcePayload> {
     const spot = this.requireSpot(spot_id);
-    const fetched = await this.get(windUrl(spot, this.forecastDays));
-    if (!fetched.ok) return fetched;
+    return this.get(windUrl(spot, this.forecastDays));
+  }
+
+  parseWind(verbatim: string): SourceResult<WindHour[]> {
     try {
-      const data = parseWindResponse(JSON.parse(fetched.verbatim) as unknown);
-      return { ok: true, verbatim: fetched.verbatim, data };
+      return { ok: true, data: parseWindResponse(JSON.parse(verbatim) as unknown) };
     } catch {
       return { ok: false, reason: 'malformed' };
     }
   }
 
-  fetchTide(_spot_id: string): Promise<SourceResult<TideHour[]>> {
+  fetchTidePayload(_spot_id: string): Promise<ReceivedSourcePayload> {
     return Promise.resolve({ ok: false, reason: 'dark' });
   }
 
-  private async get(url: string): Promise<{ ok: true; verbatim: string } | { ok: false; reason: SourceFailure }> {
+  parseTide(_verbatim: string): SourceResult<TideHour[]> {
+    return { ok: false, reason: 'dark' };
+  }
+
+  private async get(url: string): Promise<ReceivedSourcePayload> {
     try {
       const response = await this.fetchImpl(url);
       if (!response.ok) return { ok: false, reason: 'error' };

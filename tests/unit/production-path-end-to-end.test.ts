@@ -23,7 +23,9 @@ import type { PublishedSurfaceUpdate, StaticSurface, SurfaceCall } from '../../s
 
 const PROJECT_ROOT = process.cwd();
 const CAPTURE_ROOT = resolve(PROJECT_ROOT, 'data/predictions-capture');
-const AT = '2026-08-09T11:22:00Z';
+// The committed snapshot was fetched at 18:42Z and attributed to its 12Z
+// run. A build at 11:22Z would correctly refuse it as future knowledge.
+const AT = '2026-08-09T19:22:00Z';
 
 // Both cases below spawn the real production build, and the second also shells
 // out to `npx tsx`. That is seconds of genuine subprocess work, not the

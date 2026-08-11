@@ -78,6 +78,45 @@ Three gaps found after the first commit (`a4e93e1`), fixed before reporting done
 2. The acceptance assertion for the cost-allocation tag checked for the words `'Project'` and `'surfs-up-panama'` independently, which is true of several unrelated lines in the evaluator's own output (tautological). Tightened to the joined `Project=surfs-up-panama` string.
 3. Added the two negatives above ($20 import claim, watched-metric drift) to close R10 and R15's "demonstrated red" requirement, which had positive-only coverage.
 
+## Slice-05 entries (2026-08-09, DEVOPS/platform lane)
+
+Slice-05 shipped a local command surface after all (`node infra/month-close.mjs` with a
+`--input` recorded-reads mode), so it DOES produce entries here, narrowing the "no scaffold-RED"
+prediction above. Honest sequencing note: the pure core was built unit-first (13 tests in
+`infra/test/month-close.test.ts`, watched RED on an empty skeleton with real assertion failures
+like `expected '' to contain 'month-to-date'`, then GREEN), and the three `@slice-05` acceptance
+scenarios were authored afterwards against the working core, so their first run was green. Per
+the falsifiability doctrine they were then proven able to fail:
+
+| Poison | Layer that caught it | Exact evidence |
+| --- | --- | --- |
+| `evaluateMonthClose` forced to `exitCode: 0` | AT negative scenario | `WHAT: a month above $0.00 was accepted as closed at zero.` (exit 1) |
+| billed-service naming dropped from the report | AT negative scenario AND unit suite | `WHAT: the produced local-CI output omits "Amazon Simple Storage Service". WHY: the failing month must name the service that billed.` (both exit 1) |
+
+Both poisons reverted; reverts verified by grep for the poison marker and a fully green re-run
+(10 scenarios / 110 steps; 13/13 unit). Live proof against the real account, 2026-08-09:
+exit 0, `month-to-date account spend (2026-08-01 to 2026-08-10): $0.00`, three real free-tier
+lines each carrying `Always Free`, the honest `not yet activated` attribution statement, and the
+Anthropic external-audit line.
+
+## The four real stacks: red-then-green record (same lane, same day)
+
+The 23 new real-stack asserts in `infra/test/guardrails.test.ts` were authored against empty
+skeleton stacks and watched failing on real assertion errors (19 failed / 15 passed, exit 1)
+before any stack resource existed. After implementation (34/34 green), each load-bearing
+guardrail was poisoned once and watched fail naming the right thing, then reverted:
+
+| Poison | Exact rejection observed |
+| --- | --- |
+| Site bucket `versioned: false` | `SiteBucket... lack Enabled versioning: the prediction archive has no other recovery path if a single console delete happens` |
+| Extra lifecycle rule at `predictions/` | length assert 3 vs 4 (count layer; the overlap layer keeps its own shipped constructed-rule red proofs) |
+| Stack-only lifecycle prefix drift onto `predictions/photos/` | equality-vs-declaration assert (`deeply equal`) |
+| Report reserved concurrency forced to 10 | `surfs-up-panama-report reserved concurrency` expected 2, plus the sum-13 assert |
+| Dead-man `TreatMissingData` flipped to `notBreaching` | template match failure showing `"TreatMissingData": "notBreaching"` against required `breaching` |
+| `surfs-up-panama-fetch` added to the breaker's concurrency scope | resolved-resource set mismatch naming `surfs-up-panama-fetch` |
+| Write URL CORS origin widened to `*` | `expected '*' not to be '*'` on the exact-origin assert |
+| $18 budget's SNS breaker subscriber removed | `expected [] to have a length of 1` on the SNS-subscriber assert |
+
 ### Known collision, resolved (record for future slices)
 
 Adding these checks directly inside `evaluateInfrastructureDeclarations` first produced a real

@@ -84,7 +84,7 @@ describe('parseWindResponse (real Open-Meteo Weather payload)', () => {
 });
 
 describe('OpenMeteoForecastSource (fetch wiring, no network)', () => {
-  it('requests the documented marine endpoint with all four declared models and returns normalized data', async () => {
+  it('requests the documented marine endpoint and returns provider bytes for archival before parsing', async () => {
     const requested: string[] = [];
     const fakeFetch: typeof fetch = async (input) => {
       requested.push(String(input));
@@ -96,8 +96,11 @@ describe('OpenMeteoForecastSource (fetch wiring, no network)', () => {
       fakeFetch,
     );
 
-    const result = await source.fetchWaveMembers('playa-venao');
+    const received = await source.fetchWavePayload('playa-venao');
 
+    expect(received.ok).toBe(true);
+    if (!received.ok) throw new Error('unreachable');
+    const result = source.parseWaveMembers(received.verbatim);
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error('unreachable');
     expect(result.data).toHaveLength(4);
@@ -116,7 +119,7 @@ describe('OpenMeteoForecastSource (fetch wiring, no network)', () => {
       failingFetch,
     );
 
-    const result = await source.fetchWaveMembers('playa-venao');
+    const result = await source.fetchWavePayload('playa-venao');
     expect(result).toEqual({ ok: false, reason: 'error' });
   });
 
@@ -127,6 +130,6 @@ describe('OpenMeteoForecastSource (fetch wiring, no network)', () => {
       async () => new Response('{}', { status: 200 }),
     );
 
-    expect(await source.fetchTide('playa-venao')).toEqual({ ok: false, reason: 'dark' });
+    expect(await source.fetchTidePayload('playa-venao')).toEqual({ ok: false, reason: 'dark' });
   });
 });

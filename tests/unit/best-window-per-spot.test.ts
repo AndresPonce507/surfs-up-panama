@@ -131,7 +131,7 @@ function tomorrowLine(spotId: string, heightM: number): string {
   return MEMBER_SOURCES.map((source) => JSON.stringify({
     spot_id: spotId,
     source,
-    run_ts: `${TOMORROW}T06:00Z`,
+    run_ts: `${TODAY}T06:00Z`,
     valid_ts: `${TOMORROW}T18:00Z`,
     lead_h: 12,
     swell_h_m: heightM,

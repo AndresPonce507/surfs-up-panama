@@ -54,9 +54,58 @@ Slices 01, 02 and 03 entered DISTILL and shipped (2026-08-09). R1-R17 covered in
 `tests/acceptance/f-bill-stays-zero-and-stays-up/bill-and-uptime-guardrails.feature`
 (`@covers-R1` through `@covers-R17` tags) plus unit-level red-proof coverage in
 `infra/test/guardrails.test.ts`: `assertBucketVersioningEnabled` (R1, R2, R4) and
-`assertCostAllocationTagPresent` (R16). Slices 04 and 05 have no authorable test at all: their
-observables are a live email and a live account read, gated on pre-requisites 3 to 8 in
-`feature-delta.md`; R18-R24 remain uncovered by design.
+`assertCostAllocationTagPresent` (R16).
+
+Updated 2026-08-09 (DEVOPS/platform lane): slice-05 shipped. R20-R24 are covered by the three
+`@slice-05` scenarios (recorded-reads mode of `infra/month-close.mjs`) plus 13 unit tests in
+`infra/test/month-close.test.ts`, and the live half of R20/R21/R23/R24 was proven once against
+the real account (exit 0 at $0.00; see `red-classification.md`). R22's live half (a real
+above-zero month) is unprovable until such a month exists, by construction; its logic is covered
+by the negative scenario and units. R26 held: the slice-05 reader runs on read-only
+`ce`/`freetier` grants alone, and no credential that can write a production data store was
+created or held by this lane.
+
+Updated again 2026-08-09, after the first real deploy (`aws-permission-inventory.md` §7):
+
+- **R1 and R16 now have live proof, not only a CI assert.** The real archive bucket
+  `surfs-up-panama-site-602167897909` exists and returns versioning `Status: Enabled` and the
+  tag `Project=surfs-up-panama` from the live S3 API. Guardrail 4 also holds against the real
+  lifecycle configuration: the three rules match `raw/`, `photos/` and the multipart-abort
+  case, and none expires or transitions anything under `predictions/`. Slice-01's promise is
+  no longer a declaration about a bucket that might one day exist.
+- **Slice-04 is still blocked, but the blocker changed and got deeper.** The permission
+  blocker cleared. Three new ones replaced it, each independently sufficient: there is no
+  ingest schedule to disable, because `SurfsUpPanamaIngest` rolled back on a Lambda
+  concurrency quota of 10 (`feature-delta.md` pre-requisite 7); the alarm topic's email
+  subscription is `PendingConfirmation`, and R18 requires a *confirmed* subscriber
+  (pre-requisite 5); and R19's OK half additionally needs a real `ingest.success` event that
+  the deployed placeholder handler deliberately never emits, which must not be faked to close
+  the row.
+- **R25 nuance worth stating once.** The CI gate proves the *declarations*. It cannot prove
+  the deployed reservations, and this deploy is the demonstration: every slice-01 to
+  slice-03 assert was green while the account could not actually set a single reserved
+  concurrency. A green gate is necessary and not sufficient, exactly as CLAUDE.md warns.
+
+Updated 2026-08-10 (infra lane, read-only re-probe; full record in
+`aws-permission-inventory.md` §9):
+
+- **Two of slice-04's three blockers cleared.** The concurrency quota was raised 10 → 1000
+  (observed via `lambda:GetAccountSettings` and `L-B99A9384` through the lookup role), and
+  the alarm topic now carries a confirmed email subscriber. The remaining gaps are the human
+  redeploy (delete the `ROLLBACK_COMPLETE` ingest shell first, write stack LAST) and R19's
+  need for real pipeline code emitting `ingest.success`, owned by the ingest lane.
+- **Slice-02's load-bearing property is now proven live, not only declared.** The deployed
+  switch transitioned `INSUFFICIENT_DATA → ALARM` at 2026-08-09T21:56-05:00 with state
+  reason *"no datapoints were received for 2 periods and 2 missing datapoints were treated
+  as [Breaching]"* — BREACHING converted absence into failure on this account, answering
+  the open question `aws-permission-inventory.md` §7 posed. This satisfies R18's
+  *observable*; its stated *procedure* (disable, ALARM, re-enable, OK) still awaits the
+  redeploy and real ingest code, and the two remain distinct on purpose.
+- **The 13/113 arithmetic re-verified from the synthesized templates** (8 functions:
+  fetch 2, build 2, report 2, mint 1, push 1, photo-presign 1, resize 2, breaker 2), and
+  the sum-13 guardrail assert re-proven falsifiable by poison (declared sum drifted to 17;
+  the assert failed naming 13 vs 17; poison reverted, revert verified by an empty
+  `git diff`).
 
 Architectural note recorded here because it changes how future slices must be authored: the
 declaration checks for slices 01-03 do NOT live inside the pre-existing

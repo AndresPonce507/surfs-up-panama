@@ -1,0 +1,27 @@
+{
+  "note": "A month where Amazon S3 billed $3.42 while the Project tag is still inactive: the spend cannot be attributed to one project, so the month close must fail closed.",
+  "costByService": {
+    "ResultsByTime": [
+      {
+        "TimePeriod": { "Start": "2026-08-01", "End": "2026-08-10" },
+        "Groups": [
+          {
+            "Keys": ["Amazon Simple Storage Service"],
+            "Metrics": { "UnblendedCost": { "Amount": "3.42", "Unit": "USD" } }
+          },
+          {
+            "Keys": ["AWS Lambda"],
+            "Metrics": { "UnblendedCost": { "Amount": "0.0000001", "Unit": "USD" } }
+          }
+        ]
+      }
+    ]
+  },
+  "costAllocationTags": {
+    "CostAllocationTags": [
+      { "TagKey": "aws:createdBy", "Type": "AWSGenerated", "Status": "Inactive" }
+    ]
+  },
+  "projectCostByService": null,
+  "freeTierUsage": { "freeTierUsages": [] }
+}

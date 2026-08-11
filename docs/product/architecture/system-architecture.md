@@ -438,8 +438,19 @@ point. "CDK + assert" means the value is set in the CDK stack AND checked by
    ingest role too, which would let a billing flood stop the prediction log — destroying the
    irreplaceable artifact (HANDOFF §3) to save dollars. The narrowed deny means no flood can
    ever take down ingest. A real improvement over my round-1 design.) Enforced: CDK.
-9. **CloudWatch billing alarm at $20** — already exists on the account; imported/asserted in
-   CDK so a rebuild cannot silently drop it. Enforced: CDK.
+9. **The $20 last line — CREATED by this project as an AWS Budget, never imported.**
+   (Corrected 2026-08-09: round 1 claimed a $20 CloudWatch billing alarm "already exists on
+   the account". Verified false against the live account: zero CloudWatch alarms exist, and
+   the only $20 budget is the other project's `agentflow-guardrail`. Additionally the
+   `AWS/Billing` metric namespace is empty because the console-only "Receive CloudWatch
+   billing alerts" preference has never been enabled, so a CloudWatch billing alarm would
+   sit in INSUFFICIENT_DATA forever — the alarm form of this guardrail cannot work on this
+   account today.) The line is implemented as the `surfs-up-panama-last-line-20` AWS Budget
+   in `infra/lib/observability-stack.ts` (email notification at 100% actual), matching the
+   shipped slice-03 declaration `budget-last-line-source: created-by-project`. A standalone
+   pre-deploy guard budget (`surfs-up-panama-guard-20`, CLI-created 2026-08-09 with actual
+   and forecast notifications) existed before any billable resource and remains as a
+   belt-and-suspenders duplicate. Enforced: CDK + assert + the F-BILL declaration gate.
 10. **Anthropic Console spend limit = $5/month hard limit.** Direct-API spend is invisible to
     every AWS guardrail (research 08 §6.5). Enforced: console setting (no API for it) +
     documented in the runbook + the builder is the ONLY code path holding the key, at
@@ -600,7 +611,7 @@ zero-to-deployed step 1, not this design round:
 
 | # | Blocker | Exposure if bad | Check |
 |---|---|---|---|
-| 1 | Lambda `Concurrent executions` applied quota on this 3-day-old account. New accounts can carry reduced quotas; if the applied quota is ≤ 102, `PutFunctionConcurrency` is rejected and the rate limiter, the breakers and the mint cap **do not exist** (research 15 §5.0) | research 15's worked case at quota 50: **~$130/mo** attack ceiling instead of §6.1's figures | Service Quotas console, BEFORE any deploy; if reduced, recheck as usage grows and set reserved concurrency the moment the quota passes 102 |
+| 1 | ~~Lambda `Concurrent executions` applied quota on this 3-day-old account~~ **ANSWERED 2026-08-09 and it is bad: the applied quota is `10`.** Read via `lambda:GetAccountSettings` and `servicequotas:GetServiceQuota` (`L-B99A9384`, `Value: 10.0, Adjustable: true`), then independently confirmed by a real deploy: `SurfsUpPanamaIngest` was rejected on a reservation of **2** and CloudFormation rolled it back with *"decreases account's UnreservedConcurrentExecution below its minimum value of [10]"*. The floor is 10 and the quota is 10, so **no reservation of any size is settable**, and guardrail 1, the breakers' restore path and the mint cap do not exist today. This is well below the ≤ 102 case the row anticipated | Two claims, kept apart so neither hides the other. **The aggregate bound survives by accident:** an account-wide ceiling of 10 concurrent executions is tighter than the 13 this project reserves, so research 15's ~$130/mo worked case does not apply — that case assumed quota 50 with reservations impossible but 50 slots available; here there are 10. **The isolation property is genuinely lost:** write and ingest share one pool of 10, so a write flood can starve the fetch Lambda, which is exactly the failure guardrail 8 exists to prevent | **Now: one Service Quotas increase request on `L-B99A9384`.** ≥ 23 lets the stacks deploy as written; ≥ 113 also keeps the conventional 100-unreserved headroom. Andres's action, needs the console or `servicequotas:RequestServiceQuotaIncrease`. Until then `SurfsUpPanamaIngest` and `SurfsUpPanamaWrite` cannot deploy. Never strip the reservations to force a green deploy |
 | 2 | Whether AWS meters data-transfer-out for a 429 emitted before the function runs (research 15 §15.3; carried by adr-write-path-off-cloudfront, never laundered into certainty) | pessimistic bound ~$27 per BILLION rejected requests after the free 100 GB/mo | one-afternoon load test before launch; until then the working control is tier 4, deleting the Function URL config, which stops response bytes entirely |
 
 ### 12. Cost — the dollar figure and how it is produced

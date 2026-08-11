@@ -1,5 +1,92 @@
 // Reviewed limits imported by the credential-free CDK synthesis app.
 
+import { Duration, Fn, RemovalPolicy, Stack } from 'aws-cdk-lib';
+import type { StackProps } from 'aws-cdk-lib';
+import * as iam from 'aws-cdk-lib/aws-iam';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as scheduler from 'aws-cdk-lib/aws-scheduler';
+import type { Construct } from 'constructs';
+import { fileURLToPath } from 'node:url';
+
+import { functionNames, metricNamespace, siteBucketName, siteOriginExportName } from './physical-names.js';
+import {
+  BUILD_SUCCESS_EVENT,
+  INGEST_SUCCESS_EVENT,
+  PUBLISH_MISMATCH_EVENT,
+  PROVIDER_ERROR_EVENT,
+} from '../../src/pipeline/lambda/log-events.js';
+
+// The two Lambda composition roots this stack deploys. Real pipeline code
+// (src/pipeline/ingest.ts, src/pipeline/build.ts), wired to real adapters at
+// these two files only -- see their own top comments for the honesty
+// contract (ingest.success / build.success are never logged unless the run
+// actually did the work).
+const fetchHandlerEntry = fileURLToPath(new URL('../../src/pipeline/lambda/fetch-handler.ts', import.meta.url));
+const buildHandlerEntry = fileURLToPath(new URL('../../src/pipeline/lambda/build-handler.ts', import.meta.url));
+
+// loadLaunchSpotSeeds() / loadLaunchSpotCoordinates() both `readFileSync`
+// these two git-owned data files at runtime (src/pipeline/lambda/
+// bundled-launch-seed-paths.ts resolves them relative to the bundled
+// handler's own location, never process.cwd()). esbuild only follows
+// `import`, never a runtime `readFileSync` path, so this copy step is the
+// one place that actually gets them into each function's deployment
+// package. `inputDir` here is the whole project root (NodejsFunction's
+// auto-detected bundling root, proven by a throwaway local synth spike
+// before this counted), never the entry file's own directory.
+function copyLaunchSeedFiles(inputDir: string, outputDir: string): string[] {
+  // The handlers resolve the canonical package-relative layout
+  // `data/spots/...`; copying the directory *into* data preserves that
+  // segment. Do not copy the entire mutable data/ tree: prediction captures
+  // and published projections are not Lambda configuration inputs.
+  return [
+    `mkdir -p ${outputDir}/data`,
+    `cp -R ${inputDir}/data/spots ${outputDir}/data/spots`,
+    // The Build Lambda runs Astro against a writable /tmp copy. These are
+    // source inputs, not mutable captures: the generated surface is injected
+    // immediately before each build and never read from the deployment tree.
+    `cp -R ${inputDir}/src ${outputDir}/src`,
+    `cp -R ${inputDir}/public ${outputDir}/public`,
+    `cp -R ${inputDir}/scripts ${outputDir}/scripts`,
+    `cp ${inputDir}/astro.config.mjs ${outputDir}/astro.config.mjs`,
+    `cp ${inputDir}/tsconfig.json ${outputDir}/tsconfig.json`,
+    `cp ${inputDir}/data/published-surface.json ${outputDir}/data/published-surface.json`,
+  ];
+}
+
+const pipelineLambdaBundling: nodejs.BundlingOptions = {
+  format: nodejs.OutputFormat.ESM,
+  // This function includes Astro's native CSS dependency. Always package in
+  // CDK's Linux ARM64 Docker image: host bundling on a developer Mac silently
+  // stages a Darwin binary which Lambda cannot load.
+  forceDockerBundling: true,
+  // Node 22 Lambda supplies AWS SDK v3. Keeping it external avoids packaging
+  // a second SDK copy that pushes the Astro-backed build ZIP beyond Lambda's
+  // 50 MiB upload limit. The ARM64 smoke sets the runtime's NODE_PATH and
+  // imports the staged handler, proving this runtime contract directly.
+  externalModules: ['@aws-sdk/*'],
+  // Astro is invoked at runtime by the Build Lambda to render the new surface;
+  // it cannot be tree-shaken into the handler bundle.
+  nodeModules: ['astro'],
+  commandHooks: {
+    beforeBundling: () => [],
+    beforeInstall: () => [],
+    afterBundling(inputDir, outputDir) {
+      return [
+        ...copyLaunchSeedFiles(inputDir, outputDir),
+        // `astro.config.mjs` selects Astro's passthrough image service. Sharp
+        // and its platform-native libvips package are optional dependencies
+        // that the generated package manager still installs, but no deployed
+        // code can load them. Excluding that unused native tree is what keeps
+        // the ARM64 ZIP below Lambda's 50 MiB hard upload ceiling.
+        `rm -rf ${outputDir}/node_modules/sharp ${outputDir}/node_modules/@img`,
+      ];
+    },
+  },
+};
+
 export const lambdaReservedConcurrency = 2;
 
 export const lambdaTimeoutSeconds = {
@@ -14,3 +101,158 @@ export const lambdaTimeoutSeconds = {
   'notify-export': 120,
   breaker: 10,
 } as const;
+
+// The real scheduled-ingest stack: EventBridge Scheduler (hourly at :17 for
+// fetch, :22 for build) into the fetch and build Lambdas, with metric
+// filters that feed the dead-man's switch. system-architecture.md sections
+// 3, 7, 10, 11.
+//
+// Fetch and Build run the real pipeline code
+// (src/pipeline/lambda/{fetch,build}-handler.ts, wiring src/pipeline/ingest.ts
+// and src/pipeline/build.ts to real Open-Meteo + S3 adapters). The honesty
+// property the former placeholder existed to protect is preserved by
+// construction, not by comment: `ingest.success` and `build.success` are
+// only ever logged by deriveIngestLogLines / deriveBuildLogLines
+// (src/pipeline/lambda/log-events.ts), which withhold them unless the run
+// actually did the work. Copy never runs ahead of the data.
+export class IngestStack extends Stack {
+  constructor(scope: Construct, id: string, props?: StackProps) {
+    super(scope, id, props);
+
+    const bucket = s3.Bucket.fromBucketName(this, 'SiteBucket', siteBucketName);
+
+    const fetchLogs = new logs.LogGroup(this, 'FetchLogs', {
+      logGroupName: `/aws/lambda/${functionNames.fetch}`,
+      retention: logs.RetentionDays.TWO_WEEKS, // guardrail 3
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+    const buildLogs = new logs.LogGroup(this, 'BuildLogs', {
+      logGroupName: `/aws/lambda/${functionNames.build}`,
+      retention: logs.RetentionDays.TWO_WEEKS, // guardrail 3
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+
+    const fetchFn = new nodejs.NodejsFunction(this, 'Fetch', {
+      functionName: functionNames.fetch,
+      entry: fetchHandlerEntry,
+      runtime: lambda.Runtime.NODEJS_22_X,
+      architecture: lambda.Architecture.ARM_64,
+      bundling: pipelineLambdaBundling,
+      memorySize: 512,
+      timeout: Duration.seconds(lambdaTimeoutSeconds.fetch), // guardrail 2
+      reservedConcurrentExecutions: lambdaReservedConcurrency, // guardrail 1
+      logGroup: fetchLogs,
+      environment: { BUCKET_NAME: bucket.bucketName },
+    });
+    const buildFn = new nodejs.NodejsFunction(this, 'Build', {
+      functionName: functionNames.build,
+      entry: buildHandlerEntry,
+      runtime: lambda.Runtime.NODEJS_22_X,
+      architecture: lambda.Architecture.ARM_64,
+      bundling: pipelineLambdaBundling,
+      memorySize: 1024,
+      timeout: Duration.seconds(lambdaTimeoutSeconds.build), // guardrail 2
+      reservedConcurrentExecutions: lambdaReservedConcurrency, // guardrail 1
+      logGroup: buildLogs,
+      environment: {
+        BUCKET_NAME: bucket.bucketName,
+        PUBLIC_SITE_ORIGIN: Fn.importValue(siteOriginExportName),
+        STATIC_SITE_SOURCE_ROOT: '/var/task',
+      },
+    });
+
+    // Duplicate EventBridge delivery must be a no-op and must not double-bill
+    // (research 08 section 10.5): runIngestOnce's S3 conditional PUT
+    // (If-None-Match: *) and runBuildOnce's putCallIfAbsent already make a
+    // retried invocation idempotent, so a Lambda-level retry would only ever
+    // repeat work, never recover anything.
+    fetchFn.configureAsyncInvoke({ retryAttempts: 0 });
+    buildFn.configureAsyncInvoke({ retryAttempts: 0 });
+
+    // Least privilege, and never a delete: fetch writes raw archive and the
+    // prediction log only; build reads everything and writes the published
+    // surfaces. The prediction log grant matches PREDICTION_LOG_PREFIX
+    // (system-architecture.md section 5).
+    bucket.grantPut(fetchFn, 'raw/*');
+    bucket.grantPut(fetchFn, 'predictions/*');
+    bucket.grantRead(buildFn);
+    for (const prefix of ['v1/*', 'site/*', 'assets/*', 'log/*', 'manifest.json']) {
+      bucket.grantPut(buildFn, prefix);
+    }
+
+    // The metric filters are the first link of the dead-man chain: the fetch
+    // Lambda emits `ingest.success`, the filter increments IngestSuccess, and
+    // the observability stack's alarm watches the METRIC, never the Lambda
+    // (04-ingest-pipeline.md section 3 step 8; system-architecture.md
+    // section 10 alarm 1).
+    new logs.MetricFilter(this, 'IngestSuccessFilter', {
+      logGroup: fetchLogs,
+      filterPattern: logs.FilterPattern.stringValue('$.event', '=', INGEST_SUCCESS_EVENT),
+      metricNamespace,
+      metricName: 'IngestSuccess',
+      metricValue: '1',
+    });
+    new logs.MetricFilter(this, 'ProviderErrorsFilter', {
+      logGroup: fetchLogs,
+      filterPattern: logs.FilterPattern.stringValue('$.event', '=', PROVIDER_ERROR_EVENT),
+      metricNamespace,
+      metricName: 'ProviderErrors',
+      metricValue: '1',
+    });
+    new logs.MetricFilter(this, 'BuildSuccessFilter', {
+      logGroup: buildLogs,
+      filterPattern: logs.FilterPattern.stringValue('$.event', '=', BUILD_SUCCESS_EVENT),
+      metricNamespace,
+      metricName: 'BuildSuccess',
+      metricValue: '1',
+    });
+    new logs.MetricFilter(this, 'PublishMismatchFilter', {
+      logGroup: buildLogs,
+      filterPattern: logs.FilterPattern.stringValue('$.event', '=', PUBLISH_MISMATCH_EVENT),
+      metricNamespace,
+      metricName: 'ProviderErrors',
+      metricValue: '1',
+    });
+
+    // EventBridge Scheduler: fetch hourly at :17, build hourly at :22
+    // (system-architecture.md section 3; 04-ingest-pipeline.md section 3
+    // steps 1-11 -- build reads what fetch already committed, offset five
+    // minutes so a run always has this hour's snapshot to read). The 4x/day
+    // model-refresh cadence is a payload refinement owned by the ingest
+    // feature; the hourly schedule is the pinned infrastructure contract.
+    const schedulerRole = new iam.Role(this, 'SchedulerInvokeRole', {
+      assumedBy: new iam.ServicePrincipal('scheduler.amazonaws.com'),
+      description: 'Lets EventBridge Scheduler invoke the fetch and build functions, nothing else',
+    });
+    fetchFn.grantInvoke(schedulerRole);
+    buildFn.grantInvoke(schedulerRole);
+    new scheduler.CfnSchedule(this, 'HourlySchedule', {
+      name: 'surfs-up-panama-hourly',
+      description: 'Hourly ingest at :17',
+      scheduleExpression: 'cron(17 * * * ? *)',
+      scheduleExpressionTimezone: 'UTC',
+      state: 'ENABLED',
+      flexibleTimeWindow: { mode: 'OFF' },
+      target: {
+        arn: fetchFn.functionArn,
+        roleArn: schedulerRole.roleArn,
+        input: JSON.stringify({ job: 'hourly' }),
+        retryPolicy: { maximumRetryAttempts: 0 },
+      },
+    });
+    new scheduler.CfnSchedule(this, 'BuildSchedule', {
+      name: 'surfs-up-panama-build-hourly',
+      description: 'Hourly build at :22, five minutes after fetch',
+      scheduleExpression: 'cron(22 * * * ? *)',
+      scheduleExpressionTimezone: 'UTC',
+      state: 'ENABLED',
+      flexibleTimeWindow: { mode: 'OFF' },
+      target: {
+        arn: buildFn.functionArn,
+        roleArn: schedulerRole.roleArn,
+        input: JSON.stringify({ job: 'hourly' }),
+        retryPolicy: { maximumRetryAttempts: 0 },
+      },
+    });
+  }
+}

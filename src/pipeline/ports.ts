@@ -17,14 +17,22 @@
 //     clock (contract:declared-inputs-not-ambient-reads).
 
 import type { LaunchSeedData } from '../data/launch-spots';
+import type { StaticPublicationPlan } from './static-publication';
 import type { SpotSeed, SwellTrain, WindObs } from '../scoring/engine';
 
 export interface IngestStore {
   /** Archive a verbatim provider response in the raw forensic prefix. */
-  putRaw(key: string, body: string): Promise<void>;
+  putRaw(record: RawArchiveRecord): Promise<void>;
   /** S3 conditional PUT (If-None-Match:*): first prediction write wins. */
   putPredictionIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'>;
 }
+
+/** Uncompressed received response. Storage adapters encode this as real gzip
+ * bytes because its key ends in .json.gz. */
+export type RawArchiveRecord = {
+  readonly key: string;
+  readonly verbatim: string;
+};
 
 export interface BuildStore {
   /** Read a durable prediction receipt, never a raw provider payload. */
@@ -36,7 +44,12 @@ export interface BuildStore {
   putCallIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'>;
   /** The public bundle and manifest are the build's only mutable artifacts. */
   putBundle(key: string, body: string): Promise<void>;
+  /** Optional for local scoring-only callers. Production supplies this port
+   * and Build calls it before advancing the manifest commit marker. */
+  publishStaticSite?(plan: StaticPublicationPlan): Promise<void>;
   putManifest(key: string, body: string): Promise<void>;
+  /** Public CloudFront read-after-write check, after manifest only. */
+  probePublicPublication?(build_id: string): Promise<void>;
 }
 
 export interface Clock {
@@ -46,7 +59,13 @@ export interface Clock {
 export type SourceFailure = 'error' | 'malformed' | 'stale' | 'dark';
 
 export type SourceResult<T> =
-  | { ok: true; verbatim: string; data: T }
+  | { ok: true; data: T }
+  | { ok: false; reason: SourceFailure };
+
+/** HTTP succeeded and yielded bytes. The ingest core archives these bytes
+ * before it invokes the provider-specific parser. */
+export type ReceivedSourcePayload =
+  | { ok: true; verbatim: string }
   | { ok: false; reason: SourceFailure };
 
 /** One normalized hour of one wave member. land_masked per domain-model section 17. */
@@ -68,10 +87,14 @@ export type WindHour = { valid_ts: string; wind: WindObs | null };
 export type TideHour = { valid_ts: string; tide_m: number | null };
 
 export interface ForecastSource {
-  /** One call returns every wave member's normalized series for the spot. */
-  fetchWaveMembers(spot_id: string): Promise<SourceResult<MemberSeries[]>>;
-  fetchWind(spot_id: string): Promise<SourceResult<WindHour[]>>;
-  fetchTide(spot_id: string): Promise<SourceResult<TideHour[]>>;
+  /** Fetch methods receive provider bytes only. Ingest archives a successful
+   * response before these parse methods can reject malformed input. */
+  fetchWavePayload(spot_id: string): Promise<ReceivedSourcePayload>;
+  parseWaveMembers(verbatim: string): SourceResult<MemberSeries[]>;
+  fetchWindPayload(spot_id: string): Promise<ReceivedSourcePayload>;
+  parseWind(verbatim: string): SourceResult<WindHour[]>;
+  fetchTidePayload(spot_id: string): Promise<ReceivedSourcePayload>;
+  parseTide(verbatim: string): SourceResult<TideHour[]>;
 }
 
 export interface IngestDeps {

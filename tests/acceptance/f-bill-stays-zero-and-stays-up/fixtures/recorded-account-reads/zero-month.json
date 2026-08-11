@@ -1,0 +1,37 @@
+{
+  "note": "Recorded 2026-08-09 from live andres-cli reads (shapes match aws ce get-cost-and-usage --group-by SERVICE, aws ce list-cost-allocation-tags, aws freetier get-free-tier-usage). A zero account month with the Project tag not yet activated.",
+  "costByService": {
+    "ResultsByTime": [
+      {
+        "TimePeriod": { "Start": "2026-08-01", "End": "2026-08-10" },
+        "Groups": []
+      }
+    ]
+  },
+  "costAllocationTags": {
+    "CostAllocationTags": [
+      { "TagKey": "aws:createdBy", "Type": "AWSGenerated", "Status": "Inactive" }
+    ]
+  },
+  "projectCostByService": null,
+  "freeTierUsage": {
+    "freeTierUsages": [
+      {
+        "service": "AWS Lambda",
+        "description": "AWS Lambda - Total Requests",
+        "actualUsageAmount": 42,
+        "limit": 1000000,
+        "unit": "Request",
+        "freeTierType": "Always Free"
+      },
+      {
+        "service": "Amazon DynamoDB",
+        "description": "DynamoDB - Provisioned Write Capacity Units",
+        "actualUsageAmount": 25,
+        "limit": 25,
+        "unit": "WCU",
+        "freeTierType": "12 Months Free"
+      }
+    ]
+  }
+}
