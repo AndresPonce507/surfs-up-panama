@@ -807,3 +807,22 @@ FIVE, and the orchestrator was told directly that the Sonnet model was temporari
 the watchdog stall has two distinct causes and they need different responses: over-fanning (fix by
 narrowing width) and a degraded API (fix by waiting, not by relaunching). A lane idling on a
 70-second `ci:local` run is especially exposed, because the watchdog counts waiting as no progress.
+
+### X11 decision, 2026-08-10
+
+**X11 is closed.** Slice-05 launches with an expressly accepted **seed-only
+orientation diagram**, not base imagery or a geographic map. The accepted
+record had no per-spot imagery source with complete licence, build-time
+acquisition, credit, refresh, and $0-serving evidence. Recorded webcam capture
+is prohibited; other sources are unverified or unfit for break-level use.
+
+The visible caption is exactly the template `Diagrama de orientación.
+Ubicación: {coordinate_attribution}. Orientación: {orientation_attribution}.`
+The per-spot values must visibly carry the cited input sources, including
+OpenStreetMap where it supplied coordinates. The generated manifest must bind
+each asset to cited seed coordinates and `shore_normal_deg`, and refuse any
+missing, contested, or attribution-less input. This decision does **not** open
+map production, Slice-05 JIT DISTILL/tests, or the worker cache change. Those
+remain gated separately. Sources of truth:
+`docs/product/architecture/adr-static-map-orientation-fallback.md` and
+`docs/feature/f-see-what-killed-it/deliver/slice-05-contract.md`.
