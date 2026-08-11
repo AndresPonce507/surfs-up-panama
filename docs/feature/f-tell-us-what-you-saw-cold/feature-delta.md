@@ -214,6 +214,7 @@ yet.
 | --- | --- | --- | --- |
 | slice-03 | A surfer sends a saved report and sees it arrive | `@walking_skeleton @driving_port @real-io @requires_external` | A |
 | slice-03 | Repeated send, real-handler quota deferral, real-handler unknown beach, page-open send | `@error @real-io @requires_external` | A |
+| slice-03 | Mandar starts the saved label's anonymous journey from the phone | `@driving_port @real-io @local-real-io @error` | A |
 | slice-04 | A surfer sees how the call did after sending their label | `@walking_skeleton @driving_port @real-io @requires_external` | A |
 | slice-04 | No call to compare; direct visitor receives no comparison | `@error @real-io @requires_external` | A |
 | slice-05 | A wrong phone clock keeps the label and explains itself | `@walking_skeleton @driving_port @real-io @requires_external @error` | A |
@@ -248,6 +249,27 @@ artifact environments. Those two `@indeterminate` launch proofs stay INDETERMINA
 the contracts do not fabricate them. Duplicate, unknown-beach and quota cases instead use the real
 public handler with a browser-created durable record, because the page properly has no control for
 those invalid inputs.
+
+### [REF] Slice-03 page-ownership repair (JIT, 2026-08-11)
+
+Fresh acceptance review found that the old Slice-03 browser world could create a browser queue row
+and then have a step helper call the public handler directly. That proves a handler contract, not
+the user promise that Mandar causes the report page to send. The new `03-03` step and
+`the-phone-sends-its-own-saved-report.feature` are additive evidence, not a retroactive claim that
+the older steps were browser-to-server proof.
+
+The local contract builds and serves the real static output, uses real Chromium and IndexedDB, and
+passively records only the page's own `/api/mint` and `/api/report` requests. It never intercepts,
+fulfils or makes one. Its first RED must therefore be `the page did not send the saved label`.
+That is local real-I/O proof of page ownership, not a receipt claim.
+
+The deployed/page-connected proof remains external: `REPORT_ACCEPTANCE_ORIGIN` plus a real
+handler/store prove the receipt or reveal, Function-URL CORS and `Cache-Control: no-store`;
+`REPORT_ACCEPTANCE_CREDENTIAL` and `REPORT_ACCEPTANCE_QUOTA_CREDENTIAL` identify real devices for
+credential and quota boundaries; the generated spot index is required for the exact unknown-spot
+refusal. Until those values exist, the named checks are INDETERMINATE, never green by omission.
+The actual page must retain the exact queued bytes on retries, display the server's Spanish refusal
+without raw payload text, keep JS-off non-submitting, and preserve the existing anti-leak gate.
 
 ### [REF] Traceability fallback
 
