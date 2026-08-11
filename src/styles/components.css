@@ -398,6 +398,25 @@ button:disabled {
   color: var(--ink-2);
 }
 
+/* ---- report reveal shell: its return link is the only interactive control
+   until the POST-driven reveal island renders. Keep it a full thumb target
+   without adding any forecast-bearing markup to this static document. */
+main[data-reveal-shell] + p > a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--tap);
+  min-height: var(--tap);
+  padding: 0 var(--sp-3);
+  border: 1px solid var(--ctrl);
+  border-radius: var(--r-m);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  color: var(--ink);
+  font-weight: 600;
+  text-decoration: none;
+}
+
 /* ---- notices (noscript today; offline banner reuses this recipe) */
 noscript p {
   margin: var(--sp-4) 0;

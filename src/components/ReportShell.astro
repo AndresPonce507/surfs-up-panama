@@ -31,7 +31,10 @@ if (spot === undefined) {
   currentPath={paths.reported(locale, spotId)}
   altPath={paths.reported(locale === 'es' ? 'en' : 'es', spotId)}
 >
-  <main data-reveal-shell></main>
+  <main data-reveal-shell>
+    <h1>Gracias por compartir lo que viste.</h1>
+    <p>Tu comparación aparecerá aquí cuando esté lista.</p>
+  </main>
   <p>
     <a href={paths.spot(locale, spotId)}>{spot.name}</a>
   </p>
