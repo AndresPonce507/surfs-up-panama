@@ -519,6 +519,13 @@
       "s": "EXECUTED",
       "d": "PASS: 20 generated wind rotations leave the whole corrections prefix byte-identical, no stored body matches /wind/i, and computed_at tracks the injected clock across two different clocks; focused acceptance/unit 7/7 passes with no production edit. Full vitest 384/384 across 74 files, typecheck and build pass. UI checks N/A: non-visual step, the observable is stored bytes.",
       "t": "2026-08-11T18:07:24Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: approved acceptance-evidence slice committed as 8a8f7f3c5e65b83a43169391a3edfadb3489c2c3 (test(learning): prove the wind word moves no stored byte)",
+      "t": "2026-08-11T18:07:44Z"
     }
   ]
 }
