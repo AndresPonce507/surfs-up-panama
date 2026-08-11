@@ -32,3 +32,4 @@ Diferido, fuera de este slice: la superficie en inglés pertenece a F-READ-IT-IN
 ## Session log (append-only)
 | date | examiner | verdict | observations |
 |------|----------|---------|--------------|
+| 2026-08-11 | Vera | INDETERMINATE | Revisión fuente-ciega de la publicación de release 1e791856 a 390px: Mariatos 69 mostró WhatsApp (46.95 px) y Copiar (48 px), sin desborde horizontal; el enlace visible llevaba el mensaje de Mariatos y su URL sellada, y los metadatos OG nombraron Mariatos 69. La confirmación visible `Llamado copiado.` apareció, pero el puente de portapapeles del examinador devolvió vacío, así que no se afirma un pegado manual. No hubo chat de WhatsApp autorizado: vista previa y caché de tercero quedan NOT_EXECUTED. |
