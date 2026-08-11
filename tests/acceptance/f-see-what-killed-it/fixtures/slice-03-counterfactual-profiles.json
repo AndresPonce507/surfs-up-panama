@@ -1,20 +1,22 @@
 {
-  "_why": "Slice-03 published-row inputs only. The damages are an arithmetic witness for the producer-side L10 identity, while the browser receives only the already-decided whole counterfactual score. No rendered sentence, browser arithmetic, or expected markup is planted here.",
+  "_why": "Slice-03 published-row inputs only. The damages and nonzero delta_q are an arithmetic witness for the producer-side L10 identity, while the browser receives only the already-decided whole counterfactual score. The correction changes both displayed and without-the-weakness scores, so the witness fails if a producer drops delta_q. No rendered sentence, browser arithmetic, or expected markup is planted here.",
   "profiles": {
     "nombre-mas-largo": {
       "spot_id": "santa-catalina-la-punta",
       "today": {
         "link": "size",
         "subscore": 0.18,
-        "score_q": 80,
-        "counterfactual_score_q": 93,
+        "delta_q": 0.05,
+        "score_q": 85,
+        "counterfactual_score_q": 98,
         "damages": { "dir": 0, "size": 0.1499, "wind": 0.0681, "tide": 0.0059 }
       },
       "tomorrow": {
         "link": "wind",
         "subscore": 0.62,
-        "score_q": 70,
-        "counterfactual_score_q": 88,
+        "delta_q": 0.05,
+        "score_q": 75,
+        "counterfactual_score_q": 93,
         "damages": { "dir": 0.04, "size": 0.07, "wind": 0.228842, "tide": 0.017833 }
       }
     }
