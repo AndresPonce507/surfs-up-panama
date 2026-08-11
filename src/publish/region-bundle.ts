@@ -55,6 +55,10 @@ export type BundleDaySummary = {
   readonly weakest_link: Factor | null;
   /** Raw score for this row's named weakest_link; absent only on a clean row. */
   readonly weakest_link_subscore?: number;
+  /** Producer-decided integer score without this row's named weakest link. */
+  readonly counterfactual_score_q?: number;
+  /** Fresh-row equality discriminator; mutually exclusive with the score. */
+  readonly counterfactual_suppression?: 'rounded_equal';
 };
 
 export type BundleDay = {

@@ -170,9 +170,15 @@ describe('published region bundle contract', () => {
 
     for (const [index, day] of days.entries()) {
       for (const summary of day.spots) {
+        const hasCounterfactual = Object.hasOwn(summary, 'counterfactual_score_q');
+        const hasSuppression = Object.hasOwn(summary, 'counterfactual_suppression');
         const expectedFields = summary.weakest_link === null
           ? [...DAY_SUMMARY_FIELDS]
-          : [...DAY_SUMMARY_FIELDS, 'weakest_link_subscore'];
+          : [
+            ...DAY_SUMMARY_FIELDS,
+            'weakest_link_subscore',
+            hasCounterfactual ? 'counterfactual_score_q' : 'counterfactual_suppression',
+          ];
         assert.deepEqual(
           Object.keys(summary).sort(),
           expectedFields.sort(),
@@ -186,6 +192,30 @@ describe('published region bundle contract', () => {
               && summary.weakest_link_subscore <= 1,
             `Day ${index} ${summary.spot_id}: named weakest link must carry its own finite raw score.`,
           );
+          assert.notEqual(
+            hasCounterfactual,
+            hasSuppression,
+            `Day ${index} ${summary.spot_id}: a fresh named culprit must carry exactly one counterfactual representation.`,
+          );
+          if (hasCounterfactual) {
+            assert.ok(
+              typeof summary.counterfactual_score_q === 'number'
+                && Number.isInteger(summary.counterfactual_score_q)
+                && summary.counterfactual_score_q >= 0
+                && summary.counterfactual_score_q <= 100
+                && typeof summary.score_q === 'number'
+                && summary.counterfactual_score_q > summary.score_q,
+              `Day ${index} ${summary.spot_id}: a counterfactual must be an integral score strictly above this row's score.`,
+            );
+          } else {
+            assert.equal(
+              summary.counterfactual_suppression,
+              'rounded_equal',
+              `Day ${index} ${summary.spot_id}: equality may only use the declared rounded_equal marker.`,
+            );
+          }
+        } else {
+          assert.ok(!hasCounterfactual && !hasSuppression, `Day ${index} ${summary.spot_id}: a clean row carries neither counterfactual representation.`);
         }
         assert.ok(
           Object.hasOwn(spotDetail, String(summary.spot_id)),
