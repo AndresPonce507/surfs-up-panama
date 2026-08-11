@@ -11,5 +11,10 @@
       }
     },
     "mutation_enabled": false
+  },
+  "update_check": {
+    "last_checked": "2026-08-10T22:50:10.693285+00:00",
+    "skipped_versions": [],
+    "frequency": "daily"
   }
 }
