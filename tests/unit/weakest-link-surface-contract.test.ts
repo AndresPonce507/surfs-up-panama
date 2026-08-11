@@ -32,9 +32,11 @@ import {
   type SurfaceCall,
 } from '../../src/publish/static-surface';
 import {
+  breakdownCompatibilityGapEvent,
   resolveBestWindowBreakdown,
   resolveCounterfactual,
   resolveWeakestLink,
+  type BreakdownUnavailableReason,
   type CounterfactualReading,
   type SurfaceDayIndex,
   type WeakestLinkReading,
@@ -1264,6 +1266,61 @@ describe('resolveBestWindowBreakdown: the four raw scores of the hour a day\'s w
       resolveBestWindowBreakdown(malformed as unknown as PublishedSurfaceUpdate, 'playa-elegida', 0),
       { kind: 'unavailable', reason: 'malformed_point' },
       'a malformed point is refused whole; no page may read three good bars and one invented one',
+    );
+  });
+});
+
+// ------------------------------ the legacy-projection compatibility gap --
+//
+// Slice-04, step 04-04. Exactly ONE of the five unavailable reasons is a
+// compatibility gap worth recording: a surface published before the hourly
+// projection existed. Recording any of the others would file a producer
+// defect as an old surface and hide the only signal that the build is
+// wrong; recording the normal no-window day would cry wolf twenty times a
+// morning.
+//
+// This is a build-side record. It is a value here, written by the publish
+// -time renderer, and it never becomes a browser beacon, metric, endpoint
+// or fetch.
+
+describe('breakdownCompatibilityGapEvent: the one absence the build records', () => {
+  it('records only a legacy projection absence, naming the spot, the day and the publish stamp', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom<BreakdownUnavailableReason>('no_best_window', 'legacy_hourly_missing', 'hour_not_projected', 'hour_duplicated', 'malformed_point'),
+        fc.constantFrom<SurfaceDayIndex>(0, 1),
+        fc.string({ minLength: 1, maxLength: 24 }).filter((value) => value.trim().length > 0),
+        dayOffsetArb,
+        (reason, day, spotId, dayOffset) => {
+          const publishedAt = `${civilDate(dayOffset)}T11:00:00.000Z`;
+
+          assert.deepEqual(
+            breakdownCompatibilityGapEvent({ kind: 'unavailable', reason }, spotId, day, publishedAt),
+            reason === 'legacy_hourly_missing'
+              ? {
+                event: 'health.publish.breakdown_hourly_missing',
+                spot_id: spotId,
+                day: day === 0 ? 'today' : 'tomorrow',
+                published_at: publishedAt,
+              }
+              : null,
+            `"${reason}" must ${reason === 'legacy_hourly_missing' ? 'be recorded once with its spot, day and stamp' : 'record nothing: it is either a normal omission or a producer fault, and neither is a compatibility gap'}`,
+          );
+        },
+      ),
+    );
+  });
+
+  it('records nothing for a day whose breakdown was available', () => {
+    assert.equal(
+      breakdownCompatibilityGapEvent(
+        { kind: 'available', sub: { dir: 0.8, size: 0.7, wind: null, tide: 0.5 } },
+        'playa-elegida',
+        0,
+        '2026-08-09T11:00:00.000Z',
+      ),
+      null,
+      'a day that showed its four rows has no compatibility gap to record, missing observations included',
     );
   });
 });

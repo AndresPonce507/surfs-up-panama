@@ -180,6 +180,45 @@ export function resolveBestWindowBreakdown(
 }
 
 /**
+ * The one build-side record this slice emits: a spot-day whose surface was
+ * published before the hourly projection existed.
+ *
+ * Not browser telemetry, and it cannot become browser telemetry: it is a
+ * value returned from a pure function, written by the publish-time renderer
+ * to its own output. No beacon, metric, endpoint or fetch is involved.
+ */
+export type BreakdownHealthEvent = {
+  readonly event: 'health.publish.breakdown_hourly_missing';
+  readonly spot_id: string;
+  readonly day: 'today' | 'tomorrow';
+  readonly published_at: string;
+};
+
+/**
+ * The compatibility gap worth recording, or nothing.
+ *
+ * Exactly one of the five unavailable reasons qualifies. A day with no
+ * window is normal and would cry wolf twenty times a morning; an
+ * unprojected hour, a duplicated hour and a malformed point are producer
+ * faults, and filing them here would disguise a live defect as an old
+ * surface and silence the only signal that the build is wrong.
+ */
+export function breakdownCompatibilityGapEvent(
+  reading: BestWindowBreakdownReading,
+  spotId: string,
+  day: SurfaceDayIndex,
+  publishedAt: string,
+): BreakdownHealthEvent | null {
+  if (reading.kind !== 'unavailable' || reading.reason !== 'legacy_hourly_missing') return null;
+  return {
+    event: 'health.publish.breakdown_hourly_missing',
+    spot_id: spotId,
+    day: day === 0 ? 'today' : 'tomorrow',
+    published_at: publishedAt,
+  };
+}
+
+/**
  * Same published civil day, same published clock hour. The hour, not the
  * exact minute: the contract selects the point whose stamp "falls in the
  * same hour as that day summary's best_window.start", so a window opening at
