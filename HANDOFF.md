@@ -1,4 +1,61 @@
-# HANDOFF: Surfs Up Panama
+# CURRENT HANDOFF: 2026-08-11 11:45 Panama
+
+This section supersedes the legacy notes below. They are retained only as historical context.
+
+## Exact restart point
+
+- **GitHub main:** `94fad7755558107ad4cb692ee7e86444a5dccf6d`
+- **Release worktree:** `/Users/andres/psb-integration-batch2`
+- **Release branch:** `release/integration-20260810-batch2`
+- **Local state:** every registered worktree was checkpointed, scanned for secrets, committed, and pushed. All are clean.
+- **Remote verification:** `git push --dry-run --no-verify origin --all` returned `Everything up-to-date`.
+
+## Public site
+
+- **Production:** https://d1dtqpd8bf3oze.cloudfront.net/
+- **Preview:** https://d1j9u9fxnap4es.cloudfront.net/
+- Production static files were published with the checked-in PUT-only publisher. No deletes or CloudFront invalidations were used.
+- Chrome smoke on production passed: default light surface `#F2F8FA`, 44x48 top-left toggle, dark toggle changes both browser-chrome declarations to `#061A21`, English route keeps the selected choice and localizes its label, then the site was returned to light mode.
+
+## Finished, committed, and integrated on current main
+
+- **Design Phase 07:** light-first regardless of OS preference, top-left localized theme toggle, persisted choice, English routes, first-frame/browser-chrome safeguards, and report-page weight correction. Current design gates pass: full Design acceptance 65 scenarios / 1,274 steps, typecheck, 374-unit suite, build/page budget, E2E.
+- **Report Slice 03 local path:** mint/report endpoint configuration, durable queue behavior, one retry on invalid credential, and same-spot queue drain are implemented and reviewed. Local Chromium/units/build/infra gates pass. The real deployed Function URLs, quota/device proof, and deployed spot index remain external activation work.
+- **Signal Slice 04:** scoped Chromium, worker replay, mutation, U8, and independent review all passed. External push/device activation remains separate.
+- **Weather ingestion data plane:** real Fetch/Build ARM64 Node 22 handlers, archival/prediction receipts, conditional writes, freshness/refusal behavior, alarms, supply-chain and ARM smokes are committed and reviewed. It is **not deployed**. The existing live Fetch/Build functions are still placeholders.
+- **Publication-origin seam:** production/preview target guard plus PUT-only publisher is committed. The deployed production static site is current, but hourly weather cannot yet refresh public HTML automatically.
+
+## Important remaining work
+
+1. **Deploy Weather safely:** explicit stack order is Site, Ingest, Observability, Write last. Do not use `cdk diff` because it uploads assets. Live validation needs a real Fetch/Build cycle and dead-man recovery observation. Read [docs/demo/weather-ingestion-release-readiness-2026-08-11.md](docs/demo/weather-ingestion-release-readiness-2026-08-11.md).
+2. **Report production activation:** WriteStack needs a verified Lambda concurrency quota and the non-exposed SSM SecureString `/surfsuppanama/prod/credential-hmac-key`. After deploy, read its Function URL outputs, rebuild with `PUBLIC_REPORT_MINT_URL` and `PUBLIC_REPORT_SUBMIT_URL`, publish the static files, then run a real browser submit/replay smoke. Do not claim this is live before that.
+3. **Weather-to-site bridge:** this is a new serialized slice, not part of the sealed data plane. Current Build publishes JSON but does not rebuild Astro/public HTML. The recommended design is a bounded Publisher Lambda synchronously invoked by Build. See the weather bridge decision in the agent history and do not add GitHub Actions or an S3-event primary trigger.
+4. **Global acceptance is not green:** fast local CI passes 11/11. Full CI had one global acceptance job blocked by non-priority Docker infra, unfinished Push behavior, and deployed Report-origin requirements. Treat it as a program-level gate, not evidence that the integrated four priority lanes failed.
+
+## Checkpoint branches
+
+All local-only changes, including generated captures and unfinished experiments, are now preserved on their current remote branches as `chore(wip): checkpoint local work before handoff` commits. They are **not approved for merging into main** just because they are pushed. Notable resumption branches include:
+
+- `fix/report-theme-weight` for the reportado page-weight correction.
+- `design/theme-toggle` for the Design 07 source/evidence history.
+- `report-slice03-final-audit` and `fix/report-deployed-endpoints` for Report Slice 03.
+- `deliver/signal-slice04-next` for Signal Slice 04.
+- `deliver/weather-live-next` for the reviewed weather data plane.
+
+Before any integration, start with:
+
+```sh
+cd /Users/andres/psb-integration-batch2
+git fetch origin --prune
+git status --short
+git log --oneline -8 origin/main
+```
+
+Then read the relevant feature roadmap and its committed execution log. Keep generated data and WIP checkpoint branches serialized with their owning feature.
+
+---
+
+# LEGACY HANDOFF: retained below for historical context only
 
 **This file is the truth.** If it disagrees with a transcript, a memory, or anyone's
 recollection, this file wins. Update it before you stop working.
