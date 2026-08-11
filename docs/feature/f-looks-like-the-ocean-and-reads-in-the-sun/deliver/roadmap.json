@@ -2,7 +2,7 @@
   "roadmap": {
     "project_id": "f-looks-like-the-ocean-and-reads-in-the-sun",
     "created_at": "2026-08-10T00:00:00Z",
-    "total_steps": 15,
+    "total_steps": 16,
     "quality_contract_version": 1
   },
   "phases": [
@@ -535,6 +535,51 @@
           "implementation_notes": "EXEMPT FROM PARADIGM: end-to-end verification. TERMINAL STEP: the only slice-05 step allowed the unrestricted @slice-05 tag. U3 EXPECTED N/A: the bar and the dots are decorative, not new tap targets; the existing <details><summary> tap target is unchanged. This is also the last step of the whole feature's five parallel-safe slices; it does not, by itself, close Definition of Done row 10 (every Slice Plan row flipped shipped) — that is a feature-level rollup after all five slice-terminal steps (01-03, 02-03, 03-03, 04-03, 05-03) are independently green."
         }
       ]
+    },
+    {
+      "id": "06",
+      "name": "Terminal repair: browser and installed-app chrome follows the shipped palette",
+      "description": "A forward-only repair for the discovered Design DoD #1 leak. The five delivered presentation slices remain historical evidence; this new terminal step closes only the browser/PWA chrome that still emitted the superseded white and near-black surface colors outside the token boundary.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "06-01",
+          "name": "Generated browser and installed-app chrome derives from the shipped background tokens",
+          "criteria": [
+            "The built home HTML emits the light theme-color from the light --bg token (#F2F8FA) and the dark theme-color from the dark --bg token (#061A21); no old #FFFFFF or #10141A browser-chrome value remains.",
+            "The built /manifest.webmanifest emits theme_color and background_color from that same light/default --bg decision (#F2F8FA). A web manifest has no media-query equivalent, so it intentionally declares the single light/default entry while per-theme HTML meta is authoritative for a dark phone.",
+            "src/styles/chrome-colors.ts is the production build-time reader of src/styles/tokens.css. It exports named light and dark browser-chrome values by reading --bg, without owning a hexadecimal literal. src/layouts/Base.astro imports that reader for both media-qualified theme-color tags. src/pages/manifest.webmanifest.ts imports that same reader and emits the static build artifact. public/manifest.webmanifest is deleted.",
+            "The built artifact is the approved generated boundary: its JSON naturally contains serialized colors, but authored browser-chrome and manifest sources contain no surface-color literal outside src/styles/tokens.css. The existing style U7 gate remains in force and this repair extends that negative contract to Base.astro plus the manifest source boundary.",
+            "No behavior, Spanish copy, route, score, input, network request, or package changes. npm run build remains green with its page-weight gate; the added build-time source is small and must not weaken any existing 14 KB document or first-visit budget.",
+            "U1 through U7 remain executable: the generated artifacts must agree with the rendered theme backgrounds (U1); the existing 390 px route sweep and viewport contract remain green (U2); existing reachable control checks remain green (U3); reduced motion remains unchanged (U4); ready/empty/error outcomes remain unchanged (U5); type rhythm remains tokenized (U6); and the browser/PWA chrome has no independent raw surface color (U7). A fresh source-blind U8 observation is required before COMMIT."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/browser-chrome-follows-the-water.feature",
+          "scenario_name": "La surfista abre la portada y su app instalada con el borde del teléfono coherente en los dos temas",
+          "slice_id": "slice-06",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/la-barra-del-navegador-y-la-app-instalada-siguen-el-agua-tropical-que-la-surfista-esta-leyendo.md",
+          "u8_observation": "A 390 px, en claro y oscuro, el borde del navegador parece continuación natural del agua tropical de la página; al abrir desde el icono, la entrada clara no muestra un color ajeno antes de la portada.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-03 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-06 and @step-06-01 and @ui-u7"]
+          },
+          "deps": ["01-03", "02-03", "03-03", "04-03", "05-03"],
+          "files_to_modify": [
+            "src/styles/chrome-colors.ts",
+            "src/layouts/Base.astro",
+            "src/pages/manifest.webmanifest.ts",
+            "public/manifest.webmanifest"
+          ],
+          "implementation_notes": "FORWARD-ONLY REPAIR: do not edit or reclassify the 15 historical steps. This was found after their implementation and only owns the remaining named-token boundary leak. IMPLEMENTATION AUTHORITY: color VALUES remain exclusively in src/styles/tokens.css; chrome-colors.ts may parse or otherwise derive --bg but must carry no hex. Base.astro and the generated manifest endpoint consume that one derived value. Do not keep a second hand-authored JSON manifest, do not duplicate values into TypeScript, and do not waive the JSON limitation: serialized dist/manifest.webmanifest is the allowed generated output boundary, while dark browser chrome stays in media-qualified HTML. TEST MODE: real npm build and emitted artifacts, example-based. The first RED must fail because the emitted light theme-color is #FFFFFF rather than the current light --bg #F2F8FA, not because a proposed source module is absent. After GREEN run all seven commands, npm run build, npm run test:ui, the full Design terminal acceptance tags, typecheck, and record a fresh source-blind U8 result in the charter. This repair does not authorize an external deploy."
+        }
+      ]
     }
   ],
   "implementation_scope": {
@@ -542,6 +587,8 @@
       "src/styles/",
       "src/components/",
       "src/pages/",
+      "src/layouts/",
+      "public/",
       "docs/product/architecture/"
     ],
     "test_directories": [
@@ -554,10 +601,8 @@
       "src/i18n/**",
       "src/publish/**",
       "src/data/**",
-      "src/layouts/**",
       "data/**",
       "infra/**",
-      "public/**",
       "package.json",
       "package-lock.json",
       "vitest.config.ts",

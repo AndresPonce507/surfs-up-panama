@@ -1,6 +1,35 @@
 # Slice-02 and Slice-03 red classification
 
 Feature: `f-looks-like-the-ocean-and-reads-in-the-sun`
+
+## 2026-08-11 terminal repair: browser and installed-app chrome
+
+Command run from a clean worktree at exact `origin/main` base
+`1f5315a4c142c7061561ed5eab932a6ad3fe7470` after `npm ci`:
+
+```text
+npm run test:at -- --tags '@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-06 and @step-06-01'
+```
+
+Classification: `MISSING_FUNCTIONALITY`.
+
+The real production build completed, emitted `dist/index.html` and
+`dist/manifest.webmanifest`, and reached the observable assertion. It failed because the emitted
+light browser chrome still uses the superseded surface rather than the current token-backed page
+background:
+
+```text
+AssertionError [ERR_ASSERTION]: el borde claro publicado es #FFFFFF, pero el fondo claro publicado es #F2F8FA
+```
+
+This is the right RED. It is not an absent proposed module, a Cucumber import failure, a fixture
+failure, or an unbuilt artifact. The manifest also still serializes `background_color: #FFFFFF`
+and `theme_color: #0A6A2D`; the second and later assertions deliberately remain unreached until
+the first observable mismatch is repaired.
+
+The repair is forward-only. Its roadmap step 06-01 assigns production ownership to a token-derived
+build-time chrome reader, `Base.astro`, and a generated manifest endpoint. It does not claim that
+the five historical Design slices had this evidence.
 Slices entered: `slice-02` and `slice-03 / 03-01, 03-02`, 2026-08-10
 
 ## Commands observed
