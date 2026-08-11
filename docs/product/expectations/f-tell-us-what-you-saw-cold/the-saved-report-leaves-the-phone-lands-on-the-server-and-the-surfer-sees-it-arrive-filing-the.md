@@ -41,17 +41,18 @@ Those two cases cannot originate in the page because the product correctly offer
 ## JIT repair: the page owns the journey (2026-08-11)
 
 The browser proof has two deliberately separate parts. Locally, the built production page runs in
-real Chromium with its real IndexedDB queue while the test only observes the page's own outgoing
-mint and report requests. It never sends a request for the surfer, intercepts a response, or
+real Chromium with its real IndexedDB queue beside the reviewed production-local Report/Mint HTTP
+composition at the page's own paths. That composition has a disposable real filesystem store,
+fresh HMAC secret, actual clock and launch spot index. The test only observes the page's own
+requests and responses; it never sends a request for the surfer, intercepts a response, or
 provides a substitute endpoint. Its useful RED is therefore plain: after Mandar, the page did not
 send the saved label.
 
-The receipt, replay, quota, exact beach-list refusal, response `no-store` header and real
-Function-URL CORS proof require `REPORT_ACCEPTANCE_ORIGIN` connected to the actual handler/store,
-plus real credential/device inputs where named. Until that surface exists, record INDETERMINATE.
-Older direct handler calls remain narrow handler-boundary checks only; they cannot be cited as
-proof that a surfer's page sent or rendered anything. The deployed walk must observe the page's
-own credential, byte-identical saved-label replay, Spanish refusal or quiet arrival/reveal.
+Function-URL CORS and `Cache-Control: no-store`, quota/device inputs and the deployed generated
+spot-index refusal remain external checks. Until those values exist, record INDETERMINATE. Older
+direct handler calls remain narrow handler-boundary checks only; they cannot be cited as proof
+that a surfer's page sent or rendered anything. The deployed walk must observe the page's own
+credential, byte-identical saved-label replay, Spanish refusal or quiet arrival/reveal.
 
 ## Charter
 Explore the arrival of a report as the surfer who just filed it. The heart of the walk is two

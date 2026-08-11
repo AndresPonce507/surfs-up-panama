@@ -18,14 +18,21 @@
 import { After, AfterAll, Before } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
+import { randomBytes } from 'node:crypto';
 import { createReadStream, existsSync, lstatSync, readFileSync, readdirSync, statSync } from 'node:fs';
+import { mkdtemp, rm } from 'node:fs/promises';
 import http from 'node:http';
+import { tmpdir } from 'node:os';
 import { extname, join, normalize, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright';
 
+import { loadLaunchSpotSeeds } from '../../../../../src/data/launch-spots';
+import { loadLaunchSpotCoordinates } from '../../../../../src/pipeline/adapters/spot-coordinates';
+import { serializeSpotIndex } from '../../../../../src/pipeline/static-publication';
+import { createLocalWriteLambda, type LocalWriteLambda } from '../../../../../src/report/local-lambda';
 import type { UniverseSnapshot } from './state-delta';
 
 export const REPOSITORY_ROOT = fileURLToPath(new URL('../../../../../', import.meta.url));
@@ -140,19 +147,90 @@ function resolveDocument(pathname: string): string | null {
   return null;
 }
 
-let serverPromise: Promise<{ server: http.Server; baseUrl: string }> | null = null;
+type ServedSite = Readonly<{ server: http.Server; baseUrl: string; writeStoreRoot: string }>;
 
-export function ensureServedSite(): Promise<{ server: http.Server; baseUrl: string }> {
-  serverPromise ??= new Promise((resolveServer, rejectServer) => {
-    const server = http.createServer((request, response) => {
+let serverPromise: Promise<ServedSite> | null = null;
+
+/**
+ * Holds delivery of an already-computed real local report response long enough
+ * to observe the page before it can receive that response. It never provides,
+ * changes or substitutes a response, and times out open for unrelated walks.
+ */
+class ReportResponseBarrier {
+  private armed = false;
+  private held: { readonly release: () => void } | null = null;
+
+  arm(): void { this.armed = true; }
+
+  disarm(): void {
+    this.armed = false;
+    this.held?.release();
+    this.held = null;
+  }
+
+  async hold(): Promise<void> {
+    if (!this.armed) return;
+    this.armed = false;
+    let release!: () => void;
+    const actualResponseMayContinue = new Promise<void>((resolveRelease) => { release = resolveRelease; });
+    const held = { release };
+    this.held = held;
+    await Promise.race([actualResponseMayContinue, pause(5_000)]);
+    if (this.held === held) this.held = null;
+  }
+
+  async captureBeforeRelease(page: Page): Promise<string> {
+    const deadline = Date.now() + 2_000;
+    while (this.held === null && Date.now() < deadline) await pause(25);
+    assert.ok(this.held, 'WHAT: the real report answer was not ready to observe. HOW: keep the page waiting for its actual report receipt.');
+    const held = this.held;
+    try {
+      return await page.evaluate(() => document.body.innerText);
+    } finally {
+      held.release();
+    }
+  }
+}
+
+const reportResponseBarrier = new ReportResponseBarrier();
+
+/**
+ * Runs the static artifact beside the reviewed local Report/Mint composition.
+ * The write paths use a disposable filesystem store, fresh HMAC secret,
+ * actual clock and the launch spot index. This is a production-local adapter,
+ * never a test-owned receipt or browser-route interception.
+ */
+export function ensureServedSite(): Promise<ServedSite> {
+  serverPromise ??= createServedSite();
+  return serverPromise;
+}
+
+async function createServedSite(): Promise<ServedSite> {
+  const writeStoreRoot = await mkdtemp(join(tmpdir(), 'surfs-up-report-write-'));
+  let server: http.Server | undefined;
+  try {
+    const index = JSON.parse(serializeSpotIndex(loadLaunchSpotSeeds(), loadLaunchSpotCoordinates())) as {
+      readonly schema: string;
+      readonly spots: Readonly<Record<string, unknown>>;
+    };
+    assert.equal(index.schema, 'spot-index/1', 'local report host needs the published spot index');
+    const knownSpotIds = Object.keys(index.spots);
+    assert.ok(knownSpotIds.includes(SPOT_ID), `local report host spot index lacks ${SPOT_ID}`);
+    const writeLambda = createLocalWriteLambda({
+      storeRoot: writeStoreRoot,
+      credentialSecret: randomBytes(32).toString('base64url'),
+      knownSpotIds,
+      clock: () => new Date(),
+    });
+    server = http.createServer(async (request, response) => {
       const pathname = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
+      if (pathname === '/api/mint' || pathname === '/api/report') {
+        await serveLocalWrite(request, response, pathname, writeLambda);
+        return;
+      }
       if (request.method !== 'GET' && request.method !== 'HEAD') {
-        // This local proof owns only the production static surface.  It must
-        // not impersonate a write handler with a synthetic 405/receipt: the
-        // browser observer sees the page's request, then the connection ends.
-        // Real receipt and refusal evidence belongs to the external handler
-        // gate (or a separately documented production local composition).
-        request.socket.destroy();
+        response.writeHead(405, { 'content-type': 'text/plain; charset=utf-8' });
+        response.end('method not allowed');
         return;
       }
       const document = resolveDocument(pathname);
@@ -172,14 +250,52 @@ export function ensureServedSite(): Promise<{ server: http.Server; baseUrl: stri
       });
       createReadStream(document).pipe(response);
     });
-    server.on('error', rejectServer);
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address();
-      assert.ok(address !== null && typeof address === 'object', 'static server has no address');
-      resolveServer({ server, baseUrl: `http://127.0.0.1:${address.port}` });
+    await new Promise<void>((resolveServer, rejectServer) => {
+      server?.once('error', rejectServer);
+      server?.listen(0, '127.0.0.1', resolveServer);
     });
+    const address = server.address();
+    assert.ok(address !== null && typeof address === 'object', 'local site server has no address');
+    return { server, baseUrl: `http://127.0.0.1:${address.port}`, writeStoreRoot };
+  } catch (error) {
+    server?.close();
+    await rm(writeStoreRoot, { recursive: true, force: true });
+    throw error;
+  }
+}
+
+async function serveLocalWrite(
+  request: http.IncomingMessage,
+  response: http.ServerResponse,
+  pathname: '/api/mint' | '/api/report',
+  writeLambda: LocalWriteLambda,
+): Promise<void> {
+  const result = await writeLambda.handle({
+    path: pathname,
+    method: request.method ?? 'GET',
+    headers: Object.fromEntries(Object.entries(request.headers).map(([name, value]) => [name, Array.isArray(value) ? value.join(', ') : value])),
+    body: await requestBody(request),
+    sourceIp: request.socket.remoteAddress ?? '127.0.0.1',
   });
-  return serverPromise;
+  if (pathname === '/api/report') await reportResponseBarrier.hold();
+  response.writeHead(result.statusCode, {
+    ...result.headers,
+    'content-type': 'application/json; charset=utf-8',
+  });
+  response.end(JSON.stringify(result.body));
+}
+
+function requestBody(request: http.IncomingMessage): Promise<string> {
+  return new Promise((resolveBody, rejectBody) => {
+    const chunks: Buffer[] = [];
+    request.on('data', (chunk: Buffer) => chunks.push(chunk));
+    request.on('end', () => resolveBody(Buffer.concat(chunks).toString('utf8')));
+    request.on('error', rejectBody);
+  });
+}
+
+function pause(milliseconds: number): Promise<void> {
+  return new Promise((resolvePause) => { setTimeout(resolvePause, milliseconds); });
 }
 
 // ---------- Chromium at 390 px ----------
@@ -193,6 +309,7 @@ function ensureBrowser(): Promise<Browser> {
 
 export type CapturedResponse = Readonly<{
   url: string;
+  status: number;
   contentType: string;
   body: Promise<string | null>;
 }>;
@@ -220,6 +337,7 @@ export interface ReportFlowScenario {
   pageErrors: string[];
   captured: CapturedResponse[];
   writeAttempts: CapturedWriteRequest[];
+  reportTextBeforeResponse: string | null;
   distSnapshot: UniverseSnapshot | null;
 }
 
@@ -242,8 +360,13 @@ Before({ tags: '@feature-f-tell-us-what-you-saw-cold' }, function (this: object)
     pageErrors: [],
     captured: [],
     writeAttempts: [],
+    reportTextBeforeResponse: null,
     distSnapshot: null,
   });
+});
+
+Before({ tags: '@local-real-io' }, function () {
+  reportResponseBarrier.arm();
 });
 
 After({ tags: '@feature-f-tell-us-what-you-saw-cold' }, async function (this: object) {
@@ -251,9 +374,19 @@ After({ tags: '@feature-f-tell-us-what-you-saw-cold' }, async function (this: ob
   if (state?.context) await state.context.close();
 });
 
+After({ tags: '@local-real-io' }, function () {
+  reportResponseBarrier.disarm();
+});
+
 AfterAll(async function () {
   if (browserPromise) await (await browserPromise).close();
-  if (serverPromise) (await serverPromise).server.close();
+  if (serverPromise) {
+    const { server, writeStoreRoot } = await serverPromise;
+    await new Promise<void>((resolveServer, rejectServer) => {
+      server.close((error) => error === undefined ? resolveServer() : rejectServer(error));
+    });
+    await rm(writeStoreRoot, { recursive: true, force: true });
+  }
 });
 
 /**
@@ -305,6 +438,7 @@ export async function phonePage(state: ReportFlowScenario): Promise<Page> {
     if (!url.startsWith(baseUrl)) return;
     state.captured.push({
       url,
+      status: response.status(),
       contentType: response.headers()['content-type'] ?? '',
       body: response.text().catch(() => null),
     });
@@ -390,6 +524,41 @@ export async function tapMandar(state: ReportFlowScenario): Promise<void> {
 export async function visibleText(state: ReportFlowScenario): Promise<string> {
   const page = await phonePage(state);
   return page.evaluate(() => document.body.innerText);
+}
+
+/** Passive bounded wait for a browser-observed write request, never a route. */
+export async function observedWriteRequest(
+  state: ReportFlowScenario,
+  pathname: '/api/mint' | '/api/report',
+  timeoutMilliseconds = 2_000,
+): Promise<CapturedWriteRequest | undefined> {
+  const deadline = Date.now() + timeoutMilliseconds;
+  while (Date.now() < deadline) {
+    const request = state.writeAttempts.find((attempt) => new URL(attempt.url).pathname === pathname);
+    if (request) return request;
+    await new Promise<void>((resolvePause) => { setTimeout(resolvePause, 25); });
+  }
+  return state.writeAttempts.find((attempt) => new URL(attempt.url).pathname === pathname);
+}
+
+/** Passive bounded wait for a browser-observed write response, never a route. */
+export async function observedWriteResponse(
+  state: ReportFlowScenario,
+  pathname: '/api/mint' | '/api/report',
+  timeoutMilliseconds = 2_000,
+): Promise<CapturedResponse | undefined> {
+  const deadline = Date.now() + timeoutMilliseconds;
+  while (Date.now() < deadline) {
+    const response = state.captured.find((attempt) => new URL(attempt.url).pathname === pathname);
+    if (response) return response;
+    await new Promise<void>((resolvePause) => { setTimeout(resolvePause, 25); });
+  }
+  return state.captured.find((attempt) => new URL(attempt.url).pathname === pathname);
+}
+
+/** Captures the actual page state while its real local report response is held. */
+export async function textBeforeReportAnswer(state: ReportFlowScenario): Promise<string> {
+  return reportResponseBarrier.captureBeforeRelease(await phonePage(state));
 }
 
 // ---------- observing the durable on-phone queue (driven storage port) ----------
