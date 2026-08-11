@@ -19,19 +19,28 @@ DELIVER unskips them slice by slice.
 Copy discipline inside every row: scenarios never pin an English string that is not settled.
 Settled (§10 verbatim, pinnable): home strings, report questions and all 14 option labels, Send,
 noscript, GO TO {SPOT}, wind words Clean/Choppy/Blown out, confidence level words, the share
-template. Unsettled (Pre-requisite 1/2/3, never pinned): toggle labels, the English call line,
-`Ver el llamado`, spot-page empty states, 404 set, yesterday set, confidence reason sentences,
-display-format words, report CTA. Unsettled copy is asserted by property (present, English,
-never bracketed, never Spanish), not by exact text.
+template, and, since the 2026-08-10 Pre-requisite 2 decision, the English ranked daily-call
+composition and its missing-wind/window branches. Unsettled (Pre-requisite 1/3, never pinned):
+toggle labels, `Ver el llamado`, spot-page empty states, 404 set, yesterday set, confidence reason
+sentences, display-format words, report CTA. Unsettled copy is asserted by property (present,
+English, never bracketed, never Spanish), not by exact text.
+
+Daily-call contract: the producer publishes both calls from each row's same `size_band`,
+`wind_state`, and `best_window`; the English full form is
+`{Size}, {wind} wind, best from {start} to {end}.`, with `no wind data` and
+`no estimated window` as the exact absence branches. Source and schema details are in
+`application-architecture.md` §10 and `deliver/01-01-call-en-blocker.md`. English pages select
+`call.en`; they never translate `call.es`, recompute from structured fields, or substitute generic
+fallback prose.
 
 | # | Requirement | Category |
 |---|---|---|
-| R1 | The English home and English tomorrow page render the same twenty ranked spots as their Spanish twins, from the same published surface, in the same order (READ-01) | functional |
+| R1 | The English home and English tomorrow page render the same twenty ranked spots as their Spanish twins, from the same published surface, in the same order; every row renders its producer-published `call_en`, composed from that row's same size, wind and window facts under the exact §10 branches (READ-01) | functional |
 | R2 | Every page in both trees carries the language toggle as a plain link at the top of the page whose destination is exactly that page's twin address from the route map; tapping it lands on the twin, and tapping again returns (READ-01) | functional |
 | R3 | Every internal link on every emitted English page points inside the English tree and every link on a Spanish page points inside the Spanish tree; the only cross-tree link on any page is the toggle (READ-01) | validation |
 | R4 | Every emitted page declares its own language and names both language alternates with full absolute addresses derived from the configured site; the alternates name the page itself and its exact twin (READ-01) | build |
 | R5 | No locale machinery exists anywhere: nothing sniffs a language, redirects, or stores a choice; the choice persists purely as the address tree (READ-01, §4, permanent) | security |
-| R6 | No emitted English page renders missing text, a bracketed placeholder, or Spanish copy (READ-01 on the home/tomorrow pages; feature-wide from then on) | validation |
+| R6 | No emitted English page renders missing text, a bracketed placeholder, Spanish copy, a generic substitute for a missing published call, or a client-composed call (READ-01 on the home/tomorrow pages; feature-wide from then on) | validation |
 | R7 | Every new English page sits at or under its per-document byte ceiling inside the existing page-weight gate (READ-01, §5) | nfr |
 | R8 | The translation-coverage check refuses a bracketed placeholder leaf in either language tree, naming the exact file, the key path, and the missing language (READ-02 detector a) | build |
 | R9 | The check refuses a user-facing field or export whose name encodes one language with no twin (snake `_es` suffix, trailing `Es`, `SPANISH` camel convention), naming it exactly; ordinary English words ending in "es" never trigger it (READ-02 detector b) | build |

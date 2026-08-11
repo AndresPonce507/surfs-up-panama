@@ -26,7 +26,7 @@ delta. Result: **0 contradictions.** Specifically checked:
 |---|---|---|
 | A | Enum canon in the dispatch ("clean \| choppy \| blown_out", "bad \| ok \| good \| epic", one home) vs `src/data/report-vocab.ts` on disk | Identical; the f-tell-us gating decision is CLOSED, so nothing blocks READ-07's wire scenarios the way it once blocked f-tell-us slice-01 |
 | B | Feature-delta Pre-requisite 4 (absolute alternates) vs `astro.config.mjs` line 25 | ANSWERED on disk; the hreflang scenarios assert full addresses |
-| C | Pre-requisite 2 (English call-line source) | OPEN, DESIGN + producer lane. Scenarios do not choose between builder-emitted `call_en` and client-side composition: they assert the visible property only (English rows, no rendered `undefined`, no Spanish) |
+| C | Pre-requisite 2 (English call-line source) | ANSWERED 2026-08-10. The builder must emit `call_en` beside `call_es`, composed in the same producer pass from the row's structured facts under the exact §10 branches; the client renders and never computes. The existing visible-property scenarios remain valid, and R1/R6 now name the stronger producer contract. Implementation remains RED until the schema, producer, validator, adapter and generated surface carry both locales. |
 | D | Pre-requisite 3 (English yesterday page for Spanish-minted receipts) | OPEN, DESIGN + Andres. The READ-05 scenario asserts the invariant BOTH honest options satisfy: no synthesized English narrative; either the Spanish quote or a stated absence |
 | E | Pre-requisite 1 (English copy sign-off batch, toggle labels included) | OPEN, Andres. No scenario or step pins an unsettled English string; settled §10 verbatim strings are the only pinnable copy |
 

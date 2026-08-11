@@ -477,12 +477,16 @@ Route → render input (the builder's whole read contract per route):
 | `scorecard.n_obs` `.n_reporters` `.counter` `.claim_ok` `.headline` | `n_reports`, `n_distinct_reporters`, window | `counter` is decision-19's `"22 / 30"` string; the 30-day window is fixed by §9, never a payload field |
 | `build_id` | `cycle_id` | header, once (settled earlier in the 2026-08-08 round) |
 
-**Implemented names, settled 2026-08-09 by the shared-contract lane** so the per-spot-page lane and the per-row-confidence lane could not each mint a name for the same value (the failure §17 and HANDOFF §7 record twice). The bundle type is `src/publish/region-bundle.ts`; the producer is `src/pipeline/build.ts`:
+**Current pre-READ implementation snapshot, settled 2026-08-09 by the shared-contract lane, not
+the target schema authority above.** It records the code that existed before F-READ-IT-IN-YOUR-
+LANGUAGE resolved its English producer gap, so the per-spot-page lane and the per-row-confidence
+lane could not each mint a name for the same value (the failure §17 and HANDOFF §7 record twice).
+The bundle type is `src/publish/region-bundle.ts`; the producer is `src/pipeline/build.ts`:
 
 | Where | Fields, verbatim |
 |---|---|
 | Bundle header | `schema: "region-bundle/1"` · `region_id` · `build_id` · `published_at` |
-| `days[d].spots[i]` | `spot_id` · `score_q` · `conf_level` · `call{es}` · `size_band` · `size_range_m` · `wind_state` · `best_window{start,end}` · `weakest_link` |
+| `days[d].spots[i]` | `spot_id` · `score_q` · `conf_level` · `call{es}` (**pre-READ implementation; target remains `call{es,en}` above**) · `size_band` · `size_range_m` · `wind_state` · `best_window{start,end}` · `weakest_link` |
 | `spot_detail[spot_id]` | `name` |
 | PublishedCall log row only | `conf_value` (continuous), beside its `conf_level` |
 

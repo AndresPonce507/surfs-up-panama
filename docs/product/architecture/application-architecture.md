@@ -287,7 +287,7 @@ FAIL, the ranked list is the product):
 | `score_q` | **int 0-100** | FAIL |
 | `conf_level` | enum `low` \| `medium` \| `high` | FAIL (decision 7) |
 | `confidence_reason` | one `{es,en}` object, ≤ 160 chars each | degrade: `<details>` reason omitted |
-| `call` | one `{es,en}` object, ≤ 280 chars each | degrade: structured fields only (declared in P1 row) |
+| `call` | one `{es,en}` object, ≤ 280 chars each; both members are composed by the producer from this day summary's structured facts | FAIL for a current publish when the object or either locale is absent. Reading routes render the selected member verbatim and never compose or translate it. The immutable legacy-receipt exception applies only to the yesterday route. |
 | `size_band` | v1 7-band enum (domain §7.2) | FAIL |
 | `size_range_m` | `[lo, hi]` metres, always rendered with "≈", never a point | FAIL (decision 18) |
 | `wind_state` | 3-value wind enum | degrade: wind word + glyph omitted |
@@ -394,6 +394,21 @@ wireframe strings in §14 predate the band table and render the same fields.)
 - Header: es "¿Dónde se surfea hoy?" / en "Where's it working today?"
 - Tabs: es "Hoy · Mañana" / en "Today · Tomorrow"
 - Top card verb: es "VE A {SPOT}" / en "GO TO {SPOT}"
+- Ranked daily call, composed at publish time from the same `size_band`, `wind_state` and
+  `best_window` that the row carries:
+  - complete: es "{Tamaño}, viento {viento}, mejor de {inicio} a {fin}." / en "{Size}, {wind} wind, best from {start} to {end}."
+  - wind absent: es "{Tamaño}, viento sin datos, mejor de {inicio} a {fin}." / en "{Size}, no wind data, best from {start} to {end}."
+  - window absent: es "{Tamaño}, viento {viento}, sin ventana estimada." / en "{Size}, {wind} wind, no estimated window."
+  - both absent: es "{Tamaño}, viento sin datos, sin ventana estimada." / en "{Size}, no wind data, no estimated window."
+
+  `{Tamaño}` and `{Size}` are the canonical labels of the row's `size_band` in domain model
+  §7.2. `{viento}` is `limpio|picado|destrozado`; `{wind}` is
+  `clean|choppy|blown out`, the grammatical lowercase rendering of the exact Q2 labels below.
+  The producer composes both locale members in one pass from the structured row. It never
+  translates `call.es`, and the page never recomposes either member. An invalid or missing
+  `size_band` refuses the publish under P1 instead of falling back to invented prose. Example:
+  es "Pecho a cabeza, viento limpio, mejor de 06:00 a 09:30." / en
+  "Chest to head, clean wind, best from 06:00 to 09:30."
 - Staleness stamp: es "Actualizado 6:04 a.m." / en "Updated 6:04 a.m."; stale (>3 h, JS): es "Viejo. Lo último que vimos fue a las 6:04. No pudimos sacar datos nuevos esta mañana." / en "Old. Last thing we saw was at 6:04. We could not get new data this morning."
 - Honesty footer (decision 10 made legible): es "Solo hoy y mañana. Más allá nadie sabe de verdad, y no vamos a inventar." / en "Today and tomorrow only. Past that nobody really knows, so we don't pretend."
 - Confidence levels: es "confianza alta / media / baja" / en "high / medium / low confidence"
