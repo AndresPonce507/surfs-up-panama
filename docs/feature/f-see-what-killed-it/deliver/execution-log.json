@@ -771,6 +771,13 @@
       "s": "EXECUTED",
       "d": "PASS: external gate qualification after the parent integration repair. With the current HEAD producer's fresh Aug-11 raw-capture surface, named rows carry counterfactual_score_q or rounded_equal. The two exact integration-owned repaired assertion files were copied temporarily, then restored byte-for-byte before staging; full units 119/119, typecheck, build, ci:local, and Slice-03 browser acceptance 6/6 scenarios and 67/67 steps passed. Fresh browser-only Vera PASS is recorded in the expectation charter. The borrowed test repair and generated surface are not part of this step's diff.",
       "t": "2026-08-11T05:21:19Z"
+    },
+    {
+      "sid": "03-05",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: b68d18a is the genuine 03-05 implementation commit. Independent iteration-2 review APPROVED after the qualified fresh-producer gates and browser-only Vera PASS. It contains only the formatter, component, focused property, charter, and prior factual phase evidence; generated surface, progress dirt, and temporary integration guards remain excluded.",
+      "t": "2026-08-11T05:37:35Z"
     }
   ]
 }
