@@ -258,16 +258,18 @@ the user promise that Mandar causes the report page to send. The new `03-03` ste
 `the-phone-sends-its-own-saved-report.feature` are additive evidence, not a retroactive claim that
 the older steps were browser-to-server proof.
 
-The local contract builds and serves the real static output, uses real Chromium and IndexedDB, and
-passively records only the page's own `/api/mint` and `/api/report` requests. It never intercepts,
-fulfils or makes one. Its first RED must therefore be `the page did not send the saved label`.
-That is local real-I/O proof of page ownership, not a receipt claim.
+The local contract builds and serves the real static output beside the reviewed production-local
+Report/Mint HTTP composition at the page's own paths. That composition has a disposable real
+filesystem store, fresh HMAC secret, actual clock and the launch spot index. Chromium and
+IndexedDB remain real, and browser listeners passively record only the page's own `/api/mint` and
+`/api/report` requests and responses. They never intercept, fulfil or make one. Its first RED must
+therefore be `the page did not send the saved label`, while a future page can receive the local
+receipt/reveal honestly. The host does not manufacture Function-URL response policy.
 
-The deployed/page-connected proof remains external: `REPORT_ACCEPTANCE_ORIGIN` plus a real
-handler/store prove the receipt or reveal, Function-URL CORS and `Cache-Control: no-store`;
-`REPORT_ACCEPTANCE_CREDENTIAL` and `REPORT_ACCEPTANCE_QUOTA_CREDENTIAL` identify real devices for
-credential and quota boundaries; the generated spot index is required for the exact unknown-spot
-refusal. Until those values exist, the named checks are INDETERMINATE, never green by omission.
+The deployed/page-connected proof remains external: Function-URL CORS and `Cache-Control:
+no-store`, real quota/device inputs, and the deployed generated spot index for the exact
+unknown-spot refusal. Until those values exist, the named checks are INDETERMINATE, never green
+by omission.
 The actual page must retain the exact queued bytes on retries, display the server's Spanish refusal
 without raw payload text, keep JS-off non-submitting, and preserve the existing anti-leak gate.
 

@@ -14,4 +14,6 @@ Feature: The phone sends its own saved report
     And the surfer taps Mandar
     Then the phone keeps one saved label while it waits for an answer
     And the page itself asks for anonymous permission and sends that exact saved label
+    And the phone receives the saved label's private answer before it can show the outcome
+    And the surfer sees their saved report arrived only after its matching answer
     And the surfer sees neither an account step nor our forecast before a server answer

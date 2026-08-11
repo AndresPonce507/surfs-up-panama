@@ -266,10 +266,10 @@ Command:
 npm run test:at -- --tags "@feature-f-tell-us-what-you-saw-cold and @local-real-io"
 ```
 
-Observed result: exit **1**, one scenario, 22 passed steps, one skipped after failure and one
-failed step. The production build, static-host mapping, real Chromium, the report island, and real
-IndexedDB all ran. The label was durably present before the assertion. The only failing assertion
-was:
+Observed result: exit **1**, one scenario, 24 passed steps, three skipped after failure and one
+failed step. The production build, static-host mapping, reviewed local Report/Mint HTTP
+composition, real Chromium, the report island, and real IndexedDB all ran. The label was durably
+present before the assertion. The only failing assertion was:
 
 ```
 WHAT: the page did not send the saved label.
@@ -282,7 +282,18 @@ import, fixture, configured origin, test-owned route, intercepted response or ma
 request occurs before it. The passive request observer captured neither `/api/mint` nor
 `/api/report`; that absence is the product defect under test.
 
+The local host now mounts the reviewed production-local Report/Mint HTTP composition at the same
+origin as the built page. It uses `createLocalWriteLambda`, a disposable real filesystem write
+store, a freshly generated HMAC secret, the real clock and the launch spot index derived from the
+human-owned sources. Browser listeners only record the page's requests and responses; they do not
+issue, fulfil or alter either one. This makes a future page-owned mint, credentialed submit and
+receipt/reveal legitimately executable locally while preserving the current RED: the island sends
+neither request. The host does not manufacture the deployed Function-URL `no-store` policy.
+For the receipt-order check, it delays delivery only after the real local Lambda has computed its
+result, captures the page while that unchanged result is held, then releases it. That causal
+observation point detects an optimistic arrival without providing a synthetic response.
+
 The following remain explicitly **INDETERMINATE external gates**, not substitute local evidence:
-the deployed or documented production-local handler/store at `REPORT_ACCEPTANCE_ORIGIN`; real
-credential and quota device inputs; Function-URL CORS and `Cache-Control: no-store`; and the
-generated spot index needed for the exact Spanish unknown-spot refusal. No deploy was attempted.
+deployed Function-URL CORS and `Cache-Control: no-store`; real credential and quota device
+inputs; and the deployed generated spot-index artifact used by the exact Spanish unknown-spot
+refusal. No deploy was attempted.
