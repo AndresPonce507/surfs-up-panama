@@ -1,0 +1,8 @@
+{
+  "sid": "03-04",
+  "phase": "COMMIT",
+  "status": "QUALIFIED",
+  "implementation_commit": "9df5a3fa66079661e4be595a29a0bda6f8abe51c",
+  "review": "Independent approval after afternoon-window and supplied-timezone falsification checks.",
+  "qualification": "Generated data was not changed; the current integration surface lacks playa-malibu wind_state for the unrelated full-unit failure."
+}
