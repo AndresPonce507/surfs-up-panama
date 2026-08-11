@@ -946,6 +946,41 @@
       "s": "EXECUTED",
       "d": "{\"commit\":\"0caf672\",\"message\":\"feat(learning): backfit reporter offsets - step 04-05\",\"status\":\"scoped green\"}",
       "t": "2026-08-11T02:04:24Z"
+    },
+    {
+      "sid": "04-06",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: inherited 04-05, the active incident-recompute acceptance contract, roadmap, and non-visual rationale inspected. The override must filter an entire reporter before trust, selection, residuals, and gated counts; it may never read a report ID.",
+      "t": "2026-08-11T02:05:00Z"
+    },
+    {
+      "sid": "04-06",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm run test:at -- --name A discovered campaign is excised by an incident file that names reporters, never reports\",\"exit\":1,\"classification\":\"expected behavioral RED\",\"failure\":\"the zero-weight run retained 22 samples and 7 reporters instead of the absent reporter run's 18 and 6, so stored correction bytes differed\"}",
+      "t": "2026-08-11T02:05:10Z"
+    },
+    {
+      "sid": "04-06",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npx vitest run tests/unit/learning-weight-laws.test.ts\",\"exit\":1,\"classification\":\"expected unit RED\",\"failure\":\"applyReporterOverrides was absent, so the generated zero-weight reporter law failed with TypeError\",\"test_budget\":\"3 behaviors x 2 = 6; 3 new tests\"}",
+      "t": "2026-08-11T02:05:30Z"
+    },
+    {
+      "sid": "04-06",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "{\"focused_acceptance\":\"completed Slice-04 scenarios: 8 scenarios/162 steps PASS\",\"learning_units\":\"11 files, 73 tests PASS\",\"typecheck\":\"PASS\",\"roadmap_integrity\":\"PASS\",\"falsification\":\"changing the zero-weight filter to weight < 0 made the incident acceptance scenario fail with retained 22 samples and 7 reporters; restored weight === 0\",\"review_iteration_1\":\"REJECTED: absent/malformed file coverage and phase evidence missing; added file-boundary tests and this audit evidence before re-review\",\"review_iteration_2\":\"NEEDS_REVISION: numeric JSON arrays parsed as reporter maps; added [0] regression and rejected arrays in a0bb6d7 before final re-review\",\"review\":\"APPROVED: no remaining critical/high findings; parser probe [0] returns {}, focused units, acceptance, and typecheck pass\",\"global_qualification\":\"npm run build remains blocked by the unrelated stale published surface dated 2026-08-09 versus Panama 2026-08-10. This does not exercise the learning fit and is not attributed to 04-06.\",\"non_visual_rationale\":\"incident filtering changes only fit inputs and stored correction bytes; no rendered surface changed\"}",
+      "t": "2026-08-11T02:10:41Z"
+    },
+    {
+      "sid": "04-06",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "{\"commit\":\"5fa2dee\",\"test_followup\":\"92836a9\",\"parser_fix\":\"a0bb6d7\",\"message\":\"feat(learning): excise incident reporters by recompute - step 04-06\",\"status\":\"scoped green, slice-closing review approved\"}",
+      "t": "2026-08-11T02:10:41Z"
     }
   ]
 }
