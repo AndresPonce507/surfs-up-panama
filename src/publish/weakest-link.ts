@@ -31,7 +31,12 @@
 // day-selection rule declared here.
 
 import type { FactorToken } from './factor-vocab';
-import type { PublishedSurfaceUpdate, SurfaceCall } from './static-surface';
+import type {
+  HourlySubscore,
+  HourlySubscorePoint,
+  PublishedSurfaceUpdate,
+  SurfaceCall,
+} from './static-surface';
 
 /** Array position in the published surface's `days` tuple: 0 is today, 1 is tomorrow. */
 export type SurfaceDayIndex = 0 | 1;
@@ -94,6 +99,114 @@ export function resolveCounterfactual(
   }
   if (row.counterfactual_suppression === 'rounded_equal') return { kind: 'rounded_equal' };
   return { kind: 'legacy_missing' };
+}
+
+/**
+ * Why one day's four bars are unavailable. Four distinct facts, never one:
+ *
+ * - `no_best_window`   the day published no window, so there is nothing to
+ *                      explain. The accepted normal omission.
+ * - `legacy_hourly_missing`
+ *                      the surface predates the hourly projection. A
+ *                      backward-compatibility gap; the caller logs it once
+ *                      at publish time and the page simply omits the bars.
+ * - `hour_not_projected`
+ *                      a FRESH projection has no point in the very hour its
+ *                      own day summary published. A producer-contract error.
+ * - `hour_duplicated`  two points sit inside that one published hour, so no
+ *                      single honest answer exists. A producer-contract error.
+ * - `malformed_point`  the matched point is not four raw scores. A
+ *                      producer-contract error.
+ *
+ * Collapsing the last three into the first would file a real defect as an
+ * old surface and silence the only signal that the producer is wrong.
+ */
+export type BreakdownUnavailableReason =
+  | 'no_best_window'
+  | 'legacy_hourly_missing'
+  | 'hour_not_projected'
+  | 'hour_duplicated'
+  | 'malformed_point';
+
+/** The four already-scored values behind one day's best window, or why there are none. */
+export type BestWindowBreakdownReading =
+  | { readonly kind: 'available'; readonly sub: HourlySubscore }
+  | { readonly kind: 'unavailable'; readonly reason: BreakdownUnavailableReason };
+
+/**
+ * The four raw sub-scores of the single already-scored hour that this day's
+ * published `best_window` starts in.
+ *
+ * A LOOKUP, not a decision. Every value returned was computed by the scoring
+ * core for that exact hour and published on the surface; this function
+ * selects one point and copies it. It does not average adjacent hours,
+ * interpolate, re-score, read damages, choose the lowest factor, or fall
+ * back to a neighbouring hour when the published one is missing -- each of
+ * those would be a claim the producer never made.
+ *
+ * It computes no time zone either. The point carries its own precomputed
+ * spot-local stamp and the summary carries its own spot-local `HH:MM`, so
+ * the join is a string comparison between two already-local values, which
+ * is why this stays legal on a page that must never touch a clock.
+ *
+ * WHICH FACTOR IS TO BLAME IS NOT DECIDED HERE. That is the day summary's
+ * published `weakest_link` (`resolveWeakestLink`). A caller that let the
+ * lowest of these four numbers mark the weak row would be re-deciding, on
+ * the page, something the producer already decided -- the exact substitution
+ * this slice exists to prevent.
+ */
+export function resolveBestWindowBreakdown(
+  surface: PublishedSurfaceUpdate,
+  spotId: string,
+  day: SurfaceDayIndex,
+): BestWindowBreakdownReading {
+  const row = rowsForDay(surface, day).find((call) => call.spot_id === spotId);
+  const windowStart = row?.best_window?.start;
+  // A spot with no row on this day published no window either; both mean
+  // this day has no window to explain, which is a normal omission.
+  if (windowStart === undefined) return { kind: 'unavailable', reason: 'no_best_window' };
+
+  const hourly = surface.spot_detail?.[spotId]?.hourly;
+  if (hourly === undefined) return { kind: 'unavailable', reason: 'legacy_hourly_missing' };
+
+  const matching = hourly.filter((point) => startsInPublishedHour(point, surface.days[day].date, windowStart));
+  if (matching.length === 0) return { kind: 'unavailable', reason: 'hour_not_projected' };
+  if (matching.length > 1) return { kind: 'unavailable', reason: 'hour_duplicated' };
+
+  const sub = matching[0]!.sub;
+  return isHourlySubscore(sub)
+    ? { kind: 'available', sub: { dir: sub.dir, size: sub.size, wind: sub.wind, tide: sub.tide } }
+    : { kind: 'unavailable', reason: 'malformed_point' };
+}
+
+/**
+ * Same published civil day, same published clock hour. The hour, not the
+ * exact minute: the contract selects the point whose stamp "falls in the
+ * same hour as that day summary's best_window.start", so a window opening at
+ * 06:30 is explained by the 06:00 hour that contains it rather than refused.
+ */
+function startsInPublishedHour(point: HourlySubscorePoint, dayDate: string, windowStart: string): boolean {
+  return point.t.slice(0, 10) === dayDate && point.t.slice(11, 13) === windowStart.slice(0, 2);
+}
+
+/**
+ * The reading surface is JSON that reached this module through a parse and a
+ * type assertion. The publish-time validator refuses a malformed point, so
+ * this branch should be unreachable in production -- and it is checked
+ * anyway, because the alternative is a page printing `undefined` beside
+ * three real numbers, which is exactly how this repo's worst bug shipped.
+ */
+function isHourlySubscore(value: unknown): value is HourlySubscore {
+  if (typeof value !== 'object' || value === null) return false;
+  const candidate = value as Record<string, unknown>;
+  return isRawScore(candidate.dir)
+    && isRawScore(candidate.size)
+    && (candidate.wind === null || isRawScore(candidate.wind))
+    && (candidate.tide === null || isRawScore(candidate.tide));
+}
+
+function isRawScore(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1;
 }
 
 function rowsForDay(surface: PublishedSurfaceUpdate, day: SurfaceDayIndex): readonly SurfaceCall[] {
