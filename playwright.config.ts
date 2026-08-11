@@ -1,7 +1,10 @@
 import { defineConfig, devices } from '@playwright/test';
 
-const previewPort = process.env.PREVIEW_PORT ?? '4322';
-const previewUrl = process.env.PREVIEW_URL ?? `http://127.0.0.1:${previewPort}`;
+const configuredPreviewUrl = process.env.PREVIEW_URL;
+const previewPort =
+  process.env.PREVIEW_PORT ??
+  (configuredPreviewUrl ? new URL(configuredPreviewUrl).port || '4322' : '4322');
+const previewUrl = configuredPreviewUrl ?? `http://127.0.0.1:${previewPort}`;
 
 // The single walking-skeleton end-to-end per feature, plus the surface Vera
 // walks when she examines a slice against its charter.
@@ -29,7 +32,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npx vite preview --host 127.0.0.1 --port ${previewPort}`,
+    command: `npx vite preview --host 127.0.0.1 --port ${previewPort} --strictPort`,
     url: previewUrl,
     reuseExistingServer: false,
   },

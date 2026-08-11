@@ -481,6 +481,11 @@ Then('el documento publicado queda exactamente como estaba antes de probar la al
   const record = driftedRecords.get(this);
   assert.ok(record, 'test fixture error: falta el documento original para comprobar su regreso');
   assert.equal(readFileSync(designSystemPath, 'utf8'), record.original, 'la alarma dejó una edición en el documento publicado');
+  const diff = spawnSync('git', ['diff', '--exit-code', '--', 'docs/product/architecture/09-design-system.md'], {
+    cwd: projectRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(diff.status, 0, `la pareja desviada no volvió limpia al documento publicado:\n${diff.stdout}${diff.stderr}`);
 });
 
 Then('la revisión local termina sus comprobaciones de presentación y navegador sin omitir ninguna', function () {
