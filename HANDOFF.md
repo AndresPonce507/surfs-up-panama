@@ -4,7 +4,7 @@ This section supersedes the legacy notes below. They are retained only as histor
 
 ## Exact restart point
 
-- **GitHub main:** `96bd27ccffcbe68ce94b0116f8f2e9421023705c`
+- **GitHub main:** run `git fetch origin --prune && git rev-parse origin/main`; this handoff is committed with main and must be read from that fetched tip.
 - **Release worktree:** `/Users/andres/psb-integration-batch2`
 - **Release branch:** `release/integration-20260810-batch2`
 - **Local state:** every registered worktree was checkpointed, scanned for secrets, committed, and pushed. All are clean.
