@@ -694,6 +694,13 @@
       "s": "EXECUTED",
       "d": "PASS: the ladder is re-run from the record's own stated evidence by calling gateCorrection rather than restating it, so apply and fit cannot drift apart, and the record's stored verdict is never read at all. The gate token is CARRIED out of gates.ts (GateVerdict.reason narrowed from string to a GateReason union) so engine.ts never constructs the literal that declarations.ts forbids outside the gate module; the whole-source examination reports zero violations. Score move is MINUS b/100 saturated at the record's own clamp.max_abs_score; height is per (source, lead bucket) with its own re-check; the 0.40-of-member-height clamp is deferred with its reason recorded, because the port carries no member height and the only call site that knows it is build.ts, owned by a concurrent lane. Full vitest 409/409 across 82 files at --maxWorkers=4 (up from 400/80), tsc --noEmit exit 0, npm run build exit 0 with 105 pages under every page-weight ceiling. Post-GREEN wiring check: src/scoring/engine.ts and src/learning/gates.ts are both in the diff, so this is not fixture theatre; src/pipeline/build.ts is NOT in the diff. Falsifiability proven by three reverted mutations (trust the stored flag; flip the score sign; drop the record's own clamp), each failing semantically. UI checks N/A: non-visual step, and build.ts still hands applyCorrection a literal null, so no published byte can move on this step at all.",
       "t": "2026-08-11T23:55:00Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: production step committed as c6237ed (feat(learning): let a correction file move a number only on its own evidence), 10 files, 846 insertions. git show --stat confirms src/pipeline/build.ts is NOT among them. INCIDENT during this step: a second process was writing into this worktree - it replaced this step's unit-law file at 18:46 with its own incompatible version, and later reverted both src/scoring/engine.ts and src/learning/gates.ts to HEAD mid-verification. Both were restored from this session's own record and re-verified green before the commit. The foreign unit-law file is preserved outside the repo for the lane owner.",
+      "t": "2026-08-11T23:58:41Z"
     }
   ]
 }
