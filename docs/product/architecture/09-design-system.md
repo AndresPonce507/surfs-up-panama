@@ -98,7 +98,7 @@ at most **one** is present per route.
 | Surface | Why glass genuinely helps | Fallback |
 |---|---|---|
 | Language pill (`.lang-toggle`, fixed top-right, all routes) | TODO 04-03: no emitted language control is measured in this feature | Solid `--bg` via `@supports not` ordering, and again under `prefers-reduced-transparency: reduce` |
-| Report CTA tray (`p:has(> a.cta)`, fixed bottom, spot pages) | TODO 04-03: await the supported-glass proof before claiming a translucent composite | Same solid-first pattern |
+| Report CTA tray (`p:has(> a.cta)`, fixed bottom, spot pages) | The existing `--hero-grad` water field sits only inside this already-approved tray when glass is supported; its existing `--glass` overlay blurs that field. This makes the compact fixed surface visibly read as glass over water without painting the reading page or adding markup. | Same solid-first pattern; the water field and overlay are absent when glass is unsupported or reduced transparency is requested. |
 
 Refused, deliberately:
 
@@ -112,9 +112,11 @@ Refused, deliberately:
 
 Mechanics: solid background declared first, glass only inside
 `@supports (backdrop-filter: blur(1px))`, `-webkit-` prefix for older iOS, both surfaces
-forced solid under `prefers-reduced-transparency: reduce`. Exact supported-glass composite
-measurements remain TODO 04-03; this home-only step does not claim an unmeasured fallback or
-transparent layer is safe.
+forced solid under `prefers-reduced-transparency: reduce`. The report tray reuses the existing
+`--hero-grad` only as its compact supported-mode water field, behind the existing `--glass`
+overlay. This is not a page background, a new component, or a token change. Exact
+supported-glass composite measurements remain TODO 04-03; this home-only step does not claim an
+unmeasured fallback or transparent layer is safe.
 
 ### 5. Typography
 

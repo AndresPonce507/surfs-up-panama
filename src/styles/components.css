@@ -263,11 +263,26 @@ p:has(> a.cta) {
 
 @supports (backdrop-filter: blur(1px)) {
   p:has(> a.cta) {
-    background: var(--glass);
+    isolation: isolate;
+    overflow: hidden;
+    background: var(--hero-grad);
     border-top-color: var(--glass-line);
     box-shadow: inset 0 1px 0 var(--glass-line), var(--shadow-2);
+  }
+
+  p:has(> a.cta)::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background: var(--glass);
     backdrop-filter: var(--glass-blur);
     -webkit-backdrop-filter: var(--glass-blur);
+  }
+
+  p:has(> a.cta) > .cta {
+    position: relative;
+    z-index: 1;
   }
 }
 
@@ -331,6 +346,12 @@ body:has(.home-primary) {
   p:has(> a.cta),
   .home-primary {
     background: var(--bg);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  p:has(> a.cta)::before {
+    display: none;
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
   }
