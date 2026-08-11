@@ -13,8 +13,8 @@ function backgroundIn(source: string): string {
   return match[1];
 }
 
-const darkMedia = '@media (prefers-color-scheme: dark)';
-const darkOffset = tokens.indexOf(darkMedia);
+const darkThemeScope = ':root[data-theme="dark"]';
+const darkOffset = tokens.indexOf(darkThemeScope);
 if (darkOffset < 0) throw new Error('chrome colors: dark token scope is required');
 
 export const lightChromeColor = backgroundIn(tokens.slice(0, darkOffset));

@@ -15,11 +15,12 @@ import { chromium, webkit, type Browser, type BrowserType, type Page } from '@pl
 type ThemeWorld = object;
 type Visit = { browser: Browser; page: Page; label: string };
 type Publication = { preview: ChildProcess; previewRoot: string; daemonPid: number; url: string; visits: Visit[]; copiedDist?: string };
-type Paint = { background: string; firstPaint: string | undefined; themeColor: string | undefined; scrollWidth: number; clientWidth: number };
+type Paint = { background: string; firstPaint: string | undefined; themeColors: string[]; scrollWidth: number; clientWidth: number };
 
 const projectRoot = process.cwd();
 const publications = new WeakMap<ThemeWorld, Publication>();
 const invalidChoices = new WeakMap<ThemeWorld, string>();
+const firstFrameProbe = '<script>(()=>{const capture=()=>requestAnimationFrame(()=>{if(document.body!==null&&!Object.hasOwn(window,"__firstThemePaint"))Object.defineProperty(window,"__firstThemePaint",{value:getComputedStyle(document.body).backgroundColor,writable:false,configurable:false});});capture();document.addEventListener("DOMContentLoaded",capture,{once:true});})()</script>';
 
 function cleanEnvironment(): NodeJS.ProcessEnv {
   const environment = { ...process.env };
@@ -60,6 +61,26 @@ function buildPublication(): void {
   assert.match(output, /page weight|page-weight|weight gate/i, `test fixture error: la construcción no informó su límite de peso:\n${output}`);
 }
 
+function addFirstFrameProbe(dist: string): void {
+  const index = join(dist, 'index.html');
+  const html = readFileSync(index, 'utf8');
+  assert.match(html, /<head>/i, 'test fixture error: la portada publicada no contiene una cabecera donde observar su primer cuadro');
+  writeFileSync(index, html.replace(/<head>/i, `<head>${firstFrameProbe}`));
+}
+
+function firstDocumentFinding(html: string): string | undefined {
+  const opening = html.match(/<html\b[^>]*>/i)?.[0];
+  const lightChrome = html.match(/<meta[^>]*name=["']theme-color["'][^>]*content=["'](#[0-9a-f]{6})["'][^>]*prefers-color-scheme:\s*light[^>]*>/i)?.[1];
+  if (opening === undefined || lightChrome === undefined) return 'faltan la apertura del documento o el borde claro emitido';
+  if (!/color-scheme:\s*light/i.test(opening) || !new RegExp(`background:\\s*${lightChrome}`, 'i').test(opening)) {
+    return `la apertura del documento no conserva el lienzo claro ${lightChrome} derivado del borde emitido`;
+  }
+  const bootstrap = html.indexOf("localStorage.getItem('surfs-up-theme')");
+  const inlineCss = html.indexOf('<style>');
+  if (bootstrap < 0 || inlineCss < 0 || bootstrap > inlineCss) return 'la elección guardada no se aplica antes del CSS que puede pintar';
+  return undefined;
+}
+
 async function publish(world: ThemeWorld): Promise<Publication> {
   buildPublication();
   // Astro preview deliberately daemonises. Give every scenario its own small
@@ -67,6 +88,7 @@ async function publish(world: ThemeWorld): Promise<Publication> {
   // daemon or the user's working tree.
   const previewRoot = mkdtempSync(join(tmpdir(), 'surf-theme-preview-'));
   cpSync(join(projectRoot, 'dist'), join(previewRoot, 'dist'), { recursive: true });
+  addFirstFrameProbe(join(previewRoot, 'dist'));
   symlinkSync(join(projectRoot, 'node_modules'), join(previewRoot, 'node_modules'), 'dir');
   writeFileSync(join(previewRoot, 'package.json'), '{"private":true,"type":"module"}\n');
   const port = await unusedPort();
@@ -115,28 +137,23 @@ async function visit(
   const context = await browser.newContext({ viewport: { width, height: 844 }, colorScheme: scheme, reducedMotion: 'reduce', javaScriptEnabled });
   await context.addInitScript((choice) => {
     if (choice !== undefined) localStorage.setItem('surfs-up-theme', choice);
-    const firstFrame = () => {
-      if (document.body === null) requestAnimationFrame(firstFrame);
-      else (window as Window & { __firstThemePaint?: string }).__firstThemePaint = getComputedStyle(document.body).backgroundColor;
-    };
-    requestAnimationFrame(firstFrame);
   }, storedChoice);
   const page = await context.newPage();
   const response = await page.goto(`${publication.url}${path}`, { waitUntil: 'domcontentloaded' });
   assert.ok(response?.ok(), `${label}: la ruta ${path} no llegó como publicación`);
+  if (javaScriptEnabled) await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
   publication.visits.push({ browser, page, label });
   return page;
 }
 
-async function paint(page: Page): Promise<Paint> {
+async function paint(page: Page, observeFrame = true): Promise<Paint> {
+  if (observeFrame) await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
   return page.evaluate(() => {
     const background = getComputedStyle(document.body).backgroundColor;
-    const active = [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')]
-      .find((meta) => meta.media === '' || matchMedia(meta.media).matches)?.content;
     return {
       background,
       firstPaint: (window as Window & { __firstThemePaint?: string }).__firstThemePaint,
-      themeColor: active,
+      themeColors: [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')].map((meta) => meta.content),
       scrollWidth: document.documentElement.scrollWidth,
       clientWidth: document.documentElement.clientWidth,
     };
@@ -161,30 +178,24 @@ async function assertControl(page: Page, expectedName: string): Promise<void> {
 
 async function assertReadableStaticControl(page: Page): Promise<void> {
   const button = await themeButton(page);
-  const quality = await button.evaluate((element) => {
-    const parse = (value: string): [number, number, number] | null => {
-      const match = value.match(/rgba?\(([^)]+)\)/i);
-      if (!match) return null;
-      const values = match[1]!.split(',').slice(0, 3).map(Number);
-      return values.length === 3 && values.every(Number.isFinite) ? [values[0]!, values[1]!, values[2]!] : null;
-    };
-    const luminosity = ([r, g, b]: [number, number, number]) => {
-      const channel = (n: number) => { const v = n / 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
-      return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
-    };
-    const text = parse(getComputedStyle(element).color);
-    let background: [number, number, number] | null = null;
-    for (let parent: Element | null = element; parent !== null && background === null; parent = parent.parentElement) {
-      const candidate = parse(getComputedStyle(parent).backgroundColor);
-      if (candidate !== null && getComputedStyle(parent).backgroundColor !== 'rgba(0, 0, 0, 0)') background = candidate;
-    }
-    if (text === null || background === null) return { ratio: 0, moving: true };
-    const ratio = (Math.max(luminosity(text), luminosity(background)) + 0.05) / (Math.min(luminosity(text), luminosity(background)) + 0.05);
+  const styles = await button.evaluate((element) => {
     const style = getComputedStyle(element);
-    return { ratio, moving: style.animationName !== 'none' || style.transitionDuration !== '0s' };
+    return { text: style.color, background: style.backgroundColor, moving: style.animationName !== 'none' || style.transitionDuration !== '0s' };
   });
-  assert.ok(quality.ratio >= 4.5, `el texto del control queda en ${quality.ratio.toFixed(2)}:1; necesita 4.5:1`);
-  assert.equal(quality.moving, false, 'con movimiento reducido el control no puede animarse');
+  const rgb = (value: string): [number, number, number] | undefined => {
+    const match = value.match(/rgba?\(([^)]+)\)/i);
+    const channels = match?.[1]?.split(',').slice(0, 3).map(Number);
+    return channels?.length === 3 && channels.every(Number.isFinite) ? [channels[0]!, channels[1]!, channels[2]!] : undefined;
+  };
+  const luminance = ([red, green, blue]: [number, number, number]): number => {
+    const channel = (value: number): number => { const normalized = value / 255; return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4; };
+    return 0.2126 * channel(red) + 0.7152 * channel(green) + 0.0722 * channel(blue);
+  };
+  const text = rgb(styles.text);
+  const background = rgb(styles.background);
+  const ratio = text === undefined || background === undefined ? 0 : (Math.max(luminance(text), luminance(background)) + 0.05) / (Math.min(luminance(text), luminance(background)) + 0.05);
+  assert.ok(ratio >= 4.5, `el texto del control queda en ${ratio.toFixed(2)}:1; necesita 4.5:1`);
+  assert.equal(styles.moving, false, 'con movimiento reducido el control no puede animarse');
 }
 
 function emittedHtml(): string[] {
@@ -202,12 +213,17 @@ function emittedHtml(): string[] {
 }
 
 function assertRouteSweep(): string[] {
+  const controller = readFileSync(join(projectRoot, 'src/styles/theme-controller.ts'), 'utf8');
+  assert.doesNotMatch(controller, /Activar modo|Switch to (?:dark|light) mode/,
+    'theme-controller no puede inventar etiquetas: Base e i18n son la única autoridad de acción localizada');
   const routes = emittedHtml();
   const english = routes.filter((path) => relative(join(projectRoot, 'dist'), path).startsWith('en/'));
   assert.ok(english.length > 0, 'la publicación todavía no contiene sus rutas inglesas');
   for (const path of routes) {
     const html = readFileSync(path, 'utf8');
     assert.match(html, /data-theme-toggle/, `${relative(projectRoot, path)} perdió el control de tema que debe existir sin JavaScript`);
+    const firstDocument = firstDocumentFinding(html);
+    assert.equal(firstDocument, undefined, `${relative(projectRoot, path)}: ${firstDocument}`);
     if (relative(join(projectRoot, 'dist'), path).startsWith('en/')) {
       assert.match(html, /aria-label="Switch to dark mode"|aria-label="Switch to light mode"/, `${relative(projectRoot, path)} no anuncia el control en inglés`);
     } else {
@@ -223,11 +239,13 @@ function assertRouteSweep(): string[] {
 }
 
 function themeColorMatches(surface: Paint): string | undefined {
-  if (surface.themeColor === undefined) return 'no hay un borde del navegador para el tema visible';
-  const normalised = surface.themeColor.toLowerCase();
-  const rgb = normalised.match(/^#([0-9a-f]{6})$/i);
-  const expected = rgb === null ? surface.background : `rgb(${parseInt(rgb[1]!.slice(0, 2), 16)}, ${parseInt(rgb[1]!.slice(2, 4), 16)}, ${parseInt(rgb[1]!.slice(4, 6), 16)})`;
-  return expected === surface.background ? undefined : `el borde pinta ${surface.themeColor}, pero la lectura pinta ${surface.background}`;
+  if (surface.themeColors.length === 0) return 'no hay bordes del navegador para el tema visible';
+  const wrong = surface.themeColors.find((themeColor) => {
+    const rgb = themeColor.toLowerCase().match(/^#([0-9a-f]{6})$/i);
+    const expected = rgb === null ? themeColor : `rgb(${parseInt(rgb[1]!.slice(0, 2), 16)}, ${parseInt(rgb[1]!.slice(2, 4), 16)}, ${parseInt(rgb[1]!.slice(4, 6), 16)})`;
+    return expected !== surface.background;
+  });
+  return wrong === undefined ? undefined : `el borde pinta ${wrong}, pero la lectura pinta ${surface.background}`;
 }
 
 Given('la publicación real se construye y se abre en los entornos de lectura admitidos', { timeout: 120_000 }, async function (this: ThemeWorld) {
@@ -301,6 +319,12 @@ Then('el control anuncia "Activar modo claro" en español y "Switch to light mod
   const finding = themeColorMatches(english);
   assert.equal(finding, undefined, finding ?? 'el borde del navegador no siguió la lectura inglesa');
   await assertControl(page, 'Switch to light mode');
+  await page.locator('a[href^="/en/spots/"]').first().click();
+  await page.waitForURL(/\/en\/spots\//);
+  const englishSpot = await paint(page);
+  const spotFinding = themeColorMatches(englishSpot);
+  assert.equal(spotFinding, undefined, spotFinding ?? 'el borde del navegador no siguió la playa inglesa');
+  await assertControl(page, 'Switch to light mode');
 });
 
 Then('al volver a claro la elección se conserva después de otra recarga', async function (this: ThemeWorld) {
@@ -328,7 +352,7 @@ When('la surfista abre la portada y una ruta de playa', { timeout: 120_000 }, as
 
 Then('ambas llegan listas, claras, legibles y sin movimiento antes de que exista una elección guardada', async function (this: ThemeWorld) {
   const publication = required(this);
-  const [darkHome, darkBeach, lightHome, lightBeach] = await Promise.all(publication.visits.map(({ page }) => paint(page)));
+  const [darkHome, darkBeach, lightHome, lightBeach] = await Promise.all(publication.visits.map(({ page }) => paint(page, false)));
   assert.ok(darkHome && darkBeach && lightHome && lightBeach, 'test fixture error: faltan las cuatro lecturas sin automatismos');
   for (const [label, dark, light] of [
     ['la portada', darkHome, lightHome],
@@ -367,22 +391,31 @@ Given('una copia aislada de la publicación conserva la lectura oscura pero pint
   const html = readFileSync(copied, 'utf8');
   const darkTag = html.match(/<meta[^>]*name=["']theme-color["'][^>]*prefers-color-scheme:\s*dark[^>]*>/i)?.[0];
   assert.ok(darkTag, 'test fixture error: no se encontró el borde oscuro para alterar');
-  writeFileSync(copied, html.replace(darkTag, darkTag.replace(/#[0-9a-f]{6}/i, '#f2f8fa')));
+  const darkOpening = html.replace(/(<html\b[^>]*background:\s*)#[0-9a-f]{6}/i, '$1#121212');
+  assert.notEqual(firstDocumentFinding(darkOpening), undefined, 'test fixture error: oscurecer el lienzo de apertura debe romper el contrato del primer cuadro');
+  const browserChromeRegression = '<script type="module">const d=localStorage.getItem(\'surfs-up-theme\')===\'dark\';for(const c of document.querySelectorAll(\'meta[name="theme-color"]\'))c.content=d?\'#f2f8fa\':\'#061a21\'</script>';
+  writeFileSync(copied, darkOpening.replace('</body>', `${browserChromeRegression}</body>`));
   required(this).copiedDist = copied;
   const altered = readFileSync(copied, 'utf8');
   assert.match(altered, /#f2f8fa/i, 'test fixture error: la copia no cambió el borde');
+  assert.ok(firstDocumentFinding(altered), 'test fixture error: la copia no oscureció el lienzo de apertura');
 });
 
 When('la surfista abre esa copia en oscuro', { timeout: 120_000 }, async function (this: ThemeWorld) {
   assert.ok(required(this).copiedDist, 'test fixture error: falta la copia aislada');
-  await visit(this, chromium, 'copia con borde abandonado', '/', 390, 'dark');
+  // The public default is intentionally light even on a dark-preference
+  // device. This negative control promises a dark reading, so it must use the
+  // same saved visitor choice that a real dark reading now requires.
+  await visit(this, chromium, 'copia con borde abandonado', '/', 390, 'dark', true, 'dark');
+  await visit(this, chromium, 'copia clara con ambos bordes oscuros', '/', 390, 'dark');
 });
 
 Then('la comprobación rechaza la copia y nombra el fondo de lectura que el borde abandonó', async function (this: ThemeWorld) {
-  const altered = await paint(required(this).visits[0]!.page);
-  const finding = themeColorMatches(altered);
-  assert.ok(finding, 'la comprobación debía rechazar el borde claro de la copia oscura');
-  assert.match(finding, /lectura pinta|borde pinta/, 'la comprobación debe nombrar el fondo de lectura que la copia abandonó');
+  for (const { page, label } of required(this).visits) {
+    const finding = themeColorMatches(await paint(page));
+    assert.ok(finding, `${label}: la comprobación debía rechazar los dos bordes abandonados`);
+    assert.match(finding, /lectura pinta|borde pinta/, `${label}: la comprobación debe nombrar el fondo de lectura que la copia abandonó`);
+  }
 });
 
 After(async function (this: ThemeWorld) {

@@ -228,9 +228,11 @@ function emittedHtmlFiles(directory: string): string[] {
 
 function kindOfPublishedRoute(file: string): PublishedRouteKind {
   if (file === 'manana.html') return 'manana';
+  if (file === 'en/tomorrow.html') return 'manana';
   if (file === '404.html') return 'unknown';
   if (file === 'sin-senal.html') return 'offline';
   if (/^spots\/[^/]+\.html$/.test(file)) return 'spot';
+  if (/^en\/spots\/[^/]+\.html$/.test(file)) return 'spot';
   if (/^spots\/[^/]+\/ayer\.html$/.test(file)) return 'ayer';
   if (/^spots\/[^/]+\/reportar\.html$/.test(file)) return 'reportar';
   if (/^spots\/[^/]+\/reportado\.html$/.test(file)) return 'reportado';
@@ -593,6 +595,7 @@ When('el surfista abre la página de Playa Venao y su recibo de ayer a {int} px,
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width, height: 844 } });
   await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
+  if (theme === 'oscuro') await page.addInitScript(() => localStorage.setItem('surfs-up-theme', 'dark'));
   await page.goto(base, { waitUntil: 'load' });
   const homePalette = await paletteOf(page);
   const baseline = visibleBaseline(fixture.root);
@@ -644,6 +647,7 @@ When('el surfista abre la página que no existe y las dos pantallas de reportar 
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
+  if (theme === 'oscuro') await page.addInitScript(() => localStorage.setItem('surfs-up-theme', 'dark'));
   await page.goto(base, { waitUntil: 'load' });
   const homePalette = await paletteOf(page);
   const baseline = visibleBaseline(fixture.root);

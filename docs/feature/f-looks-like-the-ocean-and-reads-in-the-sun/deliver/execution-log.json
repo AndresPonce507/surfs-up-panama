@@ -428,6 +428,55 @@
       "s": "EXECUTED",
       "d": "PASS: scoped implementation committed as 0b6c7b4 with Step-ID: 02-02 after source-blind U8 PASS. The commit contains only the accepted Home-tray CSS, Slice-02 browser acceptance contract, design-system truth, the factual Slice-02 charter row, and lifecycle evidence. The unrelated Slice-04 charter remains unstaged. Independent review iteration 3 follows this factual post-hash record.",
       "t": "2026-08-11T14:12:13Z"
+    },
+    {
+      "sid": "07-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: loaded the approved 07-01 light-first contract, enabled its one distilled feature file, and confined production work to the declared layout, token, controller, base-style, i18n, compact-style, and authorized English-route seam. components.css remained untouched.",
+      "t": "2026-08-11T14:45:15Z"
+    },
+    {
+      "sid": "07-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "FAIL_FOR_RIGHT_REASON: the active real-build browser scenario found an empty-choice dark-preference visitor painting rgb(6, 26, 33) where the required light reading surface is rgb(242, 248, 250); collection and browser wiring succeeded.",
+      "t": "2026-08-11T14:45:15Z"
+    },
+    {
+      "sid": "07-01",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: the distilled real-browser acceptance contract reaches the public document, storage, control, and browser-chrome boundaries directly. It drove GREEN without a separate unit seam. Test budget: 6 observable behaviors x 2 = 12; new unit tests: 0.",
+      "t": "2026-08-11T14:45:15Z"
+    },
+    {
+      "sid": "07-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: after the U8 320px dark-OS filmstrip exposed an actual pre-document dark canvas, the opening html now carries the token-derived light canvas and the synchronous saved-choice bootstrap switches it before styles. Current full Design acceptance is 53 scenarios/1042 steps; U1 4/80, U2 4/80, U3 2/42, U4 4/80, U5 4/80, U6 4/80, U7 5/99 all pass. G1 active 07-01 acceptance 5/5; G2 units 48 files/241; G3 browser E2E 3/3; G4 full Design 53/1042; G5 diff check clean; G6 typecheck; G7 build/page-weight; G8 test budget 0/12; G9 the active contract passed RED-to-GREEN without weakening, deletion, or a test skip. test:ui measures 85 documents and compact /sin-senal at 2,262 B gz under 3 KB. Fresh source-blind U8 and iteration-2 review remain required before COMMIT.",
+      "t": "2026-08-11T14:45:15Z"
+    },
+    {
+      "sid": "07-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: post selected-light browser-chrome repair. The client resolves the selected token --bg from document root and writes every theme-color declaration, while the real-browser copy mutation proves both declarations forced to the opposite palette are refused in saved-dark and empty-storage light contexts. Full Design acceptance 53/1042; U1 4/80, U2 4/80, U3 2/42, U4 4/80, U5 4/80, U6 4/80, U7 5/99; units 48 files/241; typecheck; test:ui; build/page-weight 85 documents, compact /sin-senal 2,274 B gz under 3 KB; and browser E2E 3/3 all pass. U8 and iteration-4 review remain pending; no COMMIT event is asserted.",
+      "t": "2026-08-11T15:04:07Z"
+    },
+    {
+      "sid": "07-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the exact English linked-spot seam now uses the shared locale path, and the real browser follows /en/tomorrow to an English spot in selected dark and then selected light. Full Design 53/1042; U1 4/80, U2 4/80, U3 2/42, U4 4/80, U5 4/80, U6 4/80, U7 5/99; units 48/241; typecheck; test:ui; build/page-weight 105 documents across 10 routes with compact /sin-senal 2,274 B gz under 3 KB; E2E 3/3. Fresh U8 and iteration-5 review remain pending; no COMMIT event is asserted.",
+      "t": "2026-08-11T15:27:09Z"
+    },
+    {
+      "sid": "07-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: controller localization authority is now exclusively Base/i18n data attributes and the acceptance guard rejects controller-owned Spanish or English action literals. Slice06 2/42, Slice07 5/99, full Design 53/1042; U1 4/80, U2 4/80, U3 2/42, U4 4/80, U5 4/80, U6 4/80, U7 5/99; units 48/241; typecheck; test:ui; build/page-weight 105 documents across 10 routes with compact /sin-senal 2,273 B gz under 3 KB; E2E 3/3. Fresh U8 and iteration-6 review remain pending; no COMMIT event is asserted.",
+      "t": "2026-08-11T15:41:25Z"
     }
   ]
 }

@@ -80,7 +80,7 @@ Notes on the plan:
 |---|---|
 | Any copy change, any Spanish wording | The features that own those strings; this feature moves no words |
 | The English tree and its styling | F-READ-IT-IN-YOUR-LANGUAGE |
-| A manual light/dark toggle | Never at launch. `prefers-color-scheme` only, 0 KB JS (`application-architecture.md` section 11) |
+| A manual light/dark toggle | Superseded for Phase07 by the user-authorized light-first, persisted public choice. OS preference is never the first-visit selector. |
 | Webfonts | Never. System stack only, 0 bytes. The type hierarchy comes from weight, size and tracking |
 | Spot photography, maps, illustration | Not planned. The byte budget and the request-count guardrail both forbid it at launch |
 | Animation or transitions | Deliberately none. `prefers-reduced-motion` is honoured by having nothing to reduce |
@@ -140,6 +140,10 @@ static manifest's light/default limitation still stand.
 | `src/styles/theme-controller.ts` | Reads/writes the chosen public preference, changes root state, and synchronizes browser theme-color. | No page-specific controller and no delayed hydration. |
 | `src/i18n/strings.ts` | Owns Spanish and English accessible action labels. | Labels name the next action, not the current mode. |
 | `src/pages/manifest.webmanifest.ts` | Keeps the generated manifest's static light/default color token-derived. | A manifest cannot express one person’s stored choice. |
+| `src/styles/chrome-colors.ts` | Derives the light-first opening canvas and browser chrome from the named background tokens. | No authored hexadecimal authority outside tokens.css. |
+| `src/styles/offline.css` | Keeps compact fallback documents light-first and gives their emitted toggle the same 44 px top-left geometry. | Must remain within the 3 KB offline document ceiling. |
+| `src/pages/en/tomorrow.astro`, `src/pages/en/spots/[slug].astro`, and `scripts/page-weight-core.mjs` | Publish the already-architected English reading route, its existing linked English spot target, and measure both against the 14 KB reading ceiling. | This is the exact authorized English seam, not a new English tree. |
+| `tests/e2e/daily-call-with-permanent-receipts/walking-skeleton.spec.ts` | Reconciles its legacy OS-dark setup with the new public contract by making an explicit saved-dark choice. | Keeps its dark behavior coverage without restoring an OS-dark production fallback. |
 
 ## Wave: DISTILL / [REF] Theme-choice scenarios
 

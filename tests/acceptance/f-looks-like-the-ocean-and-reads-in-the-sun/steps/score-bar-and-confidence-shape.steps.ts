@@ -117,6 +117,7 @@ async function openAndAudit(world: RankingWorld): Promise<void> {
   const allAudits: RouteAudit[] = [];
   for (const theme of ['claro', 'oscuro'] as const) {
     await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
+    if (theme === 'oscuro') await page.addInitScript(() => localStorage.setItem('surfs-up-theme', 'dark'));
     for (const route of ['/', '/manana.html'] as const) {
       await page.goto(`${baseUrl}${route}`, { waitUntil: 'domcontentloaded' });
       if (preparedSurface.regression !== undefined) {

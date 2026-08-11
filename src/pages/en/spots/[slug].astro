@@ -1,0 +1,25 @@
+---
+import type { GetStaticPaths } from 'astro';
+import SpotDetail from '../../../components/SpotDetail.astro';
+import { forecast } from '../../../data/forecast';
+import { region } from '../../../data/region';
+import { composeLinkAnnouncement } from '../../../share/link-announcement';
+
+export const getStaticPaths = (() =>
+  region.spots.map((spot) => ({ params: { slug: spot.spot_id } }))) satisfies GetStaticPaths;
+
+const { slug } = Astro.params;
+if (slug === undefined) throw new Error('en/spots/[slug]: slug param missing');
+const spot = region.spots.find((candidate) => candidate.spot_id === slug);
+if (spot === undefined) throw new Error(`en/spots/[slug]: no spot identity for "${slug}"`);
+const today = forecast.days[0].find((summary) => summary.spot_id === slug);
+if (today === undefined) throw new Error(`en/spots/[slug]: ${spot.name} has no published call`);
+const site = Astro.site;
+if (site === undefined) throw new Error('en/spots/[slug]: astro.config.mjs must declare site');
+const announcement = {
+  ...composeLinkAnnouncement({ spotName: spot.name, score: today.score_q, site: site.toString() }),
+  url: new URL(`/en/spots/${slug}/`, site).toString(),
+};
+---
+
+<SpotDetail locale="en" spotId={slug} announcement={announcement} />

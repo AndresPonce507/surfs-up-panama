@@ -225,15 +225,13 @@ test('a surfer can read a real Spanish call and yesterday remains a separate pub
   await expect.soft(page.locator('a[href^="/en/"]'), 'this Spanish-only feature must not ship an English route').toHaveCount(0, { timeout: 1_000 });
   const englishCandidates = [
     'en',
-    'en/tomorrow',
-    'en/spots/playa-venao',
-    'en/spots/playa-venao/report',
-    'en/spots/playa-venao/reported',
+    'en/tomorrow.html',
+    ...expectedLaunchSpots.map((spot) => `en/spots/${spot.spot_id}.html`),
   ];
   expect.soft(
     englishCandidates.filter((route) => existsSync(join(process.cwd(), 'dist', route))),
-    'the generated candidate must not contain an English route or English route tree in slice-01',
-  ).toEqual([]);
+    'the theme contract may emit /en/tomorrow and only its linked English spot reading targets',
+  ).toEqual(englishCandidates);
   await auditReadingSurface(page, true);
 
   await page.goto('/spots/playa-venao/ayer');

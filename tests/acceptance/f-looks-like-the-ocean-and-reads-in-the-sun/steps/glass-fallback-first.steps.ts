@@ -136,6 +136,7 @@ async function openSpot(world: GlassWorld, width: number, theme: string): Promis
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width, height: 844 } });
   await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
+  if (theme === 'oscuro') await page.addInitScript(() => localStorage.setItem('surfs-up-theme', 'dark'));
   await page.goto(`${base}${spotRoute(fixture.root)}`, { waitUntil: 'domcontentloaded' });
   opened.set(world, { root: fixture.root, preview, browser, page });
 }

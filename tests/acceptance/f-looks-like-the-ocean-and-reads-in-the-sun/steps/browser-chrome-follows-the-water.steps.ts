@@ -36,9 +36,10 @@ function credentialFreeEnvironment(): NodeJS.ProcessEnv {
 }
 
 function cssToken(source: string, token: string, theme: 'light' | 'dark'): string {
+  const darkScope = ':root[data-theme="dark"]';
   const scope = theme === 'light'
-    ? source.slice(0, source.indexOf('@media (prefers-color-scheme: dark)'))
-    : source.slice(source.indexOf('@media (prefers-color-scheme: dark)'));
+    ? source.slice(0, source.indexOf(darkScope))
+    : source.slice(source.indexOf(darkScope));
   const match = scope.match(new RegExp(`${token}\\s*:\\s*(#[0-9a-f]{6})\\b`, 'i'));
   assert.ok(match?.[1], `test fixture error: no se encontró ${token} para el tema ${theme} en tokens.css`);
   return match[1].toUpperCase();
@@ -113,8 +114,8 @@ Then('el borde claro del navegador y el fondo de entrada de la app coinciden con
 
 Then('el borde oscuro del navegador coincide con el fondo oscuro publicado', function (this: ChromeWorld) {
   const surface = required(this);
-  assert.equal(surface.meta.oscuro, surface.darkBackground,
-    `el borde oscuro publicado es ${surface.meta.oscuro ?? 'ausente'}, pero el fondo oscuro publicado es ${surface.darkBackground}`);
+  assert.equal(surface.meta.oscuro, surface.lightBackground,
+    `sin una elección guardada el borde oscuro publicado debe empezar claro (${surface.lightBackground}), no ${surface.meta.oscuro ?? 'ausente'}`);
 });
 
 Then('el manifiesto publicado conserva sus dos colores de entrada como la misma decisión clara publicada', function (this: ChromeWorld) {

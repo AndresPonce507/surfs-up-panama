@@ -49,6 +49,8 @@ const DOCUMENTATION = 'docs/product/architecture/application-architecture.md';
 const DECLARED_ROUTES = [
   { shape: '/', pattern: /^index\.html$/, route: () => '/', label: '14 KB', bytes: 14 * KB, reading: true },
   { shape: '/manana', pattern: /^manana\.html$/, route: () => '/manana', label: '14 KB', bytes: 14 * KB, reading: true },
+  { shape: '/en/tomorrow', pattern: /^en\/tomorrow\.html$/, route: () => '/en/tomorrow', label: '14 KB', bytes: 14 * KB, reading: true },
+  { shape: '/en/spots/{slug}', pattern: /^en\/spots\/([^/]+)\.html$/, route: (m) => `/en/spots/${m[1]}`, label: '14 KB', bytes: 14 * KB, reading: true },
   { shape: '/spots/{slug}', pattern: /^spots\/([^/]+)\.html$/, route: (m) => `/spots/${m[1]}`, label: '14 KB', bytes: 14 * KB, reading: true },
   { shape: '/spots/{slug}/ayer', pattern: /^spots\/([^/]+)\/ayer\.html$/, route: (m) => `/spots/${m[1]}/ayer`, label: '14 KB', bytes: 14 * KB, reading: true },
   { shape: '/spots/{slug}/reportar', pattern: /^spots\/([^/]+)\/reportar\.html$/, route: (m) => `/spots/${m[1]}/reportar`, label: '6 KB', bytes: 6 * KB, reading: false },
@@ -70,7 +72,7 @@ const DECLARED_ROUTES = [
  * Declared in section 4, built by later features. Printed, never silently
  * skipped: a reader has to see the edge of what was measured.
  */
-const DECLARED_BUT_UNBUILT = '/acerca (8 KB), and the /en/ mirror (deferred to F-READ-IT-IN-YOUR-LANGUAGE)';
+const DECLARED_BUT_UNBUILT = '/acerca (8 KB), and the remaining /en/ mirror (deferred to F-READ-IT-IN-YOUR-LANGUAGE)';
 
 function count(bytes) {
   return bytes.toLocaleString('en-US');

@@ -53,10 +53,16 @@ interface SpotStrings {
   readonly reportCta: string;
 }
 
+interface ThemeStrings {
+  readonly activateDark: string;
+  readonly activateLight: string;
+}
+
 export interface UiStrings {
   readonly home: HomeStrings;
   readonly report: ReportCaptureStrings;
   readonly spot: SpotStrings;
+  readonly theme: ThemeStrings;
 }
 
 // Option `value` tokens come from src/data/report-vocab.ts, the one home for
@@ -99,6 +105,10 @@ export const strings: Record<Locale, UiStrings> = {
     spot: {
       reportCta: '¿ESTUVISTE? CUÉNTANOS', // verbatim (section 14 wireframe)
     },
+    theme: {
+      activateDark: 'Activar modo oscuro',
+      activateLight: 'Activar modo claro',
+    },
   },
   en: {
     home: {
@@ -131,6 +141,10 @@ export const strings: Record<Locale, UiStrings> = {
     },
     spot: {
       reportCta: '[report CTA copy pending]', // no exact English copy exists yet
+    },
+    theme: {
+      activateDark: 'Switch to dark mode',
+      activateLight: 'Switch to light mode',
     },
   },
 };
