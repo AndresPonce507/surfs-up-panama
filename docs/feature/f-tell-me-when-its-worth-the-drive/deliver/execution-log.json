@@ -29,6 +29,13 @@
       "s": "EXECUTED",
       "d": "PASS_WITH_FIX: independent review found future followup_date acceptance; it was fixed with strict earlier-than comparison and a PBT counterexample. Reviewer accepted run-cap behavior as exclusive to roadmap step 01-12, outside this step. Fresh approval is pending this canonical phase evidence.",
       "t": "2026-08-10T23:53:21-05:00"
+    },
+    {
+      "sid": "03-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "QUALIFIED: implementation and pre-commit evidence committed as 6995fd9f5b31b9f4ae26f77815e37b0b3393a739. Independent review accepted the functional change and scoped test budget but withheld unqualified all-green approval because the pre-existing stale static surface blocks global build-dependent gates. Parent explicitly authorized this scoped commit with that factual qualification; generated data remains untouched.",
+      "t": "2026-08-10T23:55:00-05:00"
     }
   ]
 }
