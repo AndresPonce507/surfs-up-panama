@@ -25,3 +25,15 @@ Feature: The phone sends its own saved report
     When the surfer answers waist to chest, choppy wind and a good session
     And the surfer taps Mandar
     Then the endpoint-free static page keeps exactly one saved label and sends nothing
+
+  @slice-03 @driving_port @real-io @local-real-io @covers-R21 @covers-R26
+  Scenario: Opening the report screen sends an already saved label
+    Given the built site is running as it would be at the beach
+    And a surfer has the report screen open for Playa Venao
+    And the phone has no signal
+    When the surfer answers waist to chest, choppy wind and a good session
+    And the surfer taps Mandar
+    And the phone gets signal and opens the report screen
+    Then the page itself asks for anonymous permission and sends that exact saved label
+    And the phone receives the saved label's private answer before it can show the outcome
+    And the surfer sees their saved report arrived only after its matching answer

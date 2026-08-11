@@ -2,10 +2,28 @@
 // real browser and only listens to browser traffic.  It does not provide a
 // route, intercept a response, or call a write handler itself.
 
-import { Then } from '@cucumber/cucumber';
+import { Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
 
-import { configuredWriteEndpoints, observedWriteRequest, observedWriteResponse, queuedReports, scenarioState, textBeforeReportAnswer, visibleText } from './support/world';
+import { configuredWriteEndpoints, observedWriteRequest, observedWriteResponse, queuedReports, scenarioState, setSignal, textBeforeReportAnswer, visibleText, openReportScreenDirectly } from './support/world';
+
+Given('the phone has no signal', async function (this: object) {
+  await setSignal(scenarioState(this), false);
+});
+
+When('the phone gets signal and opens the report screen', async function (this: object) {
+  const state = scenarioState(this);
+  // Abort the original offline transport before signal returns. The next page
+  // load, not a suspended request from the first document, owns this drain.
+  await state.page?.goto('about:blank');
+  await setSignal(state, true);
+  // The offline attempt is an expected transport failure, not evidence that
+  // reopening the production page drained the durable row. Observe only the
+  // requests created after signal returns and the route is opened again.
+  state.writeAttempts.length = 0;
+  state.captured.length = 0;
+  await openReportScreenDirectly(state);
+});
 
 Then('the phone keeps one saved label while it waits for an answer', async function (this: object) {
   const reports = await queuedReports(scenarioState(this));

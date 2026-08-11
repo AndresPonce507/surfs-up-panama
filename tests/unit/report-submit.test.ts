@@ -4,7 +4,7 @@ import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
 import { createCredentialProvider, type Fetcher } from '../../src/report/mint';
-import { finalizeSavedReport, sendSavedReport } from '../../src/report/submit';
+import { finalizeSavedReport, sendSavedReport, sendWithCredentialRecovery } from '../../src/report/submit';
 
 const MINT_URL = 'https://mint-id.lambda-url.us-east-1.on.aws/';
 const REPORT_URL = 'https://report-id.lambda-url.us-east-1.on.aws/';
@@ -45,10 +45,12 @@ describe('the browser report transport', () => {
     type InMemoryIdentity = {
       read(): Promise<{ deviceId: string; credential: string } | undefined>;
       write(value: { deviceId: string; credential: string }): Promise<void>;
+      clear(): Promise<void>;
     };
     const identity: InMemoryIdentity = {
       read: async () => saved,
       write: async (value: { deviceId: string; credential: string }) => { saved = value; },
+      clear: async () => { saved = undefined; },
     };
     const fetcher: Fetcher = async (_path, request) => {
       requests.push(request);
@@ -59,7 +61,7 @@ describe('the browser report transport', () => {
       deviceId: string | undefined,
       identity: InMemoryIdentity,
       mintEndpoint: string,
-    ) => { get(): Promise<string> };
+    ) => { get(): Promise<string>; invalidate(): Promise<void> };
 
     assert.equal(await provider(fetcher, 'd_0123456789abcdef0123456789abcdef', identity, MINT_URL).get(), 'v1.d_0123456789abcdef0123456789abcdef.1.signature');
     assert.equal(await provider(fetcher, undefined, identity, MINT_URL).get(), 'v1.d_0123456789abcdef0123456789abcdef.1.signature');
@@ -96,7 +98,38 @@ describe('the browser report transport', () => {
 
     assert.deepEqual(
       await sendSavedReport('{"report_id":"report-1"}', 'credential-1', fetcher, REPORT_URL),
-      { kind: 'refused', message: 'La playa indicada no es conocida.' },
+      { kind: 'refused', message: 'La playa indicada no es conocida.', credentialInvalid: false },
+    );
+  });
+
+  it('remints once after a rejected stored credential and replays the exact saved bytes', async () => {
+    const issued: string[] = ['stale', 'fresh'];
+    const attempted: { path: string; body: BodyInit | null | undefined; credential: string | null }[] = [];
+    let invalidations = 0;
+    const credential = {
+      get: async () => issued[invalidations]!,
+      invalidate: async () => { invalidations += 1; },
+    };
+    const fetcher: Fetcher = async (path, request) => {
+      const header = new Headers(request.headers).get('x-surf-credential');
+      attempted.push({ path, body: request.body, credential: header });
+      if (header === 'stale') return new Response(JSON.stringify({ error: { what: 'Permiso vencido.' } }), { status: 401 });
+      return new Response(JSON.stringify({ report_id: 'report-1', outcome: 'no_snapshot', predicted: null }), { status: 200 });
+    };
+    const savedBytes = '{"report_id":"report-1","spot_id":"playa-venao"}';
+
+    assert.deepEqual(
+      await sendWithCredentialRecovery(savedBytes, credential, fetcher, REPORT_URL),
+      { kind: 'received', receipt: { report_id: 'report-1', outcome: 'no_snapshot', predicted: null } },
+    );
+    assert.equal(invalidations, 1, 'one rejected credential earns exactly one invisible recovery');
+    assert.deepEqual(
+      attempted.map(({ path, body, credential: header }) => ({ path, body, credential: header })),
+      [
+        { path: REPORT_URL, body: savedBytes, credential: 'stale' },
+        { path: REPORT_URL, body: savedBytes, credential: 'fresh' },
+      ],
+      'recovery must replay exactly the durable bytes, never compose a replacement label',
     );
   });
 
@@ -108,7 +141,7 @@ describe('the browser report transport', () => {
     assert.deepEqual(await finalizeSavedReport('report-1', matching, discard), matching);
     assert.deepEqual(removed, ['report-1']);
     for (const outcome of [
-      { kind: 'refused' as const, message: 'No pudimos enviar el reporte ahora.' },
+      { kind: 'refused' as const, message: 'No pudimos enviar el reporte ahora.', credentialInvalid: false },
       { kind: 'received' as const, receipt: { report_id: 'another-report', outcome: 'no_snapshot' as const, predicted: null } },
       await sendSavedReport(
         '{"report_id":"report-1"}',

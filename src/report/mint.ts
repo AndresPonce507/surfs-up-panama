@@ -2,11 +2,13 @@ export type Fetcher = (path: string, request: RequestInit) => Promise<Response>;
 
 export interface CredentialProvider {
   get(): Promise<string>;
+  invalidate(): Promise<void>;
 }
 
 export interface CredentialStore {
   read(): Promise<{ readonly deviceId: string; readonly credential: string } | undefined>;
   write(identity: { readonly deviceId: string; readonly credential: string }): Promise<void>;
+  clear(): Promise<void>;
 }
 
 /** Reloads reuse durable browser identity; only storage loss starts a new anonymous device. */
@@ -21,6 +23,10 @@ export function createCredentialProvider(
     get: () => {
       credential ??= loadOrMintCredential(fetcher, deviceId, identity, mintEndpoint);
       return credential;
+    },
+    invalidate: async () => {
+      credential = undefined;
+      await identity?.clear();
     },
   };
 }

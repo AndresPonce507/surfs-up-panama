@@ -29,6 +29,8 @@ export interface QueueStore {
   readonly put: (key: string, value: string) => Promise<void>;
   readonly get: (key: string) => Promise<string | undefined>;
   readonly remove: (key: string) => Promise<void>;
+  /** Enumerates the durable rows so a later online visit can drain reports it did not create. */
+  readonly entries: () => Promise<readonly { readonly key: string; readonly value: string }[]>;
 }
 
 /** Opening storage is refusable in its own right: private mode refuses here. */
@@ -64,9 +66,12 @@ export interface ReportQueue {
   /** The verified durable bytes, used for a later network send without rebuilding the record. */
   readonly savedRecord?: (reportId: string) => Promise<string | undefined>;
   readonly discardSavedRecord?: (reportId: string) => Promise<void>;
+  /** Immutable records already waiting before this page opened, never a new form value. */
+  readonly pendingRecords?: () => Promise<readonly { readonly report_id: string; readonly bytes: string }[]>;
   readonly identity?: {
     read(): Promise<{ readonly deviceId: string; readonly credential: string } | undefined>;
     write(value: { readonly deviceId: string; readonly credential: string }): Promise<void>;
+    clear(): Promise<void>;
   };
 }
 
@@ -116,9 +121,13 @@ export async function openReportQueue(deps: QueueDependencies): Promise<QueueOut
       commit: (record) => append(store, record),
       savedRecord: (reportId) => store.get(reportId),
       discardSavedRecord: (reportId) => store.remove(reportId),
+      pendingRecords: async () => (await store.entries())
+        .filter(({ key }) => key !== IDENTITY_KEY && !key.startsWith(SENTINEL_KEY_PREFIX))
+        .map(({ key, value }) => ({ report_id: key, bytes: value })),
       identity: {
         read: async () => parseIdentity(await store.get(IDENTITY_KEY)),
         write: (value) => store.put(IDENTITY_KEY, JSON.stringify(value)),
+        clear: () => store.remove(IDENTITY_KEY),
       },
     },
   };
