@@ -2,7 +2,7 @@
   "roadmap": {
     "project_id": "f-tell-me-when-its-worth-the-drive",
     "created_at": "2026-08-09T00:00:00Z",
-    "total_steps": 32,
+    "total_steps": 42,
     "quality_contract_version": 1
   },
   "phases": [
@@ -886,6 +886,117 @@
             "tests/unit/push-island.test.ts"
           ],
           "implementation_notes": "EXEMPT FROM PARADIGM: rendered visual journey; compensate with fast-check properties for capability-state rendering in the adjacent unit test. The one tagged UI scenario is the executable U1-U7 target for this whole visible phase. Contrast must use the real backdrop, no raw hex or unapproved spacing, and no animation may be shortened instead of removed under reduced motion. Vera receives only the charter and the running surface."
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "name": "Slice-03: ask after the morning, including when it turned bad",
+      "description": "The follow-up planner is locally buildable through the declared pure notification-planning port. Delivery, VAPID and report storage are external boundaries and remain explicitly blocked rather than simulated.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "03-01",
+          "name": "A morning aviso earns one afternoon question",
+          "criteria": ["A stored morning aviso today with no follow-up today plans exactly one afternoon question.", "The plan's question uses the settled Spanish title and deep link for that spot.", "The planner consumes an injected instant and spot timezone, never an ambient clock."],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-seguimiento-de-la-tarde.feature",
+          "scenario_name": "Después de un aviso de la mañana, la tarde pregunta cómo estuvo",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A pure planning decision returns a plan and executes no delivery. The visible delivery journey is separately external-blocked in 03-06.",
+          "ui_checks": {},
+          "files_to_modify": ["src/push/plan-notifications.ts", "tests/unit/push-plan-notifications.test.ts"],
+          "implementation_notes": "Use fast-check for the state predicate. The only eligibility facts are spot-local 14:00 through 17:00, last_notified_date=today and followup_date before today. A follow-up does not read later wave quality, score or call, so its selection-bias purpose cannot accidentally be defeated by conditions turning bad. Return a plan object even with zero sends; a null result is not evidence that the suppression law ran."
+        },
+        {
+          "id": "03-02",
+          "name": "Later bad conditions do not cancel the question",
+          "criteria": ["A pushed morning produces the same afternoon question when later conditions are bad.", "No current score or call enters the follow-up eligibility predicate."],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-seguimiento-de-la-tarde.feature",
+          "scenario_name": "La pregunta llega aunque la mañana se haya puesto mala después del aviso",
+          "slice_id": "slice-03", "surface_classification": "non-visual", "charter_path": "", "u8_observation": "", "non_visual_rationale": "Pure planner law; it has no rendered surface before a real device receives the question.", "ui_checks": {},
+          "deps": ["03-01"], "files_to_modify": ["src/push/plan-notifications.ts", "tests/unit/push-plan-notifications.test.ts"],
+          "implementation_notes": "Property test the invariant against every later score 0..100. A code path that consults current conditions is a regression even if good-day examples still pass."
+        },
+        {
+          "id": "03-03",
+          "name": "Follow-up is one per pushed day",
+          "criteria": ["A followup_date already equal to the spot-local day produces no second question.", "A subscriber without today's morning aviso produces none.", "Both zero-send cases return a completed plan."],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-seguimiento-de-la-tarde.feature",
+          "scenario_name": "La tarde no vuelve a preguntar a quien ya contó cómo estuvo hoy",
+          "slice_id": "slice-03", "surface_classification": "non-visual", "charter_path": "", "u8_observation": "", "non_visual_rationale": "State suppression happens in the planner and executes no I/O.", "ui_checks": {},
+          "deps": ["03-01"], "files_to_modify": ["src/push/plan-notifications.ts", "tests/unit/push-plan-notifications.test.ts"],
+          "implementation_notes": "Example-based named sad paths at the acceptance layer; put the quantified date-state law in the adjacent unit property. Do not mutate followup_date in the pure planner."
+        },
+        {
+          "id": "03-04",
+          "name": "Follow-up respects each spot's 14:00 to 17:00 afternoon",
+          "criteria": ["13:25 and 17:25 spot-local produce no question despite a qualifying morning aviso.", "15:25 spot-local is eligible.", "Timezone comes from the spot seed supplied to the port."],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-seguimiento-de-la-tarde.feature",
+          "scenario_name": "Fuera de la tarde no sale la pregunta aunque hubo aviso",
+          "slice_id": "slice-03", "surface_classification": "non-visual", "charter_path": "", "u8_observation": "", "non_visual_rationale": "Injected-clock planning has no direct rendered surface.", "ui_checks": {},
+          "deps": ["03-01"], "files_to_modify": ["src/push/plan-notifications.ts", "tests/unit/push-plan-notifications.test.ts"],
+          "implementation_notes": "Use a property around the boundary in the unit layer. Preserve the feature scenario's concrete 13:25 and 17:25 examples so an operator can read the edge unambiguously."
+        },
+        {
+          "id": "03-05",
+          "name": "The real report boundary stores a solicited answer",
+          "criteria": ["Opening the follow-up deep link and sending the three answers stores trigger=push_solicited.", "The report remains cold until submission.", "No fake report endpoint or local stand-in may make the scenario green."],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/el-seguimiento-de-la-tarde.feature",
+          "scenario_name": "La surfista cuenta cómo estuvo desde la pregunta y queda marcado que se le preguntó",
+          "slice_id": "slice-03", "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/la-tarde-despues-del-aviso-pide-como-estuvo.md",
+          "u8_observation": "The afternoon question reads as a calm, brief invitation to help, and opens the same cold report journey without decorative noise.",
+          "non_visual_rationale": "", "ui_checks": {"U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-03"], "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-03"], "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-03"], "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-03"], "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-03"], "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-03"], "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-03"]},
+          "deps": ["03-01", "03-02", "03-03", "03-04"], "files_to_modify": ["src/push/plan-notifications.ts", "src/report/submit-observation.ts", "src/components/ReportCapture.astro"],
+          "implementation_notes": "REQUIRES_EXTERNAL and DEPLOY-BLOCKED: deployed scheduler, VAPID material, delivery to real Android or installed iPhone, and deployed report storage. This is the walking skeleton. Do not add a local receiver, test endpoint, VAPID substitute, or fake report repository. A real-device smoke can close delivery only after those prerequisites exist; otherwise the charter observation is INDETERMINATE."
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "name": "Slice-04: each surfer chooses the avisos bar",
+      "description": "A whole-number 0–100 personal threshold is persisted through the existing subscription identity, governs later planning, and is rendered only from real subscription state.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "04-01", "name": "Exact whole-number bar survives the idempotent upsert",
+          "criteria": ["Every integer 0..100 is stored exactly on the matching subscription.", "Re-asking preserves last_notified_date and followup_date.", "The existing identity is used; no second subscription is made."],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/la-barra-elegida.feature", "scenario_name": "La surfista guarda exactamente la barra que eligió y una mañana por debajo no la despierta", "slice_id": "slice-04", "surface_classification": "non-visual", "charter_path": "", "u8_observation": "", "non_visual_rationale": "The upsert is a pure write decision. Its visible control is covered in 04-05.", "ui_checks": {},
+          "files_to_modify": ["src/push/decide-subscribe.ts", "src/push/types.ts", "tests/unit/push-decide-subscribe.test.ts"],
+          "implementation_notes": "Use fast-check integer({min:0,max:100}) and a state-delta universe of the returned stored subscription fields. Assert threshold_score changes exactly, while last_notified_date, followup_date and nonmatching rows are unchanged."
+        },
+        {
+          "id": "04-02", "name": "Only 0 through 100 whole numbers can change the bar",
+          "criteria": ["-1, 101 and decimals are rejected in plain Spanish.", "An invalid choice leaves the previous stored value unchanged.", "No rounding, clamping or silent default is allowed."],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/la-barra-elegida.feature", "scenario_name": "Una barra que no es un número entero dentro de la escala no cambia los avisos", "slice_id": "slice-04", "surface_classification": "non-visual", "charter_path": "", "u8_observation": "", "non_visual_rationale": "The validation is a pure public decision before any visual error is rendered.", "ui_checks": {},
+          "deps": ["04-01"], "files_to_modify": ["src/push/decide-subscribe.ts", "tests/unit/push-decide-subscribe.test.ts"],
+          "implementation_notes": "Example-pinned acceptance sad paths plus a fast-check invalid-number unit property. The observable universe must prove no stored row changed on rejection."
+        },
+        {
+          "id": "04-03", "name": "Later sends use the exact chosen bar",
+          "criteria": ["A score equal to the chosen bar plans one aviso.", "A score one point below plans none.", "Planning reads stored threshold_score, not the product default or a client value."],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/la-barra-elegida.feature", "scenario_name": "Una mañana que alcanza la barra elegida sí le avisa a esa surfista", "slice_id": "slice-04", "surface_classification": "non-visual", "charter_path": "", "u8_observation": "", "non_visual_rationale": "The planning port returns a pure plan; real device delivery remains separately external.", "ui_checks": {},
+          "deps": ["04-01"], "files_to_modify": ["src/push/plan-notifications.ts", "tests/unit/push-plan-notifications.test.ts"],
+          "implementation_notes": "Property test equality and below-bar cut for every integer 0..100. No threshold default belongs in this comparison."
+        },
+        {
+          "id": "04-04", "name": "Return state comes from the real subscription, not phone memory",
+          "criteria": ["A stored value of 67 wins over a stale local remembered 88 on return.", "A missing browser or stored subscription never renders a selected active value.", "The result calls the real subscription-read path."],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/la-barra-elegida.feature", "scenario_name": "Al volver, la página no inventa una barra desde un recuerdo del teléfono", "slice_id": "slice-04", "surface_classification": "user-visible", "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/la-barra-que-elijo-sigue-siendo-mi-barra.md", "u8_observation": "The returned bar reads like a trustworthy continuation of the avisos line rather than a detached settings memory.", "non_visual_rationale": "", "ui_checks": {"U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-04 and @ui-u1"], "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-04 and @ui-u2"], "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-04 and @ui-u3"], "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-04 and @ui-u4"], "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-04 and @ui-u5"], "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-04 and @ui-u6"], "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-04 and @ui-u7"]},
+          "deps": ["04-01"], "files_to_modify": ["src/push/island.ts", "src/push/subscribe-client.ts", "src/components/PushSettings.astro", "tests/unit/push-island.test.ts"],
+          "implementation_notes": "REQUIRES_EXTERNAL and DEPLOY-BLOCKED on the deployed stored-subscription read boundary. Planting localStorage is a hostile-input check only; it can never become the positive source of truth. Do not green this with a local flag or fake store."
+        },
+        {
+          "id": "04-05", "name": "The choice is finished at phone width and Vera examines it",
+          "criteria": ["At 390 px in both themes the control has no scroll, clipped copy or undersized target.", "Saved, invalid and unavailable states are intentional and token-based.", "All U1-U7 checks and a source-blind U8 charter pass after GREEN."],
+          "test_file": "tests/acceptance/f-tell-me-when-its-worth-the-drive/la-barra-elegida.feature", "scenario_name": "Elegir la barra se ve terminado en el teléfono, en los dos temas", "slice_id": "slice-04", "surface_classification": "user-visible", "charter_path": "docs/product/expectations/f-tell-me-when-its-worth-the-drive/la-barra-que-elijo-sigue-siendo-mi-barra.md", "u8_observation": "At 390 px the choice is readable and easy to adjust without turning the surf page into a settings panel.", "non_visual_rationale": "", "ui_checks": {"U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-04 and @ui-u1"], "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-04 and @ui-u2"], "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-04 and @ui-u3"], "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-04 and @ui-u4"], "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-04 and @ui-u5"], "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-04 and @ui-u6"], "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-tell-me-when-its-worth-the-drive and @slice-04 and @ui-u7"]},
+          "deps": ["04-02", "04-04"], "files_to_modify": ["src/components/PushSettings.astro", "src/push/island.ts", "tests/unit/push-island.test.ts"],
+          "implementation_notes": "Run all UI commands only after GREEN. Vera receives the charter and real running surface, not source or acceptance details."
         }
       ]
     }

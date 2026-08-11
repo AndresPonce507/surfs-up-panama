@@ -368,3 +368,57 @@ missing-feature result. The suite may not enter DELIVER until a fresh two-day pu
 available to the isolated build. The test lane did not generate or publish one because its scope
 forbids touching generated data. Once that prerequisite is supplied, rerun the same focused command
 and require each scenario to reach its own `Then` oracle as `MISSING_FUNCTIONALITY`.
+
+---
+
+# Slice-03 and Slice-04 RED classification
+
+Observed 2026-08-10 in `psb-push-maps`.
+
+## Reconciliation
+
+Reconciliation passed, 0 contradictions. The feature-local DISCUSS, DESIGN and DEVOPS decision
+directories are absent; the unified feature delta, accepted write-path architecture and
+`distill/slice-03-04-decisions.md` are the applicable record. That decision record fixes the
+launch bar default at 70, the follow-up as shipped, its Spanish copy, and Slice-04's exact integer
+range. It also names the deployed write stack, scheduler, VAPID keypair, real-device smoke and
+deployed report storage as external boundaries. No local fake is permitted for any of those claims.
+
+## Commands observed
+
+```sh
+jq empty docs/feature/f-tell-me-when-its-worth-the-drive/deliver/roadmap.json
+npm run typecheck
+npm run test:at -- --dry-run --tags "@feature-f-tell-me-when-its-worth-the-drive and (@slice-03 or @slice-04)"
+npm run test:at -- --dry-run --tags "@feature-f-tell-me-when-its-worth-the-drive and @slice-99"
+npm run test:at -- --tags "@feature-f-tell-me-when-its-worth-the-drive and (@slice-03 or @slice-04) and not @requires_external"
+```
+
+The roadmap parsed, its 42 declared steps matched the counted phase steps, and TypeScript
+typecheck passed. The dry binding run selected 18 scenarios and 230 steps with zero undefined or
+ambiguous steps. The slice-99 control selected zero scenarios, proving the quoted tag expression
+arrives as one Cucumber argument.
+
+The local run excludes the three deliberately external journeys. It ran 15 scenarios and 192 steps:
+all 15 failed at their individual `Then` oracle, with 171 setup/action steps completing and no
+failure in import, step matching, world construction, browser launch or fixture setup.
+
+## Classification
+
+| Contract group | Classification | Right reason reached |
+|---|---|---|
+| Afternoon question, including a later bad sea | MISSING_FUNCTIONALITY | `planNotifications()` does not yet exist, so the `Then` reports zero questions rather than treating an absent plan as a pass. |
+| Afternoon suppression after a response, outside the window, or without a morning aviso | MISSING_FUNCTIONALITY | The `Then` first requires a completed plan; it reports that the run decided nothing, preventing a false-green absence claim. |
+| Exact chosen bar governs later sends | MISSING_FUNCTIONALITY | The existing idempotent upsert preserves the exact selected value; the later planner is absent and the send `Then` fails there. |
+| Invalid -1, 101 and 67.5 choices | MISSING_FUNCTIONALITY | The current public upsert changes the stored value; the `Then` reports that invalid input changed avisos instead of a setup failure. |
+| Returned bar from real active subscription | REQUIRES_EXTERNAL | `@requires_external @deploy-blocked`; it requires the real browser subscription plus deployed stored-subscription receipt. A stale local flag is hostile input only and never evidence. |
+| Visual bar control | MISSING_FUNCTIONALITY | The emitted surface is unavailable because the current published data is stale; the acting step captures that condition and the `Then` reports the missing user-visible control. |
+| Solicited report stored through the real report boundary | REQUIRES_EXTERNAL | `@requires_external @deploy-blocked`; no deployed report boundary is present and no local stand-in was made. |
+| Morning aviso through afternoon delivery and the report deep link on Android or installed iPhone | REQUIRES_EXTERNAL | `@walking_skeleton @requires_external @deploy-blocked`; the real-device/VAPID smoke remains launch evidence, not a fake local pass. |
+
+## Gate result
+
+The local pure and built-surface contracts are RED-ready. The three external journeys are explicitly
+blocked, not faked. This is not a DELIVER handoff yet: independent acceptance review is approved,
+and a fresh current published surface is required before U1-U7 or a source-blind device
+exam can produce GREEN evidence.

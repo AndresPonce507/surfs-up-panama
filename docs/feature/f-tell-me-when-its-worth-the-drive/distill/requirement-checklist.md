@@ -86,9 +86,13 @@ protocol framing only, never real FCM/APNs acceptance or aes128gcm interop.
 |---|---|---|---|
 | R39 | An open iPhone Safari tab never shows a dead subscribe affordance, and from the installed icon the same one-tap flow completes end to end | e2e | slice-02 |
 | R40 | The A2HS hint renders the §10 words verbatim as a 0 JS `<details>` disclosure. **Ownership is a live conflict** between this feature's slice-02 and F-WORKS-WITH-NO-SIGNAL slice-05 (Pre-requisite 4(b), unruled). No slice-01 scenario asserts the hint's presence or its absence, in either direction | functional | slice-02, contested |
-| R41 | On pushed days only, one afternoon follow-up between 14:00 and 17:00 spot-local asks "¿Cómo estuvo?" and deep links `/spots/{slug}/reportar?t=ps` | functional | slice-03 |
-| R42 | A report filed through that deep link is stored with `trigger: push_solicited`, satisfying the learning lane's one required field end to end | e2e | slice-03 |
-| R43 | A surfer raises their own bar for a spot with one choice, and from then on the push respects their number instead of the default; the displayed choice on a return visit renders from stored subscription state | functional | slice-04 |
+| R41 | On pushed days only, when `last_notified_date` is today and `followup_date` is earlier, exactly one afternoon follow-up between 14:00 and 17:00 spot-local asks `¿Cómo estuvo?` and deep links `/spots/{slug}/reportar?t=ps`; later bad conditions do not cancel it | functional | slice-03 |
+| R42 | A report filed through that deep link is stored through the real report boundary with `trigger: push_solicited`, satisfying the learning lane's one required field end to end — **requires external deployed report path** | e2e | slice-03 |
+| R43 | A surfer raises their own bar for a spot with one choice: only an exact whole number from 0 through 100 is accepted, and an invalid choice leaves the prior subscription unchanged | functional | slice-04 |
+| R44 | Re-subscribing uses the existing idempotent identity and persists the exact user-chosen integer without resetting `last_notified_date` or `followup_date` | functional | slice-04 |
+| R45 | Later morning planning reads that stored exact bar: score equal to it sends once, score below it sends none | functional | slice-04 |
+| R46 | On return, the displayed bar comes from the real stored subscription plus the browser subscription, never from a local remembered flag — **requires external deployed subscription read path** | validation | slice-04 |
+| R47 | The bar choice is a finished phone-width control in both themes, with designed empty, invalid and saved states; U1-U7 are executable and U8 is a source-blind observation | ui | slice-04 |
 | R44 | U1: the exact iPhone route text clears WCAG AA against its real backdrop in both themes at 390 px | ui | slice-02 |
 | R45 | U2: the iPhone route has no horizontal scroll, clipping, or overlap at 390 px in either theme | ui | slice-02 |
 | R46 | U3: Safari offers no unusable avisos target, and the installed capable path keeps the real avisos target reachable for a thumb | ui | slice-02 |
