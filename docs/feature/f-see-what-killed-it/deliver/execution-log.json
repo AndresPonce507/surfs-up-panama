@@ -393,6 +393,34 @@
       "s": "EXECUTED",
       "d": "PASS: exact two-row visual scenario 2/2 (20/20 steps), full slice 11/11 (122/122), unit 105/105, typecheck and build exit 0. Built Santa Catalina page emits both written callouts; no production change required.",
       "t": "2026-08-10T20:44:40Z"
+    },
+    {
+      "sid": "02-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: independently approved JIT contract 2532170 active with exactly two @slice-02 HTTP/Chromium examples; .develop-progress.json deliberately preserved as external dirt.",
+      "t": "2026-08-11T02:44:35Z"
+    },
+    {
+      "sid": "02-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: target contract failed for the right business reason, missing today 0.18 in the visible Spanish sentence; 0 collection or import failures.",
+      "t": "2026-08-11T02:35:20Z"
+    },
+    {
+      "sid": "02-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: targeted HTTP/Chromium contract 2/2 scenarios, 24/24 steps; U1-U7 each 2/2; dedicated formatter PBT 11/11; typecheck and ci:local:fast 8/8. Poisoning the numeric suffix made both scenarios fail for the expected missing-0.18 assertion; poison reverted and target rerun green. Fresh source-blind Vera candidate-local examination PASS.",
+      "t": "2026-08-11T02:44:35Z"
+    },
+    {
+      "sid": "02-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: implementation commit on build/f2-deltas; only the independently pre-existing .develop-progress.json dirt remains unstaged.",
+      "t": "2026-08-11T02:45:46Z"
     }
   ]
 }

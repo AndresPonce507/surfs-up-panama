@@ -152,6 +152,27 @@ describe('published weakest-link display format', () => {
     );
   });
 
+  it('keeps each named factor paired with its own published raw score as one two-place decimal', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...FACTOR_TOKENS),
+        fc.integer({ min: 0, max: 100 }),
+        (factor, hundredths) => {
+          const rawScore = hundredths / 100;
+          const text = formatWeakestLinkEs({ kind: 'named', factor, weakest_link_subscore: rawScore });
+          const { article, noun } = factorWord(factor);
+          const decimal = hundredths === 100 ? '1.00' : `0.${String(hundredths).padStart(2, '0')}`;
+
+          assert.equal(
+            text,
+            `Lo que lo tumba: ${article} ${noun}, a ${decimal}.`,
+            `The visible reason must retain ${factor}'s own published ${decimal} score, rather than select or rescale another value.`,
+          );
+        },
+      ),
+    );
+  });
+
   it('never reads a missing field the same as an explicit null: a stated absence and a genuinely clean day stay two different sentences', () => {
     const clean = formatWeakestLinkEs({ kind: 'clean' });
     const unknown = formatWeakestLinkEs({ kind: 'unknown' });

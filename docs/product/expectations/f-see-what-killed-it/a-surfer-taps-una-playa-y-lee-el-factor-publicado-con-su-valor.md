@@ -71,3 +71,4 @@ de la rompiente (slice-05). La ausencia de esas cosas no es una falla aquí.
 
 | date | examiner | verdict | observations |
 |------|----------|---------|--------------|
+| 2026-08-11 | Vera | PASS | Fresh source-blind candidate-local examination through the authorized emitted-dist HTTP/Chromium fixture: both light and dark examples passed at 390 px, with the named today and tomorrow reasons carrying their own published `0.18` and `0.62` values. The same two visual examples covered normal and reduced motion and all seven UI checks. The normal committed-data build predates the scalar and cannot exercise this candidate-only fixture. |
