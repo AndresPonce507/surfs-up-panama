@@ -32,7 +32,9 @@ import {
   type SurfaceCall,
 } from '../../src/publish/static-surface';
 import {
+  resolveCounterfactual,
   resolveWeakestLink,
+  type CounterfactualReading,
   type WeakestLinkReading,
 } from '../../src/publish/weakest-link';
 
@@ -795,6 +797,81 @@ describe('resolveWeakestLink: the publish-side reader for one spot, one day', ()
       resolveWeakestLink(surface, firstSpot.spot_id, 1),
       readOwnWeakestLink(tomorrowRow),
       'tomorrow reading must match what the committed days[1] row itself carries',
+    );
+  });
+});
+
+// -------------------------------------------- counterfactual reader --
+//
+// Slice-03, step 03-04: this reads only the one already-selected published
+// row. Score construction stays in the producer/scoring lanes; the reader
+// preserves the deliberate collision and legacy distinctions for 03-05.
+
+type CounterfactualMode = 'available' | 'rounded_equal' | 'legacy_missing' | 'clean' | 'unknown';
+const counterfactualModeArb = fc.constantFrom<CounterfactualMode>('available', 'rounded_equal', 'legacy_missing', 'clean', 'unknown');
+
+function counterfactualRow(spotId: string, scoreQ: number, label: string, factor: FactorToken, mode: CounterfactualMode): SurfaceCall {
+  const base = baseCall(spotId, scoreQ, label);
+  if (mode === 'unknown') return base;
+  if (mode === 'clean') return { ...base, weakest_link: null };
+  if (mode === 'legacy_missing') return { ...base, weakest_link: factor };
+  if (mode === 'rounded_equal') return { ...base, weakest_link: factor, counterfactual_suppression: 'rounded_equal' };
+  return { ...base, weakest_link: factor, counterfactual_score_q: scoreQ + 1 };
+}
+
+function expectedCounterfactualReading(mode: CounterfactualMode, scoreQ: number): CounterfactualReading {
+  if (mode === 'available') return { kind: 'available', score_q: scoreQ + 1 };
+  if (mode === 'rounded_equal') return { kind: 'rounded_equal' };
+  if (mode === 'legacy_missing') return { kind: 'legacy_missing' };
+  return { kind: mode };
+}
+
+function alternateCounterfactualMode(mode: CounterfactualMode): CounterfactualMode {
+  return mode === 'available' ? 'rounded_equal' : 'available';
+}
+
+describe('resolveCounterfactual: one published counterfactual state for one spot-day', () => {
+  it('uses only the selected today alias or tomorrow row, never a decoy day or clean/collision/legacy omission', () => {
+    fc.assert(
+      fc.property(
+        counterfactualModeArb,
+        counterfactualModeArb,
+        tokenArb,
+        tokenArb,
+        tokenArb,
+        (todayMode, tomorrowMode, todayFactor, tomorrowFactor, dayZeroFactor) => {
+          const surfDate = civilDate(0);
+          const tomorrowDate = nextCivilDate(surfDate);
+          const calls = [counterfactualRow('playa-pareada', 10, 'hoy', todayFactor, todayMode)];
+          const dayZeroSpots = [counterfactualRow('playa-pareada', 11, 'señuelo', dayZeroFactor, alternateCounterfactualMode(todayMode))];
+          const tomorrowSpots = [counterfactualRow('playa-pareada', 20, 'mañana', tomorrowFactor, tomorrowMode)];
+          const surface = assertStrictTwoDayUpdate({
+            schema: 'published-surface-update/v1',
+            surf_date: surfDate,
+            published_at: `${surfDate}T11:00:00.000Z`,
+            build_kind: 'dawn',
+            calls,
+            days: [
+              { date: surfDate, spots: dayZeroSpots },
+              { date: tomorrowDate, spots: tomorrowSpots },
+            ],
+          });
+          const before = structuredClone(surface);
+
+          assert.deepEqual(
+            resolveCounterfactual(surface, 'playa-pareada', 0),
+            expectedCounterfactualReading(todayMode, 10),
+            'today must read current.calls, never the different days[0] decoy',
+          );
+          assert.deepEqual(
+            resolveCounterfactual(surface, 'playa-pareada', 1),
+            expectedCounterfactualReading(tomorrowMode, 20),
+            'tomorrow must read only its own days[1] row, never today or a neighbor',
+          );
+          assert.deepEqual(resolveCounterfactual(surface, 'playa-ausente', 0), { kind: 'unknown' });
+          assert.deepEqual(surface, before, 'counterfactual reader changed the published rows it only reads');
+        },
+      ),
     );
   });
 });
