@@ -8,10 +8,10 @@ Lane: application/frontend, visual system. Author: solution-architect (Morgan), 
 (not imported — recipes for markup that has not landed).
 
 Verdict up front: system typeface used hard (scale, weight contrast, tabular numerals,
-tracking), a palette that is dawn-cool rather than postcard-blue, exactly **two** glass
-surfaces — both small, fixed, and never under the number a person reads in sunlight — every
-text/surface pair carried with a computed WCAG ratio (body text ≥ 12.8:1 everywhere, AAA), and
-a total CSS cost of **2.16 KB gz** against a declared 6 KB budget. Built, typechecked, and
+tracking), a deep tropical-water band behind the hero rather than a neutral dawn wash, exactly
+**two** glass candidates — both small, fixed, and never under the number a person reads in
+sunlight — and every current home-page text/surface pair carried with a computed WCAG ratio.
+The browser record below is the authority for the shipped palette. Built, typechecked, and
 smoke-rendered at 390 px in both themes: no horizontal scroll, no console errors.
 
 ### 1. Reuse Analysis
@@ -38,75 +38,56 @@ All tokens in `src/styles/tokens.css`, day theme default, dark under
 sizes, 3 leadings, 2 trackings), space (`--sp-1..7`, 4 px grid), radius (`--r-s/m/l/full`),
 motion (`--ease --dur-1 --dur-2`), touch (`--tap: 44px`).
 
-The palette is the §11 sunlight palette, extended. What makes it feel like the ocean at
-first light without a blue-gradient cliché: the neutrals are all cold (ink `#14181D` is a
-blue-black, surfaces `#F2F4F6`/`#E9EDF1` are sea-glass greys), the one gradient in the whole
-product is the hero card's dawn-sky wash (`#F7FAFC → #EAF1F5` day, `#1A2029 → #1E2A36`
-pre-dawn), and colour otherwise appears only as meaning: green = go, amber = stale, red =
-error/weakest link. No decorative blue anywhere.
+The palette is the accepted blue-tropical palette in
+`adr-blue-tropical-glass-palette.md`, not the neutral palette this document replaced. The page
+stays a light, fast-reading surface (`#F2F8FA` day, `#061A21` night), while the first ranked
+card alone carries the deep-water band (`#0A3A46 → #0D5866` day and
+`#04222B → #0C5866` night). Its lightest stops are load-bearing: text is measured there, never
+against white. Colour otherwise appears only as meaning: green = go, amber = stale, red =
+error/weakest link. The tropical blue-green is the product atmosphere, not an extra status.
 
 ### 3. Measured contrast (computed, not estimated)
 
-WCAG 2.x relative-luminance arithmetic on the exact hex pairs (script preserved in §14).
-Recomputation of all 18 §11 pairs reproduced §11's numbers exactly — no drift; those rows are
-not repeated here. Targets: body ≥ 7:1 (AAA, the sunlight margin), all text ≥ 4.5:1, non-text
-UI ≥ 3:1, measured against the real backdrop including gradient worst stops and glass
-composites.
+WCAG 2.x relative-luminance arithmetic is recomputed against the CSS values that cascade onto
+the built home at 390 px, in both themes. Targets: body ≥ 7:1 (AAA, the sunlight margin), all
+text ≥ 4.5:1, non-text UI ≥ 3:1. The hero's `#0D5866` / `#0C5866` lightest stop is the backdrop,
+not a convenient white substitute.
 
-New pairs, day theme:
-
-| Pair | Ratio | Clears |
-|---|---:|---|
-| body `#14181D` on hero worst stop `#EAF1F5` | 15.62 | AAA |
-| secondary `#40484F` on hero worst stop | 8.15 | AAA |
-| body on sunken `#E9EDF1` | 15.15 | AAA |
-| secondary on sunken (disabled button text) | 7.91 | AAA |
-| body on warn chip `#F6EEDC` (noscript, offline) | 15.43 | AAA |
-| amber `#7A5200` on warn chip `#F6EEDC` | 5.99 | AA (≥14 px, 600) |
-| body on selected-control wash `#EBF3EE` (go-tint over bg) | 15.78 | AAA |
-| green `#0A6A2D` on card `#F2F4F6` | 6.12 | AA |
-| red `#9E1C23` on card | 7.20 | AAA |
-| red on sunken (weakest-link fill, non-text) | 6.75 | AA |
-| link `#0B57D0` on card | 5.79 | AA |
-| control border `#5F6A73` on bg (non-text) | 5.53 | ≥3:1 |
-| focus ring `#0B57D0` on bg (non-text) | 6.39 | ≥3:1 |
-
-New pairs, dark theme:
+Clear theme, built home pairs:
 
 | Pair | Ratio | Clears |
 |---|---:|---|
-| body `#EDF1F4` on hero worst stop `#1E2A36` | 12.84 | AAA |
-| secondary `#AAB4BE` on hero worst stop | 6.93 | AA |
-| body on sunken `#161C24` | 15.08 | AAA |
-| secondary on sunken (disabled button text) | 8.14 | AAA |
-| body on warn chip `#2B2412` | 13.56 | AAA |
-| amber `#E3A83B` on warn chip | 7.28 | AAA |
-| body on selected-control wash `#192927` | 13.32 | AAA |
-| green `#57C785` on card `#1A2029` | 7.73 | AAA |
-| red `#F2707A` on card | 5.75 | AA |
-| red on sunken (non-text) | 6.02 | AA |
-| link `#8AB4F8` on card | 7.77 | AAA |
-| control border `#8A949E` on bg (non-text) | 5.99 | ≥3:1 |
+| hero title `#FFFFFF` on worst hero stop `#0D5866` | 8.06:1 | AAA (≥7:1) |
+| hero body `#E8F7FA` on worst hero stop `#0D5866` | 7.34:1 | AAA (≥7:1) |
+| body `#08252E` on page `#F2F8FA` | 14.90:1 | AAA (≥7:1) |
+| body `#08252E` on card `#FFFFFF` | 15.98:1 | AAA (≥7:1) |
+| secondary `#3B5A63` on card `#FFFFFF` | 7.42:1 | AAA (≥7:1) |
+| secondary `#3B5A63` on page `#F2F8FA` | 6.92:1 | AA (≥4.5:1) |
+| danger `#9E1C23` on page `#F2F8FA` | 7.41:1 | AAA (≥7:1) |
+| accent `#0B5F6A` on page `#F2F8FA` | 6.85:1 | AA (≥4.5:1) |
+| action text `#FFFFFF` on go `#0A6A2D` | 6.75:1 | AA (≥4.5:1) |
+| stale `#7A5200` on page `#F2F8FA` | 6.45:1 | AA (≥4.5:1) |
 
-Glass composites (sRGB alpha compositing, the arithmetic browsers apply; worst case = a solid
-block of the strongest content colour scrolled fully under the glass):
+Dark theme, built home pairs:
 
-| Glass surface | Tint | Worst backdrop | Composite | Text on it | Ratio | Clears |
-|---|---|---|---|---|---:|---|
-| day pill/tray | `rgba(255,255,255,.88)` | ink block `#14181D` | `#E3E3E4` | body `#14181D` | 13.90 | AAA |
-| day pill/tray | same | same | same | secondary `#40484F` | 7.25 | AAA |
-| day pill/tray | same | typical bg `#FFFFFF` | `#FFFFFF` | body | 17.82 | AAA |
-| dark pill/tray | `rgba(16,20,26,.84)` | text block `#EDF1F4` | `#33373D` | body `#EDF1F4` | 10.54 | AAA |
-| dark pill/tray | same | same | same | secondary `#AAB4BE` | 5.69 | AA |
-| dark pill/tray | same | typical bg `#10141A` | `#10141A` | body | 16.26 | AAA |
+| Pair | Ratio | Clears |
+|---|---:|---|
+| hero title `#FFFFFF` on worst hero stop `#0C5866` | 8.07:1 | AAA (≥7:1) |
+| hero body `#E8F7FA` on worst hero stop `#0C5866` | 7.34:1 | AAA (≥7:1) |
+| body `#E4F2F5` on worst hero stop `#0C5866` | 7.04:1 | AAA (≥7:1) |
+| body `#E4F2F5` on page `#061A21` | 15.56:1 | AAA (≥7:1) |
+| body `#E4F2F5` on card `#0C2830` | 13.45:1 | AAA (≥7:1) |
+| secondary `#9DBAC2` on card `#0C2830` | 7.52:1 | AAA (≥7:1) |
+| secondary `#9DBAC2` on page `#061A21` | 8.69:1 | AAA (≥7:1) |
+| danger `#F2848D` on page `#061A21` | 7.19:1 | AAA (≥7:1) |
+| accent `#6FCFDD` on page `#061A21` | 9.89:1 | AAA (≥7:1) |
+| action text `#04240F` on go `#6ED694` | 9.26:1 | AAA (≥7:1) |
+| stale `#E3A85F` on page `#061A21` | 8.52:1 | AAA (≥7:1) |
 
-Rule derived from that last AA row: **text on glass uses `--ink` only** — secondary-strength
-text is not permitted on glass, so the worst case on any glass surface stays AAA.
-
-Reported honestly: hairline separators measure 1.35 (day) / 1.42 (dark) — decorative by
-declaration; row separation is also carried by spacing, and no meaning is ever carried by a
-hairline alone. Accent colours in the 5.7–6.9 band follow §11's standing policy: ≥ 16 px
-semibold or glyph-plus-word, never the sole carrier of meaning.
+Hairline separators remain decorative only; spacing and text carry the row boundary. Glass
+composites are deliberately **TODO for 04-03**: Slice-02's supported-glass proof is blocked and
+this step does not fabricate a composite ratio from an unverified surface. The spot-page rows are
+also filled only by the terminal cross-route measurement, not inferred from this home record.
 
 ### 4. Glass: where it earns its place, where it is refused
 
@@ -116,24 +97,24 @@ at most **one** is present per route.
 
 | Surface | Why glass genuinely helps | Fallback |
 |---|---|---|
-| Language pill (`.lang-toggle`, fixed top-right, all routes) | Floats over scrolling content; translucency signals "above the page, not of it" while the toggle stays reachable | Solid `--bg` via `@supports not` ordering, and again under `prefers-reduced-transparency: reduce` |
-| Report CTA tray (`p:has(> a.cta)`, fixed bottom, spot pages) | The thumb-zone bar (decision 23) rides over the scorecard and reports as they scroll; glass keeps the last line of content perceivable behind it | Same solid-first pattern |
+| Language pill (`.lang-toggle`, fixed top-right, all routes) | TODO 04-03: no emitted language control is measured in this feature | Solid `--bg` via `@supports not` ordering, and again under `prefers-reduced-transparency: reduce` |
+| Report CTA tray (`p:has(> a.cta)`, fixed bottom, spot pages) | TODO 04-03: await the supported-glass proof before claiming a translucent composite | Same solid-first pattern |
 
 Refused, deliberately:
 
 | Surface | Why refused |
 |---|---|
-| Hero call card | Carries `score_q`, the number read at arm's length at midday. Solid dawn gradient; worst stop measured (15.62 / 12.84) |
-| Ranked rows, spot day cards | The product itself. Solid `--bg`/`--surface`, body ink at 16–18:1 |
-| The CTA button proper | Primary actions are never translucent; solid `--go`, 6.75:1 / 8.72:1 |
+| Hero call card | Carries `score_q`, the number read at arm's length at midday. Solid tropical-water gradient; worst stop measured at 8.06:1 / 8.07:1 for title ink and 7.34:1 for hero body ink |
+| Ranked rows, spot day cards | The product itself. Home rows are solid `--bg`/`--surface`; spot-page row measurements stay TODO 04-03 |
+| The CTA button proper | Primary actions are never translucent; solid `--go`, 6.75:1 clear / 9.26:1 dark |
 | Report form | A labelling instrument; anything between the surfer and the three taps is friction |
 | Any full-height sheet or overlay | Full-viewport blur is exactly the jank case on cheap Androids; no sheet exists in the IA anyway |
 
 Mechanics: solid background declared first, glass only inside
 `@supports (backdrop-filter: blur(1px))`, `-webkit-` prefix for older iOS, both surfaces
-forced solid under `prefers-reduced-transparency: reduce`. Blur `12px` + `saturate(140%)`,
-tint alphas `.88`/`.84` — the alphas are not taste, they are the values at which the worst-case
-composites in §3 stay AAA for ink.
+forced solid under `prefers-reduced-transparency: reduce`. Exact supported-glass composite
+measurements remain TODO 04-03; this home-only step does not claim an unmeasured fallback or
+transparent layer is safe.
 
 ### 5. Typography
 
