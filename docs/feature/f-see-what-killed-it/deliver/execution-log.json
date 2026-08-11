@@ -701,6 +701,41 @@
       "s": "EXECUTED",
       "d": "PASS: 9b751b8 is the genuine 03-03 implementation commit. Independent review iteration 2 APPROVED after build-driven score-core-to-wire proof; this evidence-only follow-up records the committed phase.",
       "t": "2026-08-11T04:42:19Z"
+    },
+    {
+      "sid": "03-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: 03-03 is sealed. The approved Slice-03 reader step opens only weakest-link.ts and its surface contract test. The existing published counterfactual fields are read verbatim: no score arithmetic, damage selection, correction, producer, formatter, page, generated-data, or Slice-04 path opened.",
+      "t": "2026-08-11T04:43:00Z"
+    },
+    {
+      "sid": "03-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "NOT_APPLICABLE",
+      "d": "Mapped-only non-visual reader step. The approved Slice-03 contract has no browser entry until the formatter/page steps, so no JIT browser scenario was authored or enabled; the public reader driving port is exercised by RED_UNIT.",
+      "t": "2026-08-11T04:43:10Z"
+    },
+    {
+      "sid": "03-04",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: new counterfactual reader property failed 1/14 for the right semantic reason while its named available row expected score_q 11 but received legacy_missing from the scaffold; no collection/import failures. Test budget: 4 behaviors x 2 = 8, one property test added.",
+      "t": "2026-08-11T04:44:20Z"
+    },
+    {
+      "sid": "03-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: exact selected row now yields available, rounded_equal, legacy_missing, clean, or unknown without recomputation. Mutating today's selector from calls to days[0].spots failed 3/14, including the new divergent compatibility assertion expected available score_q 11, received rounded_equal; reverted. Fresh scoped 14/14, full units 119/119, typecheck, build, and ci:local 10/10 pass. No Vera applies: reader-only work has no rendered surface.",
+      "t": "2026-08-11T04:45:45Z"
+    },
+    {
+      "sid": "03-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 15b851a is the genuine 03-04 implementation commit. Independent review APPROVED with no defects; this evidence-only follow-up records the committed phase. The unrelated .develop-progress.json remains unstaged external dirt.",
+      "t": "2026-08-11T04:47:43Z"
     }
   ]
 }
