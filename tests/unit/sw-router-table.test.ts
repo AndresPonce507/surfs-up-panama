@@ -22,6 +22,9 @@ import { resolve } from 'node:path';
 import fc from 'fast-check';
 import { describe, it, vi } from 'vitest';
 
+import { paths } from '../../src/i18n/routes';
+import { directoryAliasFor } from '../../scripts/preview/publish-preview.mjs';
+
 const REPO_ROOT = resolve(__dirname, '../..');
 const SW_SOURCE = readFileSync(resolve(REPO_ROOT, 'public/sw.js'), 'utf8');
 
@@ -32,7 +35,8 @@ const SW_SOURCE = readFileSync(resolve(REPO_ROOT, 'public/sw.js'), 'utf8');
 const NETWORK_FIRST_TIMEOUT_MS = Number(/NETWORK_FIRST_TIMEOUT_MS\s*=\s*(\d+)/.exec(SW_SOURCE)?.[1]);
 const ORIGIN = 'https://d1j9u9fxnap4es.cloudfront.net';
 const WRITE_PATH = '/api/report';
-const OFFLINE_DOCUMENT = '/sin-senal';
+const OFFLINE_DOCUMENT = /OFFLINE_DOCUMENT\s*=\s*"([^"]+)"/.exec(SW_SOURCE)?.[1] ?? '';
+const CANONICAL_OFFLINE_DOCUMENT = paths.offline();
 const FAVICON = '/favicon.svg';
 const SMALL_PRECACHE_PARTS = [FAVICON, OFFLINE_DOCUMENT] as const;
 
@@ -277,6 +281,21 @@ function buildNetworkResponse(shape: PlantedResponseShape, body: string): Respon
 // ---------- tests ----------
 
 describe('the offline helper (public/sw.js)', () => {
+  it('precaches the canonical offline route that the reading surface links to', () => {
+    const precachedOfflineDocument = /OFFLINE_DOCUMENT\s*=\s*"([^"]+)"/.exec(SW_SOURCE)?.[1];
+
+    assert.equal(
+      precachedOfflineDocument,
+      CANONICAL_OFFLINE_DOCUMENT,
+      'the worker fallback must be the same canonical directory URL as paths.offline(), because preview publishing creates that deployed alias',
+    );
+    assert.equal(
+      `/${directoryAliasFor('sin-senal.html')}`,
+      CANONICAL_OFFLINE_DOCUMENT,
+      'the worker fallback must be the preview publisher\'s deployed directory alias for the built offline document',
+    );
+  });
+
   it('registers install, activate and fetch as three independent listeners', () => {
     const helper = loadHelper();
     assert.equal(helper.listeners.get('install')?.length, 1);

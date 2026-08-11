@@ -20,8 +20,9 @@
 // Usage: node scripts/preview/publish-preview.mjs [--dist dist]
 
 import { readdir, readFile, stat } from 'node:fs/promises';
-import { join, relative, sep } from 'node:path';
+import { join, relative, resolve, sep } from 'node:path';
 import { execFile } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
 const run = promisify(execFile);
@@ -46,6 +47,11 @@ function contentTypeFor(path) {
   const dot = path.lastIndexOf('.');
   if (dot === -1) return 'application/octet-stream';
   return CONTENT_TYPES[path.slice(dot)] ?? 'application/octet-stream';
+}
+
+export function directoryAliasFor(key) {
+  if (!key.endsWith('.html') || key === 'index.html') return undefined;
+  return `${key.slice(0, -'.html'.length)}/`;
 }
 
 async function walk(dir) {
@@ -104,8 +110,9 @@ async function main() {
     // `spots/playa-venao.html` also lands at the literal key
     // `spots/playa-venao/`, so the directory-form link resolves. `index.html`
     // is already served by the distribution's DefaultRootObject.
-    if (key.endsWith('.html') && key !== 'index.html') {
-      await put(`${key.slice(0, -'.html'.length)}/`, file, type);
+    const directoryAlias = directoryAliasFor(key);
+    if (directoryAlias !== undefined) {
+      await put(directoryAlias, file, type);
       directoryAliases += 1;
     }
   }
@@ -129,4 +136,6 @@ async function main() {
   console.log(`https://d1j9u9fxnap4es.cloudfront.net/`);
 }
 
-await main();
+if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await main();
+}
