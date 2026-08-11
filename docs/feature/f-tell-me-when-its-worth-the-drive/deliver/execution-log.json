@@ -29,6 +29,13 @@
       "s": "EXECUTED",
       "d": "PASS: npx vitest run tests/unit/push-plan-notifications.test.ts passed 2/2 and npm run typecheck passed after the parent-directed prerequisite b1ba1b4 was cherry-picked as 4da8a4d. Test budget: 1 new 01-08 public planner behavior x 2 = 2; one closed-window property was added while the existing threshold prerequisite property remains. UI N/A: this is a pure injected-clock planning decision with no rendered surface.",
       "t": "2026-08-11T14:53:06Z"
+    },
+    {
+      "sid": "01-08",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 3563f28 committed the approved hourly-at-:25 closed-window property and the factual PREPARE, RED_ACCEPTANCE, RED_UNIT, and GREEN evidence. Independent review iteration 3 approved the unchanged accepted contract; no source planner change was required.",
+      "t": "2026-08-11T14:58:25Z"
     }
   ]
 }
