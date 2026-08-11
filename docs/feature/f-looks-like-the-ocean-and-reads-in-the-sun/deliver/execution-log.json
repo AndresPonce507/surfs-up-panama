@@ -421,6 +421,13 @@
       "s": "EXECUTED",
       "d": "PASS: fresh source-blind Vera at 390px and 320px, in light and dark, observed a fixed blue-green supported glass/water frame around the solid action, a distinct opaque reduced-transparency tray, no horizontal overflow, a solid hero, and calm reduced motion. The factual PASS row is appended to the Slice-02 charter.",
       "t": "2026-08-11T14:12:13Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: scoped implementation committed as 0b6c7b4 with Step-ID: 02-02 after source-blind U8 PASS. The commit contains only the accepted Home-tray CSS, Slice-02 browser acceptance contract, design-system truth, the factual Slice-02 charter row, and lifecycle evidence. The unrelated Slice-04 charter remains unstaged. Independent review iteration 3 follows this factual post-hash record.",
+      "t": "2026-08-11T14:12:13Z"
     }
   ]
 }
