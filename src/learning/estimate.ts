@@ -9,25 +9,59 @@
 // with a single sample there is no spread to measure and the formula must
 // say so as 0, never throw or invent one.
 
-export type WeightedSample = { readonly value: number; readonly weight: number };
+import { PHYSICAL_NOISE_FLOOR_MULTIPLIER } from "./constants";
+
+export type WeightedSample = {
+  readonly value: number;
+  readonly weight: number;
+};
 
 /** Sigma(w_i * v_i) / Sigma(w_i). A sample with no total weight has nothing to average and reads as 0. */
 export function weightedMean(samples: readonly WeightedSample[]): number {
   const totalWeight = totalWeightOf(samples);
   if (totalWeight === 0) return 0;
-  return samples.reduce((sum, sample) => sum + sample.value * sample.weight, 0) / totalWeight;
+  return (
+    samples.reduce((sum, sample) => sum + sample.value * sample.weight, 0) /
+    totalWeight
+  );
 }
 
 /** se_sample: sqrt(weighted variance) / sqrt(n). Fewer than one usable sample, or zero total weight, reads as 0. */
-export function weightedSampleStandardError(samples: readonly WeightedSample[]): number {
+export function weightedSampleStandardError(
+  samples: readonly WeightedSample[],
+): number {
   const n = samples.length;
   if (n === 0) return 0;
   const totalWeight = totalWeightOf(samples);
   if (totalWeight === 0) return 0;
   const mean = weightedMean(samples);
   const weightedVariance =
-    samples.reduce((sum, sample) => sum + sample.weight * (sample.value - mean) ** 2, 0) / totalWeight;
+    samples.reduce(
+      (sum, sample) => sum + sample.weight * (sample.value - mean) ** 2,
+      0,
+    ) / totalWeight;
   return Math.sqrt(weightedVariance) / Math.sqrt(n);
+}
+
+/** G3's irreducible error for one claim-bearing variable at the stored sample count. */
+export function physicalNoiseFloor(
+  sigmaEff: number,
+  sampleCount: number,
+): number {
+  if (sampleCount <= 0) return 0;
+  return (PHYSICAL_NOISE_FLOOR_MULTIPLIER * sigmaEff) / Math.sqrt(sampleCount);
+}
+
+/** Agreement may lower sample error only to the physical uncertainty floor, never below it. */
+export function gateStandardError(
+  sampleStandardError: number,
+  sigmaEff: number,
+  sampleCount: number,
+): number {
+  return Math.max(
+    sampleStandardError,
+    physicalNoiseFloor(sigmaEff, sampleCount),
+  );
 }
 
 function totalWeightOf(samples: readonly WeightedSample[]): number {

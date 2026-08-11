@@ -22,7 +22,12 @@ import {
   gateCorrection,
   G3_SIGNIFICANCE_MULTIPLE,
 } from "../../src/learning/gates";
-import { G1_MIN_MORNINGS, TAU_SPOT_PRIOR } from "../../src/learning/constants";
+import { physicalNoiseFloor } from "../../src/learning/estimate";
+import {
+  G1_MIN_MORNINGS,
+  SIGMA_EFF,
+  TAU_SPOT_PRIOR,
+} from "../../src/learning/constants";
 import { shrinkTowardParent } from "../../src/learning/shrink";
 
 /** This step's own required floor (06 section 7; 09 section 13.2 puts the
@@ -65,8 +70,8 @@ describe("gateCorrection: the declared law -- applied implies every established 
               `applied: true must never happen with reporters (${reporters}) below G2's floor (${REQUIRED_DISTINCT_REPORTERS})`,
             );
             assert.ok(
-              Math.abs(b) > G3_SIGNIFICANCE_MULTIPLE * se,
-              `applied: true must never happen with a difference (${b}) that does not clear ${G3_SIGNIFICANCE_MULTIPLE} times its own standard error (${se})`,
+              Math.abs(b) > G3_SIGNIFICANCE_MULTIPLE * verdict.se,
+              `applied: true must never happen with a difference (${b}) that does not clear ${G3_SIGNIFICANCE_MULTIPLE} times its stored standard error (${verdict.se})`,
             );
           }
         },
@@ -113,6 +118,59 @@ describe("gateCorrection: G3, the point -- significance is a floor independent o
             verdict.applied,
             false,
             `a difference of ${b} against a standard error of ${se} does not clear ${G3_SIGNIFICANCE_MULTIPLE} times that error, so it must never be marked applied however comfortably ${n} mornings from ${reporters} reporters clears G1 and G2`,
+          );
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+});
+
+describe("gateCorrection: physical noise floor -- agreement cannot buy precision", () => {
+  it("stores one floor and one outcome for every pair of sub-physical spreads", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: G1_MIN_MORNINGS, max: 500 }),
+        fc.integer({ min: REQUIRED_DISTINCT_REPORTERS, max: 50 }),
+        fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true }),
+        fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true }),
+        (n, reporters, firstFraction, secondFraction) => {
+          const floor = physicalNoiseFloor(SIGMA_EFF.height.value, n);
+          const b = G3_SIGNIFICANCE_MULTIPLE * floor;
+          const first = gateCorrection({
+            n,
+            reporters,
+            b,
+            se: firstFraction * floor,
+            sigma_eff: SIGMA_EFF.height.value,
+          });
+          const second = gateCorrection({
+            n,
+            reporters,
+            b,
+            se: secondFraction * floor,
+            sigma_eff: SIGMA_EFF.height.value,
+          });
+
+          assert.equal(
+            first.se,
+            floor,
+            "a below-floor sample error must store the physical floor",
+          );
+          assert.equal(
+            second.se,
+            floor,
+            "more agreement below the same floor must store that same floor",
+          );
+          assert.equal(
+            first.applied,
+            false,
+            "a difference at twice the floor must not clear G3",
+          );
+          assert.equal(
+            second.applied,
+            false,
+            "sub-physical agreement must not make G3 easier to pass",
           );
         },
       ),
@@ -220,10 +278,11 @@ describe("gateCorrection: this step's own acceptance numbers, as fixture example
   });
 
   it("turns on exactly at the significance boundary: a difference at twice se still refuses, a hair beyond it applies", () => {
+    const storedSe = physicalNoiseFloor(SIGMA_EFF.height.value, 22);
     const atBoundary = gateCorrection({
       n: 22,
       reporters: 7,
-      b: 0.1,
+      b: G3_SIGNIFICANCE_MULTIPLE * storedSe,
       se: 0.05,
     });
     assert.equal(
@@ -236,7 +295,7 @@ describe("gateCorrection: this step's own acceptance numbers, as fixture example
     const justBeyond = gateCorrection({
       n: 22,
       reporters: 7,
-      b: 0.1 + 1e-9,
+      b: G3_SIGNIFICANCE_MULTIPLE * storedSe + 1e-9,
       se: 0.05,
     });
     assert.equal(
