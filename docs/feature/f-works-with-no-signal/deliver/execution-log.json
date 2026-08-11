@@ -610,6 +610,13 @@
       "s": "BLOCKED",
       "d": "OUT_OF_SCOPE BLOCK: full @feature-f-works-with-no-signal and @slice-03 run has 6 passing scenarios and 2 failing chained capture scenarios (111 passed, 1 skipped, 2 failed). Both failures begin at the f-tell owned static report form: Mandar times out and the required Guardado state never exists, so the subsequent flush has no report. This atomic worker/offline-surface change neither owns nor modifies capture. Scoped 03-04/03-05 acceptance and every applicable unit/build/UI gate remain green; this is not represented as a passing full-slice result.",
       "t": "2026-08-11T04:27:30Z"
+    },
+    {
+      "sid": "03-04/03-05",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: atomic revision a7455b1 (feat(signal): keep refused reports on the offline queue - steps 03-04/03-05) contains the reviewed worker policy, offline-surface composition, strengthened acceptance assertions, unit proof, and chronological RED/GREEN evidence. G7 PASS for this scoped vertical: full units, typecheck, build/page-weight, U1-U8, and the three active scenarios are green; the separately recorded full-slice capture block is out of scope and remains visible. Independent re-review approved before this commit.",
+      "t": "2026-08-11T04:27:30Z"
     }
   ]
 }
