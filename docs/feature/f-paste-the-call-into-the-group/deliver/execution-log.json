@@ -519,6 +519,20 @@
       "s": "SKIPPED",
       "d": "BLOCKED_BY_EVIDENCE: fresh independent review approved GREEN but found no existing commit with Step-Id: 05-03. No new implementation commit was created by this docs-only audit, and recording COMMIT EXECUTED without a corresponding commit would be false. The step remains pending only for a properly scoped commit or an upstream-approved workflow disposition.",
       "t": "2026-08-11T04:19:00Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "EVIDENCE_CORRECTION",
+      "s": "INVALIDATED",
+      "d": "CORRECTION: the preceding COMMIT SKIPPED entry accurately described the state at 04:19Z but is superseded by the later evidence-only Step-Id commit. It remains in the append-only audit trail and is no longer the terminal 05-03 disposition.",
+      "t": "2026-08-11T04:24:35Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: commit 703f2d2e96c9f0c078f307cc986a5b34907ba73b, `chore(paste): seal sharing verification - step 05-03`, carries Step-Id: 05-03 and commits only the already reviewed strict Slice-04/Slice-05 execution evidence, progress ledger, and append-only public examination rows. Immediately before that commit, the focused 05-03 acceptance passed 1 scenario and 12 steps, npm test passed 22 files and 86 tests, both JSON ledgers parsed, and git diff --check passed. No production or acceptance-test behavior was changed.",
+      "t": "2026-08-11T04:24:35Z"
     }
   ]
 }
