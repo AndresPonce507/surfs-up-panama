@@ -981,6 +981,41 @@
       "s": "EXECUTED",
       "d": "{\"commit\":\"5fa2dee\",\"test_followup\":\"92836a9\",\"parser_fix\":\"a0bb6d7\",\"message\":\"feat(learning): excise incident reporters by recompute - step 04-06\",\"status\":\"scoped green, slice-closing review approved\"}",
       "t": "2026-08-11T02:10:41Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: Slice-05 scaffold unparked after reviewed 04-06. The monthly operator-only outcome, metrics key, and metrics projection are the scope; cross-validation judgment and correction mutation remain later steps.",
+      "t": "2026-08-11T02:14:00Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm run test:at -- --name The monthly file watches every hazard the design names\",\"exit\":1,\"classification\":\"expected behavioral RED\",\"failure\":\"monthly evaluation module was absent and no metrics file existed\"}",
+      "t": "2026-08-11T02:14:20Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npx vitest run tests/unit/learning-metrics.test.ts\",\"exit\":1,\"classification\":\"expected unit RED\",\"failure\":\"buildMonthlyMetrics module was absent\",\"test_budget\":\"1 behavior x 2 = 2; 1 new property\"}",
+      "t": "2026-08-11T02:14:50Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "{\"focused_acceptance\":\"monthly hazard file: 1 scenario/22 steps PASS\",\"learning_units\":\"12 files, 74 tests PASS\",\"typecheck\":\"PASS\",\"roadmap_integrity\":\"PASS\",\"falsification\":\"changing pairwise.target_pairs from 400 to 399 made the acceptance scenario fail; restored 400\",\"global_qualification\":\"npm run build remains blocked by the unrelated stale published surface dated 2026-08-09 versus Panama 2026-08-10. Other unimplemented Slice-05 scenarios remain out of this step's scope.\",\"non_visual_rationale\":\"the operator-only metrics JSON has no launch reader and no rendered surface\"}",
+      "t": "2026-08-11T02:15:53Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "{\"commit\":\"1f7d9c7\",\"message\":\"feat(learning): write monthly operator metrics - step 05-01\",\"status\":\"scoped green\"}",
+      "t": "2026-08-11T02:16:07Z"
     }
   ]
 }
