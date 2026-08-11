@@ -47,6 +47,8 @@ export const RULE_ONLY_THE_GATE_MAY_MARK_APPLIED = 'only-the-gate-may-mark-a-cor
  * this file from every walk for exactly that reason.
  */
 export const RULE_WIND_RESIDUAL_NEEDS_ITS_OWN_FLOOR = 'a-wind-residual-must-bring-its-own-noise-floor';
+/** G7: temporal holdout blocks must never shuffle future mornings into training. */
+export const RULE_HELD_OUT_STAYS_FORWARD_OF_TRAINING = 'held-out-mornings-must-stay-forward-of-training';
 
 /** A module allowed to construct the applied state: any file whose basename starts with this. */
 const GATE_MODULE_PREFIX = 'gates';
@@ -89,6 +91,7 @@ export async function evaluateLearningDeclarations(input: { root: string }): Pro
   const residualForms: string[] = [];
   const noiseFloors: Record<string, NoiseFloor> = {};
   const appliedMarkingSites: string[] = [];
+  const cvSchemes: DeclaredCvScheme[] = [];
 
   for (const filePath of files) {
     const text = await readFile(filePath, 'utf8');
@@ -96,6 +99,7 @@ export async function evaluateLearningDeclarations(input: { root: string }): Pro
     residualForms.push(...declared.residualForms);
     Object.assign(noiseFloors, declared.noiseFloors);
     appliedMarkingSites.push(...declared.appliedMarkingSites);
+    cvSchemes.push(...declared.cvSchemes);
   }
 
   const dedupedResidualForms = dedupe(residualForms);
@@ -107,6 +111,7 @@ export async function evaluateLearningDeclarations(input: { root: string }): Pro
     violations: [
       ...onlyTheGateMayMarkAppliedViolations(appliedMarkingSites),
       ...windResidualNeedsItsOwnFloorViolations(dedupedResidualForms, noiseFloors),
+      ...heldOutMorningsStayForwardViolations(cvSchemes),
     ],
   };
 }
@@ -172,6 +177,15 @@ function windResidualNeedsItsOwnFloorViolations(
   return [{ rule: RULE_WIND_RESIDUAL_NEEDS_ITS_OWN_FLOOR, detail }];
 }
 
+function heldOutMorningsStayForwardViolations(schemes: readonly DeclaredCvScheme[]): LearningDeclarationsViolation[] {
+  return schemes
+    .filter((scheme) => scheme.kind !== 'rolling_origin_blocked')
+    .map((scheme) => ({
+      rule: RULE_HELD_OUT_STAYS_FORWARD_OF_TRAINING,
+      detail: `${scheme.filePath} declares CV_SCHEME.kind ${JSON.stringify(scheme.kind)}; held-out mornings must stay forward of training`,
+    }));
+}
+
 /** Must name wind's own confusion structure; a derivation still naming height is borrowed, not earned. */
 function derivedFromNamesTheWindLabelsOwnConfusionStructure(derivedFrom: string): boolean {
   return /wind/i.test(derivedFrom) && !/height/i.test(derivedFrom);
@@ -183,7 +197,10 @@ type FileDeclarations = {
   residualForms: string[];
   noiseFloors: Record<string, NoiseFloor>;
   appliedMarkingSites: string[];
+  cvSchemes: DeclaredCvScheme[];
 };
+
+type DeclaredCvScheme = { filePath: string; kind: string | null };
 
 function declarationsOfFile(filePath: string, text: string): FileDeclarations {
   const { comments, strings } = lexStringsAndComments(text);
@@ -199,6 +216,7 @@ function declarationsOfFile(filePath: string, text: string): FileDeclarations {
     residualForms: residualFormsDeclaredIn(commentMasked),
     noiseFloors: noiseFloorsDeclaredIn(commentMasked),
     appliedMarkingSites: marksApplied ? [filePath] : [],
+    cvSchemes: cvSchemesDeclaredIn(filePath, commentMasked),
   };
 }
 
@@ -238,6 +256,26 @@ function noiseFloorsDeclaredIn(commentMaskedText: string): Record<string, NoiseF
     floors[key] = { value: Number(match[2]), derived_from: derivedFrom };
   }
   return floors;
+}
+
+/** Every literal CV_SCHEME is source evidence, not executable configuration. */
+function cvSchemesDeclaredIn(filePath: string, text: string): DeclaredCvScheme[] {
+  const declarations: DeclaredCvScheme[] = [];
+  const pattern = /(?:^|\n)\s*(?:export\s+)?const\s+CV_SCHEME\b/g;
+  for (const match of text.matchAll(pattern)) {
+    const start = match.index ?? 0;
+    const equals = text.indexOf('=', start);
+    const open = equals === -1 ? -1 : text.indexOf('{', equals);
+    if (open === -1) {
+      declarations.push({ filePath, kind: null });
+      continue;
+    }
+    const close = matchingCloseIndex(text, open, '{', '}');
+    const body = close === -1 ? text.slice(open + 1) : text.slice(open + 1, close);
+    const kind = /\bkind\s*:\s*(?:'([^']*)'|"([^"]*)")/.exec(body);
+    declarations.push({ filePath, kind: kind?.[1] ?? kind?.[2] ?? null });
+  }
+  return declarations;
 }
 
 /**

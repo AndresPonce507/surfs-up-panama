@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  RULE_HELD_OUT_STAYS_FORWARD_OF_TRAINING,
   RULE_ONLY_THE_GATE_MAY_MARK_APPLIED,
   RULE_WIND_RESIDUAL_NEEDS_ITS_OWN_FLOOR,
   evaluateLearningDeclarations,
@@ -80,6 +81,25 @@ describe('evaluateLearningDeclarations', () => {
     });
     expect(report.applied_marking_sites).toEqual([]);
     expect(report.violations).toEqual([]);
+  });
+
+  it('refuses a declared CV scheme that shuffles held-out mornings back into training', async () => {
+    await writeUniverse({
+      'evaluation.ts': [
+        'export const CV_SCHEME = {',
+        "  kind: 'random_kfold',",
+        '  folds: 10,',
+        '  shuffle: true,',
+        '} as const;',
+      ].join('\n'),
+    });
+
+    const report = await evaluateLearningDeclarations({ root });
+
+    expect(report.violations).toContainEqual({
+      rule: RULE_HELD_OUT_STAYS_FORWARD_OF_TRAINING,
+      detail: expect.stringContaining('random_kfold'),
+    });
   });
 
   it('flags a literal applied: true outside a gate-named module as a violation (falsifiable: plant it, catch it)', async () => {

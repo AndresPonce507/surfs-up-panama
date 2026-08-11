@@ -5,7 +5,8 @@
 
 export type CrossValidationVerdict = 'corrections-killed' | 'corrections-stay';
 
-export const MONTHLY_ROLLING_ORIGIN_BLOCKS = {
+/** Read structurally by declarations.ts: random or shuffled folds never ship. */
+export const CV_SCHEME = {
   kind: 'rolling_origin_blocked',
   train_weeks: [1, 8],
   test_weeks: [9, 10],
@@ -48,7 +49,7 @@ function forwardHoldoutStart(samples: readonly HeldOutResidual[]): string | unde
   const latest = samples.map((sample) => sample.observed_on).filter(isIsoDay).sort().at(-1);
   if (latest === undefined) return undefined;
   const start = new Date(`${latest}T00:00:00Z`);
-  const heldOutDays = (MONTHLY_ROLLING_ORIGIN_BLOCKS.test_weeks[1] - MONTHLY_ROLLING_ORIGIN_BLOCKS.test_weeks[0] + 1) * 7;
+  const heldOutDays = (CV_SCHEME.test_weeks[1] - CV_SCHEME.test_weeks[0] + 1) * 7;
   start.setUTCDate(start.getUTCDate() - (heldOutDays - 1));
   return start.toISOString().slice(0, 10);
 }
