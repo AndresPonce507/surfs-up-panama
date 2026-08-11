@@ -1044,6 +1044,13 @@
       "s": "EXECUTED",
       "d": "{\"focused_acceptance\":\"losing month: 1 scenario/20 steps PASS; winning month: 1 scenario/20 steps PASS; monthly hazard file: 1 scenario/22 steps PASS\",\"learning_units\":\"13 files, 75 tests PASS\",\"typecheck\":\"PASS\",\"roadmap_integrity\":\"PASS\",\"falsification\":\"reversing losingKeys > winningKeys made the losing-month acceptance fail with applied still true; restored the strict majority rule\",\"privacy\":\"cross-validation input carries only correction key, UTC day, and residual; no report_id is read or written\",\"next_step_qualification\":\"the shuffled-fold declaration acceptance remains red because src/learning/declarations.ts and its structural rule are explicitly owned by dependency-ready 05-03, not this mapped step\",\"global_qualification\":\"npm run build remains blocked by the unrelated stale published surface dated 2026-08-09 versus Panama 2026-08-10\",\"non_visual_rationale\":\"the evaluator writes operator-only metrics JSON and correction flags with no launch reader or rendered surface\"}",
       "t": "2026-08-11T02:21:23Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "{\"commit\":\"9e50cc9\",\"message\":\"feat(learning): judge corrections on forward held-out mornings - step 05-02\",\"status\":\"scoped green; structural shuffled-fold enforcement remains owned by 05-03\"}",
+      "t": "2026-08-11T02:22:00Z"
     }
   ]
 }
