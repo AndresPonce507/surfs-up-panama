@@ -32,14 +32,17 @@ function publishedDayEs(publishedAt: string): string {
 
 /**
  * Converts the route-selected published value into the complete share
- * template input. A partial call is a broken publish input, never a message
- * with invented or technical fallback text.
+ * template input. Optional P1 enrichments may be absent in an honest degraded
+ * reading surface. In that case the route withholds the fixed share template
+ * instead of inventing its missing lines or aborting every spot page. The
+ * production producer guard remains responsible for rejecting incomplete
+ * current publishes.
  */
 export function shareDaySummaryFor(
   publishedAt: string,
   spotName: string,
   summary: DaySummary,
-): ShareDaySummary {
+): ShareDaySummary | undefined {
   const { size_band, wind_state, best_window, conf_level } = summary;
   if (
     size_band === undefined
@@ -47,7 +50,7 @@ export function shareDaySummaryFor(
     || best_window === undefined
     || conf_level === undefined
   ) {
-    throw new Error(`share: ${spotName} llega sin los campos del llamado y no se puede compartir`);
+    return undefined;
   }
   return {
     fecha: publishedDayEs(publishedAt),

@@ -31,10 +31,10 @@ if (configuredSite === undefined) {
   throw new Error('spots/[slug]: astro.config.mjs no declara site y el mensaje no puede llevar una dirección absoluta');
 }
 const stampedSpotLink = stampedSpotShareLink(configuredSite.toString(), forecast.published_at, slug);
-const completedCall = composeWhatsAppCallMessage(
-  shareDaySummaryFor(forecast.published_at, spot.name, selectedToday),
-  stampedSpotLink,
-);
+const selectedShareSummary = shareDaySummaryFor(forecast.published_at, spot.name, selectedToday);
+const completedCall = selectedShareSummary === undefined
+  ? undefined
+  : composeWhatsAppCallMessage(selectedShareSummary, stampedSpotLink);
 const spotPreviewSelection = selectPreviewCard({
   spot_id: slug,
   spot_name: spot.name,
@@ -67,5 +67,5 @@ const spotAnnouncement = {
   spotId={slug}
   announcement={spotAnnouncement}
   shareCall={completedCall}
-  shareHref={whatsAppShareHref(completedCall)}
+  shareHref={completedCall === undefined ? undefined : whatsAppShareHref(completedCall)}
 />

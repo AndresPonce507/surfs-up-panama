@@ -26,11 +26,14 @@ interface Props {
   locale: Locale;
   spotId: string;
   announcement: LinkAnnouncement;
-  shareCall: string;
-  shareHref: string;
+  shareCall?: string;
+  shareHref?: string;
 }
 
 const { locale, spotId, announcement, shareCall, shareHref } = Astro.props;
+if ((shareCall === undefined) !== (shareHref === undefined)) {
+  throw new Error('SpotDetail: el llamado y su enlace deben llegar juntos');
+}
 const t = strings[locale];
 const spot = spotById(spotId);
 if (spot === undefined) {
@@ -102,11 +105,15 @@ const tomorrow = summaryFor(1);
     }
   </section>
   <TrackRecordBox spotId={spotId} />
-  <section class="spot-share" aria-label="Compartir este llamado">
-    <h2>Compartir este llamado</h2>
-    <ShareControls href={shareHref} label="Mandar el llamado por WhatsApp" />
-    <CopyControl call={shareCall} />
-  </section>
+  {
+    shareCall !== undefined && shareHref !== undefined ? (
+      <section class="spot-share" aria-label="Compartir este llamado">
+        <h2>Compartir este llamado</h2>
+        <ShareControls href={shareHref} label="Mandar el llamado por WhatsApp" />
+        <CopyControl call={shareCall} />
+      </section>
+    ) : null
+  }
   <p>
     <a class="cta" href={paths.report(locale, spotId)}>{t.spot.reportCta}</a>
   </p>
