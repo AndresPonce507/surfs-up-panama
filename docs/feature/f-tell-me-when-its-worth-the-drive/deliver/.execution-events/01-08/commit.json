@@ -1,0 +1,13 @@
+{
+  "step_id": "01-08",
+  "timestamp": "2026-08-11T14:58:25Z",
+  "kind": "commit",
+  "result": "PASS",
+  "commit": "3563f28",
+  "review": "approved iteration 3",
+  "evidence": {
+    "contract": "Approved build/f2-push hourly-at-:25 local-morning property preserved unchanged.",
+    "scope": "No planner source diff; only the focused property and lifecycle evidence were committed.",
+    "gates": "Focused planner suite 2/2 and npm run typecheck passed before commit."
+  }
+}
