@@ -71,12 +71,20 @@ import { extname, join, normalize, resolve, sep } from 'node:path';
 import type { PipelineWorld } from '../../daily-call-with-permanent-receipts/steps/support/world';
 import '../../daily-call-with-permanent-receipts/steps/support/world';
 import { venaoSeed } from '../../daily-call-with-permanent-receipts/steps/support/fixtures';
+import { publishedWeakestLinkSubscore } from '../../../../src/pipeline/build';
 
 const projectRoot = process.cwd();
 
 // ---------------------------------------------------------------- fixture --
 
 type Factor = 'dir' | 'size' | 'wind' | 'tide';
+
+type ProducerSubscores = Readonly<{
+  dir: number;
+  size: number;
+  wind: number | null;
+  tide: number | null;
+}>;
 
 type ProfileDay = {
   readonly link?: Factor | null;
@@ -86,6 +94,8 @@ type ProfileDay = {
    * never a sentence the fixture expects the page to produce.
    */
   readonly subscore?: number;
+  /** Full score record is producer-only input; the browser receives one selected scalar. */
+  readonly producer_subscores?: ProducerSubscores;
   readonly omit?: boolean;
   readonly drop_wind_state?: boolean;
 };
@@ -96,10 +106,19 @@ type Fixture = {
   readonly profiles: Readonly<Record<string, { readonly spot_id: string; readonly today: ProfileDay; readonly tomorrow: ProfileDay }>>;
 };
 
+type Slice02Fixture = Pick<Fixture, 'profiles'>;
+
 const fixture = JSON.parse(readFileSync(
   new URL('../fixtures/slice-01-weakest-link-profiles.json', import.meta.url),
   'utf8',
 )) as Fixture;
+
+const slice02Fixture = JSON.parse(readFileSync(
+  new URL('../fixtures/slice-02-weakest-link-subscores.json', import.meta.url),
+  'utf8',
+)) as Slice02Fixture;
+
+const profiles = { ...fixture.profiles, ...slice02Fixture.profiles };
 
 const FACTOR_WORD: Readonly<Record<Factor, RegExp>> = {
   dir: new RegExp(fixture.factor_words.dir, 'i'),
@@ -111,22 +130,28 @@ const FACTOR_WORD: Readonly<Record<Factor, RegExp>> = {
 type DayPlan = {
   readonly link: Factor | null;
   readonly subscore?: number;
+  readonly producerSubscores?: ProducerSubscores;
   readonly omit: boolean;
   readonly dropWindState: boolean;
 };
 type SpotPlan = { readonly today: DayPlan; readonly tomorrow: DayPlan };
 
 function requiredProfile(name: string): { spot_id: string; today: ProfileDay; tomorrow: ProfileDay } {
-  const profile = fixture.profiles[name];
+  const profile = profiles[name];
   assert.ok(profile, `test fixture error: unknown slice-01 profile "${name}"`);
   return profile;
 }
 
 function dayPlan(declared: ProfileDay | undefined, fallback: Factor): DayPlan {
   if (declared === undefined) return { link: fallback, omit: false, dropWindState: false };
+  const link = declared.omit === true ? null : declared.link === undefined ? fallback : declared.link;
+  const producerSubscore = declared.producer_subscores === undefined || link === null
+    ? undefined
+    : publishedWeakestLinkSubscore({ weakest_link: link, sub: declared.producer_subscores });
   return {
-    link: declared.omit === true ? null : declared.link === undefined ? fallback : declared.link,
-    ...(declared.subscore === undefined ? {} : { subscore: declared.subscore }),
+    link,
+    ...(producerSubscore === undefined && declared.subscore === undefined ? {} : { subscore: producerSubscore ?? declared.subscore }),
+    ...(declared.producer_subscores === undefined ? {} : { producerSubscores: declared.producer_subscores }),
     omit: declared.omit === true,
     dropWindState: declared.drop_wind_state === true,
   };
@@ -142,7 +167,7 @@ function buildPlan(): ReadonlyMap<string, SpotPlan> {
   const surface = JSON.parse(readFileSync(join(projectRoot, 'data/published-surface.json'), 'utf8')) as {
     current: { calls: { spot_id: string }[] };
   };
-  const named = new Map(Object.values(fixture.profiles).map((p) => [p.spot_id, p]));
+  const named = new Map(Object.values(profiles).map((p) => [p.spot_id, p]));
   const plan = new Map<string, SpotPlan>();
   surface.current.calls.forEach((call, index) => {
     const profile = named.get(call.spot_id);
@@ -507,6 +532,16 @@ function hasPrintedTwoPlaceValue(text: string, value: number): boolean {
   return new RegExp(`(?:^|[^0-9.])${token}(?![0-9])`).test(text);
 }
 
+function legacySentenceFindings(label: string, text: string | null, expected: Factor | null): string[] {
+  const findings = calloutFindings(label, text, expected);
+  if (text === null) return findings;
+  if (/\b(?:0|1)\.\d{2}\b/u.test(text)) findings.push(`${label}: la fila legada inventa una cifra en "${text}"`);
+  if (!text.endsWith('.')) findings.push(`${label}: la frase legada no termina completa: "${text}"`);
+  if (/,[\s.]*$/u.test(text)) findings.push(`${label}: la frase legada deja puntuación colgando: "${text}"`);
+  if (CODE_LEAK.test(text) || EM_DASH.test(text)) findings.push(`${label}: la frase legada filtra texto técnico: "${text}"`);
+  return findings;
+}
+
 // ------------------------------------------------------------------ Given --
 
 Given(
@@ -525,6 +560,43 @@ Given(
     const { plan } = plannedFor('nombre-mas-largo');
     assert.equal(plan.today.subscore, 0.18, 'test fixture error: hoy must carry the published value 0.18');
     assert.equal(plan.tomorrow.subscore, 0.62, 'test fixture error: mañana must carry the published value 0.62');
+  },
+);
+
+Given(
+  'una mañana publicada donde el viento es la causa pero la marea tuvo un valor menor sin publicar',
+  { timeout: 600_000 },
+  async function (this: PipelineWorld) {
+    await ensureHarness();
+    const { plan } = plannedFor('minimo-no-publicado');
+    const scores = plan.today.producerSubscores;
+    assert.ok(
+      plan.today.link === 'wind'
+        && typeof plan.today.subscore === 'number'
+        && scores?.wind !== null
+        && scores?.wind !== undefined
+        && scores?.tide !== null
+        && scores?.tide !== undefined
+        && plan.today.subscore === scores.wind
+        && scores.tide < scores.wind,
+      'a published wind cause must keep wind 0.64 even when the same score record carries lower tide 0.12',
+    );
+  },
+);
+
+Given(
+  'una mañana publicada donde una fila legada nombra sus causas pero no trae sus valores',
+  { timeout: 600_000 },
+  async function (this: PipelineWorld) {
+    await ensureHarness();
+    const { plan } = plannedFor('fila-legada');
+    assert.ok(
+      plan.today.link !== null
+        && plan.tomorrow.link !== null
+        && plan.today.subscore === undefined
+        && plan.tomorrow.subscore === undefined,
+      'test fixture error: the legacy row must retain both named factors and omit only their scalar fields',
+    );
   },
 );
 
@@ -721,6 +793,59 @@ Then('ninguna sección toma el valor publicado del otro día', function (this: P
   assertBehavior(
     findings,
     'mantener cada valor junto a la causa de su propio día: hoy y mañana nunca se prestan una cifra entre sí.',
+  );
+});
+
+Then('la sección de hoy conserva el viento y su valor publicado, no la marea menor', function (this: PipelineWorld) {
+  const world = world01(this);
+  const { plan } = plannedFor(world.killedItOpened ?? '');
+  const text = requiredReading(world).today;
+  const expected = plan.today.subscore;
+  const lower = plan.today.producerSubscores?.tide;
+  const findings = calloutFindings('hoy', text, plan.today.link);
+  if (expected === undefined || lower === undefined || lower === null) {
+    findings.push('la mañana no conserva el par publicado y su menor no publicado para este caso');
+  }
+  if (text !== null && expected !== undefined && !hasPrintedTwoPlaceValue(text, expected)) {
+    findings.push(`hoy no deja leer el valor publicado ${expected.toFixed(2)} junto al viento`);
+  }
+  if (text !== null && lower !== undefined && lower !== null && hasPrintedTwoPlaceValue(text, lower)) {
+    findings.push(`hoy inventa el menor de marea ${lower.toFixed(2)} en vez del par publicado`);
+  }
+  assertBehavior(
+    findings,
+    'mostrar solo la pareja factor-valor que la fila publicó: ni escoger el mínimo de otro factor ni llevar al navegador el registro completo.',
+  );
+});
+
+Then('las dos frases legadas siguen completas sin cifra ni puntuación rota', function (this: PipelineWorld) {
+  const world = world01(this);
+  const { plan } = plannedFor(world.killedItOpened ?? '');
+  const reading = requiredReading(world);
+  const findings = [
+    ...legacySentenceFindings('hoy', reading.today, plan.today.link),
+    ...legacySentenceFindings('mañana', reading.tomorrow, plan.tomorrow.link),
+  ];
+  assertBehavior(
+    findings,
+    'dejar la causa histórica como una frase española terminada cuando su mañana nunca publicó el valor nuevo, sin fabricar una cifra ni una coma colgando.',
+  );
+});
+
+Then('la playa sin ese dato también queda sin frase ni cifra sola', { timeout: 600_000 }, async function (this: PipelineWorld) {
+  const world = world01(this);
+  const { spotId } = plannedFor('campo-ausente');
+  const missing = await openSpot(world, spotId, 390, 'claro', 'normal');
+  const findings: string[] = [];
+  if (missing.today !== null || missing.tomorrow !== null) {
+    findings.push(`la playa sin dato muestra hoy="${String(missing.today)}" mañana="${String(missing.tomorrow)}"`);
+  }
+  if (missing.todayCount !== 0 || missing.tomorrowCount !== 0) {
+    findings.push(`la playa sin dato dejó ${String(missing.todayCount + missing.tomorrowCount)} elemento(s) del culpable`);
+  }
+  assertBehavior(
+    findings,
+    'omitir el elemento entero cuando el dato no llegó, igual que en el día perfecto, para que nunca aparezca una cifra huérfana.',
   );
 });
 
@@ -1071,7 +1196,7 @@ Then(
 
 // ---------------------------------------------------------------- cleanup --
 
-After({ tags: '@feature-f-see-what-killed-it and @slice-01', timeout: 30_000 }, async function (this: PipelineWorld) {
+After({ tags: '@feature-f-see-what-killed-it', timeout: 30_000 }, async function (this: PipelineWorld) {
   const world = world01(this);
   await world.killedItPage?.close().catch(() => undefined);
   await world.killedItBrowser?.close().catch(() => undefined);

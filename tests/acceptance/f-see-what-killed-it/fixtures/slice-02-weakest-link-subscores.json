@@ -1,0 +1,18 @@
+{
+  "_why": "Slice-02 honest-degrade inputs only. producer_subscores is a pre-projection CallRow.sub record that drives the real producer selection; only its selected scalar is written to the reading surface, because Slice-04 owns exposing a full record.",
+  "profiles": {
+    "minimo-no-publicado": {
+      "spot_id": "playa-malibu",
+      "today": {
+        "link": "wind",
+        "producer_subscores": { "dir": 0.91, "size": 0.83, "wind": 0.64, "tide": 0.12 }
+      },
+      "tomorrow": { "link": "size", "subscore": 0.83 }
+    },
+    "fila-legada": {
+      "spot_id": "playa-serena",
+      "today": { "link": "wind" },
+      "tomorrow": { "link": "tide" }
+    }
+  }
+}

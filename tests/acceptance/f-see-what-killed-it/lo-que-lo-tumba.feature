@@ -33,6 +33,28 @@ Feature: La playa dice qué fue lo que la tumbó
       | claro  | normal     |
       | oscuro | reducido   |
 
+  @slice-02 @driving_port @real-io @adapter-integration @negative @covers-R7 @covers-R8
+  Scenario: La playa muestra el valor publicado sin inventar uno menor
+    Given una mañana publicada donde el viento es la causa pero la marea tuvo un valor menor sin publicar
+    When el surfista abre la playa "minimo-no-publicado" a 390 px
+    Then la sección de hoy conserva el viento y su valor publicado, no la marea menor
+
+  @slice-02 @driving_port @real-io @adapter-integration @negative @covers-R8 @covers-R28
+  Scenario: Una fila legada conserva su causa sin inventar una cifra
+    Given una mañana publicada donde una fila legada nombra sus causas pero no trae sus valores
+    When el surfista abre la playa "fila-legada" a 390 px
+    Then las dos frases legadas siguen completas sin cifra ni puntuación rota
+
+  @slice-02 @driving_port @real-io @adapter-integration @negative @covers-R2 @covers-R8
+  Scenario: Los días perfecto y sin dato siguen callados
+    Given una mañana publicada donde cada playa trae la causa y el valor que le corresponde
+    And en esa misma mañana una playa salió perfecta, sin nada que la tumbara
+    And en esa misma mañana una playa se publicó sin ese dato en ninguno de sus dos días
+    When el surfista abre la playa "dia-perfecto" a 390 px
+    Then ninguna de las dos secciones nombra un culpable
+    And no queda un recuadro vacío ni una palabra suelta donde iría el culpable
+    And la playa sin ese dato también queda sin frase ni cifra sola
+
   @slice-01 @driving_port @real-io @adapter-integration @negative @error @covers-R2 @covers-R25
   Scenario: Un día perfecto no tiene culpable, y la página no parece rota por eso
     Given una mañana publicada donde cada playa trae el punto débil que salió del cálculo
