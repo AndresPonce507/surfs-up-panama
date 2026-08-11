@@ -1,0 +1,26 @@
+{
+  "sid": "03-01",
+  "phase": "RED_GREEN_REVIEW",
+  "acceptance_red": {
+    "command": "npm run test:at -- --name 'Después de un aviso de la mañana, la tarde pregunta cómo estuvo'",
+    "status": "FAIL",
+    "evidence": "Then oracle observed 0 questions because src/push/plan-notifications.ts did not exist; no collection failure."
+  },
+  "unit_red": {
+    "command": "npm test -- --run tests/unit/push-plan-notifications.test.ts",
+    "status": "FAIL",
+    "evidence": "AssertionError: planNotifications must be available through the declared driving port."
+  },
+  "review_falsification": {
+    "status": "FAIL_AS_EXPECTED",
+    "evidence": "With the old followup_date !== today predicate restored briefly, fast-check shrank to [14, '2026-08-11']; expected zero follow-ups, received one."
+  },
+  "green": {
+    "target_acceptance": "PASS: 1 scenario, 13 steps",
+    "slice03_non_external": "PASS: 6 scenarios, 74 steps",
+    "focused_unit": "PASS: 1 test",
+    "typecheck": "PASS",
+    "unit_except_known_stale_surface": "PASS: 20 files, 92 tests"
+  },
+  "known_external_qualification": "Full test/build/UI/budget/fast-CI gates remain blocked by existing static data dated 2026-08-09 on Panama 2026-08-10. Generated data was not changed."
+}
