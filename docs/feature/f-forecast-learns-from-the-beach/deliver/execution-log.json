@@ -281,6 +281,34 @@
       "s": "EXECUTED",
       "d": "PASS: approved implementation committed as c1abf51f5122f928e1746920236975231dddcfa0 (feat(learning): preserve exact parent estimate for one-spot gate)",
       "t": "2026-08-11T15:00:28Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: recovered accepted 01-09 contract and verified its four owned production paths already satisfy the current-equivalence contract before adding evidence",
+      "t": "2026-08-11T15:04:28Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: controlled decoded-record mutation changes score_delta.units from display_points to fraction and is rejected by the acceptance oracle. The initial exact score comparison was corrected from 9 to a 1e-12 tolerance after the valid floating result 8.999999999999998; no production failure is claimed.",
+      "t": "2026-08-11T15:04:43Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: the focused acceptance passed against inherited production after its numerical-oracle correction; no additional unit test was needed to drive production GREEN",
+      "t": "2026-08-11T15:04:52Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: real runLearningFitOnce writes schema spot-correction/1, a 9 display-point score move from the report vocabulary's good anchor, and reader limits 0.40/12; focused acceptance 1/1 passes with no production edit",
+      "t": "2026-08-11T15:04:52Z"
     }
   ]
 }
