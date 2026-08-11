@@ -399,7 +399,7 @@
       "p": "PREPARE",
       "s": "EXECUTED",
       "d": "PASS: independently approved JIT contract 2532170 active with exactly two @slice-02 HTTP/Chromium examples; .develop-progress.json deliberately preserved as external dirt.",
-      "t": "2026-08-11T02:44:35Z"
+      "t": "2026-08-11T02:35:00Z"
     },
     {
       "sid": "02-04",
@@ -442,6 +442,118 @@
       "s": "EXECUTED",
       "d": "PASS: Slice-02 5/5 scenarios and 60/60 steps; each U1-U7 2/2; full acceptance 94/94 and 1080/1080; units 112/112; typecheck; build; ci:local 10/10. Fresh source-blind Vera PASS and independent adversarial review APPROVED, iteration 2.",
       "t": "2026-08-11T03:01:00Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: post-implementation evidence repair reopened the published-surface scalar validation contract from implementation commit 1e4e517; this record is a current audit, not a claim that the omitted original log existed.",
+      "t": "2026-08-11T03:09:48Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: temporary validator poison accepted an invalid missing-link scalar; focused property test failed 1/11 with semantic AssertionError expected rejected, received accepted. Poison reverted.",
+      "t": "2026-08-11T03:09:49Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: focused five-file scalar contract regression passed 31/31 after the revert; no production diff remains.",
+      "t": "2026-08-11T03:09:50Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: implementation commit 1e4e517 verified; this later evidence-only audit commit records the omitted phase history without changing the implementation.",
+      "t": "2026-08-11T03:09:51Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: post-implementation evidence repair reopened the producer projection contract from implementation commit e07fcbc; this record is a current audit, not retrospective phase invention.",
+      "t": "2026-08-11T03:09:52Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: temporary producer poison returned undefined for every selected score; focused contract tests failed 4 assertions, including the selected 0.00 raw value and required bundle field. Poison reverted.",
+      "t": "2026-08-11T03:09:53Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: focused five-file scalar contract regression passed 31/31 after the revert; no production diff remains.",
+      "t": "2026-08-11T03:09:54Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: implementation commit e07fcbc verified; this later evidence-only audit commit records the omitted phase history without changing the implementation.",
+      "t": "2026-08-11T03:09:55Z"
+    },
+    {
+      "sid": "02-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: post-implementation evidence repair reopened the publish-side reader pairing contract from implementation commit ce43ef4; this record is a current audit, not retrospective phase invention.",
+      "t": "2026-08-11T03:09:56Z"
+    },
+    {
+      "sid": "02-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: temporary reader poison dropped the paired scalar; focused property test failed 1/11 with a semantic deep-equality AssertionError missing weakest_link_subscore 0.01. Poison reverted.",
+      "t": "2026-08-11T03:09:57Z"
+    },
+    {
+      "sid": "02-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: focused five-file scalar contract regression passed 31/31 after the revert; no production diff remains.",
+      "t": "2026-08-11T03:09:58Z"
+    },
+    {
+      "sid": "02-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: implementation commit ce43ef4 verified; this later evidence-only audit commit records the omitted phase history without changing the implementation.",
+      "t": "2026-08-11T03:09:59Z"
+    },
+    {
+      "sid": "02-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: corrected the original PREPARE event time to its actual pre-RED contract inspection; post-implementation audit also reopened formatter falsifiability from implementation commit e1efe39.",
+      "t": "2026-08-11T03:10:00Z"
+    },
+    {
+      "sid": "02-04",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: temporary formatter poison omitted the decimal suffix; focused formatter property test failed 1/11 with semantic AssertionError expected 0.00, received no score. Poison reverted.",
+      "t": "2026-08-11T03:10:01Z"
+    },
+    {
+      "sid": "02-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: focused five-file scalar contract regression passed 31/31 after the revert; no production diff remains.",
+      "t": "2026-08-11T03:10:02Z"
+    },
+    {
+      "sid": "02-05",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: a477d0a is the genuine 02-05 implementation commit. This subsequent evidence-only audit commit closes the accidentally omitted COMMIT event; .develop-progress.json remains unstaged external dirt.",
+      "t": "2026-08-11T03:10:03Z"
     }
   ]
 }
