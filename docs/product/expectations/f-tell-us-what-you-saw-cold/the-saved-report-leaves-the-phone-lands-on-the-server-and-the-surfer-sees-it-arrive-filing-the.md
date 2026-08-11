@@ -20,8 +20,8 @@ INDETERMINATE, never a PASS by absence.
 1. Build and serve the site as in the slice-01 charter.
 2. Confirm the report endpoint the site is pointed at, from the recipe pinned at JIT DISTILL.
 3. Walk the flow online: three answers, Mandar, and watch screen two.
-4. For the twice-filed check: repeat the submission of the same saved report (re-send, or reload
-   and let the page-open flush re-send it). The recipe will name the concrete way to force it.
+4. Observe the one settled arrival state. Do not attempt a re-send through the charter: the page
+   has no public re-send control, and this U8 walk does not prescribe reload or page-open behavior.
 
 ## JIT DISTILL recipe (2026-08-10)
 Set `REPORT_ACCEPTANCE_ORIGIN` to an origin where the production report page is connected to the
@@ -31,12 +31,16 @@ endpoint. The run is RED until this prerequisite exists. Before a deploy, Pre-re
 6 in the feature delta must be recorded as resolved by their owners; DISTILL does not deploy or
 invent an answer for any of them.
 
-For the duplicate and page-open checks, the examiner first creates the report through the real
-offline browser flow, reads its durable identity from that browser's own queue, and resends that
-same record to the real public handler. For the quota check, `REPORT_ACCEPTANCE_QUOTA_CREDENTIAL`
-names a real pre-provisioned device already at its allowance. For the unknown-beach check, the
-same real public handler receives the browser-created record with only its beach name changed.
-Those two cases cannot originate in the page because the product correctly offers neither control.
+The duplicate/idempotency and page-open cases are mandatory real-handler acceptance evidence, not
+source-blind charter actions. `report-arrives-once.feature`'s `@covers-R20` scenario replays the
+browser-created durable record byte-for-byte to the real handler and requires its duplicate
+receipt; that evidence is nonvisual because storage cardinality is not a public page observation.
+R26's separate page-open acceptance scenario stays in Slice-03, but it is not a source-blind U8
+action. The `online` event, service-worker activation and backoff ladder remain deferred to
+F-WORKS-WITH-NO-SIGNAL. For the quota check, `REPORT_ACCEPTANCE_QUOTA_CREDENTIAL` names a real
+pre-provisioned device already at its allowance. For the unknown-beach check, the same real public
+handler receives the browser-created record with only its beach name changed. Those cases cannot
+originate in the page because the product correctly offers neither control.
 
 ## JIT repair: the page owns the journey (2026-08-11)
 
@@ -54,26 +58,39 @@ direct handler calls remain narrow handler-boundary checks only; they cannot be 
 that a surfer's page sent or rendered anything. The deployed walk must observe the page's own
 credential, byte-identical saved-label replay, Spanish refusal or quiet arrival/reveal.
 
+## Evidence boundary
+
+U8 is source-blind and public-surface only. It may pass when the surfer can see one calm, readable
+arrival state after Mandar, with no duplicate-looking UI, raw error, account step or premature
+forecast. It cannot prove that the store contains one record: the product provides no public
+re-send control, and prescribing a reload or page-open action would change this visual charter
+into a functional replay test. The Signal-owned online-trigger behavior remains deferred.
+
+R20 remains mandatory real-I/O acceptance evidence. Its real-handler replay must keep the saved
+identity and bytes unchanged and receive the idempotent receipt. That check is not weakened or
+reclassified as U8. Its deployed/environmental form stays INDETERMINATE until the required origin
+and replay environment exist.
+
 ## Charter
-Explore the arrival of a report as the surfer who just filed it. The heart of the walk is two
-promises: the report actually arrives (the screen tells you so), and filing the same report twice
-never becomes two reports. Probe the seams: submit, then force a second send of the identical
-report and watch nothing double. Watch the quiet parts too: at no point does any credential or
-sign-up step appear, and at no point does the wait read as an error.
+Explore the arrival of a report as the surfer who just filed it. The heart of the source-blind walk
+is the public promise: the report arrives and the screen tells you so without looking duplicated or
+broken. Watch the quiet parts too: at no point does any credential or sign-up step appear, and at
+no point does the wait read as an error. The duplicate-storage promise is separately covered by
+the mandatory R20 real-handler acceptance evidence above.
 
 ## Expected observations (oracle)
 - Con señal, tras Mandar, la pantalla dos muestra un estado de llegada: el reporte salió del
   teléfono y el servidor lo tiene. El estado no afirma nada sobre el pronóstico: ni comparación,
   ni puntaje, ni promesa de que exista una.
-- Mandar el mismo reporte dos veces guarda uno: la segunda entrega se reconoce sin duplicar, la
-  pantalla no muestra dos reportes ni cuenta dos veces, y nada se lee como error.
+- U8 no pretende contar registros guardados. En esta pantalla pública solo se observa una llegada
+  terminada, no dos confirmaciones competidoras ni un error; R20 mantiene la prueba obligatoria de
+  repetición idéntica contra el handler real.
 - En ningún momento aparece un paso visible de credencial, registro o espera de identidad: tres
   taps y ya, como promete la decisión 11.
 - El estado de llegada se ve a 390 px sin desplazamiento horizontal, legible contra el fondo real
   en los dos temas, objetivos táctiles de al menos 44 px, y sin animaciones con movimiento
   reducido activado.
-- U8: el estado de llegada se ve terminado, una frase tranquila que se lee de un vistazo, sin
-  relleno, sin espacios reservados vacíos, sin nada que se mueva solo.
+- U8: La llegada muestra una sola confirmación tranquila, sin dos estados competidores ni un error. El mensaje sigue limpio, alineado y sereno. El estado se ve terminado, una frase tranquila que se lee de un vistazo, sin relleno, sin espacios reservados vacíos, sin nada que se mueva solo.
 - Negative, la fuga de anclaje: nada del pronóstico aparece antes de que la etiqueta esté guardada
   y enviada. La pantalla uno sigue fría de punta a punta. Si un puntaje o una comparación se asoma
   en este slice, es FALLA: la revelación pertenece al slice siguiente y solo puede nacer de la
@@ -89,3 +106,5 @@ slice-03), the byte-equivalent duplicate reveal on re-sync (F-WORKS-WITH-NO-SIGN
 ## Session log (append-only)
 | date | examiner | verdict | observations |
 |------|----------|---------|--------------|
+| 2026-08-11 | Vera / U8 | INDETERMINATE | The prescribed local-real-io run completed, but this examiner was given no reachable browser page or rendered human-visible observations. I could not verify at 390 px that the cold page makes no pre-receipt arrival claim, then reveals a readable arrival state after receipt without overflow or deployed/external claims. |
+| 2026-08-11 | Vera / U8 | INDETERMINATE | At http://127.0.0.1:53539/spots/playa-venao/reportar/ in real Chrome at 390 px, the cold form showed only three answer groups and Mandar, with no forecast, account, credential, production/deploy claim, or horizontal overflow. A valid three-answer submission then showed “Reporte recibido” and “Gracias. Recibimos tu reporte.” with no raw error, forecast, or count; the completed state was legible with 390 px no-overflow in dark and emulated light themes, its only link was 44 px high, and with reduced motion enabled it had no animation or transition and did not move over one second. I could not truthfully exercise the charter’s duplicate requirement: it supplies no public re-send control or concrete page-open replay recipe, and its described durable-queue identity procedure is not a public-surface observation. |
