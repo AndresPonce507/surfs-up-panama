@@ -1114,6 +1114,13 @@
       "s": "EXECUTED",
       "d": "{\"focused_acceptance\":\"completed Slice-05 contracts through 05-04: 6 scenarios/114 steps PASS\",\"learning_units\":\"13 files, 77 tests PASS\",\"typecheck\":\"PASS\",\"falsification\":\"reversing the high-versus-low hit-rate predicate made the calibration acceptance fail with null instead of c_spread; restored the strict less-than rule\",\"privacy\":\"calibration consumes only captured score, confidence label, and quality event; no reporter identity is written to the metrics projection\",\"test_budget\":\"2 behaviors x 2 = 4; 1 new property, within budget\",\"global_qualification\":\"npm run build remains blocked by the unrelated stale published surface dated 2026-08-09 versus Panama 2026-08-10\",\"non_visual_rationale\":\"the new bins and routing decision live only in operator metrics JSON; the scoring term and rendered confidence remain unchanged\"}",
       "t": "2026-08-11T02:36:00Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "{\"commit\":\"10f20c6\",\"message\":\"feat(learning): route failed confidence calibration - step 05-04\",\"status\":\"scoped green; calibration is an operator-only routing paper trail and does not perform the scoring-lane removal\",\"commands\":{\"typecheck\":\"npm run typecheck PASS\",\"learning_units\":\"npx vitest run tests/unit/learning-*.test.ts: 13 files, 77 tests PASS\",\"completed_slice_05_acceptance\":\"npm run test:at -- --name <05-01 through 05-04 contracts>: 6 scenarios, 114 steps PASS\",\"build\":\"qualified stale-surface refusal, unrelated to Learning\"},\"g7\":\"The prior rolling-origin correction-kill behavior remains green; this step neither changes CV nor correction applied flags.\"}",
+      "t": "2026-08-11T02:37:00Z"
     }
   ]
 }
