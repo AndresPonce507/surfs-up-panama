@@ -484,6 +484,20 @@
       "s": "EXECUTED",
       "d": "PASS: revision commit faa2bb9 (feat(signal): flush reports on helper activation - step 03-02) contains the active activation-time replay implementation, its direct-worker race proof, and the preceding RED/GREEN evidence. G7 PASS: all mapped pre-commit gates were green before the resulting revision was created.",
       "t": "2026-08-11T02:39:00Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS: the active Chromium throttling scenario first failed semantically because activation created a database without the agreed queue store before capture planted its record. Once that real lifecycle defect was repaired, the new direct-worker injected-timer test failed semantically because a 429 scheduled no retry. Falsification removed the 429/5xx retry branch and reproduced the same missing-schedule assertion. Acceptance tests were never weakened.",
+      "t": "2026-08-11T02:43:00Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: public/sw.js is the actual classic worker shipped at /sw.js, so it is the necessary production surface rather than the roadmap's unshipped src/offline/flush.ts. The queue store initializes with the declared report_id key; 429, 5xx, and timeout retain the record, schedule 30s doubling with bounded jitter and a one-hour cap, and suppress premature overlapping replays. Target Chromium acceptance 1 scenario/15 steps; injected-timer direct-worker proof 1/1; full units 105/105; typecheck; build/page-weight; fast CI 8/8 passed with 0 skipped. Test budget: 2 behaviors x 2 = 4 maximum, 1 new unit test.",
+      "t": "2026-08-11T02:44:00Z"
     }
   ]
 }
