@@ -49,9 +49,7 @@ function minify(css: string): string {
     .replace(/ ?([{}:;,]) ?/g, '$1')
     .replace(/\s*([>+])\s*/g, '$1')
     .replace(/@(media|supports)\s+\(/g, '@$1(')
-    .replace(/#([\da-f])\1([\da-f])\2([\da-f])\3\b/gi, '#$1$2$3')
     .replace(/(^|[^\w-])0\.(\d)/g, '$1.$2')
-    .replace(/(^|[^\d])0%/g, (_, prefix: string) => `${prefix}0`)
     .replace(/;}/g, '}')
     .trim();
 }
