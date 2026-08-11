@@ -229,6 +229,9 @@ function credentialFreeEnvironment(extra: NodeJS.ProcessEnv = {}): NodeJS.Proces
       delete environment[key];
     }
   }
+  // Child builds invoke their own tsx CLI. Re-importing the parent's loader
+  // through NODE_OPTIONS starts a second esbuild service before validation.
+  delete environment.NODE_OPTIONS;
   return environment;
 }
 
@@ -1167,7 +1170,7 @@ Then('la publicación se niega antes de preparar una página', function (this: P
   assert.notEqual(refusal.status, 0, 'la publicación aceptó una mejora menor que el puntaje y habría dejado que una página la leyera');
   assert.match(
     refusal.output,
-    /counterfactual_score_q|counterfactual.*score|strict two-day/i,
+    /counterfactual_score_q|counterfactual.*score|two well-formed ranked civil days/i,
     `la publicación se negó por otra razón antes de validar la mejora imposible:\n${refusal.output}`,
   );
 });

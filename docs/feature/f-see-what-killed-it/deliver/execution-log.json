@@ -778,6 +778,34 @@
       "s": "EXECUTED",
       "d": "PASS: b68d18a is the genuine 03-05 implementation commit. Independent iteration-2 review APPROVED after the qualified fresh-producer gates and browser-only Vera PASS. It contains only the formatter, component, focused property, charter, and prior factual phase evidence; generated surface, progress dirt, and temporary integration guards remain excluded.",
       "t": "2026-08-11T05:37:35Z"
+    },
+    {
+      "sid": "03-06",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: repaired exact Slice-03 scenario active; no skip marker; fixture carries nonzero delta_q for both day witnesses.",
+      "t": "2026-08-11T12:10:04Z"
+    },
+    {
+      "sid": "03-06",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: temporary production validator mutation removed strict counterfactual score > displayed score. The lower-score public publish:surface scenario failed semantically because publication accepted an impossible lower score; source restored byte-for-byte.",
+      "t": "2026-08-11T12:10:04Z"
+    },
+    {
+      "sid": "03-06",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: the repaired acceptance contract reached GREEN without new unit decomposition.",
+      "t": "2026-08-11T12:10:04Z"
+    },
+    {
+      "sid": "03-06",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: exact outline 2/2 and full Slice-03 7/7 scenarios (128 steps), units 241/241, typecheck, build, ci:local --jobs=1, U1-U7 each 2/2. Emitted callout route has no calculation or telemetry in inline/referenced JS. Vera current source-blind PASS is in the charter; prior FAIL and INDETERMINATE rows preserved.",
+      "t": "2026-08-11T12:10:04Z"
     }
   ]
 }
