@@ -32,6 +32,7 @@ const cucumberConfigPath = join(projectRoot, 'cucumber.mjs');
 const featureOwnedAuditPath = join(projectRoot, 'tests/e2e/f-looks-like-the-ocean-and-reads-in-the-sun/contrast-and-touch-audit.spec.ts');
 const openedHomes = new WeakMap<ContrastWorld, OpenedHome>();
 const copiedTables = new WeakMap<ContrastWorld, string>();
+const driftedRecords = new WeakMap<ContrastWorld, { original: string; drifted: string }>();
 
 const expectedRows = {
   claro: [
@@ -402,6 +403,55 @@ Then('la revisión local publica ese recorrido dentro de su aceptación de naveg
   const e2eJobs = ciCore.match(/name: 'e2e'/g) ?? [];
   assert.equal(e2eJobs.length, 1, `la revisión local debe tener exactamente una aceptación de navegador; encontró ${e2eJobs.length}`);
   assert.match(ciCore, /name: 'e2e'[\s\S]*?steps: \[\['browser acceptance', 'npm', \['run', 'test:e2e'\]\]\]/, 'la aceptación de navegador existente no ejecuta el recorrido propio');
+});
+
+Given('la promesa de contraste publicada tiene su pareja clara de agua más exigente', function (this: ContrastWorld) {
+  const original = readFileSync(designSystemPath, 'utf8');
+  assert.match(original, /\| hero title `#FFFFFF` on worst hero stop `#0D5866` \| 8\.06:1 \| AAA \(≥7:1\) \|/, 'test fixture error: la promesa publicada ya no contiene la pareja clara que debe protegerse');
+  driftedRecords.set(this, { original, drifted: '' });
+});
+
+When('una copia aislada anota esa pareja como menos legible de lo que la página pinta', function (this: ContrastWorld) {
+  const record = driftedRecords.get(this);
+  assert.ok(record, 'test fixture error: falta la promesa original antes de ensayar la alarma');
+  const drifted = record.original.replace(
+    '| hero title `#FFFFFF` on worst hero stop `#0D5866` | 8.06:1 | AAA (≥7:1) |',
+    '| hero title `#FFFFFF` on worst hero stop `#0D5866` | 4.00:1 | AA (≥4.5:1) |',
+  );
+  assert.notEqual(drifted, record.original, 'test fixture error: la deriva deliberada no alteró la pareja clara');
+  driftedRecords.set(this, { original: record.original, drifted });
+});
+
+Then('la alarma nombra la pareja de agua que dejó de coincidir', function (this: ContrastWorld) {
+  const record = driftedRecords.get(this);
+  assert.ok(record?.drifted, 'test fixture error: falta la copia deliberadamente desviada');
+  const findings = tableFindings(record.drifted, 'claro');
+  assert.ok(
+    findings.includes('falta la pareja tropical #FFFFFF sobre #0D5866, 8.06:1, AAA'),
+    `la alarma no nombró la pareja desviada #FFFFFF sobre #0D5866: ${findings.join('; ')}`,
+  );
+});
+
+Then('el documento publicado queda exactamente como estaba antes de probar la alarma', function (this: ContrastWorld) {
+  const record = driftedRecords.get(this);
+  assert.ok(record, 'test fixture error: falta el documento original para comprobar su regreso');
+  assert.equal(readFileSync(designSystemPath, 'utf8'), record.original, 'la alarma dejó una edición en el documento publicado');
+  const diff = spawnSync('git', ['diff', '--exit-code', '--', 'docs/product/architecture/09-design-system.md'], {
+    cwd: projectRoot,
+    encoding: 'utf8',
+  });
+  assert.equal(diff.status, 0, `la pareja desviada no volvió limpia al documento publicado:\n${diff.stdout}${diff.stderr}`);
+});
+
+Then('la revisión local termina sus comprobaciones de presentación y navegador sin omitir ninguna', function () {
+  const result = spawnSync('npm', ['run', 'ci:local', '--', '--job=ui', '--job=e2e'], {
+    cwd: projectRoot,
+    env: credentialFreeEnvironment(),
+    encoding: 'utf8',
+    maxBuffer: 10 * 1024 * 1024,
+  });
+  assert.equal(result.status, 0, `la revisión local de presentación y navegador falló:\n${result.stdout}${result.stderr}`);
+  assert.match(result.stdout, /2 passed \/ 0 failed \/ 0 skipped/, `la revisión local omitió una comprobación:\n${result.stdout}`);
 });
 
 After(async function (this: ContrastWorld) {
