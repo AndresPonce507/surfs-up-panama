@@ -252,3 +252,37 @@ origin is used as the driving surface and not merely parsed.
 
 Deployment was not attempted. Pre-requisites 2, 5 and 6 remain external write/deploy conditions;
 their absence is documented in the charters and policy instead of concealed with a fake endpoint.
+
+## Slice-03 page-ownership observed RED classification (2026-08-11, JIT repair)
+
+Review D1/D4 exposed a narrower but critical gap: `src/report/island.ts` commits to IndexedDB only,
+while older acceptance helpers could call the handler with `fetch`. Those handler calls are not
+browser-to-server evidence. Step `03-03` adds an additive local browser contract; it does not
+rewrite the older phase record.
+
+Command:
+
+```
+npm run test:at -- --tags "@feature-f-tell-us-what-you-saw-cold and @local-real-io"
+```
+
+Observed result: exit **1**, one scenario, 22 passed steps, one skipped after failure and one
+failed step. The production build, static-host mapping, real Chromium, the report island, and real
+IndexedDB all ran. The label was durably present before the assertion. The only failing assertion
+was:
+
+```
+WHAT: the page did not send the saved label.
+WHY: the report island still ends at the on-phone queue, so no surfer can receive a real server answer.
+HOW: make the production page submit its own saved record after the background permission succeeds.
+```
+
+Classification: **MISSING_FUNCTIONALITY**. This is the required right-reason RED: no missing
+import, fixture, configured origin, test-owned route, intercepted response or manual handler
+request occurs before it. The passive request observer captured neither `/api/mint` nor
+`/api/report`; that absence is the product defect under test.
+
+The following remain explicitly **INDETERMINATE external gates**, not substitute local evidence:
+the deployed or documented production-local handler/store at `REPORT_ACCEPTANCE_ORIGIN`; real
+credential and quota device inputs; Function-URL CORS and `Cache-Control: no-store`; and the
+generated spot index needed for the exact Spanish unknown-spot refusal. No deploy was attempted.
