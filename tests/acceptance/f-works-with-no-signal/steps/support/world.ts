@@ -499,6 +499,33 @@ export async function phonePage(state: SignalScenario): Promise<Page> {
   return page;
 }
 
+/**
+ * Observes the real page-to-controller boundary without replacing it. The
+ * emitted Base.astro handler still calls the browser's native postMessage.
+ */
+export async function observeControllerMessages(state: SignalScenario): Promise<void> {
+  const page = await phonePage(state);
+  await page.addInitScript(() => {
+    const messages: unknown[] = [];
+    const postMessage = ServiceWorker.prototype.postMessage;
+    Object.defineProperty(ServiceWorker.prototype, 'postMessage', {
+      configurable: true,
+      value(message: unknown, options?: StructuredSerializeOptions) {
+        messages.push(message);
+        return postMessage.call(this, message, options);
+      },
+    });
+    (window as Window & { __signalControllerMessages?: unknown[] }).__signalControllerMessages = messages;
+  });
+}
+
+export async function controllerMessages(state: SignalScenario): Promise<unknown[]> {
+  const page = await phonePage(state);
+  return page.evaluate(
+    () => (window as Window & { __signalControllerMessages?: unknown[] }).__signalControllerMessages ?? [],
+  );
+}
+
 /** A brand new phone: nothing installed, nothing cached, no history. */
 export async function freshPhone(state: SignalScenario): Promise<Page> {
   if (state.context) await state.context.close();

@@ -24,11 +24,13 @@ Feature: A queued report sends itself
 
   @slice-03 @walking_skeleton @driving_port @real-io @covers-R19 @covers-R23 @covers-R24 @covers-R27
   Scenario: A report filed with no signal sends itself when the signal comes back
-    Given a surfer has read the home page with signal
+    Given the phone will count the helper nudges the page sends
+    And a surfer has read the home page with signal
     And a report is waiting on the phone because it was filed with no signal
     When the signal comes back
     Then the report reaches the site by itself, exactly as it was filed
     And the report is no longer waiting on the phone
+    And the returned signal nudged the helper exactly once
 
   @slice-03 @driving_port @real-io @covers-R20 @covers-R25
   Scenario: A report waiting on a phone that never noticed the signal return still goes out

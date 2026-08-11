@@ -22,10 +22,12 @@ import {
   REFUSAL_REASON_ES,
   VISITED_SPOT,
   assertBuiltSite,
+  controllerMessages,
   failureContext,
   goTo,
   normalise,
   openReportScreenWithSignal,
+  observeControllerMessages,
   phonePage,
   prestoreReport,
   readHomeWithSignal,
@@ -111,6 +113,14 @@ async function signalReturns(world: object, state: SignalScenario): Promise<void
 }
 
 // ---------- Givens ----------
+
+Given(
+  'the phone will count the helper nudges the page sends',
+  { timeout: 120_000 },
+  async function (this: object) {
+    await observeControllerMessages(scenarioState(this));
+  },
+);
 
 Given(
   'a report is waiting on the phone because it was filed with no signal',
@@ -265,14 +275,30 @@ Given(
 // ---------- Thens ----------
 
 Then(
+  'the returned signal nudged the helper exactly once',
+  { timeout: 60_000 },
+  async function (this: object) {
+    const state = scenarioState(this);
+    assert.deepEqual(
+      await controllerMessages(state),
+      [{ type: 'flush-report-queue' }],
+      'WHAT: one returned-signal event did not send exactly one flush nudge across the page-to-helper boundary. '
+        + 'WHY: Background Sync is not load-bearing, so the page must ask its actual controller to replay a waiting report once. '
+        + `HOW: retain the additive Base.astro online listener and post one flush-report-queue message.${failureContext(state)}`,
+    );
+  },
+);
+
+Then(
   'the report reaches the site by itself, exactly as it was filed',
   { timeout: 60_000 },
   async function (this: object) {
     const state = scenarioState(this);
     const arrived = writePathReceived();
-    assert.ok(
-      arrived.length > 0,
-      'WHAT: nothing reached the site; the report is still only on the phone. '
+    assert.equal(
+      arrived.length,
+      1,
+      `WHAT: ${arrived.length} reports reached the site after one returned-signal event; the report must replay exactly once. `
         + 'WHY: a report filed with no signal must send ITSELF when coverage returns — the '
         + 'surfer already did their part on the sand, and signal is worst exactly where reports '
         + 'happen. '

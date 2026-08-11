@@ -400,6 +400,62 @@
       "s": "EXECUTED",
       "d": "PASS",
       "t": "2026-08-10T21:59:27Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: inspected the accepted queue-flush scenario, emitted Base.astro listener, real Chromium/static-host harness, and direct-worker unit proof; revision targets the missing page-to-controller boundary evidence only.",
+      "t": "2026-08-11T02:16:00Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: controlled Base.astro mutations made the active real-Chromium scenario fail semantically both when the online listener was removed (0 sends, record stayed on phone) and when it posted twice (2 !== 1 receipts). The acceptance proof was not weakened; the listener was restored unchanged before GREEN.",
+      "t": "2026-08-11T02:18:00Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: one browser acceptance behavior already exercises the emitted page, actual controller, real IndexedDB queue, worker, and real HTTP write-path. No new unit decomposition is required; existing offline-flush unit remains green.",
+      "t": "2026-08-11T02:19:00Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: one active real-Chromium scenario/15 steps dispatches one Window online event through emitted Base.astro and observes exactly one controller postMessage ({type: flush-report-queue}), one byte-identical POST receipt, and the queue entry deleted.",
+      "t": "2026-08-11T02:20:00Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "QUALITY_GATES_G1_G9",
+      "s": "EXECUTED",
+      "d": "PASS: G1 active acceptance 1 scenario/15 steps; G2 focused existing unit offline-flush 1/1; G3 real Chromium/browser+IndexedDB+HTTP integration 1/1; G4 full units 103/103; G5 git diff --check clean; G6 typecheck clean; G7 production build and page-weight gate clean; G8 target acceptance and fast CI report 0 skips; G9 test budget 1 observable page-to-controller replay behavior x 2 = 2 unit-test maximum, 0 new unit tests (acceptance proof sufficient). Fast CI 8/8 passed.",
+      "t": "2026-08-11T02:20:00Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "MIGRATE_LEGACY_PHASE_RECORD",
+      "s": "EXECUTED",
+      "d": "SUPERSEDED: the preceding PREPARE, RED_ACCEPTANCE, RED_UNIT, GREEN, and QUALITY_GATES_G1_G9 entries are retained as a legacy five-phase reconstruction only. They do not constitute the canonical revision record. The canonical three-phase RED, GREEN, COMMIT chronology begins below; G7 and COMMIT remain pending until the resulting revision commit exists.",
+      "t": "2026-08-11T02:24:00Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS: the active emitted-page Chromium acceptance failed for the right business reasons under both mutations: remove listener gave 0 sends and preserved the record; duplicate nudge gave 2 !== 1 receipts. Exact commands, semantic output, restoration, and rerun evidence are durable in .execution-events/03-01/20260811T021800Z-remove-online-listener.json and 20260811T022200Z-double-online-nudge.json.",
+      "t": "2026-08-11T02:24:00Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: restored emitted Base.astro path gives one Window online event -> exactly one native controller postMessage -> exactly one byte-identical write receipt -> queue deletion. G1 active acceptance PASS; G2 semantic RED PASS; G3 semantic AssertionError PASS; G4 no domain mocks PASS; G5 business language PASS; G6 target, units 103/103, typecheck, build and fast CI green PASS; G7 PENDING resulting revision commit; G8 test budget 1 behavior x 2, 0 new unit tests PASS; G9 acceptance strengthened, never weakened PASS. Full command/result in .execution-events/03-01/20260811T022330Z-restored-green.json.",
+      "t": "2026-08-11T02:24:00Z"
     }
   ]
 }
