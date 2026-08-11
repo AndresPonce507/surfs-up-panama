@@ -631,6 +631,34 @@
       "s": "EXECUTED",
       "d": "PASS: approved acceptance-evidence slice committed as 4e08d87ce8a2bea7552215900d93c95660e283cd (test(learning): prove every difference is forecast minus what was seen)",
       "t": "2026-08-11T18:20:09Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified declared dependency 01-18 is sealed (4e08d87, evidence d5e6041) and the full suite green at 78 files / 393 tests before any edit. Recorded that this step's roadmap-named .feature file and PENDING_SLICES entry do not exist on this branch: both live on recover/learning-build, so there was no skip marker to delete and the step is proven by a Vitest acceptance test 1:1, the shape every committed step of this feature already uses. Inventoried src/learning/ (10 siblings) and emitted the Extension Justification block for the new reader before writing it.",
+      "t": "2026-08-11T19:42:00Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: with only the tests present both files failed to COLLECT (Cannot find module '../../src/learning/load-correction'), which is not a semantic red. The seam was then scaffolded signature-only with throwing bodies, the way src/scoring/engine.ts was scaffolded by DISTILL, and the failure became semantic: 5 of 6 acceptance examples failed on 'not implemented - driven by outside-in TDD (roadmap 02-01)' with 0 collection errors. The sixth, the whole-source declarations examination, passed against the scaffold and is an already-satisfied guard, not a driven behaviour.",
+      "t": "2026-08-11T19:42:00Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: the parser totality law (fast-check, 300 runs weighted toward near-miss records) failed against the scaffold on the same 'not implemented' throw. It is a genuinely new law: no shipped test quantifies over arbitrary bytes reaching a correction parser, because before this step nothing in the tree read a correction file back.",
+      "t": "2026-08-11T19:42:00Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the reader ships as a pure total parser plus one I/O boundary. Bytes that are not a trustworthy record, and a store that cannot be reached at all, both cost the build exactly what no file costs and say why; a missing file stays 'absent' rather than being accused of a fault. The units pin refuses a foreign unit under its own event and names what it found. Focused 7/7 pass. Full vitest 400/400 across 80 files at --maxWorkers=4 (up from 393/78), typecheck exit 0, npm run build exit 0 with 105 pages under every page-weight ceiling. Post-GREEN wiring check: src/learning/load-correction.ts is in the diff, so this is not fixture theatre. Falsifiability proven by two reverted mutations (units pin disabled; parser totality removed), each failing semantically. UI checks N/A: non-visual step whose observable is a returned outcome token and an event string.",
+      "t": "2026-08-11T19:42:00Z"
     }
   ]
 }

@@ -1,0 +1,7 @@
+{
+  "sid": "02-01",
+  "p": "RED_UNIT",
+  "s": "EXECUTED",
+  "d": "PASS: the parser totality law (fast-check, 300 runs weighted toward near-miss records) failed against the scaffold on the same 'not implemented' throw. It is a genuinely new law: no shipped test quantifies over arbitrary bytes reaching a correction parser, because before this step nothing in the tree read a correction file back.",
+  "t": "2026-08-11T19:42:00Z"
+}

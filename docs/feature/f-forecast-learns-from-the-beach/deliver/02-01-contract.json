@@ -1,0 +1,30 @@
+{
+  "id": "02-01",
+  "name": "Correction reader validates, refuses units, degrades honestly",
+  "delivery_mode": "production/acceptance-evidence",
+  "accepted_context": "recover/learning-build:docs/feature/f-forecast-learns-from-the-beach/deliver/roadmap.json",
+  "dependencies": ["01-18"],
+  "surface_classification": "non-visual",
+  "non_visual_rationale": "A reader whose whole output is a report object over stored bytes; nothing renders and no published value can move on a file that yields no correction. The observable is a returned outcome token plus an event string in terminal output, so U1-U8 and a Vera walk are N/A.",
+  "criteria": [
+    "loadStoredCorrection({ store, key }) returns record, outcome and events; outcome is loaded, absent or rejected-as-absent, never a throw.",
+    "Unreadable bytes yield record null, outcome rejected-as-absent, and at least one event saying why.",
+    "A score_delta.units other than display_points yields record null and an event naming the foreign unit found.",
+    "A well-formed spot-correction/1 record loads intact: schema, clamp fields, per-source height keys, score delta.",
+    "The reader constructs no applied state anywhere; the declarations examination over shipped src stays clean."
+  ],
+  "owned_paths": [
+    "src/learning/load-correction.ts",
+    "tests/unit/learning-load-correction.test.ts",
+    "tests/acceptance/f-forecast-learns-from-the-beach/unreadable-correction-is-read-as-absent.test.ts"
+  ],
+  "production_change": true,
+  "harness_note": "The accepted roadmap points this step at a cucumber .feature file and at a PENDING_SLICES entry in tests/acceptance/.../steps/support/pending-slices.ts. Neither exists on this branch; both live on recover/learning-build, which this lane does not touch. Every committed acceptance step of this feature here drives the same production port from Vitest, 1:1 per step, and this step follows that established shape. There was therefore no skip marker to delete.",
+  "acceptance": "Six named examples through loadStoredCorrection: bytes that are not JSON, a shipped record whose score move was restated in a foreign unit, a store whose read throws outright, a well-formed record round-tripped from the real emitter, a key with no file at all, and the whole-source declarations examination. The well-formed fixture is not hand-typed: it is what buildCorrectionRecords writes for eighteen paired mornings from six people, serialized as fit.ts stores it, so the loads-intact claim is measured against the writer on the other side of the file rather than against this test's author. Five of the six oracles reject a controlled doctored report of their own.",
+  "unit_law": "One fast-check property over 300 generated inputs, weighted toward NEAR-MISS records - a well-formed record with one of twenty paths dropped, nulled, emptied, retyped or made NaN - because random strings almost never reach past the JSON parse and every interesting refusal lives beyond it. The law: for any bytes at all, parseStoredCorrection returns one of its two declared verdicts, every refusal carries a typed event with a non-empty detail, and every acceptance carries the pinned schema and the pinned score unit.",
+  "red_evidence": "Two observations. First, with only the tests present, both files failed to collect at all (Cannot find module '../../src/learning/load-correction'). The seam was then scaffolded signature-only with throwing bodies, exactly as src/scoring/engine.ts was scaffolded by DISTILL, and the failure became semantic: 5 acceptance examples and the unit property failed on 'not implemented - driven by outside-in TDD (roadmap 02-01)', with 0 collection errors. The sixth acceptance example, the declarations examination, passed against the scaffold and is an already-satisfied guard rather than a driven behaviour.",
+  "falsifiability_evidence": "Two controlled mutations of the shipped reader, each reverted. (1) The units pin was disabled (`if (value.units !== LEGAL_SCORE_UNITS)` -> `if (false)`): the foreign-unit example failed semantically with 'a file the reader cannot make sense of must yield no correction at all, never a partly-trusted one'. (2) The try/catch was removed from parseJson: the unit totality property failed after 3 cases with counterexample [\"\"] ('Unexpected end of JSON input') and the unreadable-bytes example failed with 'Expected double-quoted property name in JSON at position 27'. Both reverted; `git status --short src/` then showed only the step's own new untracked file and `git diff --stat src/` was empty.",
+  "test_bug_fixed_in_red": "One self-falsifiability check in the acceptance file was itself wrong: it asserted the units oracle would reject a refusal matching /display_points/, but the shipped refusal names BOTH the foreign unit it found and the legal unit it wanted, so nothing threw. The check now feeds the oracle a doctored report whose detail names only the wanted unit. No behavioural assertion was weakened; the primary oracle, that the refusal must name the unit it found, is unchanged.",
+  "known_flake": "At vitest's default worker count on this machine, tests/unit/surface-enriched-fields.test.ts intermittently fails with a bare 5000ms timeout and zero assertion failures, on a different `it` each run. It passes alone in 1.05s and is untouched by this step. The full-suite evidence above was therefore taken at --maxWorkers=4, where it is stable. Flagged, not fixed: the file belongs to another lane.",
+  "scope_note": "The roadmap lists two files_to_modify. A third path was added, the step's own acceptance file, because this branch proves each step with a Vitest acceptance test rather than the cucumber scenario the roadmap names. No other file was touched: `git diff --stat` over tracked files is empty for this step, and the three paths above are all new."
+}

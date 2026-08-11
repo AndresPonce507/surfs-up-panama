@@ -1,0 +1,7 @@
+{
+  "sid": "02-01",
+  "p": "RED_ACCEPTANCE",
+  "s": "EXECUTED",
+  "d": "PASS: with only the tests present both files failed to COLLECT (Cannot find module '../../src/learning/load-correction'), which is not a semantic red. The seam was then scaffolded signature-only with throwing bodies, the way src/scoring/engine.ts was scaffolded by DISTILL, and the failure became semantic: 5 of 6 acceptance examples failed on 'not implemented - driven by outside-in TDD (roadmap 02-01)' with 0 collection errors. The sixth, the whole-source declarations examination, passed against the scaffold and is an already-satisfied guard, not a driven behaviour.",
+  "t": "2026-08-11T19:42:00Z"
+}
