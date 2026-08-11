@@ -40,6 +40,19 @@ async function later(self: unknown, score: number): Promise<void> {
 
 Given('una surfista de Playa Venao con avisos guardados elige la barra {int}', async function (bar: number) { w(this).prior = before(); await choose(this, bar); });
 Given('una surfista de Playa Venao con avisos guardados', function () { w(this).prior = before(67); });
+Given('todavía no recibió un aviso esta mañana', function () {
+  const decision = w(this).decision;
+  if (decision !== null && decision !== undefined) {
+    w(this).decision = {
+      ...decision,
+      stored: decision.stored.map((subscription) =>
+        subscription.spot_id === VENAO.spot_id && subscription.device_id === 'telefono-04'
+          ? { ...subscription, last_notified_date: null }
+          : subscription,
+      ),
+    };
+  }
+});
 Given('en Playa Venao son las siete y veinticinco de la mañana', function () { /* declared at later-send port */ });
 When('la mañana puntúa {int}', async function (score: number) { await later(this, score); });
 Then('sus avisos guardados conservan exactamente la barra {int}', function (bar: number) {

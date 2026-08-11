@@ -512,6 +512,34 @@
       "s": "EXECUTED",
       "d": "PASS: eb0d4cc committed the threshold guard, one generated invalid-number state-preservation property, and factual evidence. Independent review approved under the stale-generated-surface qualification.",
       "t": "2026-08-11T05:25:59Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: 04-02 is sealed. Parent granted a narrow accepted-fixture correction because the equality scenario inherited 04-01's same-day notified row while 04-01 requires re-subscribe to preserve that date.",
+      "t": "2026-08-11T05:27:36Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: before the fixture correction the exact-67 scenario failed with zero sends because same-day dedup correctly recognized last_notified_date 2026-08-10. After the explicit no-prior-send precondition, controlled mutation of >= to > failed the same exact-67 scenario with zero sends; the predicate was restored.",
+      "t": "2026-08-11T05:27:36Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: no new unit added. The existing public-port full-scale property already quantifies every 0..100 chosen bar and score, asserting sends iff score >= stored threshold, including equality and one-point-below cases.",
+      "t": "2026-08-11T05:27:36Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the narrow fixture precondition leaves the same-day dedup law unchanged and gives the equality scenario its intended first-send state. Acceptance 1/1, focused planner units 8/8, typecheck, and qualified full units 103/103 passed. Build remains qualified by preserved stale generated surface. Test budget: 1 behavior x 2 = 2; 0 new units because the full-scale law already exists.",
+      "t": "2026-08-11T05:27:58Z"
     }
   ]
 }

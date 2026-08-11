@@ -23,6 +23,7 @@ Feature: La barra de aviso que elige cada surfista
   @slice-04 @driving_port @in-memory @covers-R43 @covers-R45
   Scenario: Una mañana que alcanza la barra elegida sí le avisa a esa surfista
     Given una surfista de Playa Venao con avisos guardados elige la barra 67
+    And todavía no recibió un aviso esta mañana
     And en Playa Venao son las siete y veinticinco de la mañana
     When la mañana puntúa 67
     Then sale exactamente un aviso para esa surfista

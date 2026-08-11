@@ -1,0 +1,13 @@
+{
+  "step_id": "04-03",
+  "timestamp": "2026-08-11T05:27:58Z",
+  "kind": "red-green",
+  "result": "QUALIFIED_PASS",
+  "evidence": {
+    "fixture_contradiction": "Original equality setup carried same-day last_notified_date, correctly producing zero sends under dedup. Parent authorized an explicit no-prior-send precondition only for the equality scenario.",
+    "falsification": "Temporary >= to > mutation made exact score 67 at saved bar 67 fail with zero sends; predicate restored.",
+    "green": "acceptance 1/1, focused planner units 8/8, typecheck, qualified full units 103/103",
+    "test_budget": "1 behavior x 2 = 2; 0 new units because the pre-existing full-scale planner property already proves equality and below for every 0..100 bar.",
+    "qualification": "Build correctly refused stale generated surface; no generated data changed."
+  }
+}
