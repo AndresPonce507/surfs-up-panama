@@ -140,6 +140,21 @@ async function openSpot(world: GlassWorld, width: number, theme: string): Promis
   opened.set(world, { root: fixture.root, preview, browser, page });
 }
 
+async function openHome(world: GlassWorld, width: number, theme: string): Promise<void> {
+  const fixture = prepared.get(world);
+  assert.ok(fixture, 'test fixture error: no prepared build; run the Given first');
+  build(fixture.root);
+  const port = await unusedPort();
+  const preview = spawn(join(projectRoot, 'node_modules/.bin/vite'), ['preview', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: fixture.root, env: credentialFreeEnvironment(), stdio: 'ignore' });
+  const base = `http://127.0.0.1:${port}`;
+  await waitFor(base, preview);
+  const browser = await chromium.launch({ headless: true });
+  const page = await browser.newPage({ viewport: { width, height: 844 } });
+  await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
+  await page.goto(`${base}/index.html`, { waitUntil: 'domcontentloaded' });
+  opened.set(world, { root: fixture.root, preview, browser, page });
+}
+
 function pageFor(world: GlassWorld): Page {
   const surface = opened.get(world);
   assert.ok(surface, 'test fixture error: no opened browser surface');
@@ -148,16 +163,18 @@ function pageFor(world: GlassWorld): Page {
 
 type TrayAudit = { findings: string[]; isGlass: boolean; isReady: boolean; hasLanguagePill: boolean };
 
-async function audit(page: Page, expectation: 'solid' | 'glass'): Promise<TrayAudit> {
+async function audit(page: Page, expectation: 'solid' | 'glass', selector = 'p:has(> a.cta)', buttonSelector = 'a.cta'): Promise<TrayAudit> {
   return page.evaluate(`(() => {
     const required = '${expectation}';
+    const selector = '${selector}';
+    const buttonSelector = '${buttonSelector}';
     const parse = (value) => (value.match(/rgba?\\(([^)]+)\\)/i)?.[1] ?? '0,0,0,1').split(',').map(Number);
     const lum = ([r, g, b]) => [r, g, b].map((n) => { const v = n / 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }).reduce((sum, n, i) => sum + n * ([0.2126, 0.7152, 0.0722][i] ?? 0), 0);
     const ratio = (a, b) => (Math.max(lum(a), lum(b)) + .05) / (Math.min(lum(a), lum(b)) + .05);
-    const tray = document.querySelector('p:has(> a.cta)');
-    const button = tray?.querySelector('a.cta');
+    const tray = document.querySelector(selector);
+    const button = tray?.querySelector(buttonSelector);
     const findings = [];
-    if (!tray || !button) return { findings: ['la página de spot no contiene la bandeja o el botón de reportar'], isGlass: false, isReady: false, hasLanguagePill: false };
+    if (!tray || !button) return { findings: ['la página no contiene la bandeja ni su botón: selector ' + selector + ', botón ' + buttonSelector], isGlass: false, isReady: false, hasLanguagePill: false };
     const trayStyle = getComputedStyle(tray);
     const buttonStyle = getComputedStyle(button);
     const background = parse(trayStyle.backgroundColor);
@@ -175,6 +192,20 @@ async function audit(page: Page, expectation: 'solid' | 'glass'): Promise<TrayAu
     if (document.documentElement.scrollWidth > document.documentElement.clientWidth) findings.push('la página tiene scroll horizontal');
     const box = button.getBoundingClientRect();
     if (box.width < 44 || box.height < 44) findings.push('botón: objetivo ' + box.width.toFixed(0) + 'x' + box.height.toFixed(0) + 'px, piso 44x44px');
+    const trayBox = tray.getBoundingClientRect();
+    if (required === 'glass' && selector === '.home-primary' && (box.left - trayBox.left < 24 || trayBox.right - box.right < 24 || box.top - trayBox.top < 16 || trayBox.bottom - box.bottom < 16)) {
+      findings.push('bandeja: el marco de agua visible mide izquierda ' + (box.left - trayBox.left).toFixed(0) + ', derecha ' + (trayBox.right - box.right).toFixed(0) + ', arriba ' + (box.top - trayBox.top).toFixed(0) + ', abajo ' + (trayBox.bottom - box.bottom).toFixed(0) + 'px; el vidrio debe enmarcar visiblemente la acción sólida');
+    }
+    window.scrollTo(0, 0);
+    const beforeScroll = tray.getBoundingClientRect();
+    const beforeScrollY = window.scrollY;
+    const maximumScroll = Math.max(0, document.documentElement.scrollHeight - innerHeight);
+    const requestedScroll = Math.min(480, maximumScroll);
+    window.scrollBy(0, requestedScroll);
+    const afterScroll = tray.getBoundingClientRect();
+    const actualScroll = window.scrollY - beforeScrollY;
+    if (maximumScroll >= 120 && actualScroll < 120) findings.push('la portada no llegó a desplazarse de forma significativa: pidió ' + requestedScroll.toFixed(0) + 'px y avanzó ' + actualScroll.toFixed(0) + 'px');
+    if (trayStyle.position !== 'fixed' || afterScroll.bottom < innerHeight - 1 || afterScroll.top < 0 || Math.abs(beforeScroll.top - afterScroll.top) > 1) findings.push('bandeja: posición ' + trayStyle.position + ', antes ' + beforeScroll.top.toFixed(0) + ', después ' + afterScroll.top.toFixed(0) + ', scroll ' + actualScroll.toFixed(0) + 'px; se esperaba fija y visible tras scroll');
     if (buttonStyle.transitionDuration !== '0s' || buttonStyle.animationName !== 'none') findings.push('el botón declara movimiento bajo movimiento reducido');
     if (!getComputedStyle(document.documentElement).getPropertyValue('--tap').trim() || !getComputedStyle(document.documentElement).getPropertyValue('--sp-3').trim()) findings.push('faltan tokens de toque o espaciado');
     return {
@@ -193,8 +224,14 @@ Given('una construcción real de una página de spot con la regla de transparenc
 Given('una construcción real de una página de spot cuya bandeja comienza en vidrio sin respaldo sólido', function (this: GlassWorld) { prepare(this, 'glass-first'); });
 Given('una construcción real de una página de spot, sin ninguna modificación', function (this: GlassWorld) { prepare(this, 'normal'); });
 Given('una construcción real, sin ninguna modificación', function (this: GlassWorld) { prepare(this, 'normal'); });
+Given('una construcción real de la portada con modo de vidrio {string}', function (this: GlassWorld, mode: string) {
+  assert.ok(mode === 'normal' || mode === 'sin-soporte', `test fixture error: modo de vidrio desconocido ${mode}`);
+  prepare(this, mode === 'sin-soporte' ? 'supports-off' : 'normal');
+});
+Given('una construcción real de la portada con transparencia reducida', function (this: GlassWorld) { prepare(this, 'reduced-transparency'); });
 
 When('el surfista abre esa página de spot a {int} px, con tema {string}', async function (this: GlassWorld, width: number, theme: string) { await openSpot(this, width, theme); });
+When('el surfista abre la portada para comprobar su bandeja a {int} px, con tema {string}', async function (this: GlassWorld, width: number, theme: string) { await openHome(this, width, theme); });
 
 Then('la bandeja de reportar es sólida, no usa filtro de vidrio y el botón conserva contraste real', async function (this: GlassWorld) {
   const result = await audit(pageFor(this), 'solid');
@@ -223,6 +260,29 @@ Then('ningún elemento con la clase lang-toggle aparece en ninguna página const
 Then('la bandeja de reportar usa vidrio como mejora y el botón conserva contraste real', async function (this: GlassWorld) {
   const result = await audit(pageFor(this), 'glass');
   assert.deepEqual(result.findings, [], result.findings.join('; '));
+});
+Then('la bandeja principal permanece fija, visible y en modo {word} sobre el contenido que se desplaza', async function (this: GlassWorld, expected: string) {
+  assert.ok(expected === 'vidrio' || expected === 'solido', `test fixture error: expectativa desconocida ${expected}`);
+  const result = await audit(pageFor(this), expected === 'vidrio' ? 'glass' : 'solid', '.home-primary', 'a[data-primary-action]');
+  assert.deepEqual(result.findings, [], result.findings.join('; '));
+});
+Then('la bandeja opaca de transparencia reducida forma un marco distinguible detrás de la acción sólida', async function (this: GlassWorld) {
+  const result = await pageFor(this).evaluate(`(() => {
+    const tray = document.querySelector('.home-primary');
+    const button = tray?.querySelector('a[data-primary-action]');
+    if (!tray || !button) return ['la portada no contiene la bandeja principal ni su acción'];
+    const trayStyle = getComputedStyle(tray);
+    const pageBackground = getComputedStyle(document.body).backgroundColor;
+    const trayBox = tray.getBoundingClientRect();
+    const buttonBox = button.getBoundingClientRect();
+    const frame = [buttonBox.left - trayBox.left, trayBox.right - buttonBox.right, buttonBox.top - trayBox.top, trayBox.bottom - buttonBox.bottom];
+    const findings = [];
+    if (trayStyle.backgroundColor === pageBackground) findings.push('bandeja opaca: fondo ' + trayStyle.backgroundColor + ' igual a la página; el marco desaparece');
+    if (trayStyle.backdropFilter !== 'none' || getComputedStyle(tray, '::before').display !== 'none') findings.push('bandeja opaca: conserva vidrio o pseudo-capa bajo transparencia reducida');
+    if (frame[0] < 24 || frame[1] < 24 || frame[2] < 16 || frame[3] < 16) findings.push('bandeja opaca: marco visible ' + frame.map((value) => value.toFixed(0)).join('/') + 'px; se esperaba 24/24/16/16px como mínimo');
+    return findings;
+  })()`);
+  assert.deepEqual(result, [], result.join('; '));
 });
 Then('la tarjeta grande del primer spot permanece sólida, nunca de vidrio', async function (this: GlassWorld) {
   const page = pageFor(this);

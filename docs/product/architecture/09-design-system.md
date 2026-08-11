@@ -94,7 +94,7 @@ at most **one** is present per route.
 | Surface | Why glass genuinely helps | Fallback |
 |---|---|---|
 | Language pill (`.lang-toggle`, fixed top-right, all routes) | TODO 04-03: no emitted language control is measured in this feature | Solid `--bg` via `@supports not` ordering, and again under `prefers-reduced-transparency: reduce` |
-| Report CTA tray (`p:has(> a.cta)`, fixed bottom, spot pages) | The existing `--hero-grad` water field sits only inside this already-approved tray when glass is supported; its existing `--glass` overlay blurs that field. This makes the compact fixed surface visibly read as glass over water without painting the reading page or adding markup. | Same solid-first pattern; the water field and overlay are absent when glass is unsupported or reduced transparency is requested. |
+| Primary CTA tray (`.home-primary` on the home route and `p:has(> a.cta)` on spot routes, fixed bottom) | The existing `--hero-grad` water field sits only inside this already-approved compact tray when glass is supported; its existing `--glass` overlay blurs that field. This makes the fixed action visibly read as glass over water without painting the reading page or adding markup. | Same solid-first pattern; the water field and overlay are absent when glass is unsupported or reduced transparency is requested. The home tray uses existing solid `--surface`, distinct from the page, so its action still has an intentional frame when transparency is reduced. |
 
 Refused, deliberately:
 
@@ -108,7 +108,7 @@ Refused, deliberately:
 
 Mechanics: solid background declared first, glass only inside
 `@supports (backdrop-filter: blur(1px))`, `-webkit-` prefix for older iOS, both surfaces
-forced solid under `prefers-reduced-transparency: reduce`. The report tray reuses the existing
+forced solid under `prefers-reduced-transparency: reduce`. The primary CTA tray reuses the existing
 `--hero-grad` only as its compact supported-mode water field, behind the existing `--glass`
 overlay. This is not a page background, a new component, or a token change. Exact
 supported-glass composite measurements remain TODO 04-03; this home-only step does not claim an
@@ -170,7 +170,7 @@ edges come from borders and surface steps first (`--hairline`, `--surface`, `--s
 shadows are secondary reinforcement only (`--shadow-1` cards, `--shadow-2` the floating CTA),
 and nothing depends on perceiving them. Touch: every target ≥ 44 px (`--tap`), controls 48 px,
 the CTA fixed in the bottom thumb zone with `env(safe-area-inset-bottom)` padding; body gets
-`padding-bottom: 7rem` via `body:has(a.cta)` so content never hides behind the tray.
+`padding-bottom: 7rem` via `body:has(.home-primary), body:has(a.cta)` so content never hides behind the tray.
 
 ### 8. Motion
 
@@ -202,7 +202,7 @@ unjustified bytes, clause `data:consumer-known-before-produced`):
 | Spot day cards | `section`, `section strong` | `--surface` card r-12; score-day 28 px/800 tabular beside body call |
 | Report controls (three taps) | `fieldset label`, `input[type=radio]` | Radio cards: 48 px, 1.5 px `--ctrl` border r-12; `:checked` via `:has()` = `--go` border + inset ring + `--go-tint` wash + native 20 px dot (`accent-color`) — state is border AND wash AND dot, never colour alone |
 | Submit / buttons | `button` | Solid `--go`, 48 px, r-12; disabled = `--sunken` + `--ink-2` at 7.91/8.14:1 — readable in sun even when disabled |
-| Report CTA | `.cta` + `p:has(> a.cta)` | Solid green button on glass tray #2, fixed thumb zone (§4, §7) |
+| Primary CTA | `.home-primary a` + `.cta` in `p:has(> a.cta)` | Solid green button on glass tray #2, fixed thumb zone (§4, §7) |
 | Notices | `noscript p` | `--warn-bg` card, `--warn` border, ink text 15.43/13.56:1 |
 | Honesty footer | `footer p` | meta/`--ink-2` over hairline rule; quiet, always present |
 
