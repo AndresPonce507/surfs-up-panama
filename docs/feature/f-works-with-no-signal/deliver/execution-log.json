@@ -456,6 +456,13 @@
       "s": "EXECUTED",
       "d": "PASS: restored emitted Base.astro path gives one Window online event -> exactly one native controller postMessage -> exactly one byte-identical write receipt -> queue deletion. G1 active acceptance PASS; G2 semantic RED PASS; G3 semantic AssertionError PASS; G4 no domain mocks PASS; G5 business language PASS; G6 target, units 103/103, typecheck, build and fast CI green PASS; G7 PENDING resulting revision commit; G8 test budget 1 behavior x 2, 0 new unit tests PASS; G9 acceptance strengthened, never weakened PASS. Full command/result in .execution-events/03-01/20260811T022330Z-restored-green.json.",
       "t": "2026-08-11T02:24:00Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: revision commit 19742ce (test(signal): prove page online flush boundary - step 03-01) contains the strengthened active browser acceptance and pre-commit audit record. G7 PASS: all mapped checks were green before that commit and the resulting revision hash is recorded here. Fresh independent rereview APPROVE. Commit evidence: .execution-events/03-01/20260811T023000Z-commit.json.",
+      "t": "2026-08-11T02:30:00Z"
     }
   ]
 }
