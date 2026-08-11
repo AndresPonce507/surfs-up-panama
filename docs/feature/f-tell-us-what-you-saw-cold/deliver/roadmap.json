@@ -706,7 +706,7 @@
           "slice_id": "slice-03",
           "surface_classification": "user-visible",
           "charter_path": "docs/product/expectations/f-tell-us-what-you-saw-cold/the-saved-report-leaves-the-phone-lands-on-the-server-and-the-surfer-sees-it-arrive-filing-the.md",
-          "u8_observation": "Un segundo intento no duplica nada y una espera se siente como espera, no como un error. El mensaje sigue limpio, alineado y sereno.",
+          "u8_observation": "La llegada muestra una sola confirmación tranquila, sin dos estados competidores ni un error. El mensaje sigue limpio, alineado y sereno.",
           "non_visual_rationale": "",
           "ui_checks": { "U1-U7": ["npm", "run", "test:ui"] },
           "deps": ["03-01"],
