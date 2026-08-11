@@ -20,6 +20,7 @@ import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import type { Construct } from 'constructs';
@@ -33,6 +34,7 @@ import {
   projectRegion,
   restoreSchedulePrefix,
   siteOriginExportName,
+  siteBucketName,
 } from './physical-names.js';
 import {
   breakerAlarmPeriodSeconds,
@@ -50,7 +52,7 @@ export class WriteStack extends Stack {
     // Provisioned 25/25 fails closed: past the free capacity the table
     // throttles for free instead of billing (adr-write-store-provisioned-
     // capacity.md). RETAIN because reports are immutable community data.
-    new dynamodb.Table(this, 'WriteStore', {
+    const writeStore = new dynamodb.Table(this, 'WriteStore', {
       tableName: 'surfs-up-panama-write-store',
       partitionKey: { name: 'pk', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'sk', type: dynamodb.AttributeType.STRING },
@@ -60,9 +62,7 @@ export class WriteStack extends Stack {
       timeToLiveAttribute: 'ttl',
       removalPolicy: RemovalPolicy.RETAIN,
     });
-    // No table grants here on purpose: the placeholder handlers must not be
-    // able to touch the store. F-TELL-US-WHAT-YOU-SAW-COLD grants exactly
-    // what its real handlers need when they ship.
+    const siteBucket = s3.Bucket.fromBucketName(this, 'SiteBucket', siteBucketName);
 
     // Guardrail 6: exact site origin, never '*'. The origin is the site
     // distribution's hostname, which only exists after the site stack
@@ -77,6 +77,11 @@ export class WriteStack extends Stack {
       + " body: JSON.stringify({ error: 'not_implemented',"
       + " note: 'write handlers land with F-TELL-US-WHAT-YOU-SAW-COLD' }) });",
     );
+    // `npm run lambda:build` emits this small Node 22 asset from the shared
+    // decision core and its DynamoDB adapter.  It is intentionally used only
+    // by report and mint: push and photo-presign remain explicit 501s until
+    // their own accepted handlers exist.
+    const reportMintCode = lambda.Code.fromAsset(lambdaSourceDirectory);
 
     const writeFunctions = writeFunctionShortNames.map((shortName) => {
       const functionName = functionNames[shortName];
@@ -89,24 +94,67 @@ export class WriteStack extends Stack {
         functionName,
         runtime: lambda.Runtime.NODEJS_22_X,
         architecture: lambda.Architecture.ARM_64,
-        handler: 'index.handler',
-        code: notImplemented,
+        handler: shortName === 'report' || shortName === 'mint' ? 'report-mint.handler' : 'index.handler',
+        code: shortName === 'report' || shortName === 'mint' ? reportMintCode : notImplemented,
         memorySize: 128, // 07-write-path 7.2 control 0.3
         timeout: Duration.seconds(lambdaTimeoutSeconds[shortName]), // guardrail 2
         reservedConcurrentExecutions: writeReservedConcurrency[shortName], // control 0.2
         logGroup,
+        ...(shortName === 'report' || shortName === 'mint' ? {
+          environment: {
+            WRITE_PATH: `/api/${shortName}`,
+            WRITE_STORE_TABLE: writeStore.tableName,
+            SITE_BUCKET: siteBucketName,
+            CREDENTIAL_HMAC_PARAMETER: '/surfsuppanama/prod/credential-hmac-key',
+          },
+        } : {}),
       });
       fn.addFunctionUrl({
         authType: lambda.FunctionUrlAuthType.NONE, // adr-write-path-off-cloudfront
         cors: {
           allowedOrigins: [siteOrigin],
           allowedMethods: [lambda.HttpMethod.POST],
-          allowedHeaders: ['content-type'],
-          maxAge: Duration.hours(1),
+          allowedHeaders: ['content-type', 'x-surf-credential'],
+          maxAge: Duration.days(1),
         },
       });
       return { shortName, functionName, fn };
     });
+
+    const reportFn = writeFunctions.find(({ shortName }) => shortName === 'report')?.fn;
+    const mintFn = writeFunctions.find(({ shortName }) => shortName === 'mint')?.fn;
+    if (reportFn === undefined || mintFn === undefined) throw new Error('write stack refused: report and mint functions are required');
+
+    // The report capability is exact by operation and resource. It can read
+    // only the public spot index/call log, retrieve duplicates, transact the
+    // immutable report/quota write, and increment its spot counter. No S3
+    // write, table scan, or secret mutation is available.
+    reportFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['dynamodb:DescribeTable', 'dynamodb:GetItem', 'dynamodb:TransactWriteItems', 'dynamodb:UpdateItem'],
+      resources: [writeStore.tableArn],
+    }));
+    reportFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:GetObject'],
+      resources: [
+        siteBucket.arnForObjects('pub/v1/meta/spot-index.json'),
+        siteBucket.arnForObjects('log/calls/v1/*'),
+      ],
+    }));
+    reportFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['ssm:GetParameter'],
+      resources: [`arn:aws:ssm:${projectRegion}:${projectAccountId}:parameter/surfsuppanama/prod/credential-hmac-key`],
+    }));
+
+    // Mint owns only the append-only credential ledger. Its handler shares
+    // validation/core code with report but has no S3 or report-write grant.
+    mintFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['dynamodb:DescribeTable', 'dynamodb:GetItem', 'dynamodb:PutItem'],
+      resources: [writeStore.tableArn],
+    }));
+    mintFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['ssm:GetParameter'],
+      resources: [`arn:aws:ssm:${projectRegion}:${projectAccountId}:parameter/surfsuppanama/prod/credential-hmac-key`],
+    }));
 
     // Resize exists because the write path mints photo-presign URLs; its
     // ObjectCreated trigger and S3 grants arrive with the real photo
