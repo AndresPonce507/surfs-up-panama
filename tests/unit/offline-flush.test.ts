@@ -5,7 +5,12 @@ import { resolve } from 'node:path';
 import { describe, it } from 'vitest';
 
 const SW_SOURCE = readFileSync(resolve(__dirname, '../../public/sw.js'), 'utf8');
+const REPORT_ISLAND_SOURCE = readFileSync(resolve(__dirname, '../../src/report/island.ts'), 'utf8');
 const ORIGIN = 'https://d1j9u9fxnap4es.cloudfront.net';
+
+const CAPTURE_DATABASE = /const DATABASE_NAME = '([^']+)'/.exec(REPORT_ISLAND_SOURCE)?.[1];
+const CAPTURE_STORE = /const STORE_NAME = '([^']+)'/.exec(REPORT_ISLAND_SOURCE)?.[1];
+assert.ok(CAPTURE_DATABASE && CAPTURE_STORE, 'the capture adapter must declare its durable queue names');
 
 type QueuedReport = Readonly<{
   report_id: string;
@@ -32,14 +37,15 @@ function queueDatabase(records: QueuedEntry[]) {
     return operation;
   };
   const database = {
-    objectStoreNames: { contains: (name: string) => name === 'queue' },
+    objectStoreNames: { contains: (name: string) => name === CAPTURE_STORE },
     close() {},
     transaction(_name: string, mode: IDBTransactionMode) {
       const transaction: { oncomplete?: () => void; objectStore: () => unknown } = {
         objectStore: () => mode === 'readonly'
           ? { getAll: () => request([...remaining]) }
           : {
-              put: (record: QueuedEntry) => {
+              put: (record: QueuedEntry, reportId: string) => {
+                assert.equal(reportId, record.report_id, 'the keyless capture store uses report_id as its durable key');
                 const index = remaining.findIndex((candidate) => candidate.report_id === record.report_id);
                 if (index === -1) remaining.push(record);
                 else remaining[index] = record;
@@ -57,7 +63,7 @@ function queueDatabase(records: QueuedEntry[]) {
   };
   return {
     open(name: string) {
-      assert.equal(name, 'surf-reports', 'the worker must open the same queue capture commits into');
+      assert.equal(name, CAPTURE_DATABASE, 'the worker must open the same queue capture commits into');
       return request(database);
     },
     remaining,

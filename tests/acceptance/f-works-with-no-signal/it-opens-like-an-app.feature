@@ -22,7 +22,7 @@ Feature: It opens like an app
 
   @slice-05 @driving_port @real-io @covers-R31
   Scenario: The site offers itself to the home screen with its settled identity
-    Given the built site is running as it would be at the beach
+    Given the offline-capable built site is running as it would be at the beach
     When a surfer's phone asks how the site wants to live on a home screen
     Then the site presents itself in Spanish as its own app that opens at the front page
     And both home-screen icons are real and the phone can fetch them
@@ -34,7 +34,7 @@ Feature: It opens like an app
 
   @slice-05 @real-io @nfr @covers-R33
   Scenario: Opening like an app costs almost nothing on a normal visit
-    Given the built site is running as it would be at the beach
+    Given the offline-capable built site is running as it would be at the beach
     When the site owner watches a normal visit and weighs what makes the site installable
     Then the app identity and the favicon together weigh 1.5 KB or less
     And the visit fetched neither home-screen icon

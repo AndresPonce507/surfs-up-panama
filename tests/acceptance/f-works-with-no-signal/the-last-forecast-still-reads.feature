@@ -15,7 +15,7 @@ Feature: The last forecast still reads when the signal drops
 
   @slice-01 @walking_skeleton @driving_port @real-io @covers-R1 @covers-R2 @covers-R14 @covers-R38
   Scenario: A surfer parked at Venao with one bar still reads the last forecast that loaded
-    Given the built site is running as it would be at the beach
+    Given the offline-capable built site is running as it would be at the beach
     When a surfer reads the home page with signal
     Then the offline helper is running on their phone
     When the signal drops and the surfer opens the home page again
@@ -62,7 +62,7 @@ Feature: The last forecast still reads when the signal drops
 
   @slice-01 @driving_port @real-io @nfr @covers-R12
   Scenario: A whole morning's reading asks the site for ten things or fewer
-    Given the built site is running as it would be at the beach
+    Given the offline-capable built site is running as it would be at the beach
     When a surfer reads the home page, opens Playa Venao and comes back to the home page
     Then the offline helper is running on their phone
     And the whole reading asked the site for ten things or fewer

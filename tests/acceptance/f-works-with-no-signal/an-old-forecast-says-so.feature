@@ -50,6 +50,6 @@ Feature: An old forecast says so
 
   @slice-02 @real-io @nfr @covers-R18
   Scenario: Admitting age costs almost nothing to carry
-    Given the built site is running as it would be at the beach
+    Given the offline-capable built site is running as it would be at the beach
     When the site owner weighs the script that admits a forecast is old
     Then the age script weighs 0.3 KB gzipped or less

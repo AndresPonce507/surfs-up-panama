@@ -29,8 +29,8 @@ import type { Page } from 'playwright';
 
 import { QUALITY_TOKENS, WIND_STATE_TOKENS } from '../../../../../src/data/report-vocab';
 
-export const QUEUE_DATABASE = 'surf-reports';
-export const QUEUE_STORE = 'queue';
+export const QUEUE_DATABASE = 'psb-report-queue';
+export const QUEUE_STORE = 'entries';
 
 export { QUALITY_TOKENS, WIND_STATE_TOKENS };
 
@@ -79,7 +79,7 @@ export async function plantQueuedReport(page: Page, record: QueuedReport): Promi
         opening.onupgradeneeded = () => {
           const db = opening.result;
           if (!db.objectStoreNames.contains(store as string)) {
-            db.createObjectStore(store as string, { keyPath: 'report_id' });
+            db.createObjectStore(store as string);
           }
         };
         opening.onerror = () => refuse(opening.error);
@@ -91,7 +91,7 @@ export async function plantQueuedReport(page: Page, record: QueuedReport): Promi
             return;
           }
           const writing = db.transaction(store as string, 'readwrite');
-          writing.objectStore(store as string).put(planted);
+          writing.objectStore(store as string).put(planted, (planted as QueuedReport).report_id);
           writing.oncomplete = () => {
             db.close();
             done();

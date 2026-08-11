@@ -140,7 +140,10 @@ When(
       if (body.trim().length === 0) continue;
       if (registration !== null && body === registration) continue;
       if (/serviceWorker/.test(body)) continue;
-      inline.push(body);
+      // The contract books 0.3 KB for the age island itself, not every
+      // unrelated inline island that later features add to the same page.
+      // Select it by the exact DOM port it owns, matching the unit harness.
+      if (body.includes('data-stale-notice')) inline.push(body);
     }
     weighedScripts.set(this, {
       found: inline.length,

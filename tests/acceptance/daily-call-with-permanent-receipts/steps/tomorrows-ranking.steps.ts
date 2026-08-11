@@ -124,13 +124,13 @@ function applyDefect(surface: PublishedSurface, defect: string): void {
       surface.current.days = [...validDays(surface), structuredClone(validDays(surface)[1])];
       return;
     case 'fechas-no-consecutivas':
-      validDays(surface)[1]!.date = '2026-08-12';
+      validDays(surface)[1]!.date = civilDateAfter(validDays(surface)[1]!.date);
       return;
     case 'mañana-vacía':
       validDays(surface)[1]!.spots = [];
       return;
     case 'mañana-copiada':
-      validDays(surface)[1]!.date = '2026-08-10';
+      validDays(surface)[1]!.date = surface.current.surf_date;
       validDays(surface)[1]!.spots = structuredClone(surface.current.calls);
       return;
     case 'días-copiados-con-alias-distinto':
@@ -141,6 +141,12 @@ function applyDefect(surface: PublishedSurface, defect: string): void {
     default:
       assert.fail(`test fixture error: unknown Slice-05 defect ${defect}`);
   }
+}
+
+function civilDateAfter(value: string): string {
+  const date = new Date(`${value}T12:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString().slice(0, 10);
 }
 
 Given('una superficie publicada con hoy y mañana consecutivos', function (this: PipelineWorld) {

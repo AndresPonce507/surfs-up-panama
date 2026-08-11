@@ -49,7 +49,7 @@ async function screenText(state: SignalScenario): Promise<string> {
 // ---------- Givens ----------
 
 Given(
-  'the built site is running as it would be at the beach',
+  'the offline-capable built site is running as it would be at the beach',
   { timeout: 300_000 },
   async function (this: object) {
     scenarioState(this);
