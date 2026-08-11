@@ -4,5 +4,8 @@ function openQueue(){return new Promise((resolve,reject)=>{const request=indexed
 function queuedReports(){return openQueue().then(database=>new Promise((resolve,reject)=>{if(!database.objectStoreNames.contains(QUEUE_STORE)){database.close(),resolve([]);return}const request=database.transaction(QUEUE_STORE,"readonly").objectStore(QUEUE_STORE).getAll();request.onerror=()=>{database.close(),reject(request.error)},request.onsuccess=()=>{database.close(),resolve(request.result)}}))}
 function deleteQueuedReport(reportId){return openQueue().then(database=>new Promise((resolve,reject)=>{if(!database.objectStoreNames.contains(QUEUE_STORE)){database.close(),resolve();return}const transaction=database.transaction(QUEUE_STORE,"readwrite");transaction.onerror=()=>{database.close(),reject(transaction.error)},transaction.oncomplete=()=>{database.close(),resolve()},transaction.objectStore(QUEUE_STORE).delete(reportId)}))}
 function flushQueuedReport(report){return self.fetch(WRITE_PATH,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(report)}).then(response=>response.status>=200&&response.status<300?deleteQueuedReport(report.report_id):void 0).catch(()=>void 0)}
-function flushQueuedReports(){return queuedReports().then(reports=>Promise.all(reports.map(flushQueuedReport))).then(()=>void 0).catch(()=>void 0)}
+let activeQueueFlush;
+function flushQueuedReports(){if(activeQueueFlush)return activeQueueFlush;activeQueueFlush=queuedReports().then(reports=>Promise.all(reports.map(flushQueuedReport))).then(()=>void 0).catch(()=>void 0).finally(()=>{activeQueueFlush=undefined});return activeQueueFlush}
+const clearOldCaches=deleteStaleCaches;
+deleteStaleCaches=()=>Promise.all([clearOldCaches(),flushQueuedReports()]).then(()=>void 0);
 self.addEventListener("message",event=>{event.data?.type===QUEUE_FLUSH_MESSAGE&&event.waitUntil(flushQueuedReports())});

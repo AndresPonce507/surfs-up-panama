@@ -102,4 +102,57 @@ describe('offline queue flush', () => {
     assert.deepEqual(queue.remaining, [], 'any 200 acknowledgement removes the record from the phone queue');
     assert.equal(listeners.has('sync'), false, 'Background Sync is not a required trigger');
   });
+
+  it('flushes when the helper activates and shares that flush with a simultaneous page nudge', async () => {
+    const record: QueuedReport = {
+      report_id: '01J0SIGNALSLICE03ACTIVATE1',
+      spot_id: 'playa-venao',
+      observed_at: '2026-08-10T14:00:00.000Z',
+      submitted_at: '2026-08-10T14:30:00.000Z',
+      size_band: 'waist_chest',
+      size_band_schema: 1,
+      wind: 'choppy',
+      quality: 'good',
+      trigger: 'organic',
+    };
+    const queue = queueDatabase([record]);
+    const listeners = new Map<string, ((event: unknown) => void)[]>();
+    const sent: Request[] = [];
+    let answer: ((response: Response) => void) | undefined;
+    const fakeSelf = {
+      addEventListener(type: string, handler: (event: unknown) => void) {
+        listeners.set(type, [...(listeners.get(type) ?? []), handler]);
+      },
+      location: { origin: ORIGIN },
+      caches: { open: async () => ({ keys: async () => [] }), keys: async () => [], delete: async () => true },
+      clients: { claim: async () => {} },
+      skipWaiting: async () => {},
+      fetch: async (input: RequestInfo, init?: RequestInit) => {
+        const request = input instanceof Request ? input : new Request(new URL(input, ORIGIN), init);
+        sent.push(request);
+        return new Promise<Response>((resolve) => { answer = resolve; });
+      },
+    };
+
+    // eslint-disable-next-line no-new-func -- this test drives the shipped worker, never a copy.
+    new Function('self', 'indexedDB', SW_SOURCE)(fakeSelf, queue);
+    const activate = listeners.get('activate');
+    const message = listeners.get('message')?.[0];
+    assert.ok(activate && activate.length > 0, 'the helper needs an activation trigger for reports that predate its first install');
+    assert.ok(message, 'the returned-signal trigger remains available while activation starts the replay');
+    const waits: Promise<unknown>[] = [];
+    for (const handler of activate) handler({ waitUntil: (work: Promise<unknown>) => waits.push(work) });
+    for (let tick = 0; tick < 8 && sent.length === 0; tick += 1) await new Promise<void>((resolve) => queueMicrotask(resolve));
+
+    assert.equal(sent.length, 1, 'activation must replay the waiting record when the queue predates the helper');
+    assert.equal(await sent[0]!.text(), JSON.stringify(record), 'activation must replay the committed record byte-for-byte');
+    message({ data: { type: 'flush-report-queue' }, waitUntil: (work: Promise<unknown>) => waits.push(work) });
+    for (let tick = 0; tick < 8; tick += 1) await new Promise<void>((resolve) => queueMicrotask(resolve));
+    assert.equal(sent.length, 1, 'activation must share its in-flight replay with a simultaneous page nudge');
+    assert.ok(answer, 'test bug: the worker did not reach the controlled site answer');
+    answer(new Response('', { status: 200 }));
+    await Promise.all(waits);
+
+    assert.deepEqual(queue.remaining, [], 'the helper removes an activation-time replay only after the site answers');
+  });
 });
