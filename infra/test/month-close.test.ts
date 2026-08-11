@@ -72,6 +72,43 @@ describe('month-close: the project tag is the declared one', () => {
   });
 });
 
+describe('month-close: required billing reads are unavailable', () => {
+  it('fails closed rather than claiming a missing account-cost response is zero', () => {
+    const result = evaluateMonthClose({
+      reads: {
+        costByService: {},
+        costAllocationTags: { CostAllocationTags: [] },
+        projectCostByService: null,
+        freeTierUsage: { freeTierUsages: [] },
+      } as unknown as Reads,
+    });
+    expect(result.exitCode).toBe(2);
+    expect(textOf(result)).toContain('INDETERMINATE');
+    expect(textOf(result)).toContain('account cost read is unavailable');
+    expect(textOf(result)).not.toContain('PASS at $0.00');
+  });
+
+  it('fails closed when the free-tier read, allowance type, or a billed amount is malformed', () => {
+    const missingFreeTier = evaluateMonthClose({
+      reads: { costByService: reads().costByService, costAllocationTags: reads().costAllocationTags, projectCostByService: null, freeTierUsage: {} } as unknown as Reads,
+    });
+    const invalidAmount = evaluateMonthClose({
+      reads: {
+        ...reads(),
+        costByService: { ResultsByTime: [{ TimePeriod: { Start: '2026-08-01', End: '2026-08-10' }, Groups: [{ Keys: ['AWS Lambda'], Metrics: { UnblendedCost: { Amount: 'not-a-number', Unit: 'USD' } } }] }] },
+      } as unknown as Reads,
+    });
+    const missingAllowanceType = evaluateMonthClose({
+      reads: {
+        ...reads(),
+        freeTierUsage: { freeTierUsages: [{ service: 'AWS Lambda', description: 'Requests', actualUsageAmount: 1, limit: 1_000_000, unit: 'Request' }] },
+      } as unknown as Reads,
+    });
+    expect([missingFreeTier.exitCode, invalidAmount.exitCode, missingAllowanceType.exitCode]).toEqual([2, 2, 2]);
+    expect(`${textOf(missingFreeTier)}\n${textOf(invalidAmount)}\n${textOf(missingAllowanceType)}`).toContain('INDETERMINATE');
+  });
+});
+
 describe('month-close: a zero account month, tag not yet activated', () => {
   const result = evaluateMonthClose({ reads: reads() });
 
