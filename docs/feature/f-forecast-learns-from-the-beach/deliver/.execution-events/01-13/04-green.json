@@ -1,0 +1,7 @@
+{
+  "sid": "01-13",
+  "p": "GREEN",
+  "s": "EXECUTED",
+  "d": "PASS: 20 isolated generated fit runs preserve source/lead records and keep every stored difference inside its fixture-derived raw corridor; focused property 1/1 passes with no production edit",
+  "t": "2026-08-11T15:26:40Z"
+}

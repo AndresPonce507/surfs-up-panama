@@ -421,6 +421,34 @@
       "s": "EXECUTED",
       "d": "PASS: approved acceptance-evidence slice committed as ec508eb6d756fba8eff11c5ce92aa7527c22aec9 (test(learning): prove sub-floor differences refuse)",
       "t": "2026-08-11T15:24:41Z"
+    },
+    {
+      "sid": "01-13",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified sealed 01-08 provides exact one-spot shrink identity, current shrink pipeline satisfies the corridor, and no competing Learning writer owns the planned paths",
+      "t": "2026-08-11T15:26:33Z"
+    },
+    {
+      "sid": "01-13",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: whole-fit property oracle rejects controlled stored-difference sign-flip and magnitude-expansion mutations; inherited production itself is already green",
+      "t": "2026-08-11T15:26:40Z"
+    },
+    {
+      "sid": "01-13",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: the existing shrink unit law and new whole-fit property pass against inherited production, so no additional unit was needed to drive GREEN",
+      "t": "2026-08-11T15:26:40Z"
+    },
+    {
+      "sid": "01-13",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: 20 isolated generated fit runs preserve source/lead records and keep every stored difference inside its fixture-derived raw corridor; focused property 1/1 passes with no production edit",
+      "t": "2026-08-11T15:26:40Z"
     }
   ]
 }

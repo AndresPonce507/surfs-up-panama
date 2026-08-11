@@ -1,0 +1,18 @@
+{
+  "id": "01-13",
+  "name": "Stored difference stays inside the shrink corridor",
+  "delivery_mode": "current-equivalence/acceptance-evidence",
+  "accepted_context": "recover/learning-build:docs/feature/f-forecast-learns-from-the-beach/deliver/roadmap.json",
+  "criteria": [
+    "Across generated mornings from at least five people, the stored difference never exceeds the raw difference in size.",
+    "The stored difference never flips the sign of the raw difference.",
+    "The corridor holds at every generated count, spread and difference."
+  ],
+  "owned_paths": [
+    "src/learning/shrink.ts",
+    "tests/unit/learning-gate-laws.test.ts",
+    "tests/acceptance/f-forecast-learns-from-the-beach/shrink-corridor.test.ts"
+  ],
+  "production_change": false,
+  "acceptance": "Twenty isolated runLearningFitOnce executions generate 10-40 mornings, 5-9 reporters, raw magnitudes 0.05-1.2 m, and spreads 0-0.3 m. The acceptance computes raw difference from its own written mornings, checks stored magnitude/sign, and rejects controlled sign-flip and magnitude-expansion mutations."
+}
