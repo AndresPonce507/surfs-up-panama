@@ -1,0 +1,991 @@
+{
+  "roadmap": {
+    "project_id": "f-read-it-in-your-language",
+    "created_at": "2026-08-10T18:30:00Z",
+    "total_steps": 38,
+    "quality_contract_version": 1
+  },
+  "phases": [
+    {
+      "id": "01",
+      "name": "READ-01: the English tree and the toggle",
+      "description": "Recreates the /en/ home and tomorrow pages properly (they were removed in 0f04f07 because half-bracketed English was worse than honest Spanish), renders the toggle Base.astro silently drops today, and makes the URL tree itself the persistence. Walking skeleton of the epic promise.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "01-01",
+          "name": "English home and tomorrow pages emitted, rows in English",
+          "criteria": [
+            "The built site emits /en/ and /en/tomorrow/ ranking the same twenty spots as their Spanish twins, same order, same published surface.",
+            "Every ranked row reads in English words: band labels from size-bands, wind words from settled section 10, confidence level word in English.",
+            "Every English call is the producer-published call_en composed from that row's same size_band, wind_state and best_window under the exact application-architecture section 10 branches; the page never translates call_es or recomposes the call.",
+            "The current publish refuses a missing or empty call_es or call_en; missing wind or window is stated by the canonical no-data branch, never filled with invented forecast data."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-tree-and-toggle.feature",
+          "scenario_name": "The visitor flips to tomorrow without leaving their language",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "docs/product/expectations/f-read-it-in-your-language/english-home-and-tomorrow-rankings-read-clearly-at-phone-width.md",
+          "u8_observation": "At 390 px, the English home and tomorrow rankings remain readable row by row: rank, spot, score, size, wind, call, and confidence do not collide.",
+          "non_visual_rationale": "The producer contract remains non-visual and 01-09 remains the slice's full U1-U7 gate. This narrow source-blind reading charter was added after closeout found a real phone-width collision in 01-01's emitted English routes; it proves only these two routes remain readable.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/publish/daily-call.ts",
+            "src/pipeline/build.ts",
+            "src/publish/region-bundle.ts",
+            "src/publish/static-surface.ts",
+            "src/publish/publish-static-surface.ts",
+            "src/data/forecast.ts",
+            "data/published-surface.json",
+            "tests/unit/daily-call-locales.test.ts",
+            "tests/unit/published-call-locales.test.ts",
+            "tests/unit/production-path-end-to-end.test.ts",
+            "tests/unit/published-bundle-contract.test.ts",
+            "tests/unit/published-surface-fields.test.ts",
+            "tests/unit/wind-state-honesty.test.ts",
+            "tests/unit/best-window-per-spot.test.ts",
+            "scripts/page-weight-core.mjs",
+            "tests/unit/page-weight-laws.test.ts",
+            "tests/acceptance/f-read-it-in-your-language/steps/read-your-language.steps.ts",
+            "src/pages/en/index.astro",
+            "src/pages/en/tomorrow.astro",
+            "src/components/RankedList.astro",
+            "src/components/Confidence.astro",
+            "src/i18n/strings.ts",
+            "src/styles/components.css"
+          ],
+          "implementation_notes": "TEST PARADIGM (project CLAUDE.md, functional): the pure locale-keyed daily-call composer gets table examples plus fast-check structural properties; the acceptance steps for this slice are already real drivers over dist/ and were observed RED 2026-08-10 (11 assertion failures, 0 broken; distill/red-classification.md). Recreate /en/ and /en/tomorrow/ as the proper twins removed in 0f04f07. Route user-visible copy through strings[locale] and canonical size-band labels; never leave Spanish prose inline in RankedList. PRE-REQUISITE 2 IS ANSWERED 2026-08-10: application-architecture.md section 10 is exact copy authority and deliver/01-01-call-en-blocker.md is the producer handoff. The producer composes call_es and call_en in one pass from each row's own size_band, wind_state and best_window, including the exact no-wind/no-window branches. region-bundle/1 requires call { es, en }; the current-publish call shape and validator require non-empty call_es plus call_en; forecast.ts maps both to a complete locale record. Split or adapt the DawnReceipt call type so old Spanish-only receipts remain valid and byte-unchanged while new dawn receipts naturally retain both members. Pages select, never translate or recompose. Regenerate published-surface.json only through the real producer; never fabricate or hand-edit forecast data, and never backfill immutable legacy receipts. This shared producer seam stays serial. Pre-requisite 1 remains open for 'Ver el llamado', the ranked generic fallback and English confidence reason sentences. Confidence level words are settled section 10. Never touch report-vocab tokens: clean|choppy|blown_out and bad|ok|good|epic are language-neutral wire values; only display labels vary."
+        },
+        {
+          "id": "01-02",
+          "name": "The toggle is a plain link to the twin",
+          "criteria": [
+            "Every page of both trees carries the language toggle at the top of the page as a plain link whose href is exactly that page's twin address from the route map.",
+            "Tapping it on the Spanish home lands on the English home; no script runs to decide anything.",
+            "Toggle labels flow from strings, asserted by property, never pinned: the copy is Pre-requisite 1's."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-tree-and-toggle.feature",
+          "scenario_name": "A visitor who does not read Spanish flips the toggle and reads today's coast",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The toggle's markup lands here but its measured 44 px target, thumb reach and finished look are judged at 01-09, the slice's single pixel gate, against the whole built tree.",
+          "ui_checks": {},
+          "deps": ["01-01"],
+          "files_to_modify": [
+            "src/layouts/Base.astro",
+            "src/i18n/strings.ts",
+            "src/pages/index.astro",
+            "src/pages/manana.astro",
+            "src/pages/en/index.astro",
+            "src/pages/en/tomorrow.astro"
+          ],
+          "implementation_notes": "THE SEAM THIS SLICE EXISTS FOR: Base.astro declares altPath at line 28 and silently DROPS it at line 31; no toggle renders anywhere on the site. Render it: a plain 44 px link at the top of the page to the twin URL, section 4 verbatim (top of page, 44 px target, no JS). Every page passes its own altPath from src/i18n/routes.ts builders, never a hand-typed string. CONTENDED SEAM (Pre-requisite 5b): Base.astro's head is also amended by f-paste slice-03's OG block, which lands FIRST and alone; this step coordinates with that lane and amends, never races. Serialize with the coordinator before dispatch. Toggle labels ('English' / 'Espanol' or whatever Andres settles) are Pre-requisite 1 copy: hold them in strings.ts, assert by property. WALKING SKELETON: this scenario is the epic promise end to end and must go green through the production composition root, the real built dist/ tree. No fixture theater: if the scenario passes without Base.astro changing, the test is misauthored, stop and report."
+        },
+        {
+          "id": "01-03",
+          "name": "The toggle returns from the twin page",
+          "criteria": [
+            "From the English tomorrow page one tap on the toggle lands on /manana/, the exact Spanish twin, and one more tap returns.",
+            "The twin address comes from the route map on every page, including the dynamic ones."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-tree-and-toggle.feature",
+          "scenario_name": "One tap on the toggle lands straight back on the twin page",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Round-trip link correctness read from the emitted documents; the pixel judgement of the same toggle is 01-09's.",
+          "ui_checks": {},
+          "deps": ["01-02"],
+          "files_to_modify": [
+            "src/layouts/Base.astro"
+          ],
+          "implementation_notes": "Likely already green from 01-02 if altPath flows correctly on every page; 'already implemented, just unskip' is the CORRECT outcome then, per the walking-skeleton protocol. If red, the defect is a page passing a wrong or missing altPath. Verify both directions on the tomorrow pair specifically: /en/tomorrow/ toggles to /manana/ and back, never to / or /en/."
+        },
+        {
+          "id": "01-04",
+          "name": "Every link keeps the visitor in their tree",
+          "criteria": [
+            "Crawling every emitted English document, every internal href stays inside the English tree; the toggle is the only cross-tree link.",
+            "The same discipline holds symmetrically on the Spanish tree: no Spanish page links into /en/ except its toggle."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-tree-and-toggle.feature",
+          "scenario_name": "Every link on an English page keeps the visitor in the English tree",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A crawl over emitted hrefs; nothing pixel-shaped is judged here. 01-09 carries the slice's visual gate.",
+          "ui_checks": {},
+          "deps": ["01-01", "01-02"],
+          "files_to_modify": [
+            "src/components/RankedList.astro",
+            "src/pages/en/index.astro",
+            "src/pages/en/tomorrow.astro"
+          ],
+          "implementation_notes": "This observable is WHY 'the choice holds': persistence is the URL tree plus locale-preserving links, section 4's design (no sniffing, no redirects, no cookie, ever; both break caching and surprise people on bad signal). RankedList's row links and tab links must build through paths(locale, ...) from src/i18n/routes.ts, never string-concatenate. The oracle is symmetric by peer-review fix (a Spanish page linking into /en/ anywhere but the toggle fails the same way). @property scenario: the steps quantify over every emitted document of both trees, fast-check not needed at this layer (layer 3+, example-run over the real tree per Mandate 9)."
+        },
+        {
+          "id": "01-05",
+          "name": "Language declared, absolute alternates name the twins",
+          "criteria": [
+            "Every emitted page declares its own lang and carries hreflang alternates naming itself and its exact twin, absolute against the configured site.",
+            "The lone self-referential relative hreflang=es Base.astro emits today is gone; Base's own 'must become absolute' comment is closed."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-tree-and-toggle.feature",
+          "scenario_name": "A saved address opens in the language the visitor chose",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Head metadata read from the emitted documents; no rendered state to judge. 01-09 is the slice's pixel gate.",
+          "ui_checks": {},
+          "deps": ["01-01"],
+          "files_to_modify": [
+            "src/layouts/Base.astro"
+          ],
+          "implementation_notes": "Pre-requisite 4 is ANSWERED (2026-08-09, 535de91): site is https://d1j9u9fxnap4es.cloudfront.net in astro.config.mjs line 25, the single owner of the absolute host. Known accepted cost: the CloudFront hostname rides the alternates until the real domain lands; the swap is one config edit plus republish. Today Base.astro line 57 emits only a self-referential relative hreflang='es' with no en pair, against section 4. Emit the pair (es + en) absolute on every page of BOTH trees, each naming itself and its exact twin from the route map. lang attribute per page from the page's own locale. CONTENDED: same Base.astro head seam as 01-02; land inside the same serialized window."
+        },
+        {
+          "id": "01-06",
+          "name": "No script decides the language",
+          "criteria": [
+            "A visitor with scripts unavailable reads the English home unredirected; nothing sniffs, redirects, or stores a language choice anywhere in either tree.",
+            "No locale cookie, no Accept-Language branch, no storage write exists; the address tree is the whole persistence mechanism."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-tree-and-toggle.feature",
+          "scenario_name": "No script ever decides the visitor's language",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "An absence-of-machinery assertion over emitted documents and scripts; there is no visual state. 01-09 carries the slice charter.",
+          "ui_checks": {},
+          "deps": ["01-01"],
+          "files_to_modify": [],
+          "implementation_notes": "Mostly a standing guard the moment the tree exists (the RED note records: the no-machinery half is coverable the moment /en/ emits). Section 4 forbids sniffing and redirects OUTRIGHT by design; a slice that adds a locale cookie violates accepted architecture and is refused in review regardless of green. Zero production code expected here beyond what 01-01/01-02 built; if the scenario stays red, something added machinery and must remove it, not justify it."
+        },
+        {
+          "id": "01-07",
+          "name": "No half-translated English page, ever",
+          "criteria": [
+            "No emitted English page renders missing text, a bracketed placeholder, or Spanish copy, including the known diacritic-free offenders from the Translation inventory.",
+            "Unsettled strings (fallback line, confidence reasons) render as real English via the Pre-requisite 1 batch, asserted by property, never pinned."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-tree-and-toggle.feature",
+          "scenario_name": "The English tree never shows half-translated text",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A text-purity sweep over the emitted English documents; the finished-look judgement of those pages is 01-09's.",
+          "ui_checks": {},
+          "deps": ["01-01"],
+          "files_to_modify": [
+            "src/components/RankedList.astro",
+            "src/i18n/strings.ts"
+          ],
+          "implementation_notes": "Half-translation is THE failure state this feature was deleted over once already (0f04f07): partial translation is a failure state, not a milestone. The step-level Spanish-leak guard vocabulary already covers the Translation inventory's diacritic-free day-one offenders (peer-review high fix (a)); structural detection stays READ-02's job. This scenario is the last of the slice to go green by construction: it needs 01-01's rows, the Pre-requisite 1 batch strings, and the Pre-requisite 2 call line all real. If a string cannot ship settled, the page does not ship the surface that needs it; never ship a bracket and never invent product copy in-lane."
+        },
+        {
+          "id": "01-08",
+          "name": "English pages born inside the byte ceilings",
+          "criteria": [
+            "Every emitted English page sits at or under its per-document section 5 ceiling inside the existing page-weight gate; the vacuity guard demands the tree exists first.",
+            "The toggle link and second hreflang line stay inside the existing envelopes on Spanish pages too."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-tree-and-toggle.feature",
+          "scenario_name": "The English pages are born inside the byte ceilings",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A byte arithmetic gate over the built tree; no pixels are judged. 01-09 is the visual gate.",
+          "ui_checks": {},
+          "deps": ["01-02", "01-04", "01-05", "01-07"],
+          "files_to_modify": [],
+          "implementation_notes": "Section 5 ceilings are per document and unchanged; the page-weight gate runs inside every build against whatever was emitted (astro.config.mjs lines 10-14, scripts/check-page-weight.mjs), so the new documents are inside the gate automatically. The RED note records the deliberate vacuity guard: zero English pages must never read as 'ceilings held'; the step demands the tree first. Expected green with no new production code once 01-01 through 01-07 land; if an English page busts its ceiling, the fix is weight, never a loosened ceiling."
+        },
+        {
+          "id": "01-09",
+          "name": "Toggle comfortable, English tree reads finished",
+          "criteria": [
+            "The language toggle measures at least 44 px on every page of both trees in the real browser, section 4's own requirement.",
+            "The seven visual checks pass over the built tree at 390 px, both themes, reduced motion honoured.",
+            "Full slice tag run exits 0, output redirected to a file and the code captured separately, never piped."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-tree-and-toggle.feature",
+          "scenario_name": "The language toggle is comfortably tappable on every page",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-read-it-in-your-language/el-boton-de-idioma-es-un-toque-comodo-y-el-arbol-en-ingles-se-ve-tan-terminado-como-el-espanol.md",
+          "u8_observation": "El botón de idioma se ve parte del diseño y cómodo de tocar con el pulgar, y la página en inglés se ve tan terminada como la española a 390 px.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@ui-u1"],
+            "U2": ["npm", "run", "test:ui"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-read-it-in-your-language and @ui"],
+            "U4": ["npm", "run", "test:ui"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-read-it-in-your-language and @slice-01 and @negative"],
+            "U6": ["npm", "run", "test:ui"],
+            "U7": ["npm", "run", "test:ui"]
+          },
+          "deps": ["01-01", "01-02", "01-03", "01-04", "01-05", "01-06", "01-07", "01-08"],
+          "files_to_modify": [],
+          "implementation_notes": "THE ONLY USER-VISIBLE STEP OF THE SLICE, deliberate, same shape as the trust lane's 01-11: this is where pixels are measured, so this step carries the charter, the U8 observation and the seven checks. The U3 scenario is a real browser measurement (Playwright geometry over the built pages), deliberately NOT faked as a markup grep (red-classification records this as a pending scaffold that rides the UI gate mechanism per HANDOFF section 4 reuse convention). UI CHECK MECHANISMS, honest about what each proves: U2/U4/U6/U7 ride the static gate npm run test:ui over the built tree (fixed widths, viewport, reduced-motion branch, token discipline, type scale), which the doubled tree passes or fails as a whole. U1: the keystone's @ui-u1 browser contrast scenarios measure the shared components against the real backdrop; the English twins introduce no new colour pair except the toggle, which DELIVER must add to the measured set (record the computed ratio in step evidence; never claim AA against white). U5: the slice's designed non-happy states are its own @negative scenarios (no-script visitor, half-translation refusal), run through the real tree. A tag run that matches ZERO scenarios is vacuous and does not count as a check; confirm scenario counts in the captured output. CHARTER: docs/product/expectations/f-read-it-in-your-language/ carries the charter authored at DISTILL; the U8 text in this step is verbatim from it and may not drift. Vera walks source-blind after GREEN, before COMMIT. GATE DISCIPLINE: redirect output to a file, read $? on its own line, then read the file; this repo has committed over a red gate through a pipeline. After GREEN run npm run build and INSPECT dist/en/ by eye: green tests do not mean it works (the 19-of-20 undefined incident passed all ten jobs)."
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "name": "READ-02: nobody ships a half-covered string",
+      "description": "The translation-coverage check: three structural detectors (bracket placeholder, single-language naming, rendered missing text on built pages) and a shrink-only ratchet with a written reason per debt line. Meant to land while ten lanes still move copy: it catches new half-coverage at add time.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "02-01",
+          "name": "Bracket placeholder refused with file, key, language",
+          "criteria": [
+            "Against a contained seeded fixture, a bracketed leaf in either language tree turns the check red naming exact file, key path and missing language.",
+            "The seeded fixture and the repository stay unchanged after the run, proven by the containment harness.",
+            "The check catches strings.en.spot.reportCta's bracket shape today; the real offender stays recorded debt, not fixed here."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/translation-coverage-gate.feature",
+          "scenario_name": "A bracketed placeholder is missing coverage, never coverage",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Emits no HTML; its product is a red CI line naming a half-covered string. Fabricating pixel checks would be dishonest (slice classification, feature-delta.md). Its examined artifact is terminal output against a seeded offender.",
+          "ui_checks": {},
+          "deps": ["01-01"],
+          "files_to_modify": [
+            "scripts/check-translation-coverage.mjs"
+          ],
+          "implementation_notes": "MECHANISM IS DELIVER'S TO DESIGN and its atdd-infrastructure-policy row is added at this slice's DELIVER entry (recorded DISTILL decision; choosing it earlier would pre-empt the crafter's seam design). CONTAINMENT is the f-bill shape recorded in the policy file: copied universe, no symlinks, the repository provably unchanged after the run, and the check demonstrated red at least once against a seeded offender before it counts as protection (unfired-is-not-evidence, R12). Detector (a): any leaf of strings or any label in a Record<Locale, string> matching ^\\[.*\\]$ is MISSING coverage. The scaffold header of strings.ts already says brackets mean no exact copy exists; the gate mechanizes that sentence. The one real offender today, strings.en.spot.reportCta line 133, is READ-07's to close: it enters the exceptions file as recorded debt with a reason, it is NOT fixed by this slice. Pure detector core as a pure function over parsed structure, fast-check properties over generated trees (layer 1-2, PBT full per Mandate 9); the acceptance scenario drives the whole check example-only over the contained fixture (layer 3)."
+        },
+        {
+          "id": "02-02",
+          "name": "Single-language name without a twin refused",
+          "criteria": [
+            "A user-facing field or export whose name encodes one language with no twin is refused, named exactly: snake _es suffix, trailing Es, SPANISH camel convention.",
+            "The day-one offender list from the Translation inventory (call_es, message_es, formatSizeEs, confidenceReasonEs, spanishCall and kin) is what the detector must structurally match."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/translation-coverage-gate.feature",
+          "scenario_name": "A field named in one language with no twin is refused",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Same check, second detector; the product is a red terminal line naming an export. No pixels exist.",
+          "ui_checks": {},
+          "deps": ["02-01"],
+          "files_to_modify": [
+            "scripts/check-translation-coverage.mjs"
+          ],
+          "implementation_notes": "TypeScript already enforces key parity inside strings.ts (Record<Locale, UiStrings>, line 69): the type system is detector zero, and this detector's real work is the sites TS cannot see, names that encode one language with no twin. Day-one list, verified on disk in feature-delta Translation inventory C: call_es (static-surface.ts 32, reading-state.ts 11), message_es/notice_es (reading-state.ts 21-29), formatSizeEs/formatBestWindowEs (display-format.ts 24, 32), CONFIDENCE_LEVEL_WORD_ES/MODEL_AGREEMENT_ES/NO_BEACH_REPORT_ES/confidenceReasonEs (confidence.ts 82-109), spanishCall/spanishWind/spanishSizeBand (build.ts 268, 308, 312). A lane that adds foo_es next week fails the gate the same day. All of these enter the exceptions file as recorded debt at wiring time (02-06); READ-05/READ-08 and the producer diff empty them. The user-facing scoping matters: the detector polices exports that feed rendered surfaces, not arbitrary internals."
+        },
+        {
+          "id": "02-03",
+          "name": "English words ending in es never trigger it",
+          "criteria": [
+            "A contained fixture of ordinary English exports ending in es (frames, pages, sizes, matches) passes with zero offenders named.",
+            "The heuristic matches only the snake _es suffix and the trailing Es/SPANISH camel convention, proven by property tests over generated identifiers."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/translation-coverage-gate.feature",
+          "scenario_name": "Ordinary English words ending in es never trigger the naming detector",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A false-positive guard on the same detector; terminal output only.",
+          "ui_checks": {},
+          "deps": ["02-02"],
+          "files_to_modify": [
+            "scripts/check-translation-coverage.mjs"
+          ],
+          "implementation_notes": "The false-positive surface is the reason this gate usually does not exist (feature-delta names it the hard part). A check that cries wolf gets deleted, and a deleted guard protects nothing. fast-check property over generated identifier shapes: for any identifier NOT carrying the _es/Es/SPANISH convention, zero findings; for any carrying it without a twin, exactly one finding. Falsifiability discipline (project CLAUDE.md): seed 'sizes' and watch it pass, seed 'size_es' and watch it fail, record both in step evidence."
+        },
+        {
+          "id": "02-04",
+          "name": "Rendered missing text on a built page refused",
+          "criteria": [
+            "A contained built tree whose English page renders missing text where its call should be turns the check red naming the page and what failed to render.",
+            "The detector catches both a literal rendered undefined and an es-only fallback string on an /en/ document, the 19-of-20 incident shape."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/translation-coverage-gate.feature",
+          "scenario_name": "A built English page rendering missing text is refused",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A post-build document scan; its product is a red line naming a page. Nothing renders differently.",
+          "ui_checks": {},
+          "deps": ["02-01"],
+          "files_to_modify": [
+            "scripts/check-translation-coverage.mjs"
+          ],
+          "implementation_notes": "This detector exists because of a shipped near-miss recorded in HANDOFF: published-surface.json carried conf_level on zero of 60 rows and every gate stayed green because the fields were optional; nineteen of twenty pages would have rendered undefined. Detector (c) closes that class for language: after a build, no /en/ document may contain a rendered 'undefined' or a known es-only fallback string. It scans emitted HTML text content, not source, so it catches whatever path produced the hole. summary.call['en'] being undefined today (forecast.ts fills es only) is exactly what it must catch the day an /en/ page renders before Pre-requisite 2 lands."
+        },
+        {
+          "id": "02-05",
+          "name": "Ratchet tolerates recorded debt, refuses new",
+          "criteria": [
+            "With known offenders recorded one line each (file, identifier, written reason), a recorded offender passes as measured debt and a new offender is refused by name.",
+            "The exceptions file is committed and its line count is the pass's distance-to-done number."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/translation-coverage-gate.feature",
+          "scenario_name": "Recorded debt is tolerated and measured, new debt is refused by name",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Ratchet mechanics observed through check exit codes and named refusals; no rendered surface.",
+          "ui_checks": {},
+          "deps": ["02-01"],
+          "files_to_modify": [
+            "scripts/check-translation-coverage.mjs"
+          ],
+          "implementation_notes": "A reporting-only gate is not a gate (project CLAUDE.md: a skipped job is not a green job); a blocking gate with an explicit shrinking debt file fails on NEW half-coverage immediately, which is the entire point of running this lane's gates while ten lanes add copy. The exceptions file home is DELIVER's choice (suggest beside the check under scripts/ or docs/feature/f-read-it-in-your-language/; record the choice in the policy row); one line per offender: file, identifier, reason, no silent skips. READ-03 and READ-04 share this exact mechanism shape (the delta calls it the shared ratchet), so build it as a small reusable core the other two checks import rather than three copies."
+        },
+        {
+          "id": "02-06",
+          "name": "Debt only shrinks; coverage job wired serially",
+          "criteria": [
+            "The check refuses its own exceptions file growing, naming the added line; shrinking passes.",
+            "The coverage job joins scripts/ci-local-core.mjs serially per the contended-seam rule, red-proven against a seeded offender before it counts."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/translation-coverage-gate.feature",
+          "scenario_name": "The debt file only ever shrinks",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Ratchet growth refusal plus CI wiring; the observable is the local CI jobs table and the check's exit code.",
+          "ui_checks": {},
+          "deps": ["02-05"],
+          "files_to_modify": [
+            "scripts/check-translation-coverage.mjs",
+            "scripts/ci-local-core.mjs"
+          ],
+          "implementation_notes": "Growth detection needs a committed baseline (the previous line set, e.g. compared against HEAD's copy via git show, or a recorded count the check asserts non-increasing); DELIVER picks the mechanism, the contract is: growth is refusal naming the added line, shrink is pass. CONTENDED SEAM (Pre-requisite 5c): scripts/ci-local-core.mjs is also amended by the F-TELL-US and F-BILL lanes; STRICTLY SERIAL on that file per lane discipline, coordinate the window before editing. After wiring, prove the job red once through the REAL CI entry (npm run ci:local) against a temporarily seeded offender in a contained copy, then revert and verify with git diff; record both observations. Never pipe the gate; redirect and read $? separately."
+        }
+      ]
+    },
+    {
+      "id": "03",
+      "name": "READ-03: nobody hides a string from the pass",
+      "description": "The hidden-copy check: user-facing strings inline in .astro templates are refused by file and line, because an inline Spanish literal is precisely the string the one translation pass will silently miss. Position-based scanning keeps class names, tokens and formats out of the findings.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "03-01",
+          "name": "Inline Spanish literal refused by file and line",
+          "criteria": [
+            "A contained page fixture carrying an inline Spanish sentence turns the check red naming the file and the line; repository provably unchanged.",
+            "The day-one offender list (RankedList 34-48, 55, 57, 85, 99; SpotDetail 39, 46, 63, 75, 89; Confidence 53; ayer 35-48; 404 13-17) is the proving ground."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/no-hidden-copy-gate.feature",
+          "scenario_name": "An inline Spanish sentence in a page template is refused by file and line",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Emits no HTML; its product is a red CI line naming an inline literal by file and line (slice classification). Terminal output is the examined artifact.",
+          "ui_checks": {},
+          "deps": ["02-05"],
+          "files_to_modify": [
+            "scripts/check-hidden-copy.mjs"
+          ],
+          "implementation_notes": "The detector scans POSITIONS, not literals: template text nodes plus an allowlist of copy-bearing attributes (title, alt, aria-label, placeholder), with a natural-language heuristic (diacritics, or two or more lowercase words) for literals in registered non-copy .ts modules. It carries a copy-home REGISTRY: src/i18n/strings.ts, src/data/size-bands.ts, and, until READ-05/READ-08 twin or relocate them, src/scoring/confidence.ts, src/publish/display-format.ts, src/publish/reading-state.ts, src/pipeline/build.ts. Copy in a registered home is legal; copy inline in a template is not. The day-one offenders double as the pass's work order; they enter the shared exceptions mechanism as recorded debt at wiring time and READ-05/07/08 move them. Shares the ratchet core built in 02-05; do not fork a second mechanism. Containment identical to READ-02: seeded fixture, repo unchanged, red-proven before counting (R12)."
+        },
+        {
+          "id": "03-02",
+          "name": "Registered copy homes are legal",
+          "criteria": [
+            "A contained fixture whose every visible string flows from a registered copy home passes with zero offenders named.",
+            "The registry is data the check reads, not code paths, so READ-08 can shrink it to the intended homes without editing the detector."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/no-hidden-copy-gate.feature",
+          "scenario_name": "Copy flowing from a registered copy home is legal",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The legal path through the same check; terminal output only.",
+          "ui_checks": {},
+          "deps": ["03-01"],
+          "files_to_modify": [
+            "scripts/check-hidden-copy.mjs"
+          ],
+          "implementation_notes": "The registry-as-data shape matters for READ-08's endgame: at settle the interim es-only homes (confidence.ts, display-format.ts, reading-state.ts, build.ts) are twinned or relocated and the registry shrinks to the intended homes. If the registry is hardcoded branching, that shrink becomes a detector edit and the ratchet rots. The fixture pairs with 03-01's: same page shape, strings routed through strings[locale] instead of inline, and the check flips from red to green on exactly that difference."
+        },
+        {
+          "id": "03-03",
+          "name": "Non-copy literals never fire the check",
+          "criteria": [
+            "A fixture carrying a class name, an accessibility token, a data marker, a time format and a style block passes untouched, zero findings.",
+            "Property tests quantify the guard: no literal in a non-copy position ever produces a finding, whatever its content."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/no-hidden-copy-gate.feature",
+          "scenario_name": "Strings that are not copy never trigger the check",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "False-positive guard; terminal output only.",
+          "ui_checks": {},
+          "deps": ["03-01"],
+          "files_to_modify": [
+            "scripts/check-hidden-copy.mjs"
+          ],
+          "implementation_notes": "The named non-copy surface, verified on disk in the delta: class names (ranked, cta, home-primary), ARIA token values (aria-current='page'), data-* values (data-field='back-to-list', data-reveal-shell), datetime attribute formats, CSS inside is:inline style blocks (ayer.astro 36-40), code comments and format tokens (the approximation mark, the dash, the hour-padding regex in display-format.ts 61). Every one is a string literal that is NOT copy. Seed at least one such candidate in the fixture and prove it does NOT fire, the same falsifiability bar as the positive detectors: a guard is proven by both its red and its silence."
+        },
+        {
+          "id": "03-04",
+          "name": "Ambiguous literals need written reasons; job wired",
+          "criteria": [
+            "A genuinely ambiguous literal absent from the exceptions file is refused; the same literal with a written debt line and reason passes as measured debt.",
+            "The hidden-copy job joins scripts/ci-local-core.mjs serially after the coverage job, red-proven against a seeded inline literal."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/no-hidden-copy-gate.feature",
+          "scenario_name": "An ambiguous literal is legal only with a written reason",
+          "slice_id": "slice-03",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Ratchet handoff plus CI wiring; observables are exit codes and the jobs table.",
+          "ui_checks": {},
+          "deps": ["03-01", "02-06"],
+          "files_to_modify": [
+            "scripts/check-hidden-copy.mjs",
+            "scripts/ci-local-core.mjs"
+          ],
+          "implementation_notes": "Never a silent skip: a guard that silently stops looking is worse than a failing one (feature-delta, and the global rule that a dead guard is itself an incident). The exceptions file is the SAME shared shrink-only mechanism as READ-02's (one line: file, identifier, reason); its emptiness is part of READ-08's Done. CONTENDED SEAM (Pre-requisite 5c): ci-local-core.mjs strictly serial; this lane's third job (READ-04's) comes later, so leave the insertion point tidy. Prove the wired job red once through npm run ci:local against a contained seeded offender, revert, verify with git diff, record both."
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "name": "READ-04: the route map cannot lie",
+      "description": "The yesterday builder exists, ayer.astro reads the route map instead of hand-typing its path, and a build-time conformance check makes map-versus-tree lies impossible in both directions, with the expected set derived from the emitted Spanish tree.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "04-01",
+          "name": "Yesterday builder exists and ayer reads it",
+          "criteria": [
+            "routes.ts carries the yesterday route in both languages (ayer / yesterday) and exports the segment mapping as data, one home.",
+            "The emitted Spanish yesterday page sits at the exact address the builder returns; ayer.astro's hand-typed currentPath is gone.",
+            "ReportCapture and ReportShell flow altPath through the route map and otherLocale(), no inline locale flips."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/route-map-conformance.feature",
+          "scenario_name": "The yesterday page's address flows from the route map",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Changes one URL builder and path plumbing; the only rendered delta is byte-identical output (slice classification). Nothing visual to judge.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "src/i18n/routes.ts",
+            "src/pages/spots/[slug]/ayer.astro",
+            "src/components/ReportCapture.astro",
+            "src/components/ReportShell.astro"
+          ],
+          "implementation_notes": "REAL DRIVER, RED TODAY (red-classification): routes.ts has no yesterday builder even though HANDOFF section 6 item 2 settles the twin as /en/spots/{slug}/yesterday ('Settled, not a proposal'), and ayer.astro line 35 hand-types its own currentPath. Add paths.yesterday(locale, spotId); route ayer.astro through it (bounded change to a keystone-owned page: the route map is this feature's seam). PEER-REVIEW RECORDED DECISION, honour it here: export the es-to-en segment mapping AS DATA from routes.ts (manana-tomorrow, ayer-yesterday, reportar-report, reportado-reported, sin-senal-offline, acerca-about, else identical) so the acceptance harness imports one home instead of mirroring it in SEG_ES_TO_EN; otherwise READ-04's check must police the second home. Fix the latent dead plumbing: ReportCapture.astro 44 and ReportShell.astro 32 pass altPath into the dead tree and both inline locale === 'es' ? 'en' : 'es' instead of otherLocale() (strings.ts 18-20). Those two components are CONTENDED with the f-tell-us lane (report island); serialize the edit window with the coordinator. R18's 'never a hand-typed path' clause is enforced by this step's design plus code review, not by a fake source-grep AT (recorded DISTILL decision 1)."
+        },
+        {
+          "id": "04-02",
+          "name": "A dead builder fails the build by name",
+          "criteria": [
+            "Against a contained fixture whose route map builds a family with no emitted page, the check goes red naming the dead builder and the address it builds.",
+            "Containment proven: seeded fixture and repository unchanged after the run."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/route-map-conformance.feature",
+          "scenario_name": "A dead builder fails the build by name",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A build-time conformance refusal; its product is a red line naming a builder. No rendered state.",
+          "ui_checks": {},
+          "deps": ["04-01"],
+          "files_to_modify": [
+            "scripts/check-route-conformance.mjs"
+          ],
+          "implementation_notes": "Today's breakage IS this class: five /en/ families built while src/pages/ contained no en/ directory at all, all four surviving builders producing links into a deleted tree, damage kept latent only by Base.astro dropping the prop. The check runs after a build: every builder output must resolve to an emitted file. By the time this step runs, 01-01 has recreated /en/ home and tomorrow, so remaining dead families (spot, report, reported, yesterday en) are the honest reds that READ-05/07 close; they live in the expected-missing debt file with reasons until then. Same containment and red-proof bar as the other two checks (R12)."
+        },
+        {
+          "id": "04-03",
+          "name": "A twinless page is refused or written down",
+          "criteria": [
+            "A Spanish page whose English twin is missing and unrecorded turns the check red naming the twinless page and the twin address it expects.",
+            "The same page with a written debt line and reason passes as measured debt; the debt file is the shared shrink-only mechanism."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/route-map-conformance.feature",
+          "scenario_name": "A page without its twin fails the build until the twin exists or the debt is written",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Twinship refusal mechanics; terminal output and exit codes only.",
+          "ui_checks": {},
+          "deps": ["04-02"],
+          "files_to_modify": [
+            "scripts/check-route-conformance.mjs"
+          ],
+          "implementation_notes": "Deriving the expected set from the emitted Spanish tree rather than a route list is what makes this catch pages the other ten lanes are adding RIGHT NOW: a new Spanish page added by any lane fails the gate the day it lands until its twin exists or its debt line is written with a reason. Bidirectional: every English page must also map back (an orphan /en/ page with no Spanish twin is the same lie mirrored). Uses the routes.ts segment mapping exported as data in 04-01, one home."
+        },
+        {
+          "id": "04-04",
+          "name": "Twinned tree passes; conformance job wired serially",
+          "criteria": [
+            "A fully twinned contained fixture passes with every address family named as resolved, both directions.",
+            "The conformance job joins scripts/ci-local-core.mjs serially after the hidden-copy job, red-proven against a seeded dead builder."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/route-map-conformance.feature",
+          "scenario_name": "A fully twinned tree passes with every family resolved",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The green path of the same check plus CI wiring; nothing renders.",
+          "ui_checks": {},
+          "deps": ["04-02", "04-03", "03-04"],
+          "files_to_modify": [
+            "scripts/check-route-conformance.mjs",
+            "scripts/ci-local-core.mjs"
+          ],
+          "implementation_notes": "@property scenario at layer 3: the both-directions invariant is exercised example-only over the contained fixture per Mandate 9; the pure mapping core (es path to en path and back, identity beyond the mapped segments) gets fast-check round-trip properties at unit level, the house style. CONTENDED SEAM (Pre-requisite 5c): third and last serial amendment of ci-local-core.mjs from this lane. After wiring, run the real gate redirected to a file, read $? separately, confirm the summary says 0 skipped; a skipped job is not a green job."
+        }
+      ]
+    },
+    {
+      "id": "05",
+      "name": "READ-05: the spot page and an honest yesterday",
+      "description": "A ranked row on /en/ opens that spot's own page in English with the format law intact, absences said plainly, and a yesterday page that never invents an English past: a Spanish-minted receipt is quoted as the artifact it is, or its absence is stated.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "05-01",
+          "name": "A ranked row opens the spot page in English",
+          "criteria": [
+            "Tapping a ranked row on /en/ lands on /en/spots/{slug}/, same language-neutral slug, page in English: today's and tomorrow's numbers, size words, window.",
+            "SpotDetail's five hardcoded Spanish strings flow from strings[locale]; display formatters gain their English twins behind one locale-keyed seam.",
+            "No rendered undefined, no bracket, no Spanish anywhere on the page."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-spot-and-yesterday.feature",
+          "scenario_name": "A ranked row leads to that spot's own page in English",
+          "slice_id": "slice-05",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The English spot page is assembled across this phase; the slice's rendered surface is judged whole at 05-05, which carries the charter and the seven checks.",
+          "ui_checks": {},
+          "deps": ["01-01", "04-01"],
+          "files_to_modify": [
+            "src/pages/en/spots/[slug]/index.astro",
+            "src/components/SpotDetail.astro",
+            "src/publish/display-format.ts",
+            "src/i18n/strings.ts"
+          ],
+          "implementation_notes": "The spot page is a translation of SETTLED STRUCTURE: SpotDetail.astro is locale-parameterized already, size-band English labels are complete in size-bands.ts (the one bilingual site needing nothing), and the section 10 en column settles the shared strings. NOT settled in English, all Pre-requisite 1 batch, asserted by property never pinned: the five hardcoded strings (SpotDetail 39, 46, 63, 75, 89: four empty states plus 'Volver a la lista') and the display-format words ('Ventana', 'm o mas'). The formatters are es-only by name AND content (formatSizeEs, formatBestWindowEs, display-format.ts 24-49); grow them behind one locale-keyed seam rather than parallel functions, so READ-02's naming detector passes structurally and the format LAW stays in one place. Slug discipline costs nothing by design: the slug IS spot_id, language-neutral (section 4, domain model section 13), so /en/spots/playa-venao/ mirrors /spots/playa-venao/ with no slug table. The English call line inherits Pre-requisite 2's answer from READ-01; do not solve it twice. Every string this step moves out of a template shrinks READ-03's debt file; delete the corresponding exception lines in the same change."
+        },
+        {
+          "id": "05-02",
+          "name": "The format law survives translation",
+          "criteria": [
+            "On every English spot page the body-height word comes first, numeric range second, always the approximation mark; the open-ended band never claims a ceiling.",
+            "The law is proven by fast-check properties over the locale-keyed formatter, both locales, one seam."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-spot-and-yesterday.feature",
+          "scenario_name": "The size line keeps the format law in English",
+          "slice_id": "slice-05",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A copy-format invariant asserted over formatter output and emitted text; the pixel judgement is 05-05's.",
+          "ui_checks": {},
+          "deps": ["05-01"],
+          "files_to_modify": [
+            "src/publish/display-format.ts",
+            "tests/unit/display-format-en.test.ts"
+          ],
+          "implementation_notes": "The format law (section 10, decision 18) is LOCALE-INDEPENDENT and must survive translation intact: body-height word first, range second, always the approximation mark, the open-ended band never claims a ceiling. This is a pure function with a declared law, so the house rule applies verbatim: prove the law with a property test instead of three examples (fast-check over band and range space, both locales through the same seam). The English words themselves are Pre-requisite 1 copy; the property pins structure, not wording. The acceptance scenario then reads the REAL emitted pages (layer 3, example-only) as the wiring proof."
+        },
+        {
+          "id": "05-03",
+          "name": "Missing values say their absence in English",
+          "criteria": [
+            "A spot missing a window or a size states each absence plainly in English words on the English tree, never as missing text, never in Spanish.",
+            "The absence copy flows from strings via Pre-requisite 1, asserted by property; the honesty rule holds: a missing value is a stated absence."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-spot-and-yesterday.feature",
+          "scenario_name": "What is missing is said plainly in English",
+          "slice_id": "slice-05",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Empty-state copy correctness read from emitted documents; 05-05 judges how those states look.",
+          "ui_checks": {},
+          "deps": ["05-01"],
+          "files_to_modify": [
+            "src/components/SpotDetail.astro",
+            "src/i18n/strings.ts"
+          ],
+          "implementation_notes": "The one rule the whole product rests on, extended to the second language: never claim more certainty than the data earns; a missing value renders as a stated absence, never as the most favourable reading, and now never as the WRONG-LANGUAGE reading either. The four SpotDetail empty states (lines 39, 46, 75, 89) get their English twins through the Pre-requisite 1 batch. The scenario seeds a day genuinely missing a window or size (the contained-fixture planting mechanics the keystone suite already owns) and reads the built English page. These ARE the U5 designed states for this slice; 05-05's charter asks the examiner to look at them."
+        },
+        {
+          "id": "05-04",
+          "name": "The English yesterday never invents a past",
+          "criteria": [
+            "A receipt minted in Spanish before English existed renders on /en/spots/{slug}/yesterday/ with no synthesized English narrative, under either Pre-requisite 3 resolution.",
+            "The page either quotes the Spanish call as the historical artifact or plainly states the narrative exists in Spanish only; frame copy via Pre-requisite 1."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-spot-and-yesterday.feature",
+          "scenario_name": "The English yesterday page never invents an English past",
+          "slice_id": "slice-05",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The honesty invariant over the emitted yesterday document; its rendered look is judged at 05-05 with the rest of the slice surface.",
+          "ui_checks": {},
+          "deps": ["04-01", "05-01"],
+          "files_to_modify": [
+            "src/pages/en/spots/[slug]/yesterday.astro",
+            "src/publish/reading-state.ts"
+          ],
+          "implementation_notes": "THE FEATURE'S ONE GENUINELY HARD HONESTY PROBLEM (Pre-requisite 3, OPEN, DESIGN plus Andres on frame copy): PublishedReceipt carries score_q and call_es and nothing else (reading-state.ts 5-12); receipts are IMMUTABLE by the epic's whole premise, so a receipt minted before English existed can NEVER gain an English narrative. The scenario asserts the invariant BOTH honest options satisfy: no synthesized English narrative, period; either the Spanish quote as the immutable artifact (recorded recommendation: a receipt is a quote of what we published, and 'never claim more certainty than the data earns' extends to 'never claim we said something in a language we did not say it in') or a stated absence with structured fields only. DO NOT resolve Pre-requisite 3 in-lane; build so either resolution is a copy-and-branch change, not a rework. The address flows from 04-01's yesterday builder. reading-state.ts's message_es/notice_es surfaces gain their en twins here for the states this page renders (the stale notice's en IS settled section 10; the empty message's en is Pre-requisite 1)."
+        },
+        {
+          "id": "05-05",
+          "name": "Yesterday absence stated; spot pages read finished",
+          "criteria": [
+            "A spot with no receipt for yesterday states the absence plainly in English, inventing no number and no narrative.",
+            "The seven visual checks pass over the English spot and yesterday pages at 390 px, both themes, reduced motion honoured.",
+            "Full slice tag run exits 0, redirect-then-$?, never piped; then npm run build and inspect dist/en/spots/ by eye."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-spot-and-yesterday.feature",
+          "scenario_name": "A yesterday with no receipt states the absence in English",
+          "slice_id": "slice-05",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-read-it-in-your-language/la-pagina-del-spot-en-ingles-esta-terminada-y-la-de-ayer-no-inventa-un-pasado-en-ingles.md",
+          "u8_observation": "La página del spot en inglés se lee tan terminada como la española, y la página de ayer cuenta su verdad en inglés sin inventar un pasado que nunca se publicó.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@ui-u1"],
+            "U2": ["npm", "run", "test:ui"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-read-it-in-your-language and @ui"],
+            "U4": ["npm", "run", "test:ui"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-read-it-in-your-language and @slice-05 and @negative"],
+            "U6": ["npm", "run", "test:ui"],
+            "U7": ["npm", "run", "test:ui"]
+          },
+          "deps": ["05-01", "05-02", "05-03", "05-04"],
+          "files_to_modify": [
+            "src/pages/en/spots/[slug]/yesterday.astro"
+          ],
+          "implementation_notes": "The slice's single user-visible gate, carrying the charter, the U8 observation and the seven checks; earlier steps assembled the surface this step judges whole. The final scenario is itself a designed state (U5's empty state: no receipt, absence stated in English), which is exactly why it closes the slice rather than opening it. U5's command runs the slice's three @negative scenarios (missing values, Spanish-minted receipt, no receipt): those ARE the designed non-happy states, driven through the real built tree; confirm the scenario count in the captured output so the check is never vacuous. U3 reuses the feature's toggle-geometry scenario, which measures EVERY page of both trees and therefore now covers the new spot and yesterday pages. U6 matters more here than anywhere: English strings run longer than Spanish in places and the type scale must survive the longest Pre-requisite 1 string at 390 px without truncation (R39); if a string cannot fit, that is a copy escalation to Andres, never a truncation, mirroring the trust lane's rule. Vera walks source-blind against the charter after GREEN, before COMMIT."
+        }
+      ]
+    },
+    {
+      "id": "06",
+      "name": "READ-06: the pasted call is English",
+      "description": "Translates the share surface after f-paste lands it: one tap on the English tree pastes the settled English template with the build's real values, and every page's link preview declares es_PA with the en alternate. Slice number reserved by f-paste's own out-of-scope row.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "06-01",
+          "name": "Every preview declares es_PA with en alternate",
+          "criteria": [
+            "Every emitted page of both trees declares og:locale es_PA with the English alternate beside it, section 13's shape.",
+            "The meta block amends f-paste slice-03's landed block, never races it; Base.astro head stays a serialized seam."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-share-card.feature",
+          "scenario_name": "A shared link previews naming both languages honestly",
+          "slice_id": "slice-06",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Head metadata read from emitted documents; the user-observable paste and preview are judged at 06-02, which carries the charter.",
+          "ui_checks": {},
+          "deps": ["01-05"],
+          "files_to_modify": [
+            "src/layouts/Base.astro"
+          ],
+          "implementation_notes": "HARD EXTERNAL PRECONDITION, not encodable as a step id: f-paste slice-03's OG meta block must have LANDED on the integration branch first (Pre-requisite 5b names the seam; 'lands first and alone'). If this step is scheduled before it, the failure is setup, BROKEN not RED; report and stop, same shape as the trust lane's 01-11 rule. The scenario itself is page-wide and tree-wide: og:locale es_PA plus the en alternate on EVERY page (section 13), which pairs with 01-05's hreflang work but is deliberately reserved to this slice by the plan. The OG card IMAGE stays Spanish for both locales at launch: recorded recommendation folded into f-paste Pre-requisite 3 (a per-locale image doubles P7 PUT volume; the preview crawler reads og:locale correctly either way). Do not build a per-locale image pipeline here."
+        },
+        {
+          "id": "06-02",
+          "name": "One tap pastes the call in English",
+          "criteria": [
+            "Sharing from the English tree pastes the settled section 10 English template with the build's real values and the full address carrying the build marker.",
+            "The template composer selects by locale from one home; the English column is verbatim section 10, pinned.",
+            "Slice tag run exits 0 captured by redirect then $?; a real WhatsApp paste is walked in the charter examination."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-share-card.feature",
+          "scenario_name": "One tap on the English tree pastes the call in English",
+          "slice_id": "slice-06",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-read-it-in-your-language/el-mensaje-pegado-se-lee-entero-en-ingles-y-la-tarjeta-del-enlace-se-ve-cuidada.md",
+          "u8_observation": "El mensaje pegado en el grupo se lee entero en inglés como una sola voz, y la tarjeta del enlace se ve cuidada, nunca a medio traducir.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@ui-u1"],
+            "U2": ["npm", "run", "test:ui"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-read-it-in-your-language and @ui"],
+            "U4": ["npm", "run", "test:ui"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-read-it-in-your-language and @slice-06"],
+            "U6": ["npm", "run", "test:ui"],
+            "U7": ["npm", "run", "test:ui"]
+          },
+          "deps": ["06-01", "01-09"],
+          "files_to_modify": [
+            "src/i18n/strings.ts"
+          ],
+          "implementation_notes": "HARD EXTERNAL PRECONDITION: f-paste slices 01 through 04 (share island, template composer, preview block, OG card) must exist before this goes RED for the right reason; the scenario was observed failing at its chained Given today and its own oracles unskip here. 'After they exist' is load-bearing: translating a composer that has not landed would ship sentences that are not true at the moment they ship. The English template is ALREADY SETTLED VERBATIM in section 10 ('SURF {date} / Best: {spot}, {score} / {size} and {wind}. {window}. / {level} confidence. / {url}?b={build_id}') and is pinned, one of the few pinnable strings in this feature. The work is selection-by-locale from one template home plus the English share affordance on the en tree; the composer belongs to f-paste's files, so the exact seam (their template module reading strings[locale], or a locale parameter) is agreed with that lane at DELIVER, recorded in the step evidence. files_to_modify lists only this lane's certain file; expect to touch f-paste's share module under a serialized window once its filename exists. U5's command runs both slice scenarios; the share surface's own states belong to f-paste, and this slice owes only that inherited states read English. The charter examination includes a REAL WhatsApp paste (slice classification note), which is Vera's half, not a CI assertion."
+        }
+      ]
+    },
+    {
+      "id": "07",
+      "name": "READ-07: the report flow in English, wire locale-blind",
+      "description": "The English CTA closes the feature's founding placeholder, the three questions ask in settled English, every flow state reads English, and the record on the wire stays byte-identical to a Spanish visitor's: canonical tokens travel, display labels never do.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "07-01",
+          "name": "The report invitation is real English words",
+          "criteria": [
+            "The English spot page carries a real report invitation: English words via Pre-requisite 1, never the bracketed placeholder at strings.ts line 133.",
+            "The corresponding exceptions-file debt line is deleted in the same change; the coverage gate proves the bracket gone."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-report-flow.feature",
+          "scenario_name": "The English report invitation is real words, never a placeholder",
+          "slice_id": "slice-07",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "One string swap on the spot page, asserted as text; the flow's rendered states are judged whole at 07-04 with the charter.",
+          "ui_checks": {},
+          "deps": ["05-01"],
+          "files_to_modify": [
+            "src/i18n/strings.ts"
+          ],
+          "implementation_notes": "This closes the feature's FOUNDING DEBT: strings.en.spot.reportCta = '[report CTA copy pending]' (strings.ts 133), the one bracketed string in the codebase and this flow's entry point. The Spanish twin ('ESTUVISTE? CUENTANOS' with its opening marks) is section 14 wireframe copy with NO settled English: the CTA copy is Pre-requisite 1's batch, asserted by property (real English words, never bracketed, never Spanish), never pinned in the scenario. Do not invent the copy in-lane; if the batch has not returned by dispatch time this step is BLOCKED on Andres, report it rather than shipping an invention. strings.ts is the single most contended file in this epic's endgame (Pre-requisite 5a); serialize the edit window."
+        },
+        {
+          "id": "07-02",
+          "name": "The three questions ask in settled English",
+          "criteria": [
+            "The English report screen asks How big?, Wind? (Clean / Choppy / Blown out), How was it? (Bad / OK / Good / Epic), Send, and the English no-script line, all pinned verbatim section 10.",
+            "The capture island reads strings[locale]; any hardcoded Spanish literal it landed with is moved, not twinned in place."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-report-flow.feature",
+          "scenario_name": "The three questions ask in settled English",
+          "slice_id": "slice-07",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Question and label text over the emitted English report page; the flow's look and feel is 07-04's gate.",
+          "ui_checks": {},
+          "deps": ["07-01"],
+          "files_to_modify": [
+            "src/pages/en/spots/[slug]/report.astro",
+            "src/pages/en/spots/[slug]/reported.astro",
+            "src/components/ReportCapture.astro",
+            "src/components/ReportShell.astro"
+          ],
+          "implementation_notes": "THE CHEAPEST TRANSLATION IN THE PLAN: the entire English report tree already sits verbatim in strings.ts lines 112-131 (three questions, all 14 option labels, Send, noscript, settled section 10) and is PINNED, unlike most of this feature's copy. The work is emitting /en/spots/{slug}/report/ and /en/.../reported/ through the route map and making the capture island read strings[locale]. EXTERNAL PRECONDITION: f-tell-us slice 01 owns the capture island's current shape; ReportCapture/ReportShell are contended with that lane, serialize the window. If the island landed with hardcoded Spanish literals instead of reading strings[locale], READ-03's gate has already named them; this step MOVES them into strings (that is the gates-before-pass ordering paying for itself), it does not twin them inline."
+        },
+        {
+          "id": "07-03",
+          "name": "Identical answers commit identical bytes",
+          "criteria": [
+            "One visitor per tree answering the same three questions the same way commits records that are the SAME BYTES; neither record carries a language field.",
+            "Answers travel only as canonical report-vocab tokens (clean|choppy|blown_out, bad|ok|good|epic), never display words; fast-check quantifies over the full answer space."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-report-flow.feature",
+          "scenario_name": "Twin visitors, identical answers, identical bytes",
+          "slice_id": "slice-07",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A wire-bytes equality invariant at the committed-record seam; nothing here is pixels, and the flow's surface gate is 07-04.",
+          "ui_checks": {},
+          "deps": ["07-02"],
+          "files_to_modify": [],
+          "implementation_notes": "THE ROW'S HARD CONSTRAINT, ALREADY ENGINEERED, DO NOT UNENGINEER IT: option value tokens are the canonical language-neutral enums of src/data/report-vocab.ts (clean|choppy|blown_out, bad|ok|good|epic, decided 2026-08-09, FROZEN); only label is locale copy (strings.ts 30-39 documents exactly this split); domain model section 7.4 replays a queued report byte-identical. Locale must never touch the committed record: no language field, no label leakage, byte-for-byte equality between an English-labeled and Spanish-labeled session of the same answers. @property at the acceptance layer means the invariant is the contract; per Mandate 9 the acceptance run is example-driven through the real committed-record seam (red-classification contract item 3: wire assertions compare BYTES and canonical tokens, never display labels), while fast-check explores the full answer space at unit level against the record-building pure function. Zero production code is the EXPECTED outcome if 07-02 wired labels correctly; this scenario is the standing guard that keeps it true."
+        },
+        {
+          "id": "07-04",
+          "name": "Every flow state reads in English",
+          "criteria": [
+            "Queued, arrival, reveal, refusal and the counter each read in English on the English tree; no state renders Spanish copy or missing text.",
+            "The seven visual checks pass over the English flow at 390 px, both themes; the charter walk taps through the three questions in English.",
+            "Slice tag run exits 0 captured by redirect then $?, never piped."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/english-report-flow.feature",
+          "scenario_name": "Every state of the flow reads in English on the English tree",
+          "slice_id": "slice-07",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-read-it-in-your-language/los-tres-toques-del-reporte-se-sienten-igual-de-faciles-en-ingles-que-en-espanol.md",
+          "u8_observation": "Los tres toques del reporte se sienten igual de fáciles en inglés que en español, y ningún paso del camino cambia de idioma a mitad de la frase.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@ui-u1"],
+            "U2": ["npm", "run", "test:ui"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-read-it-in-your-language and @ui"],
+            "U4": ["npm", "run", "test:ui"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-read-it-in-your-language and @slice-07"],
+            "U6": ["npm", "run", "test:ui"],
+            "U7": ["npm", "run", "test:ui"]
+          },
+          "deps": ["07-01", "07-02", "07-03"],
+          "files_to_modify": [],
+          "implementation_notes": "HARD EXTERNAL PRECONDITION: the flow states beyond capture (queued, arrival, reveal, refusal, counter, share prompt) live in the report island and reveal renderer that F-TELL-US is building RIGHT NOW (its slices 01 and 03-05); translating states that do not exist would be decoration, so this step waits for that lane by construction. Scheduled early it fails as setup: BROKEN, not RED; report and stop. Those states' English copy IS settled section 10 (pinned), except the probe-refusal string which is missing in BOTH languages (F-TELL-US Pre-requisite 8a) and enters through the Spanish batch first; never render an English state whose Spanish original does not exist. U5's command runs all four slice scenarios; the states scenario is itself the designed-states proof, driven through the real flow. The charter walk is the U8 half: Vera taps the three questions in English end to end, source-blind, after GREEN and before COMMIT."
+        }
+      ]
+    },
+    {
+      "id": "08",
+      "name": "READ-08: the pass, the empty ratchets, the true sentence",
+      "description": "The one translation pass over settled copy: whatever the Spanish tree emits at settle gains its twin, the three exceptions files empty, the gates flip to absolute and their ratchet mechanisms are deleted, and the epic sentence is walkable end to end.",
+      "default_agent": "nw-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "08-01",
+          "name": "The pass twins every remaining page and string",
+          "criteria": [
+            "Every page the Spanish tree emits at settle has its English twin; scope is DERIVED from the emitted tree and the copy registry, not a hand list.",
+            "Settled section 10 English lands verbatim; unsettled stragglers land only through the Pre-requisite 1 batch; nothing renders before its Spanish original exists."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/one-language-pass-complete.feature",
+          "scenario_name": "Every page the Spanish site has, the English site has",
+          "slice_id": "slice-08",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The pass's bulk work is strings and twin pages measured by the conformance and coverage checks; the completed tree's rendered judgement is 08-04's, which carries the charter.",
+          "ui_checks": {},
+          "deps": ["05-05", "06-02", "07-04"],
+          "files_to_modify": [
+            "src/i18n/strings.ts",
+            "src/pages/404.astro"
+          ],
+          "implementation_notes": "SCHEDULING GATE, NOT A CODE DEPENDENCY: Pre-requisite 6, the coordinator (Andres) declares settle after the copy-shipping lanes' slices are flipped shipped or explicitly parked; running earlier re-creates the translate-twice cost the epic ordered this feature LAST to avoid. The ratchet exception files measure exactly how much the pass still owes at any moment, so 'how close is settle' is a number, not a feeling. DERIVED SCOPE, by the epic plan possibly including: the offline page and A2HS hint (F-WORKS owns the SW; this feature hands it the en URL list through the route map and translates only the settled section 10 copy, NEVER editing the SW), the staleness stamp (en settled), day-one empty state and counter (F-SHOW, counter settled, headline not yet written), weakest-link phrasing (F-SEE, not yet written), push copy (F-TELL-ME, not yet written): each lands with section 10 verbatim English where settled and through the Pre-requisite 1 batch where not, and anything its producing lane never shipped is simply out of the emitted tree and out of scope. The English 404 set (Pre-requisite 1) lands here. files_to_modify is the certain floor; the derived scope will add files, list them in step evidence at run time."
+        },
+        {
+          "id": "08-02",
+          "name": "Ratchets flip absolute, mechanisms deleted",
+          "criteria": [
+            "The three exceptions files are EMPTY and their ratchet mechanisms deleted from the checks; all three run absolute and green.",
+            "The interim es-only copy homes are twinned or relocated and the READ-03 registry shrinks to the intended homes.",
+            "No exceptions mechanism remains to grow back: a permanent exceptions file is how ratchets rot into allowlists."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/one-language-pass-complete.feature",
+          "scenario_name": "The ratchets flip to absolute and stay green",
+          "slice_id": "slice-08",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Gate-mode mechanics: exit codes, empty debt files, deleted code paths. Nothing renders.",
+          "ui_checks": {},
+          "deps": ["08-01", "02-06", "03-04", "04-04"],
+          "files_to_modify": [
+            "scripts/check-translation-coverage.mjs",
+            "scripts/check-hidden-copy.mjs",
+            "scripts/check-route-conformance.mjs"
+          ],
+          "implementation_notes": "The DELETION is part of this row's Done, stated in the delta and in the scenario's own oracle ('no exceptions mechanism remains to grow back'). Emptying the files without deleting the mechanism leaves the allowlist door open. Coverage exceptions to zero (READ-02), copy-home exceptions to zero with the interim homes (confidence.ts, display-format.ts, reading-state.ts, build.ts) twinned or relocated (READ-03), route expected-missing to zero (READ-04); then each check drops its exceptions handling entirely. Prove the absolute mode falsifiable the same way the ratchets were proven: seed one offender in a contained fixture, watch the absolute gate refuse it with no debt path available, revert, record."
+        },
+        {
+          "id": "08-03",
+          "name": "Nothing reworded, no leaks, no em dash",
+          "criteria": [
+            "Not one verbatim string differs from its section 10 source of record in either language; the pass added twins, it edited nothing.",
+            "No new UI string carries an em dash; the Spanish surface carries zero English and the English surface zero Spanish beyond the immutable receipt quote, if quoting resolved."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/one-language-pass-complete.feature",
+          "scenario_name": "The pass added twins and edited nothing",
+          "slice_id": "slice-08",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A string-against-source-of-record comparison; no rendered state of its own. The completed surface is 08-04's walk.",
+          "ui_checks": {},
+          "deps": ["08-01"],
+          "files_to_modify": [],
+          "implementation_notes": "Strings marked verbatim come word for word from application-architecture.md section 10 in BOTH languages and must not be reworded (project CLAUDE.md); the Spanish register check ('picado', 'destrozado') stays Andres-and-cousin territory and is explicitly OUT of this feature: translation adds twins, it does not edit originals. The em-dash rule covers every new UI string in either language. The cross-language leak sweep runs over both emitted trees whole; the single legal exception is the immutable Spanish receipt quote on English yesterday pages IF Pre-requisite 3 resolved to quoting. Expected green with zero new production code if the pass behaved; red here means the pass overstepped and the fix is reverting an edit, never updating the source of record to match."
+        },
+        {
+          "id": "08-04",
+          "name": "The epic sentence walks end to end",
+          "criteria": [
+            "From any page of either tree: one tap lands on the exact twin; the call, reasons and report flow read in the chosen language; a saved address reopens in it.",
+            "The seven visual checks pass over the completed doubled tree, both themes, 390 px; Vera walks twin pages side by side.",
+            "Feature tag run exits 0, redirect-then-$?; regression control over the rest of the suite stays green."
+          ],
+          "test_file": "tests/acceptance/f-read-it-in-your-language/one-language-pass-complete.feature",
+          "scenario_name": "The epic sentence walks end to end",
+          "slice_id": "slice-08",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-read-it-in-your-language/cada-pagina-y-su-gemela-se-ven-igual-de-terminadas-y-ninguna-mezcla-idiomas.md",
+          "u8_observation": "Caminando cualquier página junto a su gemela, las dos se ven igual de terminadas, ninguna mezcla idiomas, y el sitio se siente un solo producto en dos lenguas.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@ui-u1"],
+            "U2": ["npm", "run", "test:ui"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-read-it-in-your-language and @ui"],
+            "U4": ["npm", "run", "test:ui"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-read-it-in-your-language and @slice-08"],
+            "U6": ["npm", "run", "test:ui"],
+            "U7": ["npm", "run", "test:ui"]
+          },
+          "deps": ["08-01", "08-02", "08-03"],
+          "files_to_modify": [],
+          "implementation_notes": "The capstone. Its composite When is a RECORDED DELIBERATE @e2e exception to the one-action rule (peer-review decision 3): it is the epic's Definition of Done row 1 as one walkable journey, and every behaviour inside it is separately covered by the chained scenarios of READ-01 through READ-07; the capstone proves the composition. This is also the feature-level smoke walk HANDOFF section 4 requires of the final visible slice: Vera walks Spanish pages and their twins SIDE BY SIDE (slice classification note) and the three gates run in absolute mode during the same examination window. After GREEN: npm run build, inspect BOTH trees in dist/ by eye, then run the full feature tag suite AND the regression control over the rest of the acceptance suite (this feature's edits ride through Base.astro, RankedList, SpotDetail and strings.ts, all shared with the keystone's green scenarios); a keystone scenario that reds on wording after a shared-component edit is a cross-lane conflict to report, never to 'fix' by weakening either side. Every gate and suite run: output redirected to a file, exit code read on its own line, summary confirmed 0 skipped."
+        }
+      ]
+    }
+  ],
+  "implementation_scope": {
+    "source_directories": [
+      "src/pages/",
+      "src/layouts/",
+      "src/i18n/",
+      "src/publish/",
+      "src/pipeline/",
+      "src/components/",
+      "scripts/",
+      "data/"
+    ],
+    "test_directories": [
+      "tests/acceptance/f-read-it-in-your-language/",
+      "tests/unit/"
+    ],
+    "excluded_patterns": [
+      "src/data/report-vocab.ts",
+      "src/data/size-bands.ts",
+      "public/**",
+      "infra/**",
+      "docs/epic/**",
+      "tests/acceptance/daily-call-with-permanent-receipts/**",
+      "tests/acceptance/f-bill-stays-zero-and-stays-up/**",
+      "tests/acceptance/f-paste-the-call-into-the-group/**",
+      "tests/acceptance/f-tell-us-what-you-saw-cold/**"
+    ]
+  }
+}

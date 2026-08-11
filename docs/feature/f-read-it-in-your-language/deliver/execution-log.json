@@ -1,0 +1,55 @@
+{
+  "schema_version": "3.0",
+  "feature_id": "f-read-it-in-your-language",
+  "events": [
+    {
+      "sid": "01-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: strict closeout began against reviewed commits 3b8f35a, 774d38d, 0c2526d, and bf550c2; existing generated data dirt was inventoried and left untouched.",
+      "t": "2026-08-11T04:13:58Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: source-blind Astro-preview examination at 390 px found the English home and tomorrow rows unreadable. New size and wind spans auto-flowed into the 1.75rem rank column, producing wrap and row collisions. Historical emitted-tree RED is separately recorded by distill commit 76aeadb at 2026-08-10T18:15:03Z.",
+      "t": "2026-08-11T04:15:38Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: the defect is rendered CSS-grid placement at the public browser surface. The driving acceptance is the 390 px source-blind browser observation; no new domain behaviour or pure unit seam exists.",
+      "t": "2026-08-11T04:15:38Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: row facts, call, and confidence were given deterministic grid placement in the declared 01-01 paths. `npm test` 21 files/89 tests, `npm run typecheck`, `npm run build`, exact Cucumber scenario 1/11, and `npm run test:ui` all exit 0; source-blind Astro-preview checks at 390 px pass on /en/ and /en/tomorrow/.",
+      "t": "2026-08-11T04:18:46Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "COMMIT",
+      "s": "SKIPPED",
+      "d": "CHECKPOINT_PENDING: no commit or Base/head integration before a fresh independent review of the repair and closeout evidence.",
+      "t": "2026-08-11T04:18:46Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "REVIEW",
+      "s": "EXECUTED",
+      "d": "PASS: independent nw-software-crafter-reviewer iteration 1 approved the two-file repair. At 390 px, /en/ and /en/tomorrow/ showed 20 rows each with no horizontal overflow, clipping, visible overlap, empty calls, or Spanish calls; no Base/head integration changes were found.",
+      "t": "2026-08-11T04:22:54Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: test-optimization stopping criterion recorded 1 observable browser-layout behaviour x 2 = 2 unit-test budget, 0 new unit tests. Existing exact acceptance plus source-blind browser examination cover the CSS-grid repair; only declared Slice 01 evidence and I18N-owned files are staged.",
+      "t": "2026-08-11T04:22:54Z"
+    }
+  ]
+}

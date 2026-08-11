@@ -80,8 +80,8 @@ function callFor(summary: (typeof daySpots)[number]): string {
             {index === 0 ? t.ranking.topSpot(nameOf(summary.spot_id)) : nameOf(summary.spot_id)}
           </a>
           <strong>{summary.score_q}</strong>
-          {summary.size_band !== undefined && <span>{sizeLabel(summary.size_band)}</span>}
-          {summary.wind_state !== undefined && <span>{t.ranking.wind[summary.wind_state]}</span>}
+          {summary.size_band !== undefined && <span class="row-fact row-fact-size">{sizeLabel(summary.size_band)}</span>}
+          {summary.wind_state !== undefined && <span class="row-fact row-fact-wind">{t.ranking.wind[summary.wind_state]}</span>}
           <p>{callFor(summary)}</p>
           {summary.conf_level !== undefined && <Confidence level={summary.conf_level} locale={locale} />}
         </li>

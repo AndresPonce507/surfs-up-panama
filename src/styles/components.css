@@ -88,6 +88,22 @@ ol.ranked li > span {
   font-variant-numeric: tabular-nums;
 }
 
+/* Size and wind are row facts, not extra ranks. Keep them in the name and
+   score columns so translated size labels never auto-flow into the 1.75rem
+   rank column at phone width. */
+ol.ranked li > .row-fact {
+  grid-row: 2;
+}
+
+ol.ranked li > .row-fact-size {
+  grid-column: 2;
+}
+
+ol.ranked li > .row-fact-wind {
+  grid-column: 3;
+  justify-self: end;
+}
+
 ol.ranked li > a {
   display: inline-flex;
   align-items: center;
@@ -112,6 +128,7 @@ ol.ranked li > p {
      (below) rather than sharing this one, so the call keeps its full
      width regardless of how long the published text runs. */
   grid-column: 2 / 4;
+  grid-row: 3;
   margin: var(--sp-1) 0 0;
   color: var(--ink-2);
   font-size: var(--text-meta);
@@ -157,6 +174,7 @@ ol.ranked li:first-child > strong {
 ol.ranked li:first-child > p {
   /* Original full span: confidence now has its own third line (below). */
   grid-column: 1 / 3;
+  grid-row: 2;
   margin-top: var(--sp-2);
   display: block;
   color: var(--ink);
@@ -179,7 +197,12 @@ ol.ranked li:first-child > p {
    of, and the hero row (U4) stays exempt from motion by construction. */
 ol.ranked li > .confidence {
   grid-column: 1 / -1;
+  grid-row: 4;
   margin-top: var(--sp-1);
+}
+
+ol.ranked li:first-child > .confidence {
+  grid-row: 3;
 }
 
 ol.ranked li > span.confidence {
