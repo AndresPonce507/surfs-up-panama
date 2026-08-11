@@ -89,20 +89,28 @@ type CallRow = {
 
 export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
   const now = deps.clock.now();
-  const date = now.toISOString().slice(0, 10);
-  const hour = now.toISOString().slice(11, 13);
-  const rows = await predictionRows(deps, date);
   const spots = deps.spots ?? loadLaunchSpotSeeds(deps.launchData);
-  const calls = spots.flatMap((spot) => callsForSpot(spot, rows, date, hour));
+  const date = regionalCivilDate(now, spots[0]?.timezone ?? 'America/Panama');
+  const hour = now.toISOString().slice(11, 13);
+  const dates = [date, followingCivilDate(date)] as const;
+  const rows = await predictionRows(deps, dates);
+  const calls = spots.flatMap((spot) => callsForSpot(spot, rows, dates, hour));
   if (calls.length === 0) return { published: false, reason: 'no usable wave members' };
 
   const build_id = `b_${date}T${hour}Z`;
   const callsKey = `log/calls/v1/dt=${date}/build=${hour}Z/${deps.region_id}.jsonl.gz`;
   const callsBody = calls.map((call) => JSON.stringify({ ...call, build_id })).join('\n');
   await deps.store.putCallIfAbsent(callsKey, callsBody);
-  const rankedCalls = calls
-    .filter((call) => call.valid_ts.endsWith('T18:00Z'))
-    .sort((left, right) => right.score_q - left.score_q || left.spot_id.localeCompare(right.spot_id));
+  const rankedCallsByDay = dates.map((civilDate) => calls
+    .filter((call) => call.valid_ts.startsWith(civilDate) && call.valid_ts.endsWith('T18:00Z'))
+    .sort((left, right) => right.score_q - left.score_q || left.spot_id.localeCompare(right.spot_id)));
+  if (rankedCallsByDay.some((day) => day.length !== spots.length)) {
+    return { published: false, reason: 'missing complete today or tomorrow ranking' };
+  }
+  if (sameRankedCalls(rankedCallsByDay[0]!, rankedCallsByDay[1]!)) {
+    return { published: false, reason: 'tomorrow ranking duplicates today' };
+  }
+  const rankedCalls = rankedCallsByDay[0] ?? [];
   const bundle = {
     publish_surface: {
       schema: 'published-surface-update/v1' as const,
@@ -118,24 +126,36 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
         wind_state: call.wind_state,
         best_window: call.best_window,
       })),
+      days: dates.map((civilDate, index) => ({
+        date: civilDate,
+        spots: (rankedCallsByDay[index] ?? []).map((call) => ({
+          spot_id: call.spot_id,
+          score_q: call.score_q,
+          call_es: spanishCall(call),
+          size_band: call.size_band,
+          size_range_m: call.size_range_m,
+          wind_state: call.wind_state,
+          best_window: call.best_window,
+        })),
+      })),
     },
-    days: [{
-      date,
-      spots: rankedCalls.map((call) => ({
+    days: dates.map((civilDate, index) => ({
+      date: civilDate,
+      spots: (rankedCallsByDay[index] ?? []).map((call) => ({
         spot_id: call.spot_id,
         score_q: call.score_q,
         weakest_link: call.weakest_link,
         call: { es: spanishCall(call) },
       })),
-    }],
+    })),
   };
   await deps.store.putBundle(`pub/v1/regions/${deps.region_id}/bundle.json`, JSON.stringify(bundle));
   await deps.store.putManifest('pub/v1/manifest.json', JSON.stringify({ build_id }));
   return { published: true, build_id };
 }
 
-async function predictionRows(deps: BuildDeps, date: string): Promise<PredictionRow[]> {
-  const keys = await deps.store.listPredictions(`predictions/v1/dt=${date}/`);
+async function predictionRows(deps: BuildDeps, dates: readonly string[]): Promise<PredictionRow[]> {
+  const keys = (await Promise.all(dates.map((date) => deps.store.listPredictions(`predictions/v1/dt=${date}/`)))).flat();
   const rows: PredictionRow[] = [];
   for (const key of keys) {
     const body = await deps.store.getPrediction(key);
@@ -147,11 +167,11 @@ async function predictionRows(deps: BuildDeps, date: string): Promise<Prediction
   return rows;
 }
 
-function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: PredictionRow[], date: string, hour: string): CallRow[] {
+function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: PredictionRow[], dates: readonly string[], hour: string): CallRow[] {
   const validHours = [...new Set(rows.filter((row) => row.spot_id === spot.spot_id).map((row) => row.valid_ts))].sort();
   const correction = applyCorrection(spot, null);
   return validHours.flatMap((validTs) => {
-    if (!validTs.startsWith(date)) return [];
+    if (!dates.some((date) => validTs.startsWith(date))) return [];
     const bySource = new Map(rows.filter((row) => row.spot_id === spot.spot_id && row.valid_ts === validTs).map((row) => [row.source, row]));
     const declared = DECLARED_MEMBER_SOURCES.map((source): DeclaredMember => {
       const row = bySource.get(source);
@@ -188,7 +208,7 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
     const confidenceResult = confidence(members, { kind: 'absolute' }, null, null, score.missing);
     return [{
       spot_id: spot.spot_id,
-      build_id: `b_${date}T${hour}Z`,
+      build_id: `b_${dates[0]}T${hour}Z`,
       valid_ts: validTs,
       score_q: score.score,
       conf_value: confidenceResult.c_total,
@@ -211,6 +231,36 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
 
 function spanishCall(call: CallRow): string {
   return `${spanishSizeBand(call.size_band)}, viento ${spanishWind(call.wind_state)}, mejor de ${call.best_window.start} a ${call.best_window.end}.`;
+}
+
+function followingCivilDate(civilDate: string): string {
+  const atNoonUtc = new Date(`${civilDate}T12:00:00Z`);
+  atNoonUtc.setUTCDate(atNoonUtc.getUTCDate() + 1);
+  return atNoonUtc.toISOString().slice(0, 10);
+}
+
+function regionalCivilDate(instant: Date, timezone: string): string {
+  const fields = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(instant);
+  const field = (type: Intl.DateTimeFormatPartTypes): string => fields.find((part) => part.type === type)?.value ?? '';
+  return `${field('year')}-${field('month')}-${field('day')}`;
+}
+
+function sameRankedCalls(left: readonly CallRow[], right: readonly CallRow[]): boolean {
+  return left.length === right.length && left.every((call, index) => {
+    const other = right[index];
+    return other !== undefined
+      && call.spot_id === other.spot_id
+      && call.score_q === other.score_q
+      && call.size_band === other.size_band
+      && call.wind_state === other.wind_state
+      && call.best_window.start === other.best_window.start
+      && call.best_window.end === other.best_window.end;
+  });
 }
 
 function sizeRange(sizeBand: string): readonly [number, number] {
