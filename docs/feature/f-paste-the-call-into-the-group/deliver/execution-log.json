@@ -372,6 +372,27 @@
       "s": "SKIPPED",
       "d": "CHECKPOINT_PENDING: independent review found the implementation correct but requested the phase evidence now recorded above. Vera's first source-blind observation was INDETERMINATE only because no authorized WhatsApp chat could be exercised; the architecture-defined public handoff and its external-client boundary are recorded in 04-03-whatsapp-card-external-verification.md. Awaiting the scoped Vera correction and independent re-review before a commit is permitted.",
       "t": "2026-08-11T02:34:00Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS: focused acceptance initially failed for the intended missing selected-spot WhatsApp action.",
+      "t": "2026-08-11T02:35:10Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: focused real-browser acceptance passed 13/13; no-JavaScript companion passed 11/11; first-flight scenario passed 12/12; units 86/86; typecheck, build, budget, and test:ui passed. At 390 px, source-blind browser observation found one 358x47 Mariatos WhatsApp action, no horizontal overflow, and a Mariatos 69 message ending in its stamped URL. Home-summary substitution falsified the selected-score assertion and was restored before rerun. Test budget: 1 behavior x 2 = 2 unit tests; 0 new tests because the real-I/O acceptance covers the route.",
+      "t": "2026-08-11T02:38:41Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 28f352d is `feat(paste): share the selected spot's call - step 05-01` and changes only src/share/day-summary.ts and src/pages/spots/[slug]/index.astro. Full Slice-05 retained four expected 05-02 REDs for copy and per-spot Open Graph publication.",
+      "t": "2026-08-11T02:39:21Z"
     }
   ]
 }
