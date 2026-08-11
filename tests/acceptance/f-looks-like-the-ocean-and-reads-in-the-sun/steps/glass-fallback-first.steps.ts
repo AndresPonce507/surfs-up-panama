@@ -281,7 +281,7 @@ Then('la bandeja opaca de transparencia reducida forma un marco distinguible det
     if (trayStyle.backdropFilter !== 'none' || getComputedStyle(tray, '::before').display !== 'none') findings.push('bandeja opaca: conserva vidrio o pseudo-capa bajo transparencia reducida');
     if (frame[0] < 24 || frame[1] < 24 || frame[2] < 16 || frame[3] < 16) findings.push('bandeja opaca: marco visible ' + frame.map((value) => value.toFixed(0)).join('/') + 'px; se esperaba 24/24/16/16px como mínimo');
     return findings;
-  })()`);
+  })()`) as string[];
   assert.deepEqual(result, [], result.join('; '));
 });
 Then('la tarjeta grande del primer spot permanece sólida, nunca de vidrio', async function (this: GlassWorld) {
