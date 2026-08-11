@@ -24,6 +24,8 @@ import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import type { Construct } from 'constructs';
+import { buildSync } from 'esbuild';
+import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { lambdaTimeoutSeconds } from './ingest-stack.js';
@@ -44,6 +46,7 @@ import {
 } from './write-declarations.js';
 
 const lambdaSourceDirectory = fileURLToPath(new URL('../lambda-src', import.meta.url));
+const projectRoot = fileURLToPath(new URL('../..', import.meta.url));
 
 export class WriteStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
@@ -77,11 +80,30 @@ export class WriteStack extends Stack {
       + " body: JSON.stringify({ error: 'not_implemented',"
       + " note: 'write handlers land with F-TELL-US-WHAT-YOU-SAW-COLD' }) });",
     );
-    // `npm run lambda:build` emits this small Node 22 asset from the shared
-    // decision core and its DynamoDB adapter.  It is intentionally used only
-    // by report and mint: push and photo-presign remain explicit 501s until
-    // their own accepted handlers exist.
-    const reportMintCode = lambda.Code.fromAsset(lambdaSourceDirectory);
+    // Bundle the shared decision core only into CDK's temporary asset
+    // directory. Nothing generated is committed: synth/package own the
+    // deployable Lambda file while source stays in src/report/.
+    const reportMintCode = lambda.Code.fromAsset(projectRoot, {
+      bundling: {
+        image: lambda.Runtime.NODEJS_22_X.bundlingImage,
+        local: {
+          tryBundle(outputDirectory: string): boolean {
+            buildSync({
+              entryPoints: [resolve(projectRoot, 'src/report/aws-lambda-adapter.ts')],
+              outfile: resolve(outputDirectory, 'report-mint.mjs'),
+              bundle: true,
+              format: 'esm',
+              platform: 'node',
+              target: 'node22',
+              sourcemap: false,
+              legalComments: 'none',
+              external: ['@aws-sdk/*'],
+            });
+            return true;
+          },
+        },
+      },
+    });
 
     const writeFunctions = writeFunctionShortNames.map((shortName) => {
       const functionName = functionNames[shortName];

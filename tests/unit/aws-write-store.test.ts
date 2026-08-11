@@ -6,9 +6,8 @@ import type { DynamoCommandSet, DynamoDocumentClient } from '../../src/report/aw
 class GetCommand { constructor(readonly input: Record<string, unknown>) {} }
 class PutCommand { constructor(readonly input: Record<string, unknown>) {} }
 class TransactWriteCommand { constructor(readonly input: Record<string, unknown>) {} }
-class UpdateCommand { constructor(readonly input: Record<string, unknown>) {} }
 
-const commands: DynamoCommandSet = { GetCommand, PutCommand, TransactWriteCommand, UpdateCommand };
+const commands: DynamoCommandSet = { GetCommand, PutCommand, TransactWriteCommand };
 const report = {
   report_id: '01J4QZK8Y3E9RWM2P7T6B1XCVN', spot_id: 'playa-venao',
   observed_at: '2026-08-10T18:30:00Z', submitted_at: '2026-08-10T18:30:00Z',
@@ -22,7 +21,7 @@ describe('DynamoDB write-store adapter', () => {
     const client: DynamoDocumentClient = {
       async send(command) {
         received.push(command);
-        if (command instanceof UpdateCommand) return { Attributes: { n_reports: 8 } };
+        if (command instanceof GetCommand) return { Item: { n_reports: 7 } };
         return {};
       },
     };
@@ -31,14 +30,13 @@ describe('DynamoDB write-store adapter', () => {
     if (result.kind !== 'accepted') throw new Error('expected accepted report');
 
     expect(result).toEqual({ kind: 'accepted', receipt: { outcome: 'no_snapshot', report_id: report.report_id, predicted: null, counter: { n_reports: 8, threshold: 30 } } });
-    const [transaction, counter, persistedReceipt] = received as [TransactWriteCommand, UpdateCommand, UpdateCommand];
+    const [, transaction] = received as [GetCommand, TransactWriteCommand];
     expect(transaction).toBeInstanceOf(TransactWriteCommand);
     expect(transaction.input.TransactItems).toEqual(expect.arrayContaining([
       expect.objectContaining({ Update: expect.objectContaining({ Key: { pk: 'DEV#d_0123456789abcdef0123456789abcdef', sk: 'QUOTA#2026-08-10' } }) }),
-      expect.objectContaining({ Put: expect.objectContaining({ Item: expect.objectContaining({ pk: `REP#${report.report_id}`, sk: 'REPORT' }) }) }),
+      expect.objectContaining({ Update: expect.objectContaining({ Key: { pk: 'SPOT#playa-venao', sk: 'COUNTER' }, ExpressionAttributeValues: { ':current': 7, ':next': 8 } }) }),
+      expect.objectContaining({ Put: expect.objectContaining({ Item: expect.objectContaining({ pk: `REP#${report.report_id}`, sk: 'REPORT', receipt: result.receipt }) }) }),
     ]));
-    expect(counter.input.Key).toEqual({ pk: 'SPOT#playa-venao', sk: 'COUNTER' });
-    expect(persistedReceipt.input.ExpressionAttributeValues).toEqual(expect.objectContaining({ ':receipt': result.receipt }));
   });
 
   it('reuses the original credential record after a conditional re-mint instead of resetting its age', async () => {
@@ -73,5 +71,60 @@ describe('DynamoDB write-store adapter', () => {
     };
     await expect(createAwsWriteStore(client, commands, 'write-store').storeReport(report, 'd_0123456789abcdef0123456789abcdef', '2026-08-10', 20, '2026-08-10T18:30:00.000Z', '2026-08-10T17:00:00.000Z', { outcome: 'no_snapshot', predicted: null }))
       .resolves.toEqual({ kind: 'duplicate', receipt: { ...original, outcome: 'queued_duplicate' } });
+  });
+
+  it('recovers the durable receipt when the transaction commits but its response is interrupted', async () => {
+    let stored: Record<string, unknown> | undefined;
+    const client: DynamoDocumentClient = {
+      async send(command) {
+        if (command instanceof GetCommand) return { Item: stored };
+        if (command instanceof TransactWriteCommand) {
+          const reportPut = (command.input.TransactItems as { Put?: { Item?: Record<string, unknown> } }[])
+            .find((entry) => entry.Put !== undefined)?.Put?.Item;
+          stored = reportPut;
+          throw new Error('transport interrupted after DynamoDB committed the transaction');
+        }
+        return {};
+      },
+    };
+    await expect(createAwsWriteStore(client, commands, 'write-store').storeReport(
+      report,
+      'd_0123456789abcdef0123456789abcdef',
+      '2026-08-10',
+      20,
+      '2026-08-10T18:30:00.000Z',
+      '2026-08-10T17:00:00.000Z',
+      { outcome: 'no_snapshot', predicted: null },
+    )).resolves.toEqual({
+      kind: 'duplicate',
+      receipt: {
+        outcome: 'queued_duplicate', report_id: report.report_id, predicted: null,
+        counter: { n_reports: 1, threshold: 30 },
+      },
+    });
+  });
+
+  it('does not turn an unresolved counter collision into a quota response', async () => {
+    const client: DynamoDocumentClient = {
+      async send(command) {
+        if (command instanceof GetCommand) return {};
+        if (command instanceof TransactWriteCommand) {
+          const error = new Error('counter collision');
+          error.name = 'TransactionCanceledException';
+          Object.assign(error, { CancellationReasons: [{ Code: 'None' }, { Code: 'ConditionalCheckFailed' }, { Code: 'None' }] });
+          throw error;
+        }
+        return {};
+      },
+    };
+    await expect(createAwsWriteStore(client, commands, 'write-store').storeReport(
+      report,
+      'd_0123456789abcdef0123456789abcdef',
+      '2026-08-10',
+      20,
+      '2026-08-10T18:30:00.000Z',
+      '2026-08-10T17:00:00.000Z',
+      { outcome: 'no_snapshot', predicted: null },
+    )).rejects.toThrow('concurrent report counter');
   });
 });

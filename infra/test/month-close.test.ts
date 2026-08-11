@@ -203,3 +203,19 @@ describe('month-close: tag active and this project billed', () => {
     expect(textOf(result)).toContain('0.06');
   });
 });
+
+describe('month-close: credits are evidence, not malformed zeroes', () => {
+  it('keeps a legitimate negative project line visible and fails the strict $0.00 claim', () => {
+    const result = evaluateMonthClose({
+      reads: reads({
+        services: [['AWS Lambda', '-0.06']],
+        tagStatus: 'Active',
+        projectServices: [['AWS Lambda', '-0.06']],
+      }),
+    });
+    expect(result.exitCode).toBe(1);
+    expect(textOf(result)).toContain('credit: AWS Lambda: -$0.06');
+    expect(textOf(result)).not.toContain('INDETERMINATE');
+    expect(textOf(result)).not.toContain('PASS at $0.00');
+  });
+});

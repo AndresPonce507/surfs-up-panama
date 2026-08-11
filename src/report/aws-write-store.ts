@@ -13,7 +13,6 @@ export interface DynamoCommandSet {
   readonly GetCommand: CommandConstructor;
   readonly PutCommand: CommandConstructor;
   readonly TransactWriteCommand: CommandConstructor;
-  readonly UpdateCommand: CommandConstructor;
 }
 
 export interface DynamoDocumentClient {
@@ -51,69 +50,69 @@ export function createAwsWriteStore(
 
     async storeReport(record, deviceId, receivedDay, quotaLimit, receivedAt, credentialIssuedAt, reveal): Promise<StoredReportResult> {
       const reportKey = reportKeys(record);
-      try {
-        await client.send(new commands.TransactWriteCommand({
-          TransactItems: [
-            {
-              Update: {
-                TableName: tableName,
-                Key: quotaKey(deviceId, receivedDay),
-                UpdateExpression: 'ADD reports :one SET ttl = :ttl',
-                  ConditionExpression: 'attribute_not_exists(reports) OR reports < :limit',
-                ExpressionAttributeValues: {
-                  ':one': 1,
-                  ':limit': quotaLimit,
-                  ':ttl': Math.floor(Date.parse(receivedAt) / 1000) + (2 * 24 * 60 * 60),
-                },
-              },
-            },
-            {
-              Put: {
-                TableName: tableName,
-                Item: {
-                  ...reportKey,
-                  report_id: record.report_id,
-                  device_id: deviceId,
-                  received_at: receivedAt,
-                  credential_issued_at: credentialIssuedAt,
-                  record,
-                },
-                  ConditionExpression: 'attribute_not_exists(pk) AND attribute_not_exists(sk)',
-              },
-            },
-          ],
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const counter = await client.send(new commands.GetCommand({
+          TableName: tableName,
+          Key: counterKey(record.spot_id),
+          ConsistentRead: true,
         }));
-      } catch (error) {
-        if (!isConditionalFailure(error)) throw error;
-        const existing = await client.send(new commands.GetCommand({ TableName: tableName, Key: reportKey, ConsistentRead: true }));
-        if (typeof existing.Item === 'object' && existing.Item !== null) {
-          const original = duplicateReceipt(existing.Item as Record<string, unknown>, record.report_id);
-          if (original !== null) return { kind: 'duplicate', receipt: original };
-          // A duplicate observed while the first invocation is between the
-          // counter and immutable-receipt writes must never fabricate a
-          // counter. The client keeps its queue on this transient 503.
-          throw new Error('report write store refused: duplicate receipt is not durable yet');
+        const nextCount = numberAt(counter.Item, 'n_reports', 0) + 1;
+        const canonical = receipt(record.report_id, nextCount, reveal);
+        try {
+          await client.send(new commands.TransactWriteCommand({
+            TransactItems: [
+              {
+                Update: {
+                  TableName: tableName,
+                  Key: quotaKey(deviceId, receivedDay),
+                  UpdateExpression: 'ADD reports :one SET #ttl = :ttl',
+                  ConditionExpression: 'attribute_not_exists(reports) OR reports < :limit',
+                  ExpressionAttributeNames: { '#ttl': 'ttl' },
+                  ExpressionAttributeValues: {
+                    ':one': 1,
+                    ':limit': quotaLimit,
+                    ':ttl': Math.floor(Date.parse(receivedAt) / 1000) + (2 * 24 * 60 * 60),
+                  },
+                },
+              },
+              {
+                Update: {
+                  TableName: tableName,
+                  Key: counterKey(record.spot_id),
+                  UpdateExpression: 'SET n_reports = :next',
+                  ConditionExpression: 'attribute_not_exists(n_reports) OR n_reports = :current',
+                  ExpressionAttributeValues: { ':current': nextCount - 1, ':next': nextCount },
+                },
+              },
+              {
+                Put: {
+                  TableName: tableName,
+                  Item: {
+                    ...reportKey,
+                    report_id: record.report_id,
+                    device_id: deviceId,
+                    received_at: receivedAt,
+                    credential_issued_at: credentialIssuedAt,
+                    record,
+                    receipt: canonical,
+                  },
+                    ConditionExpression: 'attribute_not_exists(pk) AND attribute_not_exists(sk)',
+                },
+              },
+            ],
+          }));
+          return { kind: 'accepted', receipt: canonical };
+        } catch (error) {
+          const existing = await client.send(new commands.GetCommand({ TableName: tableName, Key: reportKey, ConsistentRead: true }));
+          if (typeof existing.Item === 'object' && existing.Item !== null) {
+            const original = duplicateReceipt(existing.Item as Record<string, unknown>, record.report_id);
+            if (original !== null) return { kind: 'duplicate', receipt: original };
+          }
+          if (!isConditionalFailure(error)) throw error;
+          if (isQuotaFailure(error)) return { kind: 'quota_exceeded' };
         }
-        return { kind: 'quota_exceeded' };
       }
-
-      const counter = await client.send(new commands.UpdateCommand({
-        TableName: tableName,
-        Key: { pk: `SPOT#${record.spot_id}`, sk: 'COUNTER' },
-        UpdateExpression: 'ADD n_reports :one',
-        ExpressionAttributeValues: { ':one': 1 },
-        ReturnValues: 'UPDATED_NEW',
-      }));
-      const nReports = numberAt(counter.Attributes, 'n_reports', 1);
-      const canonical = receipt(record.report_id, nReports, reveal);
-      await client.send(new commands.UpdateCommand({
-        TableName: tableName,
-        Key: reportKey,
-        UpdateExpression: 'SET receipt = :receipt',
-        ConditionExpression: 'attribute_exists(pk) AND attribute_exists(sk)',
-        ExpressionAttributeValues: { ':receipt': canonical },
-      }));
-      return { kind: 'accepted', receipt: canonical };
+      throw new Error('report write store unavailable: concurrent report counter did not settle after three attempts');
     },
   };
 }
@@ -128,6 +127,10 @@ function quotaKey(deviceId: string, day: string) {
 
 function reportKeys(record: ReportRecord) {
   return { pk: `REP#${record.report_id}`, sk: 'REPORT' };
+}
+
+function counterKey(spotId: string) {
+  return { pk: `SPOT#${spotId}`, sk: 'COUNTER' };
 }
 
 function receipt(reportId: string, nReports: number, reveal: ReportReveal): Receipt {
@@ -153,4 +156,13 @@ function isConditionalFailure(error: unknown): boolean {
   return typeof error === 'object' && error !== null && 'name' in error
     && ((error as { name?: unknown }).name === 'ConditionalCheckFailedException'
       || (error as { name?: unknown }).name === 'TransactionCanceledException');
+}
+
+function isQuotaFailure(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null || !('CancellationReasons' in error)) return false;
+  const reasons = (error as { CancellationReasons?: unknown }).CancellationReasons;
+  if (!Array.isArray(reasons)) return false;
+  const quotaReason = reasons[0];
+  return typeof quotaReason === 'object' && quotaReason !== null
+    && (quotaReason as { Code?: unknown }).Code === 'ConditionalCheckFailed';
 }
