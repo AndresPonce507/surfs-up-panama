@@ -1,0 +1,10 @@
+{
+  "sid": "01-08",
+  "p": "GREEN",
+  "s": "EXECUTED",
+  "d": "RECOVERY GREEN: later corrective validation, not a claim of a contiguous acceptance-red cycle. Fixture-derived stored SE equality and physical-floor assertion pass; controlled se=0 mutation is rejected.",
+  "focused_command": "npx vitest run tests/acceptance/f-forecast-learns-from-the-beach/gate-passes-and-shrinks.test.ts tests/unit/learning-gate-laws.test.ts tests/unit/learning-correction-file.test.ts tests/unit/learning-residual-laws.test.ts",
+  "focused_result": "PASS: 4 test files, 19 tests at 2026-08-11T14:57:06Z",
+  "additional_results": "PASS: unit 254/254, full 320/320, typecheck and build",
+  "t": "2026-08-11T14:57:06Z"
+}

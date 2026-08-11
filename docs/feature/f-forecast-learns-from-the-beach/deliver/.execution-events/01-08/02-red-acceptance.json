@@ -1,0 +1,7 @@
+{
+  "sid": "01-08",
+  "p": "RED_ACCEPTANCE",
+  "s": "SKIPPED",
+  "d": "NOT_APPLICABLE: the recovered passing-gate scenario was inherited green; no false acceptance-red claim is made",
+  "t": "2026-08-11T14:20:52Z"
+}
