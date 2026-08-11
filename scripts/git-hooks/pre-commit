@@ -13,6 +13,15 @@
 
 set -euo pipefail
 
+history_probe="scripts/check-published-call-history-probe.mjs"
+if git cat-file -e "HEAD:${history_probe}" 2>/dev/null; then
+  if [ ! -f "${history_probe}" ]; then
+    echo "[pre-commit] required published-call history probe is missing from the worktree: ${history_probe}" >&2
+    exit 1
+  fi
+  node "${history_probe}"
+fi
+
 GOOD_EMAILS=(
   "andresponce0001@gmail.com"
   "andres@tradelyhq.com"
