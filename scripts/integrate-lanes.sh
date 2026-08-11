@@ -35,7 +35,7 @@
 set -uo pipefail
 
 ANCHOR="/Users/andres/psb-gate"
-LANES=(signal deltas trust record learning push report paste bugfix)
+LANES=(signal deltas trust record learning push report paste bugfix design infra i18n)
 
 cd "$ANCHOR" || { echo "anchor missing: $ANCHOR" >&2; exit 2; }
 
