@@ -78,8 +78,8 @@ relevant observable remains user-facing: every English ranked row contains its p
 English call, with no `undefined`, Spanish narrative, placeholder, or client-composed substitute.
 The Base toggle and alternate-link work is separate and may still keep other READ-01 scenarios red.
 
-This decision closes the product/architecture ambiguity. Slice 01 is still implementation-red
-until the producer change and generated surface land with passing evidence.
+This decision closes the product/architecture ambiguity. The producer change and generated
+surface landed in `774d38d`; the remaining READ-01 work is the later toggle, tree and UI sequence.
 
 ## Independent review
 
@@ -89,3 +89,26 @@ were corrected: the roadmap now includes the serial producer seam instead of exc
 requirements; and the domain model labels `call{es}` as a pre-READ implementation snapshot rather
 than target schema authority. The approval covers this decision and plan only. It does not claim
 the producer implementation or Slice 01 is green.
+
+## Implementation closure
+
+Commit `774d38d` implements this contract. Current bundle and static-surface rows carry both
+locale members and all same-row structured facts. Honest missing wind/window values are explicit
+`null`, never omitted or inferred; the current validator rejects absent/malformed facts. The
+forecast adapter selects a complete locale member while historical dawn receipts alone retain the
+legacy optional boundary. The staged data change added exactly 60 derived `call_en` values to the
+compatibility alias and both civil days; every pre-existing forecast value and all three receipts
+were verified unchanged.
+
+Evidence on 2026-08-10:
+
+- `npm run typecheck`: PASS.
+- `npm test`: 21 files, 89 tests PASS.
+- `npm run build`: PASS, 85 documents; `/en/` and `/en/tomorrow` measured under 14 KB.
+- Exact roadmap scenario `The visitor flips to tomorrow without leaving their language`: 1
+  scenario, 11 steps PASS.
+- Independent `nw-software-crafter-reviewer`, iteration 2: **APPROVED**, zero remaining defects.
+
+The broader READ-01 tag is not green yet. Its remaining failures are the serialized Base/toggle,
+absolute alternate and tree-completeness steps owned by 01-02 onward; this producer commit did not
+touch `Base.astro` or its head.
