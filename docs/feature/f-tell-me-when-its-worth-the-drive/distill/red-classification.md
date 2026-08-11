@@ -314,3 +314,111 @@ AT-review verdict is not recorded here, the slice charter under
 `docs/product/expectations/f-tell-me-when-its-worth-the-drive/` is owed and outside this
 lane's write grant, and Pre-requisites 1, 4(a), 8 and 9 are open in ways that touch this
 slice's copy, its seam and the paperwork its scenarios lean on.
+
+---
+
+# Slice-02 RED classification
+
+Observed 2026-08-10 on `recover/push-maps`, base `0286ad7`.
+
+## Reconciliation
+
+Reconciliation passed, 0 contradictions among the available project truth. This feature has no
+per-wave `discuss/`, `design/`, or `devops/` decision files; its unified feature delta and the
+accepted architecture are the applicable sources. The subscriber threshold remains deliberately
+unratified and no slice-02 requirement names a value. The only open delivery boundary is
+Pre-requisite 4(b): both Push and SIGNAL claim the same A2HS disclosure. The contract is not
+ambiguous about the user outcome, only its physical owner. The roadmap blocks implementation until
+one owner is recorded and forbids duplicate markup.
+
+## Commands observed
+
+```sh
+node --input-type=module -e "JSON.parse(...)"
+npm run typecheck
+npm run test:at -- --dry-run --tags "@feature-f-tell-me-when-its-worth-the-drive and @slice-02"
+npm run test:at -- --dry-run --tags "@feature-f-tell-me-when-its-worth-the-drive and @slice-99"
+npm run test:at -- --tags "@feature-f-tell-me-when-its-worth-the-drive and @slice-02"
+```
+
+The dry run collected 5 scenarios and 57 steps with zero undefined or ambiguous steps. The
+slice-99 control selected zero scenarios, so the quoted tag expression is known to reach Cucumber
+as one expression. Typecheck passed.
+
+The live run reached the production build entry, then every scenario stopped in the shared
+production build guard before a browser page existed:
+
+```
+publish-surface refused: WHAT static surface is for 2026-08-09,
+not Panama's 2026-08-10; HOW publish the completed current bundle.
+```
+
+## Classification
+
+| Scenario | Classification | Why |
+|---|---|---|
+| Safari explica cómo llegar a los avisos sin ofrecer un botón muerto | BROKEN | The real build refused stale published input before its Safari-path oracle could run. |
+| El surfista que abre el icono instalado encuentra la misma entrada de avisos | BROKEN | Same stale-surface build guard, before the installed-entry oracle. |
+| El icono instalado no finge que los avisos ya están encendidos | BROKEN | Same stale-surface build guard, before the no-phantom-state oracle. |
+| Desde el icono instalado el surfista ve listo solo después de guardar los avisos | BROKEN | Same stale-surface build guard, before the deploy-blocked acknowledgement oracle. |
+| El camino de iPhone se ve terminado a 390 px en los dos temas | BROKEN | Same stale-surface build guard, before U1-U7 observation. |
+
+**Result: 0 RED, 5 BROKEN, 0 standing guards.** This is an honest failed pre-DELIVER gate, not a
+missing-feature result. The suite may not enter DELIVER until a fresh two-day published surface is
+available to the isolated build. The test lane did not generate or publish one because its scope
+forbids touching generated data. Once that prerequisite is supplied, rerun the same focused command
+and require each scenario to reach its own `Then` oracle as `MISSING_FUNCTIONALITY`.
+
+---
+
+# Slice-03 and Slice-04 RED classification
+
+Observed 2026-08-10 in `psb-push-maps`.
+
+## Reconciliation
+
+Reconciliation passed, 0 contradictions. The feature-local DISCUSS, DESIGN and DEVOPS decision
+directories are absent; the unified feature delta, accepted write-path architecture and
+`distill/slice-03-04-decisions.md` are the applicable record. That decision record fixes the
+launch bar default at 70, the follow-up as shipped, its Spanish copy, and Slice-04's exact integer
+range. It also names the deployed write stack, scheduler, VAPID keypair, real-device smoke and
+deployed report storage as external boundaries. No local fake is permitted for any of those claims.
+
+## Commands observed
+
+```sh
+jq empty docs/feature/f-tell-me-when-its-worth-the-drive/deliver/roadmap.json
+npm run typecheck
+npm run test:at -- --dry-run --tags "@feature-f-tell-me-when-its-worth-the-drive and (@slice-03 or @slice-04)"
+npm run test:at -- --dry-run --tags "@feature-f-tell-me-when-its-worth-the-drive and @slice-99"
+npm run test:at -- --tags "@feature-f-tell-me-when-its-worth-the-drive and (@slice-03 or @slice-04) and not @requires_external"
+```
+
+The roadmap parsed, its 42 declared steps matched the counted phase steps, and TypeScript
+typecheck passed. The dry binding run selected 18 scenarios and 230 steps with zero undefined or
+ambiguous steps. The slice-99 control selected zero scenarios, proving the quoted tag expression
+arrives as one Cucumber argument.
+
+The local run excludes the three deliberately external journeys. It ran 15 scenarios and 192 steps:
+all 15 failed at their individual `Then` oracle, with 171 setup/action steps completing and no
+failure in import, step matching, world construction, browser launch or fixture setup.
+
+## Classification
+
+| Contract group | Classification | Right reason reached |
+|---|---|---|
+| Afternoon question, including a later bad sea | MISSING_FUNCTIONALITY | `planNotifications()` does not yet exist, so the `Then` reports zero questions rather than treating an absent plan as a pass. |
+| Afternoon suppression after a response, outside the window, or without a morning aviso | MISSING_FUNCTIONALITY | The `Then` first requires a completed plan; it reports that the run decided nothing, preventing a false-green absence claim. |
+| Exact chosen bar governs later sends | MISSING_FUNCTIONALITY | The existing idempotent upsert preserves the exact selected value; the later planner is absent and the send `Then` fails there. |
+| Invalid -1, 101 and 67.5 choices | MISSING_FUNCTIONALITY | The current public upsert changes the stored value; the `Then` reports that invalid input changed avisos instead of a setup failure. |
+| Returned bar from real active subscription | REQUIRES_EXTERNAL | `@requires_external @deploy-blocked`; it requires the real browser subscription plus deployed stored-subscription receipt. A stale local flag is hostile input only and never evidence. |
+| Visual bar control | MISSING_FUNCTIONALITY | The emitted surface is unavailable because the current published data is stale; the acting step captures that condition and the `Then` reports the missing user-visible control. |
+| Solicited report stored through the real report boundary | REQUIRES_EXTERNAL | `@requires_external @deploy-blocked`; no deployed report boundary is present and no local stand-in was made. |
+| Morning aviso through afternoon delivery and the report deep link on Android or installed iPhone | REQUIRES_EXTERNAL | `@walking_skeleton @requires_external @deploy-blocked`; the real-device/VAPID smoke remains launch evidence, not a fake local pass. |
+
+## Gate result
+
+The local pure and built-surface contracts are RED-ready. The three external journeys are explicitly
+blocked, not faked. This is not a DELIVER handoff yet: independent acceptance review is approved,
+and a fresh current published surface is required before U1-U7 or a source-blind device
+exam can produce GREEN evidence.
