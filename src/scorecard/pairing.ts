@@ -89,7 +89,7 @@ const matchingPredictions = (
   return [...perSource.values()];
 };
 
-const residualsFor = (prediction: PredictionSnapshot, report: SurfReport): readonly Residual[] => {
+const heightResidualFor = (prediction: PredictionSnapshot, report: SurfReport): readonly Residual[] => {
   const shared = {
     spot_id: prediction.spot_id,
     source: prediction.source,
@@ -99,22 +99,47 @@ const residualsFor = (prediction: PredictionSnapshot, report: SurfReport): reado
     quality: report.quality,
   };
   const height = observedHeight(report.size_band);
-  const score = observedScore(report.quality);
   return [
     ...(height === null ? [] : [{ ...shared, variable: 'swell_h' as const, err: prediction.swell_h_m - height }]),
-    ...(score === null
-      ? []
-      : [
-          {
-            ...shared,
-            source: 'published',
-            variable: 'score' as const,
-            err: report.predicted.score_q - score,
-          },
-        ]),
+  ];
+};
+
+const publishedScoreResidualFor = (
+  prediction: PredictionSnapshot,
+  report: SurfReport,
+): readonly Residual[] => {
+  const score = observedScore(report.quality);
+  if (score === null) return [];
+  return [
+    {
+      spot_id: prediction.spot_id,
+      source: 'published',
+      lead_bucket: leadBucket(prediction.lead_h),
+      variable: 'score',
+      paired_valid_ts: prediction.valid_ts,
+      err: report.predicted.score_q - score,
+      device_id: report.device_id,
+      quality: report.quality,
+    },
   ];
 };
 
 /** Forms immutable residual samples at the settled (spot, source, lead, variable) grain. */
 export const pairResiduals = ({ predictions, reports }: PairingInput): readonly Residual[] =>
-  reports.flatMap((report) => matchingPredictions(predictions, report).flatMap((prediction) => residualsFor(prediction, report)));
+  reports.flatMap((report) => {
+    const matches = [...matchingPredictions(predictions, report)].sort((left, right) => left.source.localeCompare(right.source));
+    return [
+      ...matches.flatMap((prediction) => heightResidualFor(prediction, report)),
+      ...(matches[0] === undefined ? [] : publishedScoreResidualFor(matches[0], report)),
+    ];
+  });
+
+/** Counts each stored report once when an unmasked forecast row exists at its exact spot and hour. */
+export const pairableReportCounts = ({ predictions, reports }: PairingInput): ReadonlyMap<string, number> =>
+  reports.reduce(
+    (counts, report) =>
+      matchingPredictions(predictions, report).length === 0
+        ? counts
+        : new Map(counts).set(report.spot_id, (counts.get(report.spot_id) ?? 0) + 1),
+    new Map<string, number>(),
+  );

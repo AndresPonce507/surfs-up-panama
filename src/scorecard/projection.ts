@@ -1,5 +1,5 @@
 import { aggregateDaily, type DailyAggregate } from './daily-aggregate';
-import { pairResiduals, type PredictionSnapshot, type Residual, type ScorecardVariable, type SurfReport } from './pairing';
+import { pairableReportCounts, pairResiduals, type PredictionSnapshot, type Residual, type ScorecardVariable, type SurfReport } from './pairing';
 import { evaluateBiasClause } from './publish-gate';
 import { decideScorecardBlock, type ScorecardBlock } from './scorecard-block';
 import { eligibleReports, type TrustGateConfig } from './trust-eligibility';
@@ -36,19 +36,27 @@ const validateVariables = (variables: readonly string[] | undefined): void => {
   }
 };
 
-const blocksFrom = (keys: readonly WindowStat[]): Readonly<Record<string, ScorecardBlock>> => {
+const blocksFrom = (
+  keys: readonly WindowStat[],
+  displayObservationsBySpot: ReadonlyMap<string, number>,
+): Readonly<Record<string, ScorecardBlock>> => {
   const bySpot = keys
     .filter((stat) => stat.window === '30d')
     .reduce((spots, stat) => (spots.has(stat.spot_id) ? spots : new Map(spots).set(stat.spot_id, stat)), new Map<string, WindowStat>());
+  const spotIds = new Set([...bySpot.keys(), ...displayObservationsBySpot.keys()]);
   return Object.fromEntries(
-    [...bySpot.entries()].map(([spotId, stat]) => [
-      spotId,
-      decideScorecardBlock({
-        pairedObservations: stat.n,
-        distinctTrustEligibleReporters: stat.distinct_reporters,
-        biasClause: evaluateBiasClause(stat.bias, stat.se_gate),
-      }),
-    ]),
+    [...spotIds].map((spotId) => {
+      const stat = bySpot.get(spotId);
+      return [
+        spotId,
+        decideScorecardBlock({
+          pairedObservations: stat?.n ?? 0,
+          displayObservations: displayObservationsBySpot.get(spotId) ?? 0,
+          distinctTrustEligibleReporters: stat?.distinct_reporters ?? 0,
+          biasClause: stat === undefined ? 'unavailable' : evaluateBiasClause(stat.bias, stat.se_gate),
+        }),
+      ];
+    }),
   );
 };
 
@@ -58,6 +66,7 @@ export const projectScorecard = (input: ProjectionInput): ScorecardProjection =>
   const selected = new Set<ScorecardVariable>((input.variables ?? allowedVariables) as readonly ScorecardVariable[]);
   const reports = input.fromAccumulator?.reports ?? input.reports;
   const residuals = pairResiduals({ predictions: input.predictions, reports }).filter((residual) => selected.has(residual.variable));
+  const displayObservationsBySpot = pairableReportCounts({ predictions: input.predictions, reports });
   const gatedReports = eligibleReports(reports, input.trustConfig, input.resolveReporter);
   const gatedResiduals = pairResiduals({ predictions: input.predictions, reports: gatedReports }).filter((residual) =>
     selected.has(residual.variable),
@@ -68,7 +77,7 @@ export const projectScorecard = (input: ProjectionInput): ScorecardProjection =>
     residuals,
     daily,
     keys,
-    blocks: blocksFrom(keys),
+    blocks: blocksFrom(keys, displayObservationsBySpot),
   };
 };
 

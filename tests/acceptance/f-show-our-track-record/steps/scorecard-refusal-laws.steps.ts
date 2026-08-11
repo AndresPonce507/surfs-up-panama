@@ -400,6 +400,8 @@ Given(
     // (2.0 m) average exactly the coordinated chest-head midpoint (1.35 m),
     // while retaining real sample variance: (13 * 0.9 + 9 * 2.0) / 22 = 1.35.
     const honestBands = Array.from({ length: 22 }, (_, index) => (index < 13 ? 'waist_chest' : 'head_overhead'));
+    const floor = (0.5 * SIGMA_EFF_HEIGHT_M) / Math.sqrt(22);
+    state.predictions = state.predictions.map((prediction) => ({ ...prediction, swell_h_m: 1.35 + 1.5 * floor }));
     for (let i = 0; i < 22; i += 1) {
       const day = i + 1;
       coordinated.push(
@@ -798,13 +800,12 @@ Then('el margen guardado nunca baja del piso físico del ruido', function () {
   }
 });
 
-Then('el conjunto coordinado jamás publica antes que el honesto', function () {
+Then('bajo el límite del piso el conjunto coordinado todavía no publica', function () {
   const coordinated = state.coordinated;
   const honest = state.honest;
   assert.ok(coordinated && honest, 'test harness error: the two projections did not run');
-  // Both sets share n and bias; the coordinated one has (near) zero variance.
-  // The floor means its gate threshold can never be smaller than the floor,
-  // so it can never pass at a bias magnitude the honest set would refuse.
+  // Both sets share n and a bias below 2*floor. Zero variance may reach the
+  // floor but cannot buy past it; without that floor its raw error is zero.
   const gateOf = (result: AnyRec): number => {
     const stat = keyStatsOf(result).find(
       (k) => String(k['variable']) === 'swell_h' && String(k['window']) === '30d' && Number(k['n']) >= 10,
@@ -813,28 +814,19 @@ Then('el conjunto coordinado jamás publica antes que el honesto', function () {
     return Number(stat['se_gate'] ?? stat['se']);
   };
   const coordinatedGate = gateOf(coordinated);
-  const honestGate = gateOf(honest);
+  gateOf(honest);
+  const floor = (0.5 * SIGMA_EFF_HEIGHT_M) / Math.sqrt(22);
   assert.ok(
-    coordinatedGate >= (0.5 * SIGMA_EFF_HEIGHT_M) / Math.sqrt(22) - 1e-12,
-    `the coordinated set's se_gate ${coordinatedGate} slipped under the floor; coordination must never tighten the gate`,
+    Math.abs(coordinatedGate - floor) < 1e-12,
+    `the zero-variance set must bind exactly at the sigma floor ${floor}, got ${coordinatedGate}; removing the floor makes this assertion fail`,
   );
-  assert.ok(
-    coordinatedGate <= honestGate + 1e-12 ? true : true,
-    'informational: honest variance may exceed the floor',
-  );
-  // The refusal that matters: at equal n and bias, claim_ok for the
-  // coordinated set implies claim_ok for the honest set would need at most
-  // the same evidence — coordination must never be the cheaper path.
   const claimOf = (result: AnyRec): boolean =>
     Object.values(blocksOf(result)).some((b) => b['claim_ok'] === true);
-  if (claimOf(coordinated)) {
-    assert.ok(
-      coordinatedGate >= honestGate - 1e-12 || claimOf(honest),
-      'the coordinated set published while the honest set with the same n and bias did not, ' +
-        'and its gate was tighter than the honest one: the floor exists precisely so agreement ' +
-        'never buys an earlier claim (research 15 section 15.1).',
-    );
-  }
+  assert.equal(
+    claimOf(coordinated),
+    false,
+    'a bias below 2*se_gate must not publish; removing the sigma floor lets coordinated zero-variance samples pass this boundary',
+  );
 });
 
 Then('las muestras de la credencial joven quedan fuera de toda cuenta con reja', function () {

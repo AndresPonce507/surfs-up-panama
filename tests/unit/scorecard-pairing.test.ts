@@ -64,4 +64,21 @@ describe('scorecard pairing', () => {
       { numRuns: 100 },
     );
   });
+
+  it('emits one published score residual per report even when several source forecasts match', () => {
+    const reports = [report(), report({ device_id: 'device-2' })];
+    const predictions = [
+      prediction({ source: 'dwd_gwam' }),
+      prediction({ source: 'ncep_gfswave016' }),
+    ];
+
+    const scoreResiduals = pairResiduals({ predictions, reports }).filter((residual) => residual.variable === 'score');
+
+    assert.equal(
+      scoreResiduals.length,
+      reports.length,
+      'the published score is captured once per report, not once for every source prediction that can form a height residual',
+    );
+    assert.ok(scoreResiduals.every((residual) => residual.source === 'published'));
+  });
 });
