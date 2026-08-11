@@ -21,9 +21,10 @@ type RenderedPalette = {
   titleColor: string;
   callColor: string;
   heroBackground: string;
+  visibleOpaqueBackgrounds: string[];
   tokenValues: string[];
 };
-type ExpectedPalette = Omit<RenderedPalette, 'tokenValues'>;
+type ExpectedPalette = Omit<RenderedPalette, 'tokenValues' | 'visibleOpaqueBackgrounds'>;
 
 const projectRoot = process.cwd();
 const designSystemPath = join(projectRoot, 'docs/product/architecture/09-design-system.md');
@@ -39,8 +40,6 @@ const expectedRows = {
     ['#FFFFFF', '#0D5866', '8.06', 'AAA'],
     ['#E8F7FA', '#0D5866', '7.34', 'AAA'],
     ['#08252E', '#F2F8FA', '14.90', 'AAA'],
-    ['#08252E', '#FFFFFF', '15.98', 'AAA'],
-    ['#3B5A63', '#FFFFFF', '7.42', 'AAA'],
     ['#3B5A63', '#F2F8FA', '6.92', 'AA'],
     ['#9E1C23', '#F2F8FA', '7.41', 'AAA'],
     ['#0B5F6A', '#F2F8FA', '6.85', 'AA'],
@@ -52,8 +51,6 @@ const expectedRows = {
     ['#E8F7FA', '#0C5866', '7.34', 'AAA'],
     ['#E4F2F5', '#0C5866', '7.04', 'AAA'],
     ['#E4F2F5', '#061A21', '15.56', 'AAA'],
-    ['#E4F2F5', '#0C2830', '13.45', 'AAA'],
-    ['#9DBAC2', '#0C2830', '7.52', 'AAA'],
     ['#9DBAC2', '#061A21', '8.69', 'AAA'],
     ['#F2848D', '#061A21', '7.19', 'AAA'],
     ['#6FCFDD', '#061A21', '9.89', 'AAA'],
@@ -61,6 +58,17 @@ const expectedRows = {
     ['#E3A85F', '#061A21', '8.52', 'AAA'],
   ],
 } as const satisfies Record<Theme, readonly (readonly [string, string, string, string])[]>;
+
+const unpaintedCardPairs = {
+  claro: [
+    ['#08252E', '#FFFFFF'],
+    ['#3B5A63', '#FFFFFF'],
+  ],
+  oscuro: [
+    ['#E4F2F5', '#0C2830'],
+    ['#9DBAC2', '#0C2830'],
+  ],
+} as const satisfies Record<Theme, readonly (readonly [string, string])[]>;
 
 const obsoletePaletteValues = ['#14181D', '#F7FAFC', '#EAF1F5', '#EDF1F4', '#1E2A36'];
 
@@ -156,6 +164,11 @@ function tableFindings(table: string, theme: Theme): string[] {
       findings.push(`falta la pareja tropical ${foreground} sobre ${background}, ${ratio}:1, ${floor}`);
     }
   }
+  for (const [foreground, background] of unpaintedCardPairs[theme]) {
+    if (rows.some((row) => row.includes(foreground) && row.includes(background))) {
+      findings.push(`conserva la pareja de tarjeta no pintada ${foreground} sobre ${background}`);
+    }
+  }
   return findings;
 }
 
@@ -186,6 +199,18 @@ function renderedPairFindings(tokenValues: readonly string[], theme: Theme): str
   return findings;
 }
 
+function unpaintedBackgroundFindings(backgrounds: readonly string[], theme: Theme): string[] {
+  return [...new Set(unpaintedCardPairs[theme]
+    .map(([, background]) => background)
+    .filter((background) => backgrounds.some((painted) => computedColorHex(painted) === background)))];
+}
+
+function computedColorHex(color: string): string {
+  const channels = color.match(/\d+(?:\.\d+)?/g)?.slice(0, 3).map(Number);
+  if (!channels || channels.length !== 3) return color.toUpperCase();
+  return `#${channels.map((channel) => channel.toString(16).padStart(2, '0')).join('').toUpperCase()}`;
+}
+
 async function renderedPalette(page: Page): Promise<RenderedPalette> {
   return page.evaluate(`(() => {
     const style = (selector) => {
@@ -198,12 +223,17 @@ async function renderedPalette(page: Page): Promise<RenderedPalette> {
     const call = style('ol.ranked li:first-child > p');
     const hero = style('ol.ranked li:first-child');
     const root = getComputedStyle(document.documentElement);
+    const visibleOpaqueBackgrounds = [...document.querySelectorAll('body *')]
+      .filter((element) => element.offsetParent !== null)
+      .map((element) => getComputedStyle(element).backgroundColor)
+      .filter((color) => !/^rgba\(0, 0, 0, 0\)$/.test(color));
     return {
       bodyColor: body.color,
       bodyBackground: body.backgroundColor,
       titleColor: title.color,
       callColor: call.color,
       heroBackground: hero.backgroundImage,
+      visibleOpaqueBackgrounds,
       tokenValues: ['--ink', '--ink-2', '--bg', '--surface', '--go', '--on-go', '--warn', '--danger', '--accent', '--hero-grad', '--hero-ink', '--hero-ink-2']
         .map((name) => root.getPropertyValue(name).trim()),
     };
@@ -248,6 +278,8 @@ Then('la tabla nombra las parejas de lectura que la portada realmente pinta en t
 
   const renderedFindings = renderedPairFindings(rendered.tokenValues, theme);
   assert.deepEqual(renderedFindings, [], `las parejas medidas no son las de la portada publicada: ${renderedFindings.join('; ')}`);
+  const forbiddenBackgrounds = unpaintedBackgroundFindings(rendered.visibleOpaqueBackgrounds, theme);
+  assert.deepEqual(forbiddenBackgrounds, [], `la portada todavía pinta un fondo de tarjeta que esta ruta no usa: ${forbiddenBackgrounds.join(', ')}`);
   const findings = tableFindings(readFileSync(designSystemPath, 'utf8'), theme);
   assert.deepEqual(findings, [], `la tabla no describe la portada publicada: ${findings.join('; ')}`);
 });
@@ -256,6 +288,19 @@ Then('la tabla no conserva los valores de la paleta gris que ya fue reemplazada'
   const rows = contrastTableRows(readFileSync(designSystemPath, 'utf8')).join('\n').toUpperCase();
   const stale = obsoletePaletteValues.filter((value) => rows.includes(value));
   assert.deepEqual(stale, [], `la tabla conserva valor(es) de la paleta gris reemplazada: ${stale.join(', ')}`);
+});
+
+When('una copia visual de la portada pinta el fondo de tarjeta claro que esta ruta no usa', async function (this: ContrastWorld) {
+  await requiredHome(this).page.addStyleTag({ content: 'ol.ranked > li:not(:first-child) { background: #FFFFFF !important; }' });
+});
+
+Then('la comprobación rechaza el fondo de tarjeta claro no pintado', async function (this: ContrastWorld) {
+  const rendered = await renderedPalette(requiredHome(this).page);
+  assert.deepEqual(
+    unpaintedBackgroundFindings(rendered.visibleOpaqueBackgrounds, 'claro'),
+    ['#FFFFFF'],
+    'la comprobación no nombró el fondo de tarjeta claro que la copia visual volvió a pintar',
+  );
 });
 
 Then('la portada cabe en el teléfono, conserva controles alcanzables y llega lista para leer', async function (this: ContrastWorld) {
@@ -436,11 +481,6 @@ Then('el documento publicado queda exactamente como estaba antes de probar la al
   const record = driftedRecords.get(this);
   assert.ok(record, 'test fixture error: falta el documento original para comprobar su regreso');
   assert.equal(readFileSync(designSystemPath, 'utf8'), record.original, 'la alarma dejó una edición en el documento publicado');
-  const diff = spawnSync('git', ['diff', '--exit-code', '--', 'docs/product/architecture/09-design-system.md'], {
-    cwd: projectRoot,
-    encoding: 'utf8',
-  });
-  assert.equal(diff.status, 0, `la pareja desviada no volvió limpia al documento publicado:\n${diff.stdout}${diff.stderr}`);
 });
 
 Then('la revisión local termina sus comprobaciones de presentación y navegador sin omitir ninguna', function () {

@@ -30,6 +30,13 @@ Feature: La tabla de contraste dice lo mismo que la portada que un surfista real
     When esa tabla se compara con la portada publicada
     Then la comprobación rechaza la tabla nombrando el color gris viejo y la pareja tropical que falta
 
+  @slice-04 @step-04-01 @driving_port @real-io @negative @error @ui-u1
+  Scenario: Una tarjeta que vuelve a pintar un fondo inexistente se rechaza contra la portada construida
+    Given la tabla de contraste y la portada publicada están listas para compararse
+    When el surfista abre para comparar la portada a 390 px, con tema "claro"
+    And una copia visual de la portada pinta el fondo de tarjeta claro que esta ruta no usa
+    Then la comprobación rechaza el fondo de tarjeta claro no pintado
+
   @slice-04 @step-04-02 @driving_port @real-io @ui-u1 @ui-u2 @ui-u3 @ui-u4 @ui-u5 @ui-u6 @ui-u7
   Scenario: El sitio se recorre en el teléfono, en las dos maneras del tema, y cada palabra se lee con margen de sobra bajo el sol
     Given las rutas que el surfista puede abrir están listas para recorrer
