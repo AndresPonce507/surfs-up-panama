@@ -36,6 +36,66 @@ append-only, in the keystone's format
 
 ## Entries
 
+### slice-03 — "Sin ese punto débil marcaría", day-aware counterfactual (2026-08-10)
+
+Author: JIT DISTILL on `build/f2-deltas`, worktree `/Users/andres/psb-deltas`.
+Artefacts: `tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature`,
+`tests/acceptance/f-see-what-killed-it/steps/weakest-link-callout.steps.ts`,
+`tests/acceptance/f-see-what-killed-it/fixtures/slice-03-counterfactual-profiles.json`,
+and `docs/product/expectations/f-see-what-killed-it/a-surfer-lee-cuanto-marcaria-la-playa-sin-el-punto-que-la-tumbo.md`.
+
+**Commands observed, exactly as run.**
+
+```
+npm run typecheck
+REAL_EXIT=0
+
+npm run test:at -- --dry-run --tags "@feature-f-see-what-killed-it and @slice-03"
+REAL_EXIT=0
+1 hook (1 skipped); 2 scenarios (2 skipped); 28 steps (28 skipped); 0 undefined, 0 ambiguous
+
+npm run test:at -- --tags "@feature-f-see-what-killed-it and @slice-03"
+REAL_EXIT=1
+1 hook (1 passed); 2 scenarios (2 failed); 28 steps (18 passed, 8 skipped, 2 failed)
+```
+
+**Exactness witness for R11.** The fixture is producer-shaped evidence only;
+the emitted page gets the already-published integers, never the damages. Today
+has damages `{dir: 0, size: 0.1499, wind: 0.0681, tide: 0.0059}`, named
+`size`, and `delta_q = 0`: `round(100 * exp(-(0.2239 - 0.1499))) = 93` while
+`round(100 * exp(-0.2239)) = 80`. Tomorrow has damages `{dir: 0.04,
+size: 0.07, wind: 0.228842, tide: 0.017833}`, named `wind`, and `delta_q = 0`:
+`round(100 * exp(-(0.356675 - 0.228842))) = 88` while
+`round(100 * exp(-0.356675)) = 70`. The Given recomputes both before browser
+navigation so a dishonest fixture cannot make the page test pass.
+
+**Classification.** Both light and dark/reduced-motion examples reach the
+real production build, emitted `dist/`, HTTP server, and Chromium at 390 px.
+They fail at the same user-visible assertion, not at imports, fixture setup,
+step matching, build, HTTP, or browser startup:
+
+| Scenario | Observable exercised | Behavior oracle reached | Classification |
+|---|---|---|---|
+| El surfista lee cuánto marcaría la playa sin ese punto débil, tema claro | Today’s visible counterfactual clause on the emitted spot page | `Then la sección de hoy dice cuánto marcaría sin su causa publicada` — the page does not show the published `93` | MISSING_FUNCTIONALITY |
+| El surfista lee cuánto marcaría la playa sin ese punto débil, tema oscuro y movimiento reducido | Same day-aware clause under the alternate shipped visual state | Same visible `93` oracle | MISSING_FUNCTIONALITY |
+
+The scaffold also specifies the post-GREEN integrity boundary: the production
+build emits exactly two JSON-lines events for the two named legacy spot-days,
+each with `event`, `spot_id`, `day`, and `published_at`; a rounded equality and
+a clean day emit none. It is not reached while the missing visible clause is
+correctly RED, and will become the next assertion when the first oracle is
+GREEN.
+
+**Review amendment.** Independent review separated the original surfer journey
+from three explicit suppression journeys (rounded equality, named legacy
+absence, and perfect day) and one publisher journey for the JSON-lines health
+event. The original RED snapshot above remains the truthful entry evidence for
+the exact requested surfer scenario: it was taken before the clause existed.
+The later scenarios are deliberately enabled after that first behavior under
+the one-at-a-time sequence. Their current binding is `6 scenarios, 67 steps,
+0 undefined, 0 ambiguous`; they are not retroactively represented as having
+failed in the earlier snapshot.
+
 ### slice-01 — "Lo que la tumbó", named per day section (2026-08-09)
 
 Author: JIT DISTILL on `build/f2-deltas`, worktree `/Users/andres/psb-deltas`, base `6037fc1`.

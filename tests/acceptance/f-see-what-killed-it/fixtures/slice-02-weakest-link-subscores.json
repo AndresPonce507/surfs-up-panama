@@ -5,14 +5,15 @@
       "spot_id": "playa-malibu",
       "today": {
         "link": "wind",
-        "producer_subscores": { "dir": 0.91, "size": 0.83, "wind": 0.64, "tide": 0.12 }
+        "producer_subscores": { "dir": 0.91, "size": 0.83, "wind": 0.64, "tide": 0.12 },
+        "counterfactual_suppression": "rounded_equal"
       },
-      "tomorrow": { "link": "size", "subscore": 0.83 }
+      "tomorrow": { "link": "size", "subscore": 0.83, "counterfactual_suppression": "rounded_equal" }
     },
     "fila-legada": {
       "spot_id": "playa-serena",
-      "today": { "link": "wind" },
-      "tomorrow": { "link": "tide" }
+      "today": { "link": "wind", "counterfactual_score_q": "legacy" },
+      "tomorrow": { "link": "tide", "counterfactual_score_q": "legacy" }
     }
   }
 }

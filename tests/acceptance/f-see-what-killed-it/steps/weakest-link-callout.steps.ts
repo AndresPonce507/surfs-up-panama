@@ -86,6 +86,8 @@ type ProducerSubscores = Readonly<{
   tide: number | null;
 }>;
 
+type DamageReceipt = Readonly<Record<Factor, number>>;
+
 type ProfileDay = {
   readonly link?: Factor | null;
   /**
@@ -96,6 +98,12 @@ type ProfileDay = {
   readonly subscore?: number;
   /** Full score record is producer-only input; the browser receives one selected scalar. */
   readonly producer_subscores?: ProducerSubscores;
+  readonly score_q?: number;
+  /** `legacy` deliberately plants neither fresh counterfactual representation. */
+  readonly counterfactual_score_q?: number | 'legacy';
+  readonly counterfactual_suppression?: 'rounded_equal';
+  /** Producer-side arithmetic witness; it never reaches the emitted reading surface. */
+  readonly damages?: DamageReceipt;
   readonly omit?: boolean;
   readonly drop_wind_state?: boolean;
 };
@@ -107,6 +115,7 @@ type Fixture = {
 };
 
 type Slice02Fixture = Pick<Fixture, 'profiles'>;
+type Slice03Fixture = Pick<Fixture, 'profiles'>;
 
 const fixture = JSON.parse(readFileSync(
   new URL('../fixtures/slice-01-weakest-link-profiles.json', import.meta.url),
@@ -118,7 +127,12 @@ const slice02Fixture = JSON.parse(readFileSync(
   'utf8',
 )) as Slice02Fixture;
 
-const profiles = { ...fixture.profiles, ...slice02Fixture.profiles };
+const slice03Fixture = JSON.parse(readFileSync(
+  new URL('../fixtures/slice-03-counterfactual-profiles.json', import.meta.url),
+  'utf8',
+)) as Slice03Fixture;
+
+const profiles = { ...fixture.profiles, ...slice02Fixture.profiles, ...slice03Fixture.profiles };
 
 const FACTOR_WORD: Readonly<Record<Factor, RegExp>> = {
   dir: new RegExp(fixture.factor_words.dir, 'i'),
@@ -131,6 +145,10 @@ type DayPlan = {
   readonly link: Factor | null;
   readonly subscore?: number;
   readonly producerSubscores?: ProducerSubscores;
+  readonly scoreQ?: number;
+  readonly counterfactualScore?: number | 'legacy';
+  readonly counterfactualSuppression?: 'rounded_equal';
+  readonly damages?: DamageReceipt;
   readonly omit: boolean;
   readonly dropWindState: boolean;
 };
@@ -152,6 +170,10 @@ function dayPlan(declared: ProfileDay | undefined, fallback: Factor): DayPlan {
     link,
     ...(producerSubscore === undefined && declared.subscore === undefined ? {} : { subscore: producerSubscore ?? declared.subscore }),
     ...(declared.producer_subscores === undefined ? {} : { producerSubscores: declared.producer_subscores }),
+    ...(declared.score_q === undefined ? {} : { scoreQ: declared.score_q }),
+    ...(declared.counterfactual_score_q === undefined ? {} : { counterfactualScore: declared.counterfactual_score_q }),
+    ...(declared.counterfactual_suppression === undefined ? {} : { counterfactualSuppression: declared.counterfactual_suppression }),
+    ...(declared.damages === undefined ? {} : { damages: declared.damages }),
     omit: declared.omit === true,
     dropWindState: declared.drop_wind_state === true,
   };
@@ -222,10 +244,28 @@ function copyProjectForSurface(): string {
 
 type SurfaceRow = {
   spot_id: string;
+  score_q: number;
   weakest_link?: Factor | null;
   weakest_link_subscore?: number;
+  counterfactual_score_q?: number;
+  counterfactual_suppression?: 'rounded_equal';
   wind_state?: string;
 };
+
+function panamaCivilDate(now = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Panama',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+}
+
+function nextCivilDate(date: string): string {
+  const next = new Date(`${date}T12:00:00.000Z`);
+  next.setUTCDate(next.getUTCDate() + 1);
+  return next.toISOString().slice(0, 10);
+}
 
 function applyDayPlan(rows: SurfaceRow[], which: 'today' | 'tomorrow'): void {
   for (const row of rows) {
@@ -240,6 +280,22 @@ function applyDayPlan(rows: SurfaceRow[], which: 'today' | 'tomorrow'): void {
     } else {
       delete row.weakest_link_subscore;
     }
+    if (typeof planned.scoreQ === 'number') row.score_q = planned.scoreQ;
+    delete row.counterfactual_score_q;
+    delete row.counterfactual_suppression;
+    if (planned.link !== null && !planned.omit) {
+      if (planned.counterfactualSuppression === 'rounded_equal') {
+        row.counterfactual_suppression = 'rounded_equal';
+      } else if (planned.counterfactualScore !== 'legacy') {
+        // Every unnamed fixture row is fresh and must not accidentally become
+        // a legacy compatibility case just because this scenario does not
+        // inspect it. The score is an input to the emitted reading surface,
+        // never a browser calculation.
+        const counterfactualScore = planned.counterfactualScore ?? (row.score_q < 100 ? row.score_q + 1 : undefined);
+        if (counterfactualScore === undefined) row.counterfactual_suppression = 'rounded_equal';
+        else row.counterfactual_score_q = counterfactualScore;
+      }
+    }
     if (planned.dropWindState) delete row.wind_state;
   }
 }
@@ -252,15 +308,29 @@ function applyDayPlan(rows: SurfaceRow[], which: 'today' | 'tomorrow'): void {
 function applyPublishedCulprits(root: string): void {
   const path = join(root, 'data/published-surface.json');
   const surface = JSON.parse(readFileSync(path, 'utf8')) as {
-    current: { calls: SurfaceRow[]; days: [{ spots: SurfaceRow[] }, { spots: SurfaceRow[] }] };
+    current: {
+      surf_date: string;
+      published_at: string;
+      calls: SurfaceRow[];
+      days: [{ date: string; spots: SurfaceRow[] }, { date: string; spots: SurfaceRow[] }];
+    };
   };
+  // The copied surface is a fresh morning for this real build, not a stale
+  // archived document. Keep its two-day wire invariant while the calendar
+  // advances, otherwise publish:surface correctly refuses the test before a
+  // surfer can reach the behavior this slice owns.
+  const today = panamaCivilDate();
+  surface.current.surf_date = today;
+  surface.current.published_at = `${today}T12:05:00.000Z`;
+  surface.current.days[0].date = today;
+  surface.current.days[1].date = nextCivilDate(today);
   applyDayPlan(surface.current.calls, 'today');
   applyDayPlan(surface.current.days[0].spots, 'today');
   applyDayPlan(surface.current.days[1].spots, 'tomorrow');
   writeFileSync(path, `${JSON.stringify(surface, null, 2)}\n`);
 }
 
-type UiGate = { readonly status: number | null; readonly output: string };
+type UiGate = { readonly status: number | null; readonly output: string; readonly buildOutput: string };
 
 function buildSurface(root: string): UiGate {
   const build = spawnSync('npm', ['run', 'build'], {
@@ -278,7 +348,11 @@ function buildSurface(root: string): UiGate {
     encoding: 'utf8',
     maxBuffer: 2 * 1024 * 1024,
   });
-  return { status: gate.status, output: `${gate.stdout}${gate.stderr}` };
+  return {
+    status: gate.status,
+    output: `${gate.stdout}${gate.stderr}`,
+    buildOutput: `${build.stdout}${build.stderr}`,
+  };
 }
 
 // ------------------------------------------------- emitted dist over HTTP --
@@ -391,6 +465,16 @@ function requiredHarness(): Harness {
   return harness;
 }
 
+function buildCounterfactualHealthSurface(): string {
+  const root = copyProjectForSurface();
+  try {
+    applyPublishedCulprits(root);
+    return buildSurface(root).buildOutput;
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
 // ------------------------------------------------------------- the reader --
 
 type CalloutReading = {
@@ -450,6 +534,7 @@ type Slice01World = PipelineWorld & {
   killedItListCallouts?: number;
   killedItMonochrome?: { readonly today: string | null; readonly tomorrow: string | null };
   killedItVisual?: RawVisualAudit;
+  killedItHealthBuildOutput?: string;
 };
 
 function world01(world: PipelineWorld): Slice01World {
@@ -542,6 +627,48 @@ function legacySentenceFindings(label: string, text: string | null, expected: Fa
   return findings;
 }
 
+function exactCounterfactualFindings(label: string, plan: DayPlan): string[] {
+  const findings: string[] = [];
+  if (plan.link === null || plan.damages === undefined || typeof plan.counterfactualScore !== 'number' || plan.scoreQ === undefined) {
+    return [`${label}: la mañana de prueba no trae el recibo completo de la mejora honesta`];
+  }
+  const totalDamage = Object.values(plan.damages).reduce((sum, damage) => sum + damage, 0);
+  const withoutNamedWeakness = Math.round(100 * Math.exp(-(totalDamage - plan.damages[plan.link])));
+  const displayed = Math.round(100 * Math.exp(-totalDamage));
+  if (withoutNamedWeakness !== plan.counterfactualScore) {
+    findings.push(`${label}: el recibo recompone ${withoutNamedWeakness}, no el ${plan.counterfactualScore} que la mañana publicó`);
+  }
+  if (displayed !== plan.scoreQ) {
+    findings.push(`${label}: el recibo recompone puntaje ${displayed}, no el ${plan.scoreQ} de esa sección`);
+  }
+  return findings;
+}
+
+/** A whole score token is never accepted as a prefix of another displayed number. */
+function hasPrintedWholeScore(text: string, value: number): boolean {
+  return new RegExp(`(?:^|[^0-9])${String(value)}(?![0-9])`).test(text);
+}
+
+type PublishHealthEvent = Readonly<{
+  readonly event?: unknown;
+  readonly spot_id?: unknown;
+  readonly day?: unknown;
+  readonly published_at?: unknown;
+}>;
+
+function counterfactualHealthEvents(output: string): readonly PublishHealthEvent[] {
+  return output.split(/\r?\n/u).flatMap((line) => {
+    try {
+      const parsed: unknown = JSON.parse(line);
+      return typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)
+        ? [parsed as PublishHealthEvent]
+        : [];
+    } catch {
+      return [];
+    }
+  }).filter((entry) => entry.event === 'health.publish.counterfactual_field_missing');
+}
+
 // ------------------------------------------------------------------ Given --
 
 Given(
@@ -562,6 +689,75 @@ Given(
     assert.equal(plan.tomorrow.subscore, 0.62, 'test fixture error: mañana must carry the published value 0.62');
   },
 );
+
+Given(
+  'una mañana publicada donde cada día trae una mejora honesta junto a su causa',
+  { timeout: 600_000 },
+  async function () {
+    await ensureHarness();
+    const { plan } = plannedFor('nombre-mas-largo');
+    const findings = [
+      ...exactCounterfactualFindings('hoy', plan.today),
+      ...exactCounterfactualFindings('mañana', plan.tomorrow),
+    ];
+    assert.deepEqual(
+      findings,
+      [],
+      `test fixture error: ${findings.join('; ')}. La prueba necesita números que la mañana pueda publicar sin inventarlos.`,
+    );
+  },
+);
+
+Given(
+  'una mañana publicada donde la mejora redondeada no cambia el puntaje de cada día',
+  { timeout: 600_000 },
+  async function () {
+    await ensureHarness();
+    const { plan } = plannedFor('minimo-no-publicado');
+    assert.ok(
+      plan.today.counterfactualSuppression === 'rounded_equal' && plan.tomorrow.counterfactualSuppression === 'rounded_equal',
+      'test fixture error: both rounded-equality days must carry their honest suppression marker',
+    );
+  },
+);
+
+Given(
+  'una mañana publicada donde una playa conserva sus causas pero no la mejora nueva',
+  { timeout: 600_000 },
+  async function () {
+    await ensureHarness();
+    const { plan } = plannedFor('fila-legada');
+    assert.ok(
+      plan.today.counterfactualScore === 'legacy' && plan.tomorrow.counterfactualScore === 'legacy',
+      'test fixture error: both named legacy days must omit both fresh counterfactual representations',
+    );
+  },
+);
+
+Given(
+  'una mañana publicada donde una playa salió perfecta, sin nada que la tumbara',
+  { timeout: 600_000 },
+  async function () {
+    await ensureHarness();
+    const { plan } = plannedFor('dia-perfecto');
+    assert.ok(
+      plan.today.link === null && plan.tomorrow.link === null,
+      'test fixture error: the perfect-day profile must publish no named cause in either section',
+    );
+  },
+);
+
+Given('una mañana publicada con una ausencia heredada en sus dos días', function () {
+  const legacy = plannedFor('fila-legada');
+  const rounded = plannedFor('minimo-no-publicado');
+  const clean = plannedFor('dia-perfecto');
+  assert.ok(
+    legacy.plan.today.counterfactualScore === 'legacy' && legacy.plan.tomorrow.counterfactualScore === 'legacy'
+      && rounded.plan.today.counterfactualSuppression === 'rounded_equal' && rounded.plan.tomorrow.counterfactualSuppression === 'rounded_equal'
+      && clean.plan.today.link === null && clean.plan.tomorrow.link === null,
+    'test fixture error: this publication needs named legacy, rounded-equality, and clean rows to keep their distinct meanings',
+  );
+});
 
 Given(
   'una mañana publicada donde el viento es la causa pero la marea tuvo un valor menor sin publicar',
@@ -707,6 +903,10 @@ When('esa mañana se publica', { timeout: 60_000 }, async function (this: Pipeli
   await this.publishMorning('killed-it-morning', this.today);
 });
 
+When('la mañana queda lista para leerse', { timeout: 600_000 }, function (this: PipelineWorld) {
+  world01(this).killedItHealthBuildOutput = buildCounterfactualHealthSurface();
+});
+
 // ------------------------------------------------------------------- Then --
 
 Then('la sección de hoy nombra en palabras el punto débil publicado para hoy', function (this: PipelineWorld) {
@@ -793,6 +993,125 @@ Then('ninguna sección toma el valor publicado del otro día', function (this: P
   assertBehavior(
     findings,
     'mantener cada valor junto a la causa de su propio día: hoy y mañana nunca se prestan una cifra entre sí.',
+  );
+});
+
+Then('la sección de hoy dice cuánto marcaría sin su causa publicada', function (this: PipelineWorld) {
+  const world = world01(this);
+  const { plan } = plannedFor(world.killedItOpened ?? '');
+  const text = requiredReading(world).today;
+  const findings = calloutFindings('hoy', text, plan.today.link);
+  if (typeof plan.today.counterfactualScore !== 'number') {
+    findings.push('la mañana de hoy no trae la mejora honesta que este escenario necesita');
+  } else if (text === null || !hasPrintedWholeScore(text, plan.today.counterfactualScore)) {
+    findings.push(`hoy no deja leer el ${plan.today.counterfactualScore} publicado sin su causa`);
+  }
+  assertBehavior(
+    findings,
+    'repetir el puntaje entero que la mañana ya publicó sin el punto débil de hoy; la página no vuelve a hacer esa cuenta.',
+  );
+});
+
+Then('la sección de mañana dice cuánto marcaría sin su causa publicada', function (this: PipelineWorld) {
+  const world = world01(this);
+  const { plan } = plannedFor(world.killedItOpened ?? '');
+  const text = requiredReading(world).tomorrow;
+  const findings = calloutFindings('mañana', text, plan.tomorrow.link);
+  if (typeof plan.tomorrow.counterfactualScore !== 'number') {
+    findings.push('la mañana de mañana no trae la mejora honesta que este escenario necesita');
+  } else if (text === null || !hasPrintedWholeScore(text, plan.tomorrow.counterfactualScore)) {
+    findings.push(`mañana no deja leer el ${plan.tomorrow.counterfactualScore} publicado sin su causa`);
+  }
+  assertBehavior(
+    findings,
+    'repetir el puntaje entero que la mañana ya publicó sin el punto débil de mañana; la página no vuelve a hacer esa cuenta.',
+  );
+});
+
+Then('ninguna sección toma la cifra de mejora del otro día', function (this: PipelineWorld) {
+  const world = world01(this);
+  const { plan } = plannedFor(world.killedItOpened ?? '');
+  const reading = requiredReading(world);
+  const findings: string[] = [];
+  if (typeof plan.today.counterfactualScore === 'number' && reading.tomorrow !== null && hasPrintedWholeScore(reading.tomorrow, plan.today.counterfactualScore)) {
+    findings.push(`mañana toma el ${plan.today.counterfactualScore} de hoy`);
+  }
+  if (typeof plan.tomorrow.counterfactualScore === 'number' && reading.today !== null && hasPrintedWholeScore(reading.today, plan.tomorrow.counterfactualScore)) {
+    findings.push(`hoy toma el ${plan.tomorrow.counterfactualScore} de mañana`);
+  }
+  assertBehavior(
+    findings,
+    'mantener cada explicación junto a la causa y el número publicados por su propio día.',
+  );
+});
+
+function suppressedCounterfactualFindings(label: string, text: string | null, link: Factor | null): string[] {
+  const findings: string[] = [];
+  findings.push(...calloutFindings(label, text, link));
+  if (text === null) return findings;
+  if (/\bmarcaría\b/iu.test(text)) findings.push(`${label} repite o inventa una mejora en "${text}"`);
+  if (!text.endsWith('.')) findings.push(`${label} deja una frase incompleta: "${text}"`);
+  if (CODE_LEAK.test(text) || EM_DASH.test(text)) findings.push(`${label} filtra texto crudo: "${text}"`);
+  return findings;
+}
+
+Then('las dos frases de la causa quedan completas sin una mejora repetida', function (this: PipelineWorld) {
+  const world = world01(this);
+  const { plan } = plannedFor(world.killedItOpened ?? '');
+  const reading = requiredReading(world);
+  const findings = [
+    ...suppressedCounterfactualFindings('hoy', reading.today, plan.today.link),
+    ...suppressedCounterfactualFindings('mañana', reading.tomorrow, plan.tomorrow.link),
+  ];
+  assertBehavior(
+    findings,
+    'dejar completa la causa publicada cuando la mejora redondea igual al puntaje que ya se ve, sin repetir esa cifra.',
+  );
+});
+
+Then('las dos frases de la causa quedan completas sin una mejora inventada', function (this: PipelineWorld) {
+  const world = world01(this);
+  const { plan } = plannedFor(world.killedItOpened ?? '');
+  const reading = requiredReading(world);
+  const findings = [
+    ...suppressedCounterfactualFindings('hoy', reading.today, plan.today.link),
+    ...suppressedCounterfactualFindings('mañana', reading.tomorrow, plan.tomorrow.link),
+  ];
+  assertBehavior(
+    findings,
+    'conservar una frase española terminada cuando una mañana antigua no publicó la mejora nueva, sin fabricar una cifra.',
+  );
+});
+
+Then('la publicación señala una sola ausencia heredada por día sin confundirla con los otros silencios', function (this: PipelineWorld) {
+  const legacy = plannedFor('fila-legada');
+  const rounded = plannedFor('minimo-no-publicado');
+  const clean = plannedFor('dia-perfecto');
+  const output = world01(this).killedItHealthBuildOutput;
+  assert.ok(output !== undefined, 'test fixture error: the published morning was never prepared for its health observation');
+  const events = counterfactualHealthEvents(output);
+  const expected = new Set([
+    `${legacy.spotId}:today`,
+    `${legacy.spotId}:tomorrow`,
+  ]);
+  const actual = events.map((entry) => `${String(entry.spot_id)}:${String(entry.day)}`);
+  const findings: string[] = [];
+  if (events.length !== expected.size) findings.push(`la publicación señaló ${events.length} ausencia(s) heredada(s), no ${expected.size}`);
+  for (const key of expected) {
+    if (actual.filter((candidate) => candidate === key).length !== 1) findings.push(`falta o se repite la ausencia heredada ${key}`);
+  }
+  for (const entry of events) {
+    if (typeof entry.published_at !== 'string' || entry.published_at.length === 0) {
+      findings.push(`la ausencia heredada ${String(entry.spot_id)}:${String(entry.day)} no trae su momento de publicación`);
+    }
+  }
+  if (rounded.plan.today.counterfactualSuppression !== 'rounded_equal' || rounded.plan.tomorrow.counterfactualSuppression !== 'rounded_equal') {
+    findings.push('la mañana de choque no quedó marcada como una igualdad honesta');
+  }
+  if (clean.plan.today.link !== null || clean.plan.tomorrow.link !== null) findings.push('la mañana perfecta no quedó sin causa');
+  assertBehavior(
+    findings,
+    'anotar una falta heredada por cada día que conserva su causa sin la mejora nueva, sin tratar una igualdad honesta ni un día perfecto como una falla.',
   );
 });
 
