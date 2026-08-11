@@ -161,10 +161,14 @@ async function audit(page: Page, expectation: 'solid' | 'glass'): Promise<TrayAu
     const trayStyle = getComputedStyle(tray);
     const buttonStyle = getComputedStyle(button);
     const background = parse(trayStyle.backgroundColor);
-    const filter = trayStyle.backdropFilter;
-    const glass = filter !== 'none' && background[3] !== undefined && background[3] < 1;
+    const overlayStyle = getComputedStyle(tray, '::before');
+    const overlayBackground = parse(overlayStyle.backgroundColor);
+    const filter = overlayStyle.backdropFilter;
+    const glass = filter !== 'none' && overlayBackground[3] !== undefined && overlayBackground[3] < 1;
     if (required === 'solid' && (filter !== 'none' || (background[3] ?? 1) < 1)) findings.push('bandeja: fondo ' + trayStyle.backgroundColor + ', filtro ' + filter + '; se esperaba respaldo sólido sin filtro');
+    const hasWaterField = trayStyle.backgroundImage.includes('linear-gradient');
     if (required === 'glass' && !glass) findings.push('bandeja: fondo ' + trayStyle.backgroundColor + ', filtro ' + filter + '; se esperaba vidrio mejorado');
+    if (required === 'glass' && !hasWaterField) findings.push('bandeja: fondo ' + trayStyle.backgroundColor + ', agua detrás ' + trayStyle.backgroundImage + '; el vidrio no tiene el campo de agua aprobado detrás');
     const buttonBackground = parse(buttonStyle.backgroundColor);
     const buttonText = parse(buttonStyle.color);
     if (ratio(buttonBackground, buttonText) < 4.5) findings.push('botón: contraste ' + ratio(buttonBackground, buttonText).toFixed(2) + ':1, piso 4.5:1');
