@@ -39,11 +39,61 @@ export type ConfLevel = 'low' | 'medium' | 'high';
  */
 export type ConfidenceReason = Pick<ConfidenceResult, 'dominant' | 'spread_terms' | 'track_state'>;
 
+/**
+ * The four raw sub-scores the scoring engine produced for ONE already-scored
+ * hour. Every value is that hour's own published number in [0, 1].
+ *
+ * `wind` and `tide` are nullable and `dir`/`size` are not, because that is
+ * what the engine can honestly report: wind and tide come from observations
+ * that a morning may simply not have, while direction and size are computed
+ * from the swell members every scored hour has. A null is a MISSING
+ * OBSERVATION. It is not zero, and it is not a good condition; nothing
+ * downstream may read it as either.
+ */
+export type HourlySubscore = {
+  readonly dir: number;
+  readonly size: number;
+  readonly wind: number | null;
+  readonly tide: number | null;
+};
+
+/**
+ * One point of the published two-day hourly projection: the only per-hour
+ * material the static reading surface receives.
+ *
+ * `t` is the PRECOMPUTED spot-local timestamp with a numeric offset
+ * (`2026-08-09T06:00:00-05:00`), the form the authoritative payload example
+ * uses. A `Z` instant is refused by the validator below: accepting one would
+ * push the local-hour decision onto whoever reads it, which is the browser
+ * time-zone calculation this product forbids (application-architecture.md
+ * P1, "client renders, never computes").
+ *
+ * Two keys, deliberately. No raw observation, no damage, no total, no second
+ * ranking and no score-selection rule travels here.
+ */
+export type HourlySubscorePoint = {
+  readonly t: string;
+  readonly sub: HourlySubscore;
+};
+
 /** Day-independent spot identity carried on the surface itself, mirroring
  * `region-bundle.ts`'s `BundleSpotDetail` so a page never has to read the
  * bundle for it -- the bundle is written to S3 and never committed. */
 export type SurfaceSpotDetail = {
   readonly name: string;
+  /**
+   * The scored hours spanning both published civil days.
+   *
+   * MISSING VERSUS EMPTY, the distinction this field must not collapse: no
+   * key at all means a surface published before this projection existed, and
+   * a page degrades by omitting its bars. A PRESENT array is a fresh
+   * producer projection and is validated all the way down, because a
+   * malformed fresh point is a producer-contract error, never material a
+   * page may turn into plausible bars. An empty array is therefore refused
+   * rather than read as legacy: the two would render identically while
+   * meaning opposite things.
+   */
+  readonly hourly?: readonly HourlySubscorePoint[];
 };
 
 export type SurfaceCall = {
@@ -195,7 +245,67 @@ export function assertStrictTwoDayUpdate(value: unknown): PublishedSurfaceUpdate
     || sameRankedCalls(value.calls, tomorrow.spots)) {
     throw new Error('published surface tomorrow ranking must be its own values, never a clone of today.');
   }
+  if (Object.hasOwn(value, 'spot_detail')
+    && !isSpotDetailIndex(value.spot_detail, [today.date, tomorrow.date])) {
+    throw new Error('published surface spot_detail must name every spot and, when it publishes an hourly projection, carry only well-formed spot-local points inside the two published civil days.');
+  }
   return value as PublishedSurfaceUpdate;
+}
+
+/** Published civil dates, in `days` order: the whole horizon a point may sit in. */
+type PublishedHorizon = readonly [string, string];
+
+function isSpotDetailIndex(value: unknown, horizon: PublishedHorizon): boolean {
+  return isRecord(value) && Object.values(value).every((detail) => isSurfaceSpotDetail(detail, horizon));
+}
+
+function isSurfaceSpotDetail(value: unknown, horizon: PublishedHorizon): boolean {
+  if (!isRecord(value) || typeof value.name !== 'string') return false;
+  // A legacy detail carries no key at all. Only a present projection is
+  // inspected, and then it is inspected completely.
+  if (!Object.hasOwn(value, 'hourly')) return true;
+  return Array.isArray(value.hourly)
+    && value.hourly.length > 0
+    && value.hourly.every((point) => isHourlySubscorePoint(point, horizon));
+}
+
+function isHourlySubscorePoint(value: unknown, horizon: PublishedHorizon): boolean {
+  return isRecord(value)
+    && hasExactlyKeys(value, ['sub', 't'])
+    && typeof value.t === 'string'
+    && isPublishedLocalHour(value.t, horizon)
+    && isHourlySubscore(value.sub);
+}
+
+/**
+ * `2026-08-09T06:00:00-05:00`, on one of the two days this surface publishes.
+ * The numeric offset is required: a bare or `Z`-suffixed stamp would leave
+ * the spot-local hour to be computed by a reader.
+ */
+const SPOT_LOCAL_HOUR = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}(?::\d{2})?[+-]\d{2}:\d{2}$/;
+
+function isPublishedLocalHour(value: string, horizon: PublishedHorizon): boolean {
+  const civilDate = SPOT_LOCAL_HOUR.exec(value)?.[1];
+  return civilDate !== undefined && horizon.includes(civilDate);
+}
+
+function isHourlySubscore(value: unknown): boolean {
+  return isRecord(value)
+    && hasExactlyKeys(value, ['dir', 'size', 'tide', 'wind'])
+    && isRawScore(value.dir)
+    && isRawScore(value.size)
+    && (value.wind === null || isRawScore(value.wind))
+    && (value.tide === null || isRawScore(value.tide));
+}
+
+function isRawScore(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1;
+}
+
+/** Exactly these own keys, sorted: no extra field may ride along unnoticed. */
+function hasExactlyKeys(value: Record<string, unknown>, expected: readonly string[]): boolean {
+  const actual = Object.keys(value).sort();
+  return actual.length === expected.length && actual.every((key, index) => key === expected[index]);
 }
 
 function isPublishedSurfaceDay(value: unknown): value is PublishedSurfaceDay {

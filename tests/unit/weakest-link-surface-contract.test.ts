@@ -875,3 +875,192 @@ describe('resolveCounterfactual: one published counterfactual state for one spot
     );
   });
 });
+
+// ------------------------------------------- hourly best-window seam --
+//
+// Slice-04, step 04-01: `spot_detail` gains the already-scored two-day
+// hourly projection that the best-window breakdown will read. WIRE
+// CONTRACT ONLY. Populating it is 04-02's producer edit and selecting one
+// point from it is 04-03's reader; neither is asserted here.
+//
+// THE DISTINCTION THIS STEP MUST NOT COLLAPSE, again: a spot_detail entry
+// with NO `hourly` key is a surface published before this field existed and
+// degrades by omitting bars. A present `hourly` is a fresh projection and
+// must be well formed all the way down, because a malformed fresh point is
+// a producer-contract error, never material a page may turn into plausible
+// bars. That is why an empty array is refused rather than read as "legacy":
+// the two facts would otherwise render identically while meaning opposite
+// things.
+//
+// `t` is the PRECOMPUTED spot-local timestamp with a numeric offset. A `Z`
+// instant is refused on purpose: accepting one would push the local-hour
+// decision into whoever reads it, which is exactly the browser time-zone
+// calculation this product forbids.
+
+type HourlySubRecord = {
+  readonly dir: number;
+  readonly size: number;
+  readonly wind: number | null;
+  readonly tide: number | null;
+};
+
+type SpotDetailEntry = { readonly name: string; readonly hourly?: readonly unknown[] };
+
+const rawScoreArb = fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true });
+const nullableRawScoreArb = fc.oneof(rawScoreArb, fc.constant(null));
+const subArb: fc.Arbitrary<HourlySubRecord> = fc.record({
+  dir: rawScoreArb,
+  size: rawScoreArb,
+  wind: nullableRawScoreArb,
+  tide: nullableRawScoreArb,
+});
+
+/** The published local wall clock for one scored hour, offset and all. */
+function localHourStamp(civil: string, hour: number): string {
+  return `${civil}T${String(hour).padStart(2, '0')}:00:00-05:00`;
+}
+
+/**
+ * A two-day projection, one point per generated hour on each published civil
+ * day. Every record is rebuilt as a plain object: a published surface is JSON
+ * on disk, and comparing a generator's null-prototype record against a parsed
+ * one measures fast-check, not the wire.
+ */
+function twoDayProjection(surfDate: string, subs: readonly HourlySubRecord[]): readonly unknown[] {
+  const tomorrowDate = nextCivilDate(surfDate);
+  return subs.flatMap((sub, index) => {
+    const plain = { dir: sub.dir, size: sub.size, wind: sub.wind, tide: sub.tide };
+    return [
+      { t: localHourStamp(surfDate, index), sub: plain },
+      { t: localHourStamp(tomorrowDate, index), sub: plain },
+    ];
+  });
+}
+
+function surfaceWithSpotDetail(
+  surfDate: string,
+  spotDetail: Readonly<Record<string, SpotDetailEntry>>,
+): unknown {
+  const tomorrowDate = nextCivilDate(surfDate);
+  const today = [baseCall('playa-0', 10, 'hoy')];
+  const tomorrow = [baseCall('playa-0', 40, 'mañana')];
+  return {
+    schema: 'published-surface-update/v1',
+    surf_date: surfDate,
+    published_at: `${surfDate}T11:00:00.000Z`,
+    build_kind: 'dawn',
+    calls: today,
+    days: [
+      { date: surfDate, spots: today },
+      { date: tomorrowDate, spots: tomorrow },
+    ],
+    spot_detail: spotDetail,
+  };
+}
+
+/** How a downstream reader must be able to tell the two absences apart. */
+function readHourlyPresence(detail: SpotDetailEntry): 'legacy-omitted' | 'projected' {
+  return withoutOwnKey(detail as unknown as Record<string, unknown>, 'hourly') ? 'legacy-omitted' : 'projected';
+}
+
+type MalformedProjection =
+  | 'empty-array'
+  | 'not-an-array'
+  | 'utc-instant'
+  | 'offsetless-stamp'
+  | 'day-outside-horizon'
+  | 'extra-point-key'
+  | 'missing-sub'
+  | 'extra-sub-key'
+  | 'missing-sub-key'
+  | 'null-dir'
+  | 'null-size'
+  | 'sub-above-one'
+  | 'sub-below-zero'
+  | 'sub-not-finite'
+  | 'sub-not-a-number'
+  | 'detail-without-name';
+
+const SOUND_SUB: HourlySubRecord = { dir: 0.8, size: 0.6, wind: null, tide: 0.4 };
+
+function malformedSpotDetail(kind: MalformedProjection, surfDate: string): Readonly<Record<string, SpotDetailEntry>> {
+  const sound = { t: localHourStamp(surfDate, 6), sub: SOUND_SUB };
+  const broken: Readonly<Record<MalformedProjection, SpotDetailEntry>> = {
+    'empty-array': { name: 'Playa Cero', hourly: [] },
+    'not-an-array': { name: 'Playa Cero', hourly: { '0': sound } as unknown as readonly unknown[] },
+    'utc-instant': { name: 'Playa Cero', hourly: [{ t: `${surfDate}T11:00:00Z`, sub: SOUND_SUB }] },
+    'offsetless-stamp': { name: 'Playa Cero', hourly: [{ t: `${surfDate}T11:00:00`, sub: SOUND_SUB }] },
+    'day-outside-horizon': { name: 'Playa Cero', hourly: [{ t: localHourStamp(nextCivilDate(nextCivilDate(surfDate)), 6), sub: SOUND_SUB }] },
+    'extra-point-key': { name: 'Playa Cero', hourly: [{ ...sound, wind_kt: 12 }] },
+    'missing-sub': { name: 'Playa Cero', hourly: [{ t: sound.t }] },
+    'extra-sub-key': { name: 'Playa Cero', hourly: [{ t: sound.t, sub: { ...SOUND_SUB, total: 0.5 } }] },
+    'missing-sub-key': { name: 'Playa Cero', hourly: [{ t: sound.t, sub: { dir: 0.8, size: 0.6, wind: null } }] },
+    'null-dir': { name: 'Playa Cero', hourly: [{ t: sound.t, sub: { ...SOUND_SUB, dir: null } }] },
+    'null-size': { name: 'Playa Cero', hourly: [{ t: sound.t, sub: { ...SOUND_SUB, size: null } }] },
+    'sub-above-one': { name: 'Playa Cero', hourly: [{ t: sound.t, sub: { ...SOUND_SUB, tide: 1.01 } }] },
+    'sub-below-zero': { name: 'Playa Cero', hourly: [{ t: sound.t, sub: { ...SOUND_SUB, wind: -0.01 } }] },
+    'sub-not-finite': { name: 'Playa Cero', hourly: [{ t: sound.t, sub: { ...SOUND_SUB, dir: Number.POSITIVE_INFINITY } }] },
+    'sub-not-a-number': { name: 'Playa Cero', hourly: [{ t: sound.t, sub: { ...SOUND_SUB, size: '0.6' } }] },
+    'detail-without-name': { hourly: [sound] } as unknown as SpotDetailEntry,
+  };
+  return { 'playa-0': broken[kind] };
+}
+
+describe('SurfaceSpotDetail.hourly: the already-scored two-day projection behind the best-window bars', () => {
+  it('accepts a fresh two-day projection beside a legacy detail and keeps every score, null and absence readable on the wire', () => {
+    fc.assert(
+      fc.property(
+        dayOffsetArb,
+        fc.array(subArb, { minLength: 1, maxLength: 6 }),
+        (dayOffset, subs) => {
+          const surfDate = civilDate(dayOffset);
+          const projected = twoDayProjection(surfDate, subs);
+          const supplied = surfaceWithSpotDetail(surfDate, {
+            'playa-0': { name: 'Playa Cero', hourly: projected },
+            'playa-legada': { name: 'Playa Legada' },
+          });
+
+          const outcome = tryValidate(supplied);
+          assert.ok(!outcome.threw, outcome.threw ? outcome.message : 'a well-formed two-day projection must validate');
+
+          // The reading surface is a committed JSON file; the round trip is
+          // the real transport, not a stand-in.
+          const onTheWire = JSON.parse(JSON.stringify(outcome.value)) as {
+            spot_detail: Record<string, SpotDetailEntry>;
+          };
+          const fresh = onTheWire.spot_detail['playa-0'];
+          const legacy = onTheWire.spot_detail['playa-legada'];
+          assert.ok(fresh && legacy, 'validation dropped a spot_detail entry it only reads');
+
+          assert.equal(readHourlyPresence(fresh), 'projected', 'a fresh projection must survive the wire as a present key');
+          assert.equal(readHourlyPresence(legacy), 'legacy-omitted', 'a legacy detail must keep NO hourly key, never an empty one');
+          assert.deepEqual(fresh.hourly, projected, 'the projection changed shape, value or null between publish and read');
+        },
+      ),
+    );
+  });
+
+  it('refuses a fresh projection that is empty, browser-timed, off-horizon, over-wide or not a finite raw score', () => {
+    fc.assert(
+      fc.property(
+        dayOffsetArb,
+        fc.constantFrom<MalformedProjection>(
+          'empty-array', 'not-an-array', 'utc-instant', 'offsetless-stamp', 'day-outside-horizon',
+          'extra-point-key', 'missing-sub', 'extra-sub-key', 'missing-sub-key', 'null-dir',
+          'null-size', 'sub-above-one', 'sub-below-zero', 'sub-not-finite', 'sub-not-a-number',
+          'detail-without-name',
+        ),
+        (dayOffset, kind) => {
+          const surfDate = civilDate(dayOffset);
+          const supplied = surfaceWithSpotDetail(surfDate, malformedSpotDetail(kind, surfDate));
+          const before = structuredClone(supplied);
+
+          const outcome = tryValidate(supplied);
+
+          assert.ok(outcome.threw, `a "${kind}" projection reached a page instead of being refused at publish time`);
+          assert.deepEqual(supplied, before, 'the validator mutated the surface it only inspects');
+        },
+      ),
+    );
+  });
+});
