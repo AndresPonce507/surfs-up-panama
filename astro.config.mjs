@@ -1,7 +1,32 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
+import { writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 
 import { pageWeightBudgetIntegration } from './scripts/page-weight-core.mjs';
+import {
+  PUBLICATION_ORIGIN_RECEIPT,
+  publicationOriginReceipt,
+  resolvePublicSiteOrigin,
+} from './scripts/release/publication-target.mjs';
+
+const publicSiteOrigin = resolvePublicSiteOrigin();
+
+function publicationOriginReceiptIntegration() {
+  return {
+    name: 'publication-origin-receipt',
+    hooks: {
+      /** @param {{ dir: URL }} build */
+      'astro:build:done': async ({ dir }) => {
+        await writeFile(
+          fileURLToPath(new URL(PUBLICATION_ORIGIN_RECEIPT, dir)),
+          publicationOriginReceipt(publicSiteOrigin),
+          'utf8',
+        );
+      },
+    },
+  };
+}
 
 // Static output only. The deployed artifact is files on S3 + CloudFront; the
 // hourly publish job regenerates HTML routes. No SSR, no adapter, no server
@@ -22,7 +47,7 @@ export default defineConfig({
   // the CloudFront hostname rather than block the share feature on it. Known
   // cost, accepted with the decision: this hostname appears in every pasted
   // message until the domain lands (HANDOFF.md section 10).
-  site: 'https://d1j9u9fxnap4es.cloudfront.net',
+  site: publicSiteOrigin,
   output: 'static',
   build: {
     format: 'file',
@@ -30,5 +55,5 @@ export default defineConfig({
   // The measurement is written straight to the streams rather than through
   // Astro's logger: the route-by-route list is the artefact a reader (and the
   // acceptance suite) parses, and a log prefix would corrupt it.
-  integrations: [pageWeightBudgetIntegration()],
+  integrations: [pageWeightBudgetIntegration(), publicationOriginReceiptIntegration()],
 });

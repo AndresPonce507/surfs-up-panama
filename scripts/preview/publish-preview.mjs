@@ -1,5 +1,7 @@
 #!/usr/bin/env node
-// Publish dist/ to the ephemeral S3 + CloudFront preview used for examiner walks.
+// Publish dist/ to one approved S3 + CloudFront target. The default remains
+// the examiner preview; production needs an explicit target and a matching
+// PUBLIC_SITE_ORIGIN, so a preview build cannot accidentally become public.
 //
 // Why this is not a plain `aws s3 sync`:
 //
@@ -17,7 +19,16 @@
 // second time at its literal directory key, which is the same trick that was
 // already applied by hand to `manana/`.
 //
-// Usage: node scripts/preview/publish-preview.mjs [--dist dist]
+// Publication is additive: this script only PUTs keys present in dist/ and
+// their directory aliases. It never lists or deletes bucket keys, so raw
+// captures, prediction logs, and hourly publisher artifacts stay outside its
+// blast radius. HTML is uploaded with no-cache, so no routine whole-
+// distribution invalidation is needed.
+//
+// Usage:
+//   node scripts/preview/publish-preview.mjs [--dist dist]
+//   PUBLIC_SITE_ORIGIN=https://d1dtqpd8bf3oze.cloudfront.net \
+//     node scripts/preview/publish-preview.mjs --target production [--dist dist]
 
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join, relative, resolve, sep } from 'node:path';
@@ -25,10 +36,11 @@ import { execFile } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 
+import { assertPublicationArtifactOrigin, publicationPlan } from '../release/publication-target.mjs';
+
 const run = promisify(execFile);
 
-const BUCKET = 'surfs-up-panama-preview-602167897909';
-const DISTRIBUTION = 'EH95FHQ75WCL3';
+/** @typedef {(command: string, arguments_: string[]) => Promise<unknown>} CommandRunner */
 
 const CONTENT_TYPES = {
   '.html': 'text/html',
@@ -64,12 +76,13 @@ async function walk(dir) {
   return out;
 }
 
-async function put(key, body, contentType) {
-  await run('aws', [
+/** @param {CommandRunner} invoke */
+async function put(target, key, body, contentType, invoke) {
+  await invoke('aws', [
     's3api',
     'put-object',
     '--bucket',
-    BUCKET,
+    target.bucket,
     '--key',
     key,
     '--body',
@@ -81,10 +94,11 @@ async function put(key, body, contentType) {
   ]);
 }
 
-async function main() {
-  const distArg = process.argv.indexOf('--dist');
-  const distDir = distArg === -1 ? 'dist' : process.argv[distArg + 1];
-
+/**
+ * @param {{ target: { name: string, bucket: string }, distDir: string, origin: string }} plan
+ * @param {CommandRunner} [invoke]
+ */
+export async function publishBuild({ target, distDir, origin }, invoke = /** @type {CommandRunner} */ (run)) {
   const distStat = await stat(distDir).catch(() => null);
   if (!distStat?.isDirectory()) {
     console.error(`No build artifact at ${distDir}. Run "npm run build" first.`);
@@ -97,6 +111,8 @@ async function main() {
     process.exit(1);
   }
 
+  await assertPublicationArtifactOrigin(distDir, origin);
+
   let canonical = 0;
   let directoryAliases = 0;
 
@@ -104,7 +120,7 @@ async function main() {
     const key = relative(distDir, file).split(sep).join('/');
     const type = contentTypeFor(key);
 
-    await put(key, file, type);
+    await put(target, key, file, type, invoke);
     canonical += 1;
 
     // `spots/playa-venao.html` also lands at the literal key
@@ -112,28 +128,21 @@ async function main() {
     // is already served by the distribution's DefaultRootObject.
     const directoryAlias = directoryAliasFor(key);
     if (directoryAlias !== undefined) {
-      await put(directoryAlias, file, type);
+      await put(target, directoryAlias, file, type, invoke);
       directoryAliases += 1;
     }
   }
 
-  const { stdout } = await run('aws', [
-    'cloudfront',
-    'create-invalidation',
-    '--distribution-id',
-    DISTRIBUTION,
-    '--paths',
-    '/*',
-    '--query',
-    'Invalidation.Id',
-    '--output',
-    'text',
-  ]);
+  return { canonical, directoryAliases };
+}
 
+async function main() {
+  const plan = publicationPlan(process.argv.slice(2));
+  const { canonical, directoryAliases } = await publishBuild(plan);
   console.log(
-    `Published ${canonical} objects and ${directoryAliases} directory aliases. Invalidation ${stdout.trim()}.`,
+    `Published ${canonical} objects and ${directoryAliases} directory aliases to ${plan.target.name}.`,
   );
-  console.log(`https://d1j9u9fxnap4es.cloudfront.net/`);
+  console.log(plan.origin);
 }
 
 if (process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
