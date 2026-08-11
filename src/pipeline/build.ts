@@ -34,6 +34,7 @@ import {
   applyCorrection,
   blend,
   combine,
+  counterfactualScore,
   hEff,
   sDir,
   sizeBand,
@@ -41,6 +42,7 @@ import {
   sTide,
   sWind,
   type DeclaredMember,
+  type CounterfactualScore,
   type Factor,
   type MemberRow,
   type ScoreResult,
@@ -109,6 +111,8 @@ type CallRow = {
   members_null: number;
   missing: ('wind' | 'tide')[];
   weakest_link: Factor | null;
+  counterfactual_score_q?: number;
+  counterfactual_suppression?: 'rounded_equal';
   confidence_reason: ConfidenceReason;
 };
 
@@ -220,6 +224,7 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
       wind: sWind(wind, correction.params),
       tide: sTide(tide, correction.params),
     }, correction.params, correction.delta_q);
+    const counterfactual = publishedCounterfactualProjection(score, counterfactualScore(score));
     const members = declared.filter((member): member is MemberRow => !('exclusion' in member));
     const confidenceResult = confidence(members, { kind: 'absolute' }, null, null, score.missing);
     // SIZE_BANDS is derived from the one canonical vocabulary whose tokens ARE
@@ -243,6 +248,7 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
       members_null: blended.members_null,
       missing: score.missing,
       weakest_link: score.weakest_link,
+      ...counterfactual,
       confidence_reason: {
         dominant: confidenceResult.dominant,
         spread_terms: confidenceResult.spread_terms,
@@ -281,6 +287,7 @@ function daySummary(call: CallRow): BundleDaySummary {
     best_window: call.best_window,
     weakest_link: call.weakest_link,
     ...(weakestLinkSubscore === undefined ? {} : { weakest_link_subscore: weakestLinkSubscore }),
+    ...counterfactualFields(call),
   };
 }
 
@@ -298,6 +305,43 @@ export function publishedWeakestLinkSubscore(
     throw new Error(`publish refused: weakest_link ${call.weakest_link} has no finite raw sub-score in [0, 1]`);
   }
   return scalar;
+}
+
+type CounterfactualProjection =
+  | { readonly counterfactual_score_q: number }
+  | { readonly counterfactual_suppression: 'rounded_equal' }
+  | Record<never, never>;
+
+/**
+ * The producer's final honesty gate, after the scoring core has formed the
+ * candidate and before any call receipt or bundle can advance.
+ */
+export function publishedCounterfactualProjection(
+  score: Pick<ScoreResult, 'score' | 'weakest_link'>,
+  candidate: CounterfactualScore | undefined,
+): CounterfactualProjection {
+  if (score.weakest_link === null) {
+    if (candidate !== undefined) throw new Error('publish refused: a clean row cannot carry a counterfactual candidate');
+    return {};
+  }
+  if (candidate === undefined) throw new Error('publish refused: a named weakest link requires a counterfactual candidate');
+  if (!Number.isInteger(candidate.score_q) || candidate.score_q < 0 || candidate.score_q > 100) {
+    throw new Error('publish refused: counterfactual score must be an integer from 0 through 100');
+  }
+  if (candidate.score_q < score.score) {
+    throw new Error('publish refused: counterfactual score cannot be below its displayed score');
+  }
+  return candidate.score_q === score.score
+    ? { counterfactual_suppression: 'rounded_equal' }
+    : { counterfactual_score_q: candidate.score_q };
+}
+
+function counterfactualFields(
+  call: Pick<CallRow, 'counterfactual_score_q' | 'counterfactual_suppression'>,
+): CounterfactualProjection {
+  if (call.counterfactual_score_q !== undefined) return { counterfactual_score_q: call.counterfactual_score_q };
+  if (call.counterfactual_suppression !== undefined) return { counterfactual_suppression: call.counterfactual_suppression };
+  return {};
 }
 
 /**
@@ -322,6 +366,7 @@ function surfaceCall(call: CallRow): FreshSurfaceCall {
     size_range_m: call.size_range_m,
     weakest_link: call.weakest_link,
     ...(weakestLinkSubscore === undefined ? {} : { weakest_link_subscore: weakestLinkSubscore }),
+    ...counterfactualFields(call),
     confidence_reason: call.confidence_reason,
     // wind_state and best_window are optional on the wire (SurfaceCall),
     // never null: an unknown wind reading, or a day with no genuine peak,

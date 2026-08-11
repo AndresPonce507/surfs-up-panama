@@ -14,7 +14,21 @@ import fc from 'fast-check';
 import { publishedWeakestLinkSubscore } from '../../src/pipeline/build';
 import { runProductionBuild } from '../../src/pipeline/run-build-cli';
 import type { RegionBundle } from '../../src/publish/region-bundle';
-import type { Factor, ScoreResult, SpotSeed } from '../../src/scoring/engine';
+import {
+  applyCorrection,
+  blend,
+  combine,
+  counterfactualScore,
+  hEff,
+  sDir,
+  sSize,
+  sTide,
+  sWind,
+  type Factor,
+  type MemberRow,
+  type ScoreResult,
+  type SpotSeed,
+} from '../../src/scoring/engine';
 
 const MEMBER_SOURCES = ['ncep_gfswave016', 'ncep_gfswave025', 'meteofrance_wave', 'dwd_gwam'] as const;
 const TODAY = '2026-08-09';
@@ -93,11 +107,11 @@ function perfectPredictionLines(spot_id: string, date: string): string[] {
   }));
 }
 
-async function seedPredictions(predictionsRoot: string): Promise<void> {
+async function seedPredictions(predictionsRoot: string, todayVenaoHeight = 1.2): Promise<void> {
   // Heights differ per spot and per day so tomorrow's ranking is genuinely
   // its own list, never a clone of today's (build.ts's clone guard).
   const heightsByDate: Record<string, Record<string, number>> = {
-    [TODAY]: { 'playa-venao': 1.2, 'playa-cambutal': 0.7 },
+    [TODAY]: { 'playa-venao': todayVenaoHeight, 'playa-cambutal': 0.7 },
     [TOMORROW]: { 'playa-venao': 0.5, 'playa-cambutal': 1.4 },
   };
   for (const date of [TODAY, TOMORROW]) {
@@ -109,6 +123,29 @@ async function seedPredictions(predictionsRoot: string): Promise<void> {
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, 'all.jsonl'), lines.join('\n'));
   }
+}
+
+function scoreForPrediction(spot: SpotSeed, height_m: number): ReturnType<typeof combine> {
+  const correction = applyCorrection(spot, null);
+  const members: MemberRow[] = MEMBER_SOURCES.map((source, index) => ({
+    source,
+    lead_h: 12,
+    swell: { h_m: height_m + index * 0.02, t_s: 15.5, dir_deg: 204 + index },
+    swell2: null,
+  }));
+  const blended = blend(members);
+  assertBuild(blended.kind === 'ok', 'The real prediction variant must retain at least one usable wave member.');
+  const wind = { speed_kt: 7, dir_deg: 40 };
+  return combine({
+    dir: sDir(blended.swell.dir_deg, correction.params),
+    size: sSize(hEff(blended.swell.h_m, blended.swell.t_s), correction.params),
+    wind: sWind(wind, correction.params),
+    tide: sTide(null, correction.params),
+  }, correction.params, correction.delta_q);
+}
+
+function assertBuild(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(message);
 }
 
 describe('runProductionBuild (the missing production caller for runBuildOnce)', () => {
@@ -159,8 +196,11 @@ describe('runProductionBuild (the missing production caller for runBuildOnce)', 
       ...bundle.publish_surface.days.flatMap((day) => day.spots),
     ] as Array<{
       readonly spot_id: string;
+      readonly score_q: unknown;
       readonly weakest_link?: string | null;
       readonly weakest_link_subscore?: unknown;
+      readonly counterfactual_score_q?: unknown;
+      readonly counterfactual_suppression?: unknown;
     }>;
     for (const row of freshRows) {
       if (typeof row.weakest_link === 'string') {
@@ -172,8 +212,29 @@ describe('runProductionBuild (the missing production caller for runBuildOnce)', 
             && row.weakest_link_subscore <= 1,
           `${row.spot_id}: a named culprit score must be finite and within [0, 1]`,
         ).toBe(true);
+        const hasCounterfactual = Object.hasOwn(row, 'counterfactual_score_q');
+        const hasSuppression = Object.hasOwn(row, 'counterfactual_suppression');
+        expect(
+          hasCounterfactual !== hasSuppression,
+          `${row.spot_id}: every fresh named culprit must carry exactly one counterfactual representation`,
+        ).toBe(true);
+        if (hasCounterfactual) {
+          expect(
+            typeof row.counterfactual_score_q === 'number'
+              && Number.isInteger(row.counterfactual_score_q)
+              && row.counterfactual_score_q >= 0
+              && row.counterfactual_score_q <= 100
+              && typeof row.score_q === 'number'
+              && row.counterfactual_score_q > row.score_q,
+            `${row.spot_id}: a published counterfactual must be an integral score strictly above its own row score`,
+          ).toBe(true);
+        } else {
+          expect(row.counterfactual_suppression).toBe('rounded_equal');
+        }
       } else {
         expect(Object.hasOwn(row, 'weakest_link_subscore'), `${row.spot_id}: a clean row must omit the culprit score`).toBe(false);
+        expect(Object.hasOwn(row, 'counterfactual_score_q'), `${row.spot_id}: a clean row must omit the counterfactual`).toBe(false);
+        expect(Object.hasOwn(row, 'counterfactual_suppression'), `${row.spot_id}: a clean row must omit the counterfactual suppression`).toBe(false);
       }
     }
   });
@@ -214,6 +275,8 @@ describe('runProductionBuild (the missing production caller for runBuildOnce)', 
     for (const row of cleanRows) {
       expect(row.weakest_link).toBeNull();
       expect(Object.hasOwn(row, 'weakest_link_subscore')).toBe(false);
+      expect(Object.hasOwn(row, 'counterfactual_score_q')).toBe(false);
+      expect(Object.hasOwn(row, 'counterfactual_suppression')).toBe(false);
     }
   });
 
@@ -255,4 +318,84 @@ describe('runProductionBuild (the missing production caller for runBuildOnce)', 
     );
   });
 
+  it('ties each emitted counterfactual to the same score-core row across real factor-damage build variants', async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.constantFrom(0.6, 1.2, 1.8), async (todayVenaoHeight) => {
+        const variantPredictions = await mkdtemp(join(tmpdir(), 'surfs-up-counterfactual-predictions-'));
+        const variantWork = await mkdtemp(join(tmpdir(), 'surfs-up-counterfactual-work-'));
+        try {
+          await seedPredictions(variantPredictions, todayVenaoHeight);
+          const spots = [seed('playa-venao', 'Playa Venao'), seed('playa-cambutal', 'Playa Cambutal')];
+          const { bundlePath } = await runProductionBuild(
+            ['--at', AT, '--predictions', variantPredictions, '--work-dir', variantWork, '--region', 'pa-pacific'],
+            { spots },
+          );
+          const bundle = JSON.parse(await readFile(bundlePath, 'utf8')) as RegionBundle;
+          const expectedBySpotDay = new Map<string, ReturnType<typeof combine>>([
+            [`${TODAY}/playa-venao`, scoreForPrediction(spots[0]!, todayVenaoHeight)],
+            [`${TODAY}/playa-cambutal`, scoreForPrediction(spots[1]!, 0.7)],
+            [`${TOMORROW}/playa-venao`, scoreForPrediction(spots[0]!, 0.5)],
+            [`${TOMORROW}/playa-cambutal`, scoreForPrediction(spots[1]!, 1.4)],
+          ]);
+
+          for (const [dayIndex, day] of bundle.days.entries()) {
+            const surfaceDay = bundle.publish_surface.days[dayIndex]!;
+            for (const summary of day.spots) {
+              const surface = surfaceDay.spots.find((row) => row.spot_id === summary.spot_id);
+              const score = expectedBySpotDay.get(`${day.date}/${summary.spot_id}`);
+              assertBuild(surface !== undefined && score !== undefined, 'Every emitted row must retain its own spot-day score-core receipt.');
+              const candidate = counterfactualScore(score);
+              const expectedProjection = candidate === undefined
+                ? {}
+                : candidate.score_q === score.score
+                  ? { counterfactual_suppression: 'rounded_equal' }
+                  : { counterfactual_score_q: candidate.score_q };
+              const summarySnapshot = structuredClone({
+                spot_id: summary.spot_id,
+                score_q: summary.score_q,
+                conf_level: summary.conf_level,
+                call: summary.call,
+                size_band: summary.size_band,
+                size_range_m: summary.size_range_m,
+                wind_state: summary.wind_state,
+                best_window: summary.best_window,
+                weakest_link: summary.weakest_link,
+                weakest_link_subscore: summary.weakest_link_subscore,
+              });
+              const surfaceSnapshot = structuredClone({
+                spot_id: surface.spot_id,
+                score_q: surface.score_q,
+                conf_level: surface.conf_level,
+                call: { es: surface.call_es },
+                size_band: surface.size_band,
+                size_range_m: surface.size_range_m,
+                wind_state: surface.wind_state,
+                best_window: surface.best_window,
+                weakest_link: surface.weakest_link,
+                weakest_link_subscore: surface.weakest_link_subscore,
+              });
+
+              expect(summarySnapshot).toEqual(surfaceSnapshot);
+              expect(counterfactualWire(summary)).toEqual(expectedProjection);
+              expect(counterfactualWire(surface)).toEqual(expectedProjection);
+            }
+          }
+        } finally {
+          await rm(variantPredictions, { recursive: true, force: true });
+          await rm(variantWork, { recursive: true, force: true });
+        }
+      }),
+      { numRuns: 9 },
+    );
+  });
+
 });
+
+function counterfactualWire(row: {
+  readonly counterfactual_score_q?: number;
+  readonly counterfactual_suppression?: 'rounded_equal';
+}): Record<string, number | string> {
+  if (row.counterfactual_score_q !== undefined) return { counterfactual_score_q: row.counterfactual_score_q };
+  if (row.counterfactual_suppression !== undefined) return { counterfactual_suppression: row.counterfactual_suppression };
+  return {};
+}
