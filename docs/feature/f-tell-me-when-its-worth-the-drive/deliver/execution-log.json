@@ -92,6 +92,13 @@
       "s": "EXECUTED",
       "d": "QUALIFIED_PASS: one observable suppression behavior x 2 = 2 unit-test budget, one extended property test. Pure core has no mocks or adapter. The current integration surface removes stale-build blockage but its unrelated playa-malibu wind_state omission still blocks the full unit job; generated data remains untouched.",
       "t": "2026-08-11T00:04:06-05:00"
+    },
+    {
+      "sid": "03-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "QUALIFIED: strengthened morning-aviso state property and RED/GREEN evidence committed as 2b01f9c21e3eb83714a8bf8e91a4782f26c7b95b after independent approval. The generated-surface qualification remains factual and generated data remains untouched.",
+      "t": "2026-08-11T00:06:00-05:00"
     }
   ]
 }
