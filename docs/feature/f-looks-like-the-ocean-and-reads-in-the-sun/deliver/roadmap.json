@@ -2,7 +2,7 @@
   "roadmap": {
     "project_id": "f-looks-like-the-ocean-and-reads-in-the-sun",
     "created_at": "2026-08-10T00:00:00Z",
-    "total_steps": 16,
+    "total_steps": 17,
     "quality_contract_version": 1
   },
   "phases": [
@@ -580,6 +580,53 @@
           "implementation_notes": "FORWARD-ONLY REPAIR: do not edit or reclassify the 15 historical steps. This was found after their implementation and only owns the remaining named-token boundary leak. IMPLEMENTATION AUTHORITY: color VALUES remain exclusively in src/styles/tokens.css; chrome-colors.ts may parse or otherwise derive --bg but must carry no hex. Base.astro and the generated manifest endpoint consume that one derived value. Do not keep a second hand-authored JSON manifest, do not duplicate values into TypeScript, and do not waive the JSON limitation: serialized dist/manifest.webmanifest is the allowed generated output boundary, while dark browser chrome stays in media-qualified HTML. TEST MODE: real npm build and emitted artifacts, example-based. The first RED must fail because the emitted light theme-color is #FFFFFF rather than the current light --bg #F2F8FA, not because a proposed source module is absent. After GREEN run all seven commands, npm run build, npm run test:ui, the full Design terminal acceptance tags, typecheck, and record a fresh source-blind U8 result in the charter. This repair does not authorize an external deploy."
         }
       ]
+    },
+    {
+      "id": "07",
+      "name": "Forward Design addition: light-first theme choice across the public reading surface",
+      "description": "User-authorized addition after completed 06-01. It supersedes only the earlier launch decision to follow device theme automatically: first visit is always light, and the surfer may choose and retain dark. It does not reopen or reclassify any completed phase.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "07-01",
+          "name": "The published reading surface starts light and offers a persisted accessible theme choice",
+          "criteria": [
+            "With no saved choice, every public Spanish and English route renders light even when the device prefers dark. The light decision is present before styles paint, so no opposite-theme flash is visible.",
+            "A visible top-left control is at least 44 by 44 CSS pixels. It uses Spanish action labels 'Activar modo oscuro' and 'Activar modo claro' on Spanish routes, and English action labels 'Switch to dark mode' and 'Switch to light mode' on English routes.",
+            "A surfer can choose light or dark; the selected value survives reload and every Spanish/English route transition. Browser theme-color follows the chosen reading background. The static manifest keeps its deliberate light/default start color because it cannot express a saved per-person choice.",
+            "JavaScript-off pages remain legibly light regardless of device preference. Reduced motion prevents theme-change animation. The control clears AA contrast, preserves the design-system type rhythm and named tokens, and neither 390 px nor 320 px reading routes horizontally overflow.",
+            "The emitted-document route sweep proves the control and correct language label exist on every public Spanish and English document. One compact browser matrix covers Chromium mobile 390/320, Chromium desktop, Safari/WebKit mobile, and Safari/WebKit desktop instead of duplicating an E2E journey per route.",
+            "No palette value is invented. Existing aquatic tokens remain the authority. No scores, forecast input, route content, network request, package, component stylesheet owned by active slice-02, or production behavior outside theme choice changes."
+          ],
+          "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/theme-choice-begins-light.feature",
+          "scenario_name": "La surfista abre cualquier ruta sin elección previa y empieza a leer en claro",
+          "slice_id": "slice-07",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/la-surfista-elige-claro-u-oscuro-sin-perder-la-lectura.md",
+          "u8_observation": "En teléfono y escritorio, la primera visita se siente deliberadamente clara aun con el teléfono oscuro; el control arriba a la izquierda se siente parte de la navegación, no un parche, y elegir un modo nunca produce un destello de la otra paleta.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-07 and @step-07-01 and @ui-u1"],
+            "U2": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-07 and @step-07-01 and @ui-u2"],
+            "U3": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-07 and @step-07-01 and @ui-u3"],
+            "U4": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-07 and @step-07-01 and @ui-u4"],
+            "U5": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-07 and @step-07-01 and @ui-u5"],
+            "U6": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-07 and @step-07-01 and @ui-u6"],
+            "U7": ["npm", "run", "test:at", "--", "--tags", "@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-07 and @step-07-01 and @ui-u7"]
+          },
+          "deps": ["06-01"],
+          "files_to_modify": [
+            "src/layouts/Base.astro",
+            "src/styles/tokens.css",
+            "src/styles/base.css",
+            "src/styles/theme-controller.ts",
+            "src/i18n/strings.ts",
+            "src/pages/manifest.webmanifest.ts"
+          ],
+          "implementation_notes": "FORWARD-ONLY USER AUTHORITY: this step supersedes the earlier no-toggle / prefers-color-scheme-only launch decision, but does not change any historical result. Keep source color authority in tokens.css. Base.astro owns the synchronous light-first bootstrap before inline CSS and the semantic control; theme-controller.ts owns storage, toggle action, root state and meta theme-color synchronization; base.css styles the 44 px top-left control so active slice-02's components.css remains untouched; strings.ts owns both accessible action labels; manifest.webmanifest.ts remains light/default because a manifest cannot represent a saved individual choice. Do not add a route-specific controller, a second palette, a media-query fallback that makes JavaScript-off dark, or a delayed client hydration that flashes. Contract tests are real-build, example-based layer-4 proofs; run each U1-U7 command plus npm run build, npm run test:ui, typecheck, and a fresh source-blind U8 charter observation before COMMIT. No deploy is authorized."
+        }
+      ]
     }
   ],
   "implementation_scope": {
@@ -588,6 +635,7 @@
       "src/components/",
       "src/pages/",
       "src/layouts/",
+      "src/i18n/",
       "public/",
       "docs/product/architecture/"
     ],
@@ -598,7 +646,6 @@
     "excluded_patterns": [
       "src/pipeline/**",
       "src/scoring/**",
-      "src/i18n/**",
       "src/publish/**",
       "src/data/**",
       "data/**",

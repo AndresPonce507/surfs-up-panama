@@ -18,6 +18,7 @@ treatment for its port class.
 |---|---|---|
 | Infrastructure declaration evaluator | Production-owned `evaluateInfrastructureDeclarations({ root, environment, output })`, invoked by `runLocalCi` for `repoRoot/infra` in the public `infra` job and for a generic `declarationInput.root` in declaration-only mode | The real public job remains Vitest plus credential-free synth. The focused AT observes only the shared evaluator over a copied source universe. Declaration-only is not synth or deploy proof. |
 | Infrastructure declarations | A copied `tests/.../fixtures/controlled-infrastructure-declarations/` input with no symlinks or `node_modules`; source symlinks are rejected before a non-dereferencing copy; only contained regular files may be renamed or rewritten, then restored and removed in finally-safe cleanup | Controlled universe: copied declaration files, a test-local credential-free environment, local-CI exit/report, and an unchanged working tree. The fixture is never `repoRoot`, a package, or a deployment source. |
+| Reading-mode preference | Real per-scenario browser storage in a fresh Chromium or Safari/WebKit context | Slice-07 proves selection by click, reload, and Spanish/English route transition; no test fake stands in for the surfer’s stored choice. |
 
 ## Driven external / non-deterministic (fake)
 
