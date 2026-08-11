@@ -1,0 +1,636 @@
+{
+  "schema_version": "3.0",
+  "feature_id": "f-know-how-much-to-trust-it",
+  "events": [
+    {
+      "sid": "01-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T04:24:47Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T11:40:25Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T11:40:25Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T11:40:25Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T11:42:39Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T11:42:39Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:09:57Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:10:03Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:10:10Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:11:31Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:12:11Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:33:06Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:33:24Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:36:19Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:37:02Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T12:44:05Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:36:19Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:36:19Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:36:19Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:36:19Z"
+    },
+    {
+      "sid": "01-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:36:27Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:54:20Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:54:20Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:54:20Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:54:20Z"
+    },
+    {
+      "sid": "01-05",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T13:54:53Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T15:19:34Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T15:19:34Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "FAIL",
+      "t": "2026-08-10T15:19:34Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T15:20:32Z"
+    },
+    {
+      "sid": "01-06",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: single zero-JS presentational pass-through component (level, reason props); dispatch's own EXEMPT-FROM-PARADIGM note says this is compensated by 01-01..01-05's composer property tests plus the acceptance fidelity oracle, not a new unit test. Row-identity property falsified instead via a temp-copy real-build harness (20 rows, 20 reasons, broken/reverted, see COMMIT message).",
+      "t": "2026-08-10T15:23:12Z"
+    },
+    {
+      "sid": "01-07",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T16:16:22Z"
+    },
+    {
+      "sid": "01-07",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T16:16:23Z"
+    },
+    {
+      "sid": "01-07",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T16:16:23Z"
+    },
+    {
+      "sid": "01-07",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "FAIL",
+      "t": "2026-08-10T16:16:23Z"
+    },
+    {
+      "sid": "01-07",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T16:16:23Z"
+    },
+    {
+      "sid": "01-08",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:33:06Z"
+    },
+    {
+      "sid": "01-08",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:33:24Z"
+    },
+    {
+      "sid": "01-08",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:37:12Z"
+    },
+    {
+      "sid": "01-08",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "FAIL",
+      "t": "2026-08-10T17:38:35Z"
+    },
+    {
+      "sid": "01-08",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:42:17Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:53:15Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:53:15Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: step is EXEMPT FROM PARADIGM per roadmap (component composition in a second layout context, compensated by 01-01..01-05 composer property tests and the acceptance oracle); files_to_modify for this step is ConfidenceDetail.astro only, no test file may be added or edited",
+      "t": "2026-08-10T17:53:26Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:54:59Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T17:56:07Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T18:02:36Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: EXEMPT FROM PARADIGM per roadmap (a designed accessibility affordance on one component; the acceptance scenario is its own oracle); files_to_modify is ConfidenceDetail.astro only; the one pre-existing unit test touched (confidence-detail-degrade.test.ts) was a documented boundary exception to relax an over-specified literal regex broken by this step's required markup change, not a new RED_UNIT test",
+      "t": "2026-08-10T18:02:36Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-10T18:02:43Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: re-executed named active AT, 1 scenario/12 steps; non-visual UI N/A.",
+      "t": "2026-08-10T21:20:48Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: inherited-green target re-executed; original semantic red and registry falsification remain preserved in isolated DES event evidence.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: registry is directly covered through the active port-to-port acceptance contract; no separate unit test was added in this re-execution.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: target, slice AT, full unit, typecheck, build, and fast CI passed during Slice-04 repair; production capture registry now includes the real NOAA source.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: re-executed named active AT, 1 scenario/12 steps; non-visual UI N/A.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: inherited-green durability target re-executed; original conditional-PUT falsification is preserved in isolated DES event evidence.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: verification-only durability guard with no new unit-test ownership.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: target, slice AT, full unit, typecheck, build, and fast CI passed during Slice-04 repair.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: re-executed named active AT, 1 scenario/12 steps; non-visual UI N/A.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: inherited-green dark-primary target re-executed; original continuation falsification is preserved in isolated DES event evidence.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: verification-only partial-failure guard with no new unit-test ownership.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: target, slice AT, full unit, typecheck, build, and fast CI passed during Slice-04 repair.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: re-executed named active AT, 1 scenario/12 steps; non-visual UI N/A.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: inherited-green dark-independent target re-executed; original fabricated-raw falsification is preserved in isolated DES event evidence.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-04",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: verification-only no-fabrication guard with no new unit-test ownership.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: target, slice AT, full unit, typecheck, build, and fast CI passed during Slice-04 repair.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-05",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: re-executed named real-fixture AT, 1 scenario/11 steps; non-visual UI N/A.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-05",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: strengthened real-fixture target passed; prior missing-fixture semantic red is preserved in isolated DES event evidence.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-05",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: new real-port unit integration was RED because NoaaGfswaveForecastSource was absent; controlled parser-empty mutation then failed on independently expected normalized NOAA values and was restored.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: receipt validates exact URL, headers, 91681 bytes, and SHA-256; NOAA source is wired in capture composition; target, slice AT, full unit, typecheck, build, and fast CI passed.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-06",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: re-executed named active AT, 1 scenario/13 steps; non-visual UI N/A.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-06",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: inherited-green single-member target re-executed; original 0.4-cap falsification is preserved in isolated DES event evidence.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-06",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: verification-only cross-provider confidence guard with no new unit-test ownership.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-06",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: target, corrected slice AT 6 scenarios/72 steps, full unit, typecheck, build, and fast CI passed during Slice-04 repair.",
+      "t": "2026-08-10T21:20:49Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: repair commit dc496e5 wires/verifies NOAA evidence and records the re-executed Slice-04 quality gates; only reviewed production/test paths staged.",
+      "t": "2026-08-10T21:21:14Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: repair commit dc496e5 wires/verifies NOAA evidence and records the re-executed Slice-04 quality gates; only reviewed production/test paths staged.",
+      "t": "2026-08-10T21:21:14Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: repair commit dc496e5 wires/verifies NOAA evidence and records the re-executed Slice-04 quality gates; only reviewed production/test paths staged.",
+      "t": "2026-08-10T21:21:14Z"
+    },
+    {
+      "sid": "04-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: repair commit dc496e5 wires/verifies NOAA evidence and records the re-executed Slice-04 quality gates; only reviewed production/test paths staged.",
+      "t": "2026-08-10T21:21:14Z"
+    },
+    {
+      "sid": "04-05",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: repair commit dc496e5 wires/verifies NOAA evidence and records the re-executed Slice-04 quality gates; only reviewed production/test paths staged.",
+      "t": "2026-08-10T21:21:14Z"
+    },
+    {
+      "sid": "04-06",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: repair commit dc496e5 wires/verifies NOAA evidence and records the re-executed Slice-04 quality gates; only reviewed production/test paths staged.",
+      "t": "2026-08-10T21:21:14Z"
+    },
+    {
+      "sid": "04-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "CORRECTION: final NOAA global.0p16 fixture is 2652 bytes, SHA-256 6997a999ea6a34cfc35d347c82b249448139bfe83502685f9a807dadcf632b8c; d5cbf1f selects requested grid cell and bitmap mask, 4064938 asserts all receipt metadata. Target NOAA unit, real-fixture AT, Slice-04 AT, full unit 101, typecheck passed. Clean HEAD build remains separately blocked by unrelated stale Aug-9 published surface; isolated Aug-10 inputs passed.",
+      "t": "2026-08-10T22:00:07Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: repaired 05-01 contract, durable-root boundary and active acceptance scenarios audited; generated Aug-10 capture remains unstaged.",
+      "t": "2026-08-10T21:34:00Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "REPAIRED RED: contract scenarios initially had 10 undefined steps. Production CLI fault steps and an explicit unprobed-use falsification made the failure boundary executable before GREEN.",
+      "t": "2026-08-10T21:35:00Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: port, filesystem, CLI and structural checks cover history availability, malformed corpus, duplicate grain, disappearing receipt, durable-root reuse and exact refusal event.",
+      "t": "2026-08-10T21:39:00Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: Slice-05 targets, 109-unit suite, typecheck, full acceptance, build and local CI passed. Current Aug-10 inputs prove wiring only: no claim of live activation before 30 real days.",
+      "t": "2026-08-10T21:40:00Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 766606b after independent review findings D1-D3 were repaired. 112 unit tests, full acceptance, typecheck and local CI passed; generated Aug-10 data remains unstaged. A second reviewer dispatch could not start because all shared agent threads were occupied.",
+      "t": "2026-08-10T21:50:30Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: inherited-green target re-executed through production ports: npm run test:at -- --name Un spot recién llegado al registro no se compara contra un historial que no tiene, 1 scenario/13 steps. No new code or test ownership.",
+      "t": "2026-08-11T03:03:10Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: controlled production-only threshold bypass changed history.length >= minimumHistoryDays to history.length > 0; the target failed semantically on false normal-comparison wording after two mornings. Exact predicate restored, no test changed; restored source mtime 2026-08-11T02:57:36Z.",
+      "t": "2026-08-11T03:04:02Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: verification-only inherited producer guard; the active acceptance scenario is the port-level proof and 05-02 owns no new unit behavior or source line.",
+      "t": "2026-08-11T03:04:02Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: restored target 1 scenario/13 steps; npm run typecheck passed 2026-08-11T03:03:28Z-03:03:30Z; npm run ci:local passed all 10 jobs starting 2026-08-11T03:03:30Z; git diff --check and the owned source/test diff were empty at 2026-08-11T03:04:02Z.",
+      "t": "2026-08-11T03:04:02Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: no-op verification evidence only. Staged scope is execution-log.json and 05-02 event records; source/test diff remains empty and generated prediction, published-surface, provenance, and PublishedCall files remain unstaged.",
+      "t": "2026-08-11T03:04:47Z"
+    }
+  ]
+}

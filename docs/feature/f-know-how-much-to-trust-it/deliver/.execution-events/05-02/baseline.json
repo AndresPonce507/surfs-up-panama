@@ -1,0 +1,1 @@
+{"d":"PASS: inherited-green baseline re-executed with `npm run test:at -- --name 'Un spot recién llegado al registro no se compara contra un historial que no tiene'`; 1 scenario, 13 steps. This step owns no new production or test file because 05-01's reviewed threshold branch already covers it.","p":"PREPARE","s":"EXECUTED","sid":"05-02","t":"2026-08-11T03:03:10Z"}
