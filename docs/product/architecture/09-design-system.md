@@ -60,8 +60,6 @@ Clear theme, built home pairs:
 | hero title `#FFFFFF` on worst hero stop `#0D5866` | 8.06:1 | AAA (≥7:1) |
 | hero body `#E8F7FA` on worst hero stop `#0D5866` | 7.34:1 | AAA (≥7:1) |
 | body `#08252E` on page `#F2F8FA` | 14.90:1 | AAA (≥7:1) |
-| body `#08252E` on card `#FFFFFF` | 15.98:1 | AAA (≥7:1) |
-| secondary `#3B5A63` on card `#FFFFFF` | 7.42:1 | AAA (≥7:1) |
 | secondary `#3B5A63` on page `#F2F8FA` | 6.92:1 | AA (≥4.5:1) |
 | danger `#9E1C23` on page `#F2F8FA` | 7.41:1 | AAA (≥7:1) |
 | accent `#0B5F6A` on page `#F2F8FA` | 6.85:1 | AA (≥4.5:1) |
@@ -76,8 +74,6 @@ Dark theme, built home pairs:
 | hero body `#E8F7FA` on worst hero stop `#0C5866` | 7.34:1 | AAA (≥7:1) |
 | body `#E4F2F5` on worst hero stop `#0C5866` | 7.04:1 | AAA (≥7:1) |
 | body `#E4F2F5` on page `#061A21` | 15.56:1 | AAA (≥7:1) |
-| body `#E4F2F5` on card `#0C2830` | 13.45:1 | AAA (≥7:1) |
-| secondary `#9DBAC2` on card `#0C2830` | 7.52:1 | AAA (≥7:1) |
 | secondary `#9DBAC2` on page `#061A21` | 8.69:1 | AAA (≥7:1) |
 | danger `#F2848D` on page `#061A21` | 7.19:1 | AAA (≥7:1) |
 | accent `#6FCFDD` on page `#061A21` | 9.89:1 | AAA (≥7:1) |
