@@ -1,0 +1,7 @@
+{
+  "sid": "01-09",
+  "p": "RED_ACCEPTANCE",
+  "s": "EXECUTED",
+  "d": "PASS: controlled decoded-record mutation changes score_delta.units from display_points to fraction and is rejected by the acceptance oracle. The initial exact score comparison was corrected from 9 to a 1e-12 tolerance after the valid floating result 8.999999999999998; no production failure is claimed.",
+  "t": "2026-08-11T15:04:43Z"
+}

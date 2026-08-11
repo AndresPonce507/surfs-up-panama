@@ -1,0 +1,21 @@
+{
+  "id": "01-09",
+  "name": "Correction states its score move in display points",
+  "delivery_mode": "current-equivalence/acceptance-evidence",
+  "accepted_context": "recover/learning-build:docs/feature/f-forecast-learns-from-the-beach/deliver/roadmap.json",
+  "criteria": [
+    "The stored record names schema spot-correction/1 and states its score move in display_points, the only legal unit.",
+    "The record carries the height limit 0.40 and the score limit 12 that its reader must honour.",
+    "The score residual is the score a reporter was shown minus the observed quality anchor, per report.",
+    "Quality anchors are imported from the shipped report vocabulary, never retyped, and carried as unfit priors."
+  ],
+  "owned_paths": [
+    "src/learning/residuals.ts",
+    "src/learning/constants.ts",
+    "src/learning/correction-file.ts",
+    "tests/unit/learning-correction-file.test.ts",
+    "tests/acceptance/f-forecast-learns-from-the-beach/score-move-display-points.test.ts"
+  ],
+  "production_change": false,
+  "acceptance": "The real runLearningFitOnce port writes a 22-morning, seven-reporter correction with a 9 display-point score move and reader limits 0.40/12; the decoded unit mutation display_points -> fraction is rejected by the acceptance oracle."
+}
