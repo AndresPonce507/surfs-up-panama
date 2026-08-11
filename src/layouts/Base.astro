@@ -20,6 +20,7 @@ import type { LinkAnnouncement } from '../share/link-announcement';
 import tokens from '../styles/tokens.css?raw';
 import base from '../styles/base.css?raw';
 import components from '../styles/components.css?raw';
+import offline from '../styles/offline.css?raw';
 
 interface Props {
   locale: Locale;
@@ -29,9 +30,11 @@ interface Props {
   announcement?: LinkAnnouncement;
   /** Deferred until the English tree ships with its own feature. */
   altPath?: string;
+  /** The precached fallback has its own 3 KB document ceiling. */
+  compactStyles?: boolean;
 }
 
-const { locale, title, currentPath, announcement } = Astro.props;
+const { locale, title, currentPath, announcement, compactStyles = false } = Astro.props;
 
 // Build-time CSS minifier: comments out, whitespace collapsed. Safe for this
 // codebase by construction: no CSS strings/content values contain spaces or
@@ -45,7 +48,7 @@ function minify(css: string): string {
     .trim();
 }
 
-const inlineCss = minify(`${tokens}\n${base}\n${components}`);
+const inlineCss = minify(compactStyles ? offline : `${tokens}\n${base}\n${components}`);
 ---
 
 <!doctype html>

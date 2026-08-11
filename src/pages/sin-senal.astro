@@ -40,7 +40,7 @@ import { forecast } from '../data/forecast';
 import { formatPanamaTime } from '../publish/reading-state';
 ---
 
-<Base locale="es" title="Sin señal" currentPath={paths.offline()}>
+<Base locale="es" title="Sin señal" currentPath={paths.offline()} compactStyles>
   <h1>Sin señal.</h1>
   <p>Esto es lo último que vimos, de las {formatPanamaTime(forecast.published_at)}</p>
   <p>Los reportes que mandes quedan guardados.</p>
