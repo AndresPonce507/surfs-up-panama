@@ -59,8 +59,10 @@ async function auditReadingSurface(page: Page, route: RouteUnderAudit): Promise<
       }
       return [[255, 255, 255]];
     };
+    const paintsOwnText = (element: Element): boolean => [...element.childNodes]
+      .some((node) => node.nodeType === Node.TEXT_NODE && Boolean(node.textContent?.trim()));
     const contrastFailures = [...document.querySelectorAll('body, h1, h2, p, a, button, label, legend, strong, summary')]
-      .filter((element) => element.textContent?.trim() && (element as HTMLElement).offsetParent !== null)
+      .filter((element) => (element === document.body || paintsOwnText(element)) && (element as HTMLElement).offsetParent !== null)
       .flatMap((element) => {
         const foreground = parse(getComputedStyle(element).color);
         if (foreground === null) return [`could not parse text colour for <${element.tagName.toLowerCase()}>`];

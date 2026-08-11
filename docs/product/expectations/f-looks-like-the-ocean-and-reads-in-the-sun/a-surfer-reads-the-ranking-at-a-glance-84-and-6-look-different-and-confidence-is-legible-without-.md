@@ -41,3 +41,4 @@ Deferred, not this slice: whether the weakest-link callout gets its own visual t
 ## Session log (append-only)
 | date | examiner | verdict | observations |
 |------|----------|---------|--------------|
+| 2026-08-11 | Vera | PASS | Examen ciego de Home y Mañana publicadas: las 20 filas llevan barras proporcionales junto al puntaje, columna numérica alineada, puntos llenos/vacíos y palabra completa de confianza. Escala de grises conserva barra, puntos, palabra y orden. La superficie actual llega a 57, no al ejemplo histórico 70, pero mantiene la relación de largo y la lectura completa. |

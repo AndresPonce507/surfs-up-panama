@@ -287,8 +287,13 @@ async function auditPublishedPage(page: Page, route: PublishedRoute, expected: P
     }
     const words = compact(document.body.innerText || '');
     if (!words) findings.push('llega en blanco');
+    // A container that only holds a styled child paints none of the child's
+    // glyphs. Measure the child against its own backdrop, not the inherited
+    // colour of an otherwise-empty <p> against its tray or page background.
+    const paintsOwnText = (element) => [...element.childNodes]
+      .some((node) => node.nodeType === Node.TEXT_NODE && compact(node.textContent || '').length > 0);
     const readable = [...document.querySelectorAll('h1, h2, p, time, legend, label, a, button, summary')]
-      .filter((element) => compact(element.textContent || '').length > 0 && getComputedStyle(element).visibility !== 'hidden');
+      .filter((element) => paintsOwnText(element) && getComputedStyle(element).visibility !== 'hidden');
     for (const element of readable) {
       const backdrops = backdropsFor(element);
       if (backdrops === null) {

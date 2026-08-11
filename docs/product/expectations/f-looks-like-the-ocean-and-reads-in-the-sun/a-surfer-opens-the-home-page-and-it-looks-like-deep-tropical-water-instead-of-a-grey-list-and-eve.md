@@ -78,3 +78,4 @@ Their absence, or their continued old styling, is not a failure of this charter.
 ## Session log (append-only)
 | date | examiner | verdict | observations |
 |------|----------|---------|--------------|
+| 2026-08-11 | Vera | PASS | Examen ciego sobre capturas Playwright publicadas en 390 y 320 px, claro y oscuro, escala de grises y movimiento reducido: la portada se lee como agua tropical profunda y deliberada; las 20 filas, incluido Santa Catalina - La Punta, permanecen completas y sin escape horizontal. Los dos cuadros de movimiento reducido fueron idénticos tras 1.5 s. |

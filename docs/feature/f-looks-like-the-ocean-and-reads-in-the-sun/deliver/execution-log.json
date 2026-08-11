@@ -246,6 +246,104 @@
       "s": "EXECUTED",
       "d": "PASS: full @slice-05 acceptance run passed 5/5 scenarios and 80/80 steps through the real build and Chromium. Build and UI-quality pass; a fresh source-blind browser examination passed at 390px in light, dark, grayscale, and deuteranopia, plus mañana at 320px.",
       "t": "2026-08-11T05:11:10Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: reopened against the truthful Aug-11/12 published surface. The non-empty terminal U1-U7 selections all passed: U1 2 scenarios, U2 4, U3 14, U4 1, U5 2, U6 4, U7 3; full feature acceptance later passed 46/46 and 717/717.",
+      "t": "2026-08-11T05:39:51Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "EXAMINE",
+      "s": "EXECUTED",
+      "d": "PASS: fresh source-blind Vera screenshots at 390/320 px light and dark, grayscale, and reduced motion show the complete intentional water surface with no clipping or horizontal escape.",
+      "t": "2026-08-11T05:39:51Z"
+    },
+    {
+      "sid": "02-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: reopened terminal evidence with the active pre-authored Slice-02 acceptance contracts and the truthful Aug-11/12 surface; no scenario was added, skipped, or altered.",
+      "t": "2026-08-11T05:39:51Z"
+    },
+    {
+      "sid": "02-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: existing shipped acceptance contracts were rerun, not re-authored. Their current green result records verification only; it does not claim a retrospective RED failure.",
+      "t": "2026-08-11T05:39:51Z"
+    },
+    {
+      "sid": "02-03",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: reopened terminal verification required no new production logic; the real-browser acceptance contracts remained the driving proof.",
+      "t": "2026-08-11T05:39:51Z"
+    },
+    {
+      "sid": "02-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: terminal U1-U7 selections were all non-empty and passed: U1 9 scenarios, U2 7, U3 11, U4 9, U5 4, U6 7, U7 7.",
+      "t": "2026-08-11T05:39:51Z"
+    },
+    {
+      "sid": "02-03",
+      "p": "EXAMINE",
+      "s": "EXECUTED",
+      "d": "PASS: fresh source-blind Vera screenshot examination found supported frosted teal glass and a deliberate opaque reduced-transparency fallback, readable and unclipped at 390/320 px; the hero remained solid.",
+      "t": "2026-08-11T05:39:51Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: reopened Slice-04 terminal proof with the active drift contract, the restored document-cleanup protection, and the truthful Aug-11/12 surface.",
+      "t": "2026-08-11T05:39:51Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: the existing drift acceptance scenario was rerun after its target-file cleanup guard was restored; this is a current verification result, not a claim that its already-shipped behavior newly failed RED.",
+      "t": "2026-08-11T05:39:51Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: the repair restores an acceptance cleanup assertion and introduces no application/domain logic.",
+      "t": "2026-08-11T05:39:51Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: terminal U1-U7 selections were all non-empty and passed: U1 5 scenarios, U2 3, U3 6, U4 3, U5 3, U6 3, U7 3. The drift scenario passed with its published design-system target clean afterward.",
+      "t": "2026-08-11T05:39:51Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "EXAMINE",
+      "s": "EXECUTED",
+      "d": "PASS: fresh source-blind Vera screenshots show the 390px teal home readable in both themes, grayscale and reduced motion, and the rendered design-system contrast table describes the painted teal pairs.",
+      "t": "2026-08-11T05:39:51Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: reopened terminal U1-U7 selections on the truthful Aug-11/12 surface were all non-empty and passed: U1 3 scenarios, U2 3, U3 5, U4 3, U5 3, U6 3, U7 3.",
+      "t": "2026-08-11T05:39:51Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "EXAMINE",
+      "s": "EXECUTED",
+      "d": "PASS: fresh source-blind Vera screenshots of Home and Mañana show all 20 rows with proportional neutral bars, aligned score columns, filled/empty confidence dots plus full words, and the same information under grayscale.",
+      "t": "2026-08-11T05:39:51Z"
     }
   ]
 }
