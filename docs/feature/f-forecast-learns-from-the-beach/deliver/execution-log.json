@@ -1079,6 +1079,13 @@
       "s": "EXECUTED",
       "d": "{\"focused_acceptance\":\"forward/shuffled CV: 2 scenarios/34 steps PASS; untouched gate declaration: 1 scenario/17 steps PASS; untouched wind declaration: 1 scenario/17 steps PASS\",\"learning_units\":\"13 files, 76 tests PASS\",\"typecheck\":\"PASS\",\"roadmap_integrity\":\"PASS\",\"falsification\":\"accepting random_kfold instead made both fixture cases fail: shuffled was not refused and rolling_origin_blocked was refused; restored rolling_origin_blocked\",\"privacy\":\"the examination reads source text and returns rule violations only; it imports no examined universe and reads no report identity\",\"global_qualification\":\"npm run build remains blocked by the unrelated stale published surface dated 2026-08-09 versus Panama 2026-08-10\",\"non_visual_rationale\":\"the rule is a source-text violations list with no rendered or launch surface\"}",
       "t": "2026-08-11T02:24:19Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "{\"commit\":\"3c9a8c9\",\"message\":\"feat(learning): refuse shuffled cross-validation declarations - step 05-03\",\"status\":\"scoped green\"}",
+      "t": "2026-08-11T02:25:00Z"
     }
   ]
 }
