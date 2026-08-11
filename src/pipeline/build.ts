@@ -13,6 +13,8 @@
 // The build never fetches; the log is the only contract with the fetch run.
 
 import type { BuildDeps, BuildOutcome } from './ports';
+import { loadLaunchSpotCoordinates } from './adapters/spot-coordinates';
+import { serializeSpotIndex } from './static-publication';
 import { confidence } from '../scoring/confidence';
 import { loadLaunchSpotSeeds } from '../data/launch-spots';
 import { sizeBands, type SizeBandToken } from '../data/size-bands';
@@ -52,6 +54,9 @@ const DECLARED_MEMBER_SOURCES = [
   'meteofrance_wave',
   'dwd_gwam',
 ] as const;
+
+const DEFAULT_SOURCE_SEED_PATH = 'data/spots/pa-pacific.yaml';
+const DEFAULT_POLICY_PATH = 'data/spots/pa-pacific-launch-v1.json';
 
 // The classification intervals come from the one canonical vocabulary file
 // (domain-model.md section 7.2), the same rows the capture form offers, so a
@@ -115,6 +120,7 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
   const rows = await predictionRows(deps, dates);
   const calls = spots.flatMap((spot) => callsForSpot(spot, rows, dates, hour));
   if (calls.length === 0) return { published: false, reason: 'no usable wave members' };
+  const spotIndex = serializeSpotIndex(spots, coordinatesFor(deps));
 
   const build_id = `b_${date}T${hour}Z`;
   const callsKey = `log/calls/v1/dt=${date}/build=${hour}Z/${deps.region_id}.jsonl.gz`;
@@ -151,8 +157,17 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
     },
   };
   await deps.store.putBundle(`pub/v1/regions/${deps.region_id}/bundle.json`, JSON.stringify(bundle));
+  await deps.store.putBundle('pub/v1/meta/spot-index.json', spotIndex);
   await deps.store.putManifest('pub/v1/manifest.json', JSON.stringify({ build_id }));
   return { published: true, build_id };
+}
+
+function coordinatesFor(deps: BuildDeps) {
+  if (deps.spotCoordinates !== undefined) return deps.spotCoordinates;
+  return loadLaunchSpotCoordinates(
+    deps.launchData?.sourceSeedPath ?? DEFAULT_SOURCE_SEED_PATH,
+    deps.launchData?.policyPath ?? DEFAULT_POLICY_PATH,
+  );
 }
 
 async function predictionRows(deps: BuildDeps, dates: readonly string[]): Promise<PredictionRow[]> {

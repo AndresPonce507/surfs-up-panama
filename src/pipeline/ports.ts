@@ -17,6 +17,7 @@
 //     clock (contract:declared-inputs-not-ambient-reads).
 
 import type { LaunchSeedData } from '../data/launch-spots';
+import type { SpotIndexCoordinate } from './static-publication';
 import type { SpotSeed, SwellTrain, WindObs } from '../scoring/engine';
 
 export interface IngestStore {
@@ -98,6 +99,9 @@ export interface BuildDeps {
   spots?: SpotSeed[];
   /** Isolated immutable source/policy paths for a controlled publication run. */
   launchData?: LaunchSeedData;
+  /** Coordinate projection from the human-owned seed, used only to publish
+   * the report handler's minimal spot index. */
+  spotCoordinates?: readonly SpotIndexCoordinate[];
   region_id: string;
 }
 
