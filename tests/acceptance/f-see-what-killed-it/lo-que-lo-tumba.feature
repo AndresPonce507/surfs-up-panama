@@ -34,18 +34,25 @@ Feature: La playa dice qué fue lo que la tumbó
       | oscuro | reducido   |
 
   @slice-03 @driving_port @real-io @adapter-integration @ui-u1 @ui-u2 @ui-u3 @ui-u4 @ui-u5 @ui-u6 @ui-u7 @covers-R9 @covers-R11 @covers-R12 @covers-R21 @covers-R22 @covers-R23 @covers-R24 @covers-R25 @covers-R26 @covers-R27
-  Scenario Outline: El surfista lee cuánto marcaría la playa sin ese punto débil
-    Given una mañana publicada donde cada día trae una mejora honesta junto a su causa
+  Scenario Outline: La playa explica la mejora sin inventar una cifra
+    Given una mañana publicada donde cada día conserva la corrección que formó su puntaje
     When el surfista abre la playa "nombre-mas-largo" a 390 px, con tema "<tema>" y movimiento "<movimiento>"
     Then la sección de hoy dice cuánto marcaría sin su causa publicada
     And la sección de mañana dice cuánto marcaría sin su causa publicada
     And ninguna sección toma la cifra de mejora del otro día
     And la frase del punto débil cumple las siete comprobaciones visuales sobre el fondo real
+    And la explicación publicada no deja cálculo ni seguimiento en el teléfono
 
     Examples:
       | tema   | movimiento |
       | claro  | normal     |
       | oscuro | reducido   |
+
+  @slice-03 @driving_port @real-io @adapter-integration @negative @error @covers-R9 @covers-R12
+  Scenario: La publicación rechaza una mejora menor que el puntaje publicado
+    Given una mañana publicada donde cada día conserva la corrección que formó su puntaje
+    When la publicación revisa una mejora menor que el puntaje publicado
+    Then la publicación se niega antes de preparar una página
 
   @slice-03 @driving_port @real-io @adapter-integration @negative @error @covers-R12
   Scenario: El surfista no recibe una cifra repetida cuando la mejora redondea igual
@@ -142,7 +149,8 @@ Feature: La playa dice qué fue lo que la tumbó
   @slice-01 @driving_port @real-io @adapter-integration @covers-R4
   Scenario: El culpable aparece en la página de la playa y no cambia la lista de hoy
     Given una mañana publicada donde cada playa trae el punto débil que salió del cálculo
-    When el surfista mira la lista de hoy y después abre la playa "dos-dias-distintos" a 390 px
+    And el surfista ya miró la lista de hoy sin culpables
+    When el surfista abre la playa "dos-dias-distintos" a 390 px
     Then la lista de hoy sigue igual, sin nombrar culpables
     And la página de esa playa sí nombra el suyo
 

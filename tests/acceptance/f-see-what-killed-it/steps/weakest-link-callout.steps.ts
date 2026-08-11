@@ -99,6 +99,8 @@ type ProfileDay = {
   /** Full score record is producer-only input; the browser receives one selected scalar. */
   readonly producer_subscores?: ProducerSubscores;
   readonly score_q?: number;
+  /** Applied model correction. It stays in producer arithmetic, never in page markup. */
+  readonly delta_q?: number;
   /** `legacy` deliberately plants neither fresh counterfactual representation. */
   readonly counterfactual_score_q?: number | 'legacy';
   readonly counterfactual_suppression?: 'rounded_equal';
@@ -146,6 +148,7 @@ type DayPlan = {
   readonly subscore?: number;
   readonly producerSubscores?: ProducerSubscores;
   readonly scoreQ?: number;
+  readonly deltaQ?: number;
   readonly counterfactualScore?: number | 'legacy';
   readonly counterfactualSuppression?: 'rounded_equal';
   readonly damages?: DamageReceipt;
@@ -171,6 +174,7 @@ function dayPlan(declared: ProfileDay | undefined, fallback: Factor): DayPlan {
     ...(producerSubscore === undefined && declared.subscore === undefined ? {} : { subscore: producerSubscore ?? declared.subscore }),
     ...(declared.producer_subscores === undefined ? {} : { producerSubscores: declared.producer_subscores }),
     ...(declared.score_q === undefined ? {} : { scoreQ: declared.score_q }),
+    ...(declared.delta_q === undefined ? {} : { deltaQ: declared.delta_q }),
     ...(declared.counterfactual_score_q === undefined ? {} : { counterfactualScore: declared.counterfactual_score_q }),
     ...(declared.counterfactual_suppression === undefined ? {} : { counterfactualSuppression: declared.counterfactual_suppression }),
     ...(declared.damages === undefined ? {} : { damages: declared.damages }),
@@ -475,6 +479,41 @@ function buildCounterfactualHealthSurface(): string {
   }
 }
 
+type PublishRefusal = { readonly status: number | null; readonly output: string };
+
+/**
+ * This drives the production publication validator over a contained copy of
+ * the public surface. It intentionally never starts HTTP or Chromium: an
+ * impossible lower counterfactual must be rejected before a page exists.
+ */
+function rejectLowerCounterfactualBeforeRendering(): PublishRefusal {
+  const root = copyProjectForSurface();
+  try {
+    applyPublishedCulprits(root);
+    const path = join(root, 'data/published-surface.json');
+    const surface = JSON.parse(readFileSync(path, 'utf8')) as {
+      current: { calls: SurfaceRow[]; days: [{ spots: SurfaceRow[] }, { spots: SurfaceRow[] }] };
+    };
+    const { spotId } = plannedFor('nombre-mas-largo');
+    for (const rows of [surface.current.calls, surface.current.days[0].spots, surface.current.days[1].spots]) {
+      const row = rows.find((candidate) => candidate.spot_id === spotId);
+      if (row === undefined) continue;
+      row.counterfactual_score_q = row.score_q - 1;
+      delete row.counterfactual_suppression;
+    }
+    writeFileSync(path, `${JSON.stringify(surface, null, 2)}\n`);
+    const validation = spawnSync('npm', ['run', 'publish:surface', '--', '--verify'], {
+      cwd: root,
+      env: credentialFreeEnvironment(),
+      encoding: 'utf8',
+      maxBuffer: 2 * 1024 * 1024,
+    });
+    return { status: validation.status, output: `${validation.stdout}${validation.stderr}` };
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+}
+
 // ------------------------------------------------------------- the reader --
 
 type CalloutReading = {
@@ -535,6 +574,7 @@ type Slice01World = PipelineWorld & {
   killedItMonochrome?: { readonly today: string | null; readonly tomorrow: string | null };
   killedItVisual?: RawVisualAudit;
   killedItHealthBuildOutput?: string;
+  killedItCounterfactualRefusal?: PublishRefusal;
 };
 
 function world01(world: PipelineWorld): Slice01World {
@@ -629,17 +669,22 @@ function legacySentenceFindings(label: string, text: string | null, expected: Fa
 
 function exactCounterfactualFindings(label: string, plan: DayPlan): string[] {
   const findings: string[] = [];
-  if (plan.link === null || plan.damages === undefined || typeof plan.counterfactualScore !== 'number' || plan.scoreQ === undefined) {
+  if (plan.link === null || plan.damages === undefined || typeof plan.counterfactualScore !== 'number' || plan.scoreQ === undefined || plan.deltaQ === undefined) {
     return [`${label}: la mañana de prueba no trae el recibo completo de la mejora honesta`];
   }
   const totalDamage = Object.values(plan.damages).reduce((sum, damage) => sum + damage, 0);
-  const withoutNamedWeakness = Math.round(100 * Math.exp(-(totalDamage - plan.damages[plan.link])));
-  const displayed = Math.round(100 * Math.exp(-totalDamage));
+  const clip = (value: number): number => Math.min(1, Math.max(0, value));
+  const withoutNamedWeakness = Math.round(100 * clip(Math.exp(-(totalDamage - plan.damages[plan.link])) + plan.deltaQ));
+  const displayed = Math.round(100 * clip(Math.exp(-totalDamage) + plan.deltaQ));
+  const uncorrected = Math.round(100 * clip(Math.exp(-(totalDamage - plan.damages[plan.link]))));
   if (withoutNamedWeakness !== plan.counterfactualScore) {
     findings.push(`${label}: el recibo recompone ${withoutNamedWeakness}, no el ${plan.counterfactualScore} que la mañana publicó`);
   }
   if (displayed !== plan.scoreQ) {
     findings.push(`${label}: el recibo recompone puntaje ${displayed}, no el ${plan.scoreQ} de esa sección`);
+  }
+  if (uncorrected === plan.counterfactualScore) {
+    findings.push(`${label}: la corrección no cambia la mejora y no puede probar que el productor la conserva`);
   }
   return findings;
 }
@@ -691,7 +736,7 @@ Given(
 );
 
 Given(
-  'una mañana publicada donde cada día trae una mejora honesta junto a su causa',
+  'una mañana publicada donde cada día conserva la corrección que formó su puntaje',
   { timeout: 600_000 },
   async function () {
     await ensureHarness();
@@ -879,13 +924,13 @@ When('el surfista recorre todas las playas de la lista', { timeout: 600_000 }, a
   world.killedItSweep = sweep;
 });
 
-When(
-  'el surfista mira la lista de hoy y después abre la playa {string} a {int} px',
+Given(
+  'el surfista ya miró la lista de hoy sin culpables',
   { timeout: 600_000 },
-  async function (this: PipelineWorld, profileName: string, width: number) {
+  async function (this: PipelineWorld) {
     const world = world01(this);
     const active = await ensureHarness();
-    const page = await ensurePage(world, width, 'claro', 'normal');
+    const page = await ensurePage(world, 390, 'claro', 'normal');
     await page.goto(active.url, { waitUntil: 'domcontentloaded' });
     const list = await page.evaluate(() => ({
       text: document.body.innerText,
@@ -893,9 +938,6 @@ When(
     }));
     world.killedItListText = list.text;
     world.killedItListCallouts = list.callouts;
-    const { spotId } = plannedFor(profileName);
-    world.killedItOpened = profileName;
-    world.killedItReading = await openSpot(world, spotId, width, 'claro', 'normal');
   },
 );
 
@@ -905,6 +947,10 @@ When('esa mañana se publica', { timeout: 60_000 }, async function (this: Pipeli
 
 When('la mañana queda lista para leerse', { timeout: 600_000 }, function (this: PipelineWorld) {
   world01(this).killedItHealthBuildOutput = buildCounterfactualHealthSurface();
+});
+
+When('la publicación revisa una mejora menor que el puntaje publicado', { timeout: 600_000 }, function (this: PipelineWorld) {
+  world01(this).killedItCounterfactualRefusal = rejectLowerCounterfactualBeforeRendering();
 });
 
 // ------------------------------------------------------------------- Then --
@@ -1112,6 +1158,17 @@ Then('la publicación señala una sola ausencia heredada por día sin confundirl
   assertBehavior(
     findings,
     'anotar una falta heredada por cada día que conserva su causa sin la mejora nueva, sin tratar una igualdad honesta ni un día perfecto como una falla.',
+  );
+});
+
+Then('la publicación se niega antes de preparar una página', function (this: PipelineWorld) {
+  const refusal = world01(this).killedItCounterfactualRefusal;
+  assert.ok(refusal, 'test fixture error: the publication was never asked to validate the impossible improvement');
+  assert.notEqual(refusal.status, 0, 'la publicación aceptó una mejora menor que el puntaje y habría dejado que una página la leyera');
+  assert.match(
+    refusal.output,
+    /counterfactual_score_q|counterfactual.*score|strict two-day/i,
+    `la publicación se negó por otra razón antes de validar la mejora imposible:\n${refusal.output}`,
   );
 });
 
@@ -1472,6 +1529,39 @@ Then('la frase del punto débil cumple las siete comprobaciones visuales sobre e
   assertBehavior(
     findings,
     'construir el aviso con los tokens y la escala tipográfica ya declarados (09-design-system.md línea 237), medido sobre el fondo real de la página en los dos temas, no sobre blanco.',
+  );
+});
+
+Then('la explicación publicada no deja cálculo ni seguimiento en el teléfono', function (this: PipelineWorld) {
+  const world = world01(this);
+  const { spotId } = plannedFor(world.killedItOpened ?? '');
+  const dist = join(requiredHarness().root, 'dist');
+  const emitted = readFileSync(join(dist, 'spots', `${spotId}.html`), 'utf8');
+  const scripts = [...emitted.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/giu)]
+    .flatMap((match) => {
+      const inline = match[2] ?? '';
+      const source = /\bsrc=["']([^"']+)["']/iu.exec(match[1] ?? '')?.[1];
+      if (source === undefined) return [inline];
+      const asset = resolveEmittedFile(dist, source);
+      return asset === null ? [`unresolved emitted script: ${source}`] : [inline, readFileSync(asset, 'utf8')];
+    });
+  const findings: string[] = [];
+  if (!emitted.includes('data-field="weakest-link"')) {
+    findings.push('la explicación no quedó en el documento publicado');
+  }
+  for (const script of scripts) {
+    if (script.startsWith('unresolved emitted script:')) {
+      findings.push(script);
+      continue;
+    }
+    if (/counterfactual|weakest-link|health\.publish|telemetry|sendBeacon/iu.test(script)) {
+      findings.push('el documento publicado manda el cálculo o su registro a código del teléfono');
+      break;
+    }
+  }
+  assertBehavior(
+    findings,
+    'dejar la explicación como texto ya publicado en el documento: sin cálculo, telemetría ni código propio en el teléfono.',
   );
 });
 
