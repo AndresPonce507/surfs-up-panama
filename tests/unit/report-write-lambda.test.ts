@@ -9,6 +9,7 @@ import { join } from 'node:path';
 
 import { afterEach, beforeEach, describe, it } from 'vitest';
 
+import { functionUrlResponse } from '../../src/report/aws-lambda-adapter';
 import { createLocalWriteLambda, type LocalWriteLambda } from '../../src/report/local-lambda';
 
 const SECRET = 'test-only-credential-secret-that-is-long-enough';
@@ -17,6 +18,20 @@ const DEVICE = 'd_0123456789abcdef0123456789abcdef';
 
 let root: string;
 let lambda: LocalWriteLambda;
+
+describe('report/mint Function URL response boundary', () => {
+  it('marks every report or mint response network-only without erasing CORS headers', () => {
+    for (const statusCode of [200, 400, 401, 429, 503]) {
+      const result = functionUrlResponse(statusCode, { statusCode }, {
+        'access-control-allow-origin': 'https://surfsup.example',
+        'Cache-Control': 'public, max-age=31536000',
+      });
+      assert.equal(result.headers['cache-control'], 'no-store');
+      assert.equal(result.headers['access-control-allow-origin'], 'https://surfsup.example');
+      assert.equal(Object.keys(result.headers).filter((name) => name.toLowerCase() === 'cache-control').length, 1);
+    }
+  });
+});
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), 'surfs-up-report-write-'));

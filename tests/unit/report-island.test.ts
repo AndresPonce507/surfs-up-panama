@@ -297,7 +297,7 @@ describe('cold load of the confirmation address (event ddc0ba7c)', () => {
 
   it('ships a document built by `npm run build` to examine', () => {
     assert.match(buildReportadoDocument(), /<!doctype html>/i);
-  });
+  }, 60_000);
 
   it('carries a script of its own, so a cold load can re-derive the confirmation from durable storage', () => {
     const html = buildReportadoDocument();

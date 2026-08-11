@@ -22,7 +22,7 @@ function readCostAndUsage(costAndUsage, name) {
     services: result.Groups.map((group) => {
       const service = group?.Keys?.[0];
       const amount = Number(group?.Metrics?.UnblendedCost?.Amount);
-      if (typeof service !== 'string' || service.length === 0 || !Number.isFinite(amount) || amount < 0) throw new Error(`${name} cost read has an invalid service amount`);
+      if (typeof service !== 'string' || service.length === 0 || !Number.isFinite(amount)) throw new Error(`${name} cost read has an invalid service amount`);
       return { service, amount };
     }),
   };
@@ -33,11 +33,20 @@ function total(services) {
 }
 
 function dollars(amount) {
-  return `$${amount < CENT ? '0.00' : amount.toFixed(2)}`;
+  if (Math.abs(amount) < CENT) return '$0.00';
+  return `${amount < 0 ? '-' : ''}$${Math.abs(amount).toFixed(2)}`;
 }
 
 function billedServices(services) {
   return services.filter(({ amount }) => amount >= CENT);
+}
+
+function creditedServices(services) {
+  return services.filter(({ amount }) => amount <= -CENT);
+}
+
+function isMaterial(amount) {
+  return Math.abs(amount) >= CENT;
 }
 
 export function evaluateMonthClose({ reads }) {
@@ -61,6 +70,7 @@ export function evaluateMonthClose({ reads }) {
 
   lines.push(`month-to-date account spend (${period}): ${dollars(accountTotal)}`);
   for (const { service, amount } of billedServices(account.services)) lines.push(`  billed: ${service}: $${amount.toFixed(2)}`);
+  for (const { service, amount } of creditedServices(account.services)) lines.push(`  credit: ${service}: ${dollars(amount)}`);
 
   const tagEntry = (reads.costAllocationTags?.CostAllocationTags ?? []).find((tag) => tag?.TagKey === projectTag.key);
   const tagActive = tagEntry?.Status === 'Active';
@@ -77,9 +87,11 @@ export function evaluateMonthClose({ reads }) {
     const projectTotal = total(project.services);
     lines.push(`project-scoped spend (${projectTag.key}=${projectTag.value}): ${dollars(projectTotal)}`);
     const billed = billedServices(project.services);
-    if (billed.length > 0) {
+    const credited = creditedServices(project.services);
+    if (isMaterial(projectTotal)) {
       exitCode = 1;
       for (const { service, amount } of billed) lines.push(`ABOVE ZERO: ${service} billed $${amount.toFixed(2)} to this project this month`);
+      for (const { service, amount } of credited) lines.push(`credit: ${service}: ${dollars(amount)} to this project this month`);
     } else {
       lines.push(`the project-scoped month is provably ${dollars(0)}; account total ${dollars(accountTotal)} belongs to other work on this shared account`);
     }
@@ -87,7 +99,7 @@ export function evaluateMonthClose({ reads }) {
     return { exitCode: 2, lines: [...lines, 'month close: INDETERMINATE: the active project tag has no tag-filtered cost read; retry with a complete tag-filtered read'] };
   } else {
     lines.push(`per-project attribution: the ${projectTag.key} cost-allocation tag is not yet activated in the Billing console (feature pre-requisite 8), so spend cannot be attributed to one project`);
-    if (accountTotal < CENT) lines.push(`the whole account is at ${dollars(0)}, so this project is at ${dollars(0)} by arithmetic`);
+    if (!isMaterial(accountTotal)) lines.push(`the whole account is at ${dollars(0)}, so this project is at ${dollars(0)} by arithmetic`);
     else {
       exitCode = 1;
       lines.push(`ABOVE ZERO: the account billed ${dollars(accountTotal)} this month and it cannot be attributed to a project until the ${projectTag.key} tag is activated`);

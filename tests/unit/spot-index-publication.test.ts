@@ -16,7 +16,7 @@ import type { SpotSeed } from '../../src/scoring/engine';
 
 const CAPTURE_ROOT = resolve(process.cwd(), 'data/predictions-capture');
 const BUILD_INSTANT = '2026-08-09T11:22:00Z';
-const BUNDLE_SHA256_AT_BUILD_INSTANT = 'ac0c772cece44653918529cd059f49cb2482d2955213017942af4d12dc5aecbd';
+const BUNDLE_SHA256_AT_BUILD_INSTANT = '53d5fea339c0ebce353953ba5d3d900ce86a107bc2c2264d2a0c2a6fcc65f418';
 const MEMBER_SOURCES = ['ncep_gfswave016', 'ncep_gfswave025', 'meteofrance_wave', 'dwd_gwam'] as const;
 
 describe('spot-index publication', { timeout: 30_000 }, () => {

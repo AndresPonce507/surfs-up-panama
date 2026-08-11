@@ -21,7 +21,7 @@ export async function handler(event: FunctionUrlEvent) {
   const writeLambda = composition ??= createComposition();
   const expectedPath = requiredEnvironment('WRITE_PATH');
   if (event.rawPath !== undefined && event.rawPath !== expectedPath && event.rawPath !== '/') {
-    return response(404, { error: { code: 'not_found', what: 'La ruta de escritura no existe.', why: 'Cada Function URL tiene una sola operación.', how: 'Usa la URL publicada por el sitio.' } });
+    return functionUrlResponse(404, { error: { code: 'not_found', what: 'La ruta de escritura no existe.', why: 'Cada Function URL tiene una sola operación.', how: 'Usa la URL publicada por el sitio.' } });
   }
   const result = await (await writeLambda).handle({
     path: expectedPath as '/api/mint' | '/api/report',
@@ -30,7 +30,7 @@ export async function handler(event: FunctionUrlEvent) {
     body: event.body ?? '',
     sourceIp: event.requestContext?.http?.sourceIp ?? '',
   });
-  return response(result.statusCode, result.body, result.headers);
+  return functionUrlResponse(result.statusCode, result.body, result.headers);
 }
 
 async function createComposition(): Promise<LocalWriteLambda> {
@@ -67,7 +67,6 @@ async function createComposition(): Promise<LocalWriteLambda> {
     GetCommand: constructor(document, 'GetCommand'),
     PutCommand: constructor(document, 'PutCommand'),
     TransactWriteCommand: constructor(document, 'TransactWriteCommand'),
-    UpdateCommand: constructor(document, 'UpdateCommand'),
   };
   const callCache = new Map<string, string | null>();
   return createWriteLambda({
@@ -141,10 +140,17 @@ function requireProvisionedTable(described: unknown): void {
   if (mode?.BillingMode === 'PAY_PER_REQUEST' || throughput === undefined) throw new Error('report write Lambda refused: write table is not PROVISIONED');
 }
 
-function response(statusCode: number, body: unknown, headers: Readonly<Record<string, string>> = {}) {
+export function functionUrlResponse(
+  statusCode: number,
+  body: unknown,
+  headers: Readonly<Record<string, string>> = {},
+): { readonly statusCode: number; readonly headers: Readonly<Record<string, string>>; readonly body: string } {
+  const headersWithoutCacheControl = Object.fromEntries(
+    Object.entries(headers).filter(([name]) => name.toLowerCase() !== 'cache-control'),
+  );
   return {
     statusCode,
-    headers: { 'content-type': 'application/json', ...headers },
+    headers: { 'content-type': 'application/json', ...headersWithoutCacheControl, 'cache-control': 'no-store' },
     body: JSON.stringify(body),
   };
 }

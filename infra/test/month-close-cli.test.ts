@@ -55,4 +55,8 @@ describe('month-close driving command', () => {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+
+  it('refuses the paid Cost Explorer live path until a zero-cost project-scoped monitor is designed', () => {
+    expect(() => runMonthClose({ argv: [], output: { log() {} } })).toThrow(/Cost Explorer charges/);
+  });
 });

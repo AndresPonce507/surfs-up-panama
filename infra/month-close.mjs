@@ -2,30 +2,12 @@
 // The operator-facing month-close command. Tests use --input, so no AWS call
 // or credential is required to prove the driving port and exit-code contract.
 
-import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
-import { evaluateMonthClose, projectTag } from './month-close-core.mjs';
-
-function awsRead(args) {
-  const result = spawnSync('aws', [...args, '--output', 'json'], { encoding: 'utf8', env: { ...process.env, AWS_PAGER: '' }, shell: false });
-  if (result.status !== 0) throw new Error(`aws ${args.join(' ')} failed: ${(result.stderr || result.stdout || '').trim()}`);
-  return JSON.parse(result.stdout);
-}
-
-function monthPeriod(now = new Date()) {
-  return { start: `${now.toISOString().slice(0, 8)}01`, end: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10) };
-}
+import { evaluateMonthClose } from './month-close-core.mjs';
 
 function liveReads() {
-  const { start, end } = monthPeriod();
-  const shared = ['ce', 'get-cost-and-usage', '--time-period', `Start=${start},End=${end}`, '--granularity', 'MONTHLY', '--metrics', 'UnblendedCost', '--group-by', 'Type=DIMENSION,Key=SERVICE'];
-  const costByService = awsRead(shared);
-  const costAllocationTags = awsRead(['ce', 'list-cost-allocation-tags']);
-  const tagActive = (costAllocationTags.CostAllocationTags ?? []).some((tag) => tag.TagKey === projectTag.key && tag.Status === 'Active');
-  const projectCostByService = tagActive ? awsRead([...shared, '--filter', JSON.stringify({ Tags: { Key: projectTag.key, Values: [projectTag.value], MatchOptions: ['EQUALS'] } })]) : null;
-  const freeTierUsage = awsRead(['freetier', 'get-free-tier-usage', '--region', 'us-east-1']);
-  return { costByService, costAllocationTags, projectCostByService, freeTierUsage };
+  throw new Error('month close: live Cost Explorer reads are disabled because Cost Explorer charges per request; the accepted architecture has only account-wide Budgets, so it cannot yet prove Project=surfs-up-panama spend on a shared account. Use --input recorded evidence until a zero-cost project-scoped monitor is designed.');
 }
 
 export function runMonthClose({ argv = process.argv.slice(2), output = console } = {}) {

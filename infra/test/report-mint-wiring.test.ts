@@ -2,7 +2,7 @@
 // cost limits; this file keeps the report/mint composition and least-privilege
 // boundary honest without asserting unrelated stack details.
 
-import { readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import { Template } from 'aws-cdk-lib/assertions';
@@ -41,7 +41,7 @@ function actionSet(statements: readonly Properties[]): string[] {
 }
 
 describe('report/mint Lambda composition', () => {
-  it('ships the built shared-core adapter for report and mint while the later write URLs remain fail-closed', () => {
+  it('bundles the shared-core adapter at synth time for report and mint while the later write URLs remain fail-closed', () => {
     const report = functions().find(([, resource]) => resource.Properties?.FunctionName === functionNames.report)?.[1].Properties;
     const mint = functions().find(([, resource]) => resource.Properties?.FunctionName === functionNames.mint)?.[1].Properties;
     const push = functions().find(([, resource]) => resource.Properties?.FunctionName === functionNames.push)?.[1].Properties;
@@ -50,12 +50,7 @@ describe('report/mint Lambda composition', () => {
     expect(mint?.Handler).toBe('report-mint.handler');
     expect(JSON.stringify(push?.Code)).toContain('not_implemented');
     expect(JSON.stringify(presign?.Code)).toContain('not_implemented');
-    const asset = readFileSync(resolve(import.meta.dirname, '../lambda-src/report-mint.mjs'), 'utf8');
-    expect(asset).toContain('createWriteLambda');
-    expect(asset).toContain('createAwsWriteStore');
-    expect(asset).toContain('resolveReportReveal');
-    expect(asset).toContain('requireProvisionedTable');
-    expect(asset).not.toContain('not_implemented');
+    expect(existsSync(resolve(import.meta.dirname, '../lambda-src/report-mint.mjs'))).toBe(false);
   });
 
   it('allows the credential header and only the 24-hour CORS contract on all four write URLs', () => {

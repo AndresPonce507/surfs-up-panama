@@ -15,9 +15,8 @@
     "pipeline:capture": "tsx src/pipeline/capture-cli.ts",
     "pipeline:build": "tsx src/pipeline/run-build-cli.ts",
     "month:close": "node infra/month-close.mjs",
-    "lambda:build": "node scripts/build-report-lambda.mjs",
-    "test:infra": "npm run lambda:build && vitest run infra/test/guardrails.test.ts infra/test/month-close.test.ts infra/test/month-close-cli.test.ts infra/test/report-mint-wiring.test.ts tests/unit/aws-write-store.test.ts tests/unit/call-log-reader.test.ts tests/unit/report-write-http-adapter.test.ts",
-    "synth:infra": "npm run lambda:build && cdk synth --app 'npx tsx infra/bin/app.ts' --no-lookups --no-notices --quiet",
+    "test:infra": "vitest run infra/test/guardrails.test.ts infra/test/month-close.test.ts infra/test/month-close-cli.test.ts infra/test/report-mint-wiring.test.ts infra/test/aws-write-store.dynamodb.test.ts tests/unit/aws-write-store.test.ts tests/unit/call-log-reader.test.ts tests/unit/report-write-http-adapter.test.ts",
+    "synth:infra": "cdk synth --app 'npx tsx infra/bin/app.ts' --no-lookups --no-notices --quiet",
     "dev": "astro dev",
     "preview": "astro preview",
     "test": "vitest run",
@@ -31,6 +30,8 @@
     "postinstall": "bash scripts/git-hooks/install.sh >/dev/null 2>&1 || true"
   },
   "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1107.0",
+    "@aws-sdk/lib-dynamodb": "^3.1107.0",
     "@cucumber/cucumber": "^13.2.1",
     "@playwright/test": "^1.62.1",
     "@types/node": "^26.2.0",
