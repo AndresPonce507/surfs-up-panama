@@ -12,7 +12,7 @@
 // provisioned fail-closed table, and the exact resources the $18 budget line
 // trips.
 
-import { Duration, RemovalPolicy, Fn, Stack } from 'aws-cdk-lib';
+import { CfnOutput, Duration, RemovalPolicy, Fn, Stack } from 'aws-cdk-lib';
 import type { StackProps } from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cloudwatchActions from 'aws-cdk-lib/aws-cloudwatch-actions';
@@ -131,7 +131,7 @@ export class WriteStack extends Stack {
           },
         } : {}),
       });
-      fn.addFunctionUrl({
+      const functionUrl = fn.addFunctionUrl({
         authType: lambda.FunctionUrlAuthType.NONE, // adr-write-path-off-cloudfront
         cors: {
           allowedOrigins: [siteOrigin],
@@ -140,12 +140,23 @@ export class WriteStack extends Stack {
           maxAge: Duration.days(1),
         },
       });
-      return { shortName, functionName, fn };
+      return { shortName, functionName, fn, functionUrl };
     });
 
     const reportFn = writeFunctions.find(({ shortName }) => shortName === 'report')?.fn;
     const mintFn = writeFunctions.find(({ shortName }) => shortName === 'mint')?.fn;
     if (reportFn === undefined || mintFn === undefined) throw new Error('write stack refused: report and mint functions are required');
+    const reportUrl = writeFunctions.find(({ shortName }) => shortName === 'report')?.functionUrl;
+    const mintUrl = writeFunctions.find(({ shortName }) => shortName === 'mint')?.functionUrl;
+    if (reportUrl === undefined || mintUrl === undefined) throw new Error('write stack refused: report and mint Function URLs are required');
+    new CfnOutput(this, 'ReportFunctionUrl', {
+      value: reportUrl.url,
+      description: 'Public report Function URL for the static-site build',
+    });
+    new CfnOutput(this, 'MintFunctionUrl', {
+      value: mintUrl.url,
+      description: 'Public mint Function URL for the static-site build',
+    });
 
     // The report capability is exact by operation and resource. It can read
     // only the public spot index/call log, retrieve duplicates, transact the

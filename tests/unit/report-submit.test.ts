@@ -6,20 +6,37 @@ import { describe, it } from 'vitest';
 import { createCredentialProvider, type Fetcher } from '../../src/report/mint';
 import { finalizeSavedReport, sendSavedReport } from '../../src/report/submit';
 
+const MINT_URL = 'https://mint-id.lambda-url.us-east-1.on.aws/';
+const REPORT_URL = 'https://report-id.lambda-url.us-east-1.on.aws/';
+
 describe('the browser report transport', () => {
   it('mints once and reuses the anonymous credential for later saved labels', async () => {
+    const paths: string[] = [];
     const requests: RequestInit[] = [];
-    const fetcher: Fetcher = async (_path, request) => {
+    const fetcher: Fetcher = async (path, request) => {
+      paths.push(path);
       requests.push(request);
       return new Response(JSON.stringify({ credential: 'v1.d_0123456789abcdef0123456789abcdef.1.signature' }), { status: 200 });
     };
-    const credential = createCredentialProvider(fetcher, 'd_0123456789abcdef0123456789abcdef');
+    const credential = createCredentialProvider(fetcher, 'd_0123456789abcdef0123456789abcdef', undefined, MINT_URL);
 
     assert.equal(await credential.get(), 'v1.d_0123456789abcdef0123456789abcdef.1.signature');
     assert.equal(await credential.get(), 'v1.d_0123456789abcdef0123456789abcdef.1.signature');
     assert.equal(requests.length, 1);
+    assert.deepEqual(paths, [MINT_URL]);
     assert.equal(requests[0]?.method, 'POST');
     assert.equal(requests[0]?.cache, 'no-store');
+  });
+
+  it('refuses absent endpoint configuration without inventing a relative write path', async () => {
+    const paths: string[] = [];
+    const credential = createCredentialProvider(async (path) => {
+      paths.push(path);
+      return new Response(JSON.stringify({ credential: 'should-not-be-used' }), { status: 200 });
+    }, 'd_0123456789abcdef0123456789abcdef');
+
+    await assert.rejects(credential.get(), /endpoint/i);
+    assert.deepEqual(paths, [], 'an unconfigured static site must keep the label local instead of POSTing a broken /api path');
   });
 
   it('keeps the same anonymous credential after a page reload until browser storage is lost', async () => {
@@ -41,10 +58,11 @@ describe('the browser report transport', () => {
       fetcher: Fetcher,
       deviceId: string | undefined,
       identity: InMemoryIdentity,
+      mintEndpoint: string,
     ) => { get(): Promise<string> };
 
-    assert.equal(await provider(fetcher, 'd_0123456789abcdef0123456789abcdef', identity).get(), 'v1.d_0123456789abcdef0123456789abcdef.1.signature');
-    assert.equal(await provider(fetcher, undefined, identity).get(), 'v1.d_0123456789abcdef0123456789abcdef.1.signature');
+    assert.equal(await provider(fetcher, 'd_0123456789abcdef0123456789abcdef', identity, MINT_URL).get(), 'v1.d_0123456789abcdef0123456789abcdef.1.signature');
+    assert.equal(await provider(fetcher, undefined, identity, MINT_URL).get(), 'v1.d_0123456789abcdef0123456789abcdef.1.signature');
     assert.deepEqual(saved, { deviceId: 'd_0123456789abcdef0123456789abcdef', credential: 'v1.d_0123456789abcdef0123456789abcdef.1.signature' });
     assert.equal(requests.length, 1, 'a reload must reuse its stored device instead of minting a fresh one');
   });
@@ -52,16 +70,19 @@ describe('the browser report transport', () => {
   it('posts every saved byte unchanged with the credential and no-store transport policy', async () => {
     fc.assert(fc.asyncProperty(fc.json(), async (saved) => {
       const bytes = JSON.stringify(saved);
+      let path: string | undefined;
       let request: RequestInit | undefined;
-      const fetcher: Fetcher = async (_path, candidate) => {
+      const fetcher: Fetcher = async (candidatePath, candidate) => {
+        path = candidatePath;
         request = candidate;
         return new Response(JSON.stringify({ report_id: 'report-1', outcome: 'no_snapshot', predicted: null }), { status: 200 });
       };
 
-      const result = await sendSavedReport(bytes, 'credential-1', fetcher);
+      const result = await sendSavedReport(bytes, 'credential-1', fetcher, REPORT_URL);
 
       assert.deepEqual(result, { kind: 'received', receipt: { report_id: 'report-1', outcome: 'no_snapshot', predicted: null } });
       assert.equal(request?.body, bytes);
+      assert.equal(path, REPORT_URL);
       assert.equal(request?.method, 'POST');
       assert.equal(request?.cache, 'no-store');
       assert.equal(new Headers(request?.headers).get('x-surf-credential'), 'credential-1');
@@ -74,7 +95,7 @@ describe('the browser report transport', () => {
     }), { status: 400 });
 
     assert.deepEqual(
-      await sendSavedReport('{"report_id":"report-1"}', 'credential-1', fetcher),
+      await sendSavedReport('{"report_id":"report-1"}', 'credential-1', fetcher, REPORT_URL),
       { kind: 'refused', message: 'La playa indicada no es conocida.' },
     );
   });
@@ -93,6 +114,7 @@ describe('the browser report transport', () => {
         '{"report_id":"report-1"}',
         'credential-1',
         async () => new Response(JSON.stringify({ outcome: 'no_snapshot', predicted: null }), { status: 200 }),
+        REPORT_URL,
       ),
     ]) {
       const before = [...removed];
@@ -100,7 +122,7 @@ describe('the browser report transport', () => {
       assert.deepEqual(removed, before, 'a refusal or wrong receipt must preserve the exact queued label for retry');
     }
     await assert.rejects(
-      sendSavedReport('{"report_id":"report-1"}', 'credential-1', async () => Promise.reject(new Error('offline'))),
+      sendSavedReport('{"report_id":"report-1"}', 'credential-1', async () => Promise.reject(new Error('offline')), REPORT_URL),
       /offline/,
     );
     assert.deepEqual(removed, ['report-1'], 'a network refusal must leave the exact queued label available for retry');

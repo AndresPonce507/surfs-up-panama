@@ -13,7 +13,10 @@ import { functionNames, projectAccountId, projectRegion, siteBucketName } from '
 
 type Properties = Readonly<Record<string, unknown>>;
 type Resource = Readonly<{ readonly Type?: string; readonly Properties?: Properties }>;
-type TemplateJson = Readonly<{ readonly Resources?: Readonly<Record<string, Resource>> }>;
+type TemplateJson = Readonly<{
+  readonly Resources?: Readonly<Record<string, Resource>>;
+  readonly Outputs?: Readonly<Record<string, Properties>>;
+}>;
 
 const template = Template.fromStack(writeStack).toJSON() as TemplateJson;
 const resources = Object.entries(template.Resources ?? {});
@@ -41,6 +44,16 @@ function actionSet(statements: readonly Properties[]): string[] {
 }
 
 describe('report/mint Lambda composition', () => {
+  it('publishes the two standalone write URLs for the static-site build handoff', () => {
+    const outputs = Object.values(template.Outputs ?? {}) as readonly Properties[];
+    const reportUrl = outputs.find((output) => output.Description === 'Public report Function URL for the static-site build')?.Value;
+    const mintUrl = outputs.find((output) => output.Description === 'Public mint Function URL for the static-site build')?.Value;
+    expect(reportUrl).toBeDefined();
+    expect(mintUrl).toBeDefined();
+    expect(JSON.stringify(reportUrl)).toContain('Fn::GetAtt');
+    expect(JSON.stringify(mintUrl)).toContain('Fn::GetAtt');
+  });
+
   it('bundles the shared-core adapter at synth time for report and mint while the later write URLs remain fail-closed', () => {
     const report = functions().find(([, resource]) => resource.Properties?.FunctionName === functionNames.report)?.[1].Properties;
     const mint = functions().find(([, resource]) => resource.Properties?.FunctionName === functionNames.mint)?.[1].Properties;

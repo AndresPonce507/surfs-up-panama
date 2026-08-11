@@ -420,7 +420,8 @@ function readRawAnswers(form: HTMLFormElement): RawAnswers {
 
 async function submitReport(
   queue: ReportQueue,
-  credential: CredentialProvider,
+  credential: CredentialProvider | undefined,
+  reportEndpoint: string | undefined,
   spotId: string,
   answers: ReportAnswers,
   links: ConfirmationLinks,
@@ -432,6 +433,10 @@ async function submitReport(
     applyCommitUi(decideCommitUi(outcome, links), elements);
     return;
   }
+  if (credential === undefined || reportEndpoint === undefined) {
+    applyCommitUi(decideCommitUi(outcome, links), elements);
+    return;
+  }
   const savedBytes = await queue.savedRecord?.(outcome.report_id);
   if (savedBytes === undefined) {
     showNotice(elements.notice, STORAGE_REFUSED_MESSAGE);
@@ -440,7 +445,7 @@ async function submitReport(
   try {
     const submission = await finalizeSavedReport(
       outcome.report_id,
-      await sendSavedReport(savedBytes, await credential.get()),
+      await sendSavedReport(savedBytes, await credential.get(), fetch, reportEndpoint),
       {
         discard: (reportId) => queue.discardSavedRecord?.(reportId) ?? Promise.reject(new Error('report queue cannot discard receipt')),
       },
@@ -470,7 +475,10 @@ async function activate(elements: IslandElements, spotId: string, locale: Locale
     backHref: paths.spot(locale, spotId),
     backLabel: spotName,
   };
-  const credential = createCredentialProvider(fetch, undefined, browserCredentialStore(opened.queue));
+  const endpoints = configuredWriteEndpoints(elements.form);
+  const credential = endpoints === undefined
+    ? undefined
+    : createCredentialProvider(fetch, undefined, browserCredentialStore(opened.queue), endpoints.mint);
 
   // A passing storage probe makes reporting available, but Mandar is not an
   // honest action until all three answers exist. Keep the static disabled
@@ -485,10 +493,26 @@ async function activate(elements: IslandElements, spotId: string, locale: Locale
     event.preventDefault();
     const answers = parseAnswers(readRawAnswers(elements.form));
     if (!answers) return;
-    void submitReport(opened.queue, credential, spotId, answers, links, elements).catch(() => {
+    void submitReport(opened.queue, credential, endpoints?.report, spotId, answers, links, elements).catch(() => {
       showNotice(elements.notice, STORAGE_REFUSED_MESSAGE);
     });
   });
+}
+
+function configuredWriteEndpoints(form: HTMLFormElement): { readonly mint: string; readonly report: string } | undefined {
+  const mint = configuredWriteEndpoint(form.dataset.reportMintUrl);
+  const report = configuredWriteEndpoint(form.dataset.reportSubmitUrl);
+  return mint === undefined || report === undefined ? undefined : { mint, report };
+}
+
+function configuredWriteEndpoint(value: string | undefined): string | undefined {
+  if (value === undefined) return undefined;
+  try {
+    const endpoint = new URL(value);
+    return endpoint.protocol === 'https:' || endpoint.protocol === 'http:' ? endpoint.href : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function browserCredentialStore(queue: ReportQueue): {
