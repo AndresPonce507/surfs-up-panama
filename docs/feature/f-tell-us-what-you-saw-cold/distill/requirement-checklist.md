@@ -111,4 +111,4 @@ regression guards). Per-scenario classification and falsifiability proofs:
 | R36 | `@covers-R36`: quota deferral is the handler prerequisite for the eventual calm wait | RED at the real public-handler boundary; the browser-owned calm-wait launch proof remains external-only and is not faked. |
 | R37 | `@covers-R37`: wrong-clock walking skeleton retains three taps and no time choice | RED pending the real report journey. |
 | R38 | `@covers-R38`: direct visitor receives no comparison; the report route family remains forecast-free before a send | RED pending the real report journey. |
-| R39 to R45 | `@ui-u1` through `@ui-u7` tags on the three walking skeletons; each expectation charter contains its U8 observation | RED pending the real report journey. |
+| R39 to R45 | `@ui-u1` through `@ui-u7` tags on the explicit external walking skeletons and on the local `@local-real-io` page-ownership journey; each expectation charter contains its U8 observation | The local page-owned journey is executable without `REPORT_ACCEPTANCE_ORIGIN`; deployed external journeys remain INDETERMINATE until their declared prerequisites exist. |
