@@ -101,6 +101,7 @@ function predictionLine(
 async function publishWithNullWindToday(swell: { h_m: number; t_s: number; dir_deg: number }): Promise<{
   todaySurfaceCall: Record<string, unknown>;
   todayReceiptRow: Record<string, unknown>;
+  todayProjectedPoint: { readonly t: string; readonly sub: Record<string, number | null> } | undefined;
 }> {
   const store = new RecordingStore();
   store.objects.set(`predictions/v1/dt=${TODAY}/all.jsonl`, predictionLine(TODAY, swell, { speed_kt: null, dir_deg: null }));
@@ -115,10 +116,17 @@ async function publishWithNullWindToday(swell: { h_m: number; t_s: number; dir_d
 
   const bundleBody = store.objects.get('pub/v1/regions/pa-pacific/bundle.json');
   assert.ok(bundleBody, 'The build must publish the region bundle; the reading lanes have no other input.');
-  const bundle = JSON.parse(bundleBody) as { publish_surface: { days: { date: string; spots: Record<string, unknown>[] }[] } };
+  const bundle = JSON.parse(bundleBody) as {
+    publish_surface: {
+      days: { date: string; spots: Record<string, unknown>[] }[];
+      spot_detail?: Record<string, { hourly?: { t: string; sub: Record<string, number | null> }[] }>;
+    };
+  };
   const today = bundle.publish_surface.days.find((day) => day.date === TODAY);
   const todaySurfaceCall = today?.spots.find((entry) => entry.spot_id === SPOT_ID);
   assert.ok(todaySurfaceCall, 'Today must have a published call.');
+  const todayProjectedPoint = bundle.publish_surface.spot_detail?.[SPOT_ID]?.hourly
+    ?.find((point) => point.t.startsWith(TODAY));
 
   const callKey = [...store.objects.keys()].find((key) => key.startsWith('log/calls/v1/'));
   assert.ok(callKey, 'The build must write a PublishedCall receipt.');
@@ -129,7 +137,7 @@ async function publishWithNullWindToday(swell: { h_m: number; t_s: number; dir_d
     .find((row) => row.valid_ts === `${TODAY}T18:00Z`);
   assert.ok(todayReceiptRow, 'The receipt log must carry today\'s row.');
 
-  return { todaySurfaceCall: todaySurfaceCall!, todayReceiptRow: todayReceiptRow! };
+  return { todaySurfaceCall: todaySurfaceCall!, todayReceiptRow: todayReceiptRow!, todayProjectedPoint };
 }
 
 describe('a missing wind observation is never published as the best-case reading', () => {
@@ -164,6 +172,47 @@ describe('a missing wind observation is never published as the best-case reading
         },
       ),
       { numRuns: 30 },
+    );
+  });
+
+  // Slice-04, step 04-02. The wind WORD is deliberately absent from a
+  // null-wind row (above). The four-factor projection is a different
+  // surface, and its honest answer is not silence but an explicit null:
+  // the breakdown must be able to say "sin dato de viento hoy" instead of
+  // drawing a bar. Publishing 0 here would read as the worst wind on
+  // record, and omitting the key would read as a legacy row.
+  it('keeps the unobserved wind as an explicit null in the projected hour, even where the wind word is absent', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.double({ min: 0.05, max: 3, noNaN: true, noDefaultInfinity: true }),
+        fc.double({ min: 5, max: 20, noNaN: true, noDefaultInfinity: true }),
+        fc.double({ min: 0, max: 359.999, noNaN: true, noDefaultInfinity: true }),
+        async (h_m, t_s, dir_deg) => {
+          const { todaySurfaceCall, todayProjectedPoint } = await publishWithNullWindToday({ h_m, t_s, dir_deg });
+
+          assert.ok(todayProjectedPoint, 'A freshly built surface must project today\'s scored hour for this spot.');
+          assert.equal(
+            todaySurfaceCall.wind_state,
+            undefined,
+            'This property is only meaningful while the wind word is genuinely absent from the row.',
+          );
+          assert.ok(
+            Object.hasOwn(todayProjectedPoint.sub, 'wind'),
+            `The projected hour must state the wind absence, not drop the key like a legacy row. Got ${JSON.stringify(todayProjectedPoint.sub)}.`,
+          );
+          assert.equal(
+            todayProjectedPoint.sub.wind,
+            null,
+            `An unobserved wind must project as null, never as 0 (the worst reading) nor as a number. Got ${JSON.stringify(todayProjectedPoint.sub.wind)}.`,
+          );
+          assert.equal(
+            todayProjectedPoint.sub.tide,
+            null,
+            `This fixture also publishes no tide observation; it must project as null too. Got ${JSON.stringify(todayProjectedPoint.sub.tide)}.`,
+          );
+        },
+      ),
+      { numRuns: 20 },
     );
   });
 });

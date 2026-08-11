@@ -19,6 +19,7 @@ import { describe, it } from 'vitest';
 
 import { runBuildOnce } from '../../src/pipeline/build';
 import type { BuildStore, Clock } from '../../src/pipeline/ports';
+import { assertStrictTwoDayUpdate } from '../../src/publish/static-surface';
 import type { SpotSeed } from '../../src/scoring/engine';
 
 const BUILD_INSTANT = '2026-08-09T11:22:00Z';
@@ -84,25 +85,80 @@ function seed(spot_id: string, name: string): SpotSeed {
   };
 }
 
-function predictionLines(spot_id: string, date: string, height_m: number): string {
+function predictionLines(spot_id: string, date: string, height_m: number, utcHour = '18'): string {
   return MEMBER_SOURCES
     .map((source, index) => JSON.stringify({
       spot_id,
       source,
       run_ts: `${date}T06:00Z`,
-      valid_ts: `${date}T18:00Z`,
+      valid_ts: `${date}T${utcHour}:00Z`,
       lead_h: 12,
       swell_h_m: height_m + index * 0.02,
       swell_t_s: 15.5,
       swell_dir_deg: 204 + index,
-      wind_speed_kt: 7,
-      wind_dir_deg: 40,
-      tide_m: 2.31,
-      tide_day_low_m: 0.9,
-      tide_day_high_m: 4.3,
+      // Wind and tide are absent at 21:00Z on purpose: a real morning loses
+      // observations for some hours and the projection must carry that
+      // absence through as null rather than as a zero or a best case.
+      wind_speed_kt: utcHour === '21' ? null : 7,
+      wind_dir_deg: utcHour === '21' ? null : 40,
+      tide_m: utcHour === '21' ? null : 2.31,
+      tide_day_low_m: utcHour === '21' ? null : 0.9,
+      tide_day_high_m: utcHour === '21' ? null : 4.3,
       land_masked: false,
     }))
     .join('\n');
+}
+
+/** UTC hours that all land inside their own Panama civil day (UTC-5): 07:00 to 16:00 local. */
+const IN_HORIZON_UTC_HOURS = ['12', '15', '18', '21'] as const;
+
+/**
+ * 00:00Z on the published day is 19:00 on the PREVIOUS Panama evening. The
+ * build scores it (its UTC prefix is today) but it belongs to a civil day
+ * this surface does not publish, so the projection must leave it out. This is
+ * the row that fails an implementation which groups by the UTC prefix the
+ * rest of build.ts ranks by.
+ */
+const BEFORE_HORIZON_UTC_HOUR = '00';
+
+const PROJECTED_SPOTS = ['playa-venao', 'playa-cambutal'] as const;
+
+type ProjectedPoint = { readonly t: string; readonly sub: Record<string, number | null> };
+type ProjectedDetail = { readonly name: string; readonly hourly?: readonly ProjectedPoint[] };
+type ReceiptRow = { readonly spot_id: string; readonly valid_ts: string; readonly sub: Record<string, number | null> };
+
+async function publishEveryScoredHour(): Promise<{ bundle: Record<string, unknown>; receipts: readonly ReceiptRow[] }> {
+  const store = new RecordingStore();
+  const heights: Record<string, Record<string, number>> = {
+    [TODAY]: { 'playa-venao': 1.2, 'playa-cambutal': 0.7 },
+    [TOMORROW]: { 'playa-venao': 0.5, 'playa-cambutal': 1.4 },
+  };
+  for (const date of [TODAY, TOMORROW]) {
+    const perDate = heights[date]!;
+    store.objects.set(`predictions/v1/dt=${date}/all.jsonl`, PROJECTED_SPOTS.flatMap((spot_id) => [
+      ...IN_HORIZON_UTC_HOURS.map((utcHour) => predictionLines(spot_id, date, perDate[spot_id]!, utcHour)),
+      ...(date === TODAY ? [predictionLines(spot_id, date, perDate[spot_id]!, BEFORE_HORIZON_UTC_HOUR)] : []),
+    ]).join('\n'));
+  }
+
+  const clock: Clock = { now: () => new Date(BUILD_INSTANT) };
+  const outcome = await runBuildOnce({
+    store,
+    clock,
+    region_id: 'pa-pacific',
+    spots: [seed('playa-venao', 'Playa Venao'), seed('playa-cambutal', 'Playa Cambutal')],
+  });
+  assert.equal(outcome.published, true, `The many-hour fixture must publish before its projection can be read. Got ${JSON.stringify(outcome)}.`);
+
+  const bundleBody = store.objects.get('pub/v1/regions/pa-pacific/bundle.json');
+  assert.ok(bundleBody, 'The build must publish the region bundle; the reading lanes have no other input.');
+  const callKey = [...store.objects.keys()].find((key) => key.startsWith('log/calls/v1/'));
+  assert.ok(callKey, 'The build must write a PublishedCall receipt; it is the only witness of what was actually scored.');
+
+  return {
+    bundle: JSON.parse(bundleBody) as Record<string, unknown>,
+    receipts: (store.objects.get(callKey) ?? '').split('\n').filter((line) => line !== '').map((line) => JSON.parse(line) as ReceiptRow),
+  };
 }
 
 async function publishTwoSpots(): Promise<{ bundle: Record<string, unknown>; callLog: string }> {
@@ -255,5 +311,71 @@ describe('published region bundle contract', () => {
       callLog.includes('"conf_value"') && callLog.includes('"conf_level"'),
       'The PublishedCall receipt must keep both, so a later threshold change can be replayed against what was actually shown.',
     );
+  });
+
+  // Slice-04, step 04-02. The projection is a PROJECTION: the same scored
+  // numbers the receipt already recorded, re-addressed by their own
+  // spot-local hour. It is not a second scoring pass and it may not
+  // substitute a missing observation.
+  it('projects every scored hour of the two published civil days onto spot_detail, carrying the receipt\'s own sub values and nulls', async () => {
+    const { bundle, receipts } = await publishEveryScoredHour();
+    const spotDetail = bundle.spot_detail as Record<string, ProjectedDetail>;
+    const surface = (bundle.publish_surface as { spot_detail: Record<string, ProjectedDetail> }).spot_detail;
+
+    // The strict reading-surface validator (04-01) is the gate a real
+    // publish runs through; a fresh projection must satisfy it, not merely
+    // look plausible in this assertion.
+    assertStrictTwoDayUpdate(bundle.publish_surface);
+
+    for (const spotId of PROJECTED_SPOTS) {
+      const points = spotDetail[spotId]?.hourly;
+      assert.ok(points, `${spotId}: a freshly built surface must publish its hourly projection.`);
+      assert.deepEqual(
+        surface[spotId]?.hourly,
+        points,
+        `${spotId}: the bundle and the reading surface must carry the one projection, never two that can disagree.`,
+      );
+
+      const scored = receipts.filter((row) => row.spot_id === spotId);
+      const beforeHorizon = scored.filter((row) => row.valid_ts.endsWith(`T${BEFORE_HORIZON_UTC_HOUR}:00Z`));
+      assert.equal(beforeHorizon.length, 1, `${spotId}: the fixture must actually score the previous-evening hour it expects to be dropped.`);
+      assert.equal(
+        points.length,
+        scored.length - beforeHorizon.length,
+        `${spotId}: the projection must hold one point per scored hour of the two published civil days -- no fabricated hour, and no hour belonging to a day this surface does not publish.`,
+      );
+
+      const byInstant = new Map(points.map((point) => [new Date(point.t).toISOString(), point]));
+      assert.equal(byInstant.size, points.length, `${spotId}: two projection points name the same instant.`);
+
+      for (const row of scored) {
+        const point = byInstant.get(new Date(row.valid_ts).toISOString());
+        if (row.valid_ts.endsWith(`T${BEFORE_HORIZON_UTC_HOUR}:00Z`)) {
+          assert.equal(point, undefined, `${spotId}: ${row.valid_ts} is 19:00 the previous Panama evening and must not be projected onto a day this surface publishes.`);
+          continue;
+        }
+        assert.ok(point, `${spotId}: the scored hour ${row.valid_ts} reached the receipt but never reached the projection.`);
+        assert.deepEqual(Object.keys(point).sort(), ['sub', 't'], `${spotId}: a projection point carries the local hour and its four sub-scores, nothing else.`);
+        assert.match(
+          point.t,
+          /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?[+-]\d{2}:\d{2}$/u,
+          `${spotId}: ${point.t} is not a precomputed spot-local stamp with its own numeric offset; a page would have to work the local hour out for itself.`,
+        );
+        assert.ok(
+          [TODAY, TOMORROW].includes(point.t.slice(0, 10)),
+          `${spotId}: ${point.t} sits outside the two civil days this surface publishes.`,
+        );
+        assert.deepEqual(
+          point.sub,
+          row.sub,
+          `${spotId}: ${row.valid_ts} was scored ${JSON.stringify(row.sub)} and projected ${JSON.stringify(point.sub)}; the projection must repeat the receipt exactly, nulls included.`,
+        );
+      }
+
+      assert.ok(
+        points.some((point) => point.sub.wind === null && point.sub.tide === null),
+        `${spotId}: the fixture's unobserved hour must stay null in the projection, never a zero and never a best case.`,
+      );
+    }
   });
 });
