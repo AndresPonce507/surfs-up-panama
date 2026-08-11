@@ -52,6 +52,16 @@ export type ObservationRow = {
   wind?: WindStateToken;
   quality?: QualityToken;
   predicted?: { score_q: number } | null;
+  /** C5's late resolution, domain-model.md section 8: reporter_key = person_id ?? device_id. */
+  person_id?: string;
+  /**
+   * The two trust-gate carriers, 07 section 6, server-set and frozen at
+   * receipt. They exist on every record from day one precisely so G2's
+   * eligibility can be flipped on retroactively (06 section 7); they are read
+   * only by src/learning/trust.ts and form no residual.
+   */
+  received_at?: string;
+  credential_issued_at?: string;
 };
 
 /** One prediction receipt row, the same shape src/pipeline/ingest.ts writes (04-ingest-pipeline.md). */

@@ -526,6 +526,34 @@
       "s": "EXECUTED",
       "d": "PASS: approved acceptance-evidence slice committed as 8a8f7f3c5e65b83a43169391a3edfadb3489c2c3 (test(learning): prove the wind word moves no stored byte)",
       "t": "2026-08-11T18:07:44Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified 01-15 is sealed, confirmed no trust module, no trust config and no eligibility seam exist in the shipped tree, and inventoried src/learning/ before adding a new file there",
+      "t": "2026-08-11T18:13:12Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PARTIAL: the seam failed for the right reason - typecheck TS2353 'trustGate does not exist in type LearningFitDeps' on the new acceptance file. The scenario's own assertion is a no-op claim (gated and ungated answers are identical at the shipped config) and was inherited green; no false acceptance-red is claimed. 06 section 7's clause check:unfired-is-not-evidence is discharged by 01-17, not here.",
+      "t": "2026-08-11T18:13:12Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: four fast-check laws over selectTrustEligible failed semantically against a throwing skeleton - shipped-config identity, the one-spot trap that a standalone min_prior_spots would red, age-threshold monotonicity, and fail-closed on an unprovable age above zero",
+      "t": "2026-08-11T18:13:12Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: two clauses only, age-at-receipt and a history clause whose spots requirement qualifies it, wired once over the whole log in fit.ts before it is grouped by spot so every gated count is already post-eligibility. Focused acceptance/unit 6/6 passes; full vitest 390/390 across 76 files, typecheck and build pass. Live probe over the real port: age 0 stores n=22/reporters=7, age 30 stores n=18/reporters=6 with se moved to the floor at n=18, so the gate is live and not inert. UI checks N/A: non-visual step with no rendered consequence by design.",
+      "t": "2026-08-11T18:13:12Z"
     }
   ]
 }

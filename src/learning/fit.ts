@@ -23,6 +23,7 @@
 import type { Clock } from '../pipeline/ports';
 import { buildCorrectionRecords, currentCorrectionKey } from './correction-file';
 import { readObservationLog, readPredictionLog, spotsReportedIn, type LearningInputStore } from './inputs';
+import { selectTrustEligible, SHIPPED_TRUST_GATE, type TrustGateConfig } from './trust';
 
 /** What the fit needs of the store: read its inputs, store what it earns. */
 export interface LearningStore extends LearningInputStore {
@@ -32,6 +33,14 @@ export interface LearningStore extends LearningInputStore {
 export interface LearningFitDeps {
   store: LearningStore;
   clock: Clock;
+  /**
+   * G2's eligibility thresholds (06 section 7). Injected rather than read
+   * from disk here, for the same reason the clock is: nothing in the core
+   * reaches for the ambient world (src/pipeline/ports.ts). Omitted, the run
+   * uses the thresholds shipped in data/config/trust-gate.json, which are a
+   * proven no-op at launch.
+   */
+  trustGate?: TrustGateConfig;
 }
 
 /**
@@ -51,12 +60,26 @@ export type LearningFitOutcome = {
 export async function runLearningFitOnce(deps: LearningFitDeps): Promise<LearningFitOutcome> {
   const observations = await readObservationLog(deps.store);
   const predictions = await readPredictionLog(deps.store);
+
+  // Eligibility is applied ONCE, here, to the whole log before it is grouped
+  // by spot. Two reasons. The history clause counts a reporter's earlier
+  // reports ACROSS spots, so it needs the whole log, not one spot's slice.
+  // And filtering upstream means every count downstream is already the
+  // post-eligibility count -- G1's n, G2's distinctness, and the n inside
+  // se_gate's floor -- rather than three separate places each remembering to
+  // subtract (06 section 7: "Ineligible samples are excluded from the
+  // correction fit and from every gated count").
+  const eligible = selectTrustEligible(observations, deps.trustGate ?? SHIPPED_TRUST_GATE);
+
+  // spots_examined stays over the RAW log: a spot whose only reports were
+  // ineligible was still examined, and 07 section 7.3 keeps acceptance and
+  // display ungated. This gate excludes samples from the fit, nothing else.
   const spots = spotsReportedIn(observations);
 
   const records = buildCorrectionRecords(
     spots.map((spotId) => ({
       spotId,
-      observations: observations.filter((observation) => observation.spot_id === spotId),
+      observations: eligible.filter((observation) => observation.spot_id === spotId),
       predictions,
     })),
     deps.clock,

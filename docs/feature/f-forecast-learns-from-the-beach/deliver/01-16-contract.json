@@ -1,0 +1,27 @@
+{
+  "id": "01-16",
+  "name": "Shipped trust settings drop nobody",
+  "delivery_mode": "outside-in-red-green",
+  "accepted_context": "recover/learning-build:docs/feature/f-forecast-learns-from-the-beach/deliver/roadmap.json",
+  "surface_classification": "non-visual",
+  "non_visual_rationale": "An eligibility predicate whose entire effect at the shipped config is that nothing changes; the evidence is the pair of counts inside the stored record, which no surface reads in this slice. U1-U8 and a Vera walk are therefore N/A: there is no rendered surface, and by design no rendered consequence.",
+  "criteria": [
+    "At the shipped trust settings all twenty-two mornings and all seven people count, including a same-morning credential.",
+    "Eligibility is a pure function of the stored record and the config, reading no wall clock.",
+    "The shipped minimum of two prior spots is inactive, because it qualifies a vacuous prior-report clause.",
+    "Counts are bit-identical to the same computation with no trust settings at all."
+  ],
+  "owned_paths": [
+    "data/config/trust-gate.json",
+    "src/learning/trust.ts",
+    "src/learning/inputs.ts",
+    "src/learning/fit.ts",
+    "tests/unit/learning-trust-eligibility.test.ts",
+    "tests/acceptance/f-forecast-learns-from-the-beach/shipped-trust-drops-nobody.test.ts"
+  ],
+  "production_change": true,
+  "scope_note": "Two paths beyond the roadmap's files_to_modify list, both unavoidable. data/config/trust-gate.json is the one home 06 section 7 and 07 section 7.3 give the thresholds; src/learning/trust.ts re-exports them typed rather than restating the numbers. src/learning/inputs.ts is widened with the two day-one trust carriers (received_at, credential_issued_at) plus person_id for the C5 resolution, because the predicate cannot read fields the row type does not admit. The correction file's `reporters` count still counts distinct device_id, not resolved reporter_key; that unification is a no-op at launch (no stored record carries person_id) and is left to the step that has a scenario requiring it.",
+  "acceptance": "The nightly fit runs three times over the accepted 22-morning, 7-reporter fixture whose first reporter's credential was minted at 05:00 the same morning they reported: once under the shipped config, once under an all-zero config, once with no trustGate injected at all. The oracle asserts n = 22 and reporters = 7 and byte-identity across all three, and rejects a controlled count-drop mutation and a controlled divergence from the ungated computation.",
+  "red_evidence": "The four unit laws failed semantically against a throwing skeleton ('trust eligibility not implemented yet - driven by outside-in TDD'), and `npm run typecheck` failed on the acceptance file with TS2353 'trustGate does not exist in type LearningFitDeps', which is the seam this step adds. The acceptance assertion itself is a no-op claim and was inherited green: at the shipped config the gated and ungated answers are identical by construction. That is exactly why 06 section 7's clause check:unfired-is-not-evidence sequences 01-17 immediately after, and no contiguous acceptance-red is claimed here.",
+  "live_behaviour_probe": "Beyond the suite, the real runLearningFitOnce was driven through tsx over the same fixture at two configs to confirm the gate is not inert: min_credential_age_days=0 stored n=22, reporters=7, se=0.0511681719253465; min_credential_age_days=30 stored n=18, reporters=6, se=0.0565685424949238. The moved se confirms the post-eligibility n reaches the physical floor as well as G1 and G2."
+}

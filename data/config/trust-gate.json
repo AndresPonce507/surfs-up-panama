@@ -1,0 +1,5 @@
+{
+  "min_credential_age_days": 0,
+  "min_prior_reports": 0,
+  "min_prior_spots": 2
+}
