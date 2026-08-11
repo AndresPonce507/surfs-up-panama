@@ -182,7 +182,8 @@ ol.ranked li > details.confidence {
   margin-top: var(--sp-1);
 }
 
-ol.ranked li > details.confidence > summary {
+ol.ranked li > details.confidence > summary,
+section[data-day] > details.confidence > summary {
   display: inline-flex;
   align-items: center;
   gap: var(--sp-1);

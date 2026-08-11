@@ -57,7 +57,7 @@ type Profile = {
 };
 
 type Fixture = {
-  readonly default_profile: ProfileName;
+  readonly default_profile: { readonly today: ProfileName; readonly tomorrow: ProfileName };
   readonly by_spot: Readonly<Record<string, { today: ProfileName; tomorrow: ProfileName }>>;
   readonly profiles: Readonly<Record<ProfileName, Profile>>;
   readonly spot_page_spot_id: string;
@@ -488,10 +488,8 @@ function panamaCivilDate(offsetDays: number): string {
 }
 
 function profileFor(spotId: string, day: 0 | 1): Profile {
-  const assignment = fixture.by_spot[spotId];
-  const name = assignment === undefined
-    ? fixture.default_profile
-    : (day === 0 ? assignment.today : assignment.tomorrow);
+  const assignment = fixture.by_spot[spotId] ?? fixture.default_profile;
+  const name = day === 0 ? assignment.today : assignment.tomorrow;
   const profile = fixture.profiles[name];
   assert.ok(profile, `test fixture error: unknown profile "${name}"`);
   return profile;
@@ -723,8 +721,7 @@ async function observeConfidence(
     // closing it here keeps this block's panel from covering the next one.
     await summary.click();
   } else {
-    const match = LEVEL_WORD.exec(closedText);
-    wordText = match === null ? '' : match[0];
+    wordText = closedText;
   }
   return { label, spot_id: spotId, day, closedText, wordText, reasonText, hasDisclosure };
 }
@@ -810,6 +807,25 @@ async function plantedReason(spotId: string, day: 0 | 1): Promise<string | null>
   return profile.reason_es;
 }
 
+function assertReasonNamesItsOwnDay(rows: readonly ObservedConfidence[]): void {
+  const findings: string[] = [];
+  for (const row of rows) {
+    if (!row.hasDisclosure) continue;
+    const expected = row.day === 0 ? 'Hoy' : 'Mañana';
+    const otherDay = row.day === 0 ? 'Mañana' : 'Hoy';
+    if (!new RegExp(`\\b${expected}\\b`, 'iu').test(row.reasonText)) {
+      findings.push(`${row.label} abre una razón de ${row.day === 0 ? 'hoy' : 'mañana'} que no nombra "${expected}": "${row.reasonText}"`);
+    }
+    if (new RegExp(`\\b${otherDay}\\b`, 'iu').test(row.reasonText)) {
+      findings.push(`${row.label} abre una razón de ${row.day === 0 ? 'hoy' : 'mañana'} que nombra "${otherDay}": "${row.reasonText}"`);
+    }
+  }
+  assertBehavior(
+    findings,
+    'cada razón publicada pertenece a su propio día: las filas y secciones de Hoy dicen "Hoy", las de Mañana dicen "Mañana". Una razón ausente sigue callada y no inventa ninguno de los dos.',
+  );
+}
+
 Then('cada fila abre la razón publicada para esa playa y ese día', async function (this: PipelineWorld) {
   const rows = observedRows(trustWorld(this));
   const findings: string[] = [];
@@ -827,6 +843,7 @@ Then('cada fila abre la razón publicada para esa playa y ese día', async funct
     findings,
     'pasarle a <Confidence /> la razón de ESA fila y ESE día y renderizarla tal cual; hoy la razón se deriva del nivel con confidenceReasonEs(level), así que las veinte filas dicen exactamente lo mismo.',
   );
+  assertReasonNamesItsOwnDay(rows);
 });
 
 Then('dos playas con razones distintas no muestran el mismo texto', async function (this: PipelineWorld) {
@@ -910,6 +927,9 @@ Then(
       if (row.reasonText !== '') {
         findings.push(`${row.label} se publicó sin razón y aun así abre un texto: "${row.reasonText}"`);
       }
+      if (row.hasDisclosure) {
+        findings.push(`${row.label} se publicó sin razón y aun así ofrece un detalle que abrir`);
+      }
     }
     assertBehavior(
       findings,
@@ -975,6 +995,7 @@ Then('cada sección de día abre la razón publicada para ese día', async funct
     findings,
     'cada sección de día usa la razón de SU día; hoy y mañana no comparten frase, igual que no comparten número.',
   );
+  assertReasonNamesItsOwnDay(days);
 });
 
 Then('ningún color distingue un nivel de confianza de otro', async function (this: PipelineWorld) {

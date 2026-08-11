@@ -141,6 +141,7 @@ const SPREAD_DOMINANTS: readonly ConfidenceResult['dominant'][] = [
 ];
 
 const LEVELS: readonly ConfidenceLevel[] = ['high', 'medium', 'low'];
+const REASON_DAYS = ['today', 'tomorrow'] as const;
 
 /**
  * The tightest reachable shape today: both declared inputs missing, no track
@@ -197,6 +198,21 @@ const PERIOD_SPLIT_RESULT: ConfidenceResult = confidence(
 );
 
 describe('composeConfidenceReasonEs', () => {
+  it('names the day it was composed for, never the other published day', () => {
+    fc.assert(
+      fc.property(engineResult, fc.constantFrom(...REASON_DAYS), (result, day) => {
+        const reason = composeConfidenceReasonEs(result, FACTOR_VOCAB_ES, undefined, { day });
+        const expected = day === 'today' ? 'Hoy' : 'Mañana';
+        const otherDay = day === 'today' ? 'Mañana' : 'Hoy';
+
+        assert.match(reason, new RegExp(`\\b${expected}\\b`, 'iu'), `la razón de ${day} no nombra "${expected}": "${reason}"`);
+        assert.doesNotMatch(reason, new RegExp(`\\b${otherDay}\\b`, 'iu'), `la razón de ${day} todavía nombra "${otherDay}": "${reason}"`);
+        assert.ok([...reason].length <= REASON_MAX_CHARS, `la razón de ${day} mide ${[...reason].length}, más de ${REASON_MAX_CHARS}: "${reason}"`);
+      }),
+      { examples: [[WORST_CASE_RESULT, 'today'], [WORST_CASE_RESULT, 'tomorrow']] },
+    );
+  });
+
   /**
    * 05-scoring-engine.md section 3.6, cap-application row: when an input is
    * missing, the cap it applies is what topped the level, so the reason must

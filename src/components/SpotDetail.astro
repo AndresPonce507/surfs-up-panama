@@ -11,6 +11,7 @@
 // section 10, decision 18). When a spot has no structured size or window yet,
 // the page says so in words rather than showing nothing or a raw value.
 import Base from '../layouts/Base.astro';
+import ConfidenceDetail from './ConfidenceDetail.astro';
 import { forecast, type DaySummary } from '../data/forecast';
 import { spotById } from '../data/region';
 import { strings, type Locale } from '../i18n/strings';
@@ -68,6 +69,14 @@ const tomorrow = summaryFor(1);
       today ? (
         <>
           <p><strong data-field="score">{today.score_q}</strong> {today.call[locale]}</p>
+          {
+            today.conf_level !== undefined && (
+              <ConfidenceDetail
+                level={today.conf_level}
+                reason={today.confidence_reason_es}
+              />
+            )
+          }
           <p data-field="size">{sizeText(today)}</p>
           <p data-field="window">{windowText(today)}</p>
         </>
@@ -82,6 +91,14 @@ const tomorrow = summaryFor(1);
       tomorrow ? (
         <>
           <p><strong data-field="score">{tomorrow.score_q}</strong> {tomorrow.call[locale]}</p>
+          {
+            tomorrow.conf_level !== undefined && (
+              <ConfidenceDetail
+                level={tomorrow.conf_level}
+                reason={tomorrow.confidence_reason_es}
+              />
+            )
+          }
           <p data-field="size">{sizeText(tomorrow)}</p>
           <p data-field="window">{windowText(tomorrow)}</p>
         </>

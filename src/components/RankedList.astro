@@ -5,7 +5,7 @@
 // visible in the information architecture itself (application-architecture.md
 // section 4). Array position IS the rank; no rank field exists.
 import Base from '../layouts/Base.astro';
-import Confidence from './Confidence.astro';
+import ConfidenceDetail from './ConfidenceDetail.astro';
 import { forecast } from '../data/forecast';
 import { spotById } from '../data/region';
 import { strings, type Locale } from '../i18n/strings';
@@ -87,7 +87,14 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
           </a>
           <strong>{summary.score_q}</strong>
           <p>{index === 0 ? repeatableCall(summary) : summary.call[locale]}</p>
-          {summary.conf_level !== undefined && <Confidence level={summary.conf_level} />}
+          {
+            summary.conf_level !== undefined && (
+              <ConfidenceDetail
+                level={summary.conf_level}
+                reason={summary.confidence_reason_es}
+              />
+            )
+          }
         </li>
       ))
     }

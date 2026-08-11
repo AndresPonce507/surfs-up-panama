@@ -9,12 +9,10 @@
 // AST-shape pattern; this reads the compiled HTML instead, the same oracle
 // the acceptance suite reads, just without the browser or the full site.
 //
-// Two degrade shapes, both required by application-architecture.md section 7
-// (P1's `confidence_reason` row: "degrade: <details> reason omitted"):
-//   - reason absent (the prop never passed): already correct before this step.
-//   - reason "" (present but empty): renders a silent empty <div></div> today,
-//     which is worse than nothing -- a box a surfer taps expecting an
-//     explanation and finds blank. This is the RED this step closes.
+// Two degrade shapes, both required by application-architecture.md section 7:
+//   - reason absent (the prop never passed): level remains, with no disclosure.
+//   - reason "" (present but empty): exactly the same, never a box a surfer
+//     taps expecting an explanation and finds blank.
 // A third case (a real reason) proves the fix does not also swallow content.
 
 import assert from 'node:assert/strict';
@@ -51,6 +49,7 @@ const REAL_REASON = 'Hoy no tenemos el dato de la marea, así que el nivel no su
  * the shape span lives inside <summary>, before `</summary>`.
  */
 const SUMMARY_OPENS_WITH_LEVEL_WORD = /<summary>Confianza baja[\s\S]*<\/summary>/;
+const QUIET_LEVEL_WITH_SHAPE = /Confianza baja[\s\S]*●○○/;
 
 function buildIsolatedHarness(): { outDir: string; root: string } {
   const root = mkdtempSync(join(tmpdir(), 'surfs-up-confidence-detail-'));
@@ -143,6 +142,11 @@ function nonSummaryContent(block: string): string {
   return match[1]!.trim();
 }
 
+function assertQuietLevel(caseHtml: string): void {
+  assert.match(caseHtml, QUIET_LEVEL_WITH_SHAPE, `the level word and shape must remain visible: ${caseHtml}`);
+  assert.doesNotMatch(caseHtml, /<details\b/, `no reason was published, so nothing may be offered to open: ${caseHtml}`);
+}
+
 afterAll(() => {
   if (harness) {
     rmSync(harness.outDir, { recursive: true, force: true });
@@ -151,24 +155,12 @@ afterAll(() => {
 });
 
 describe('ConfidenceDetail degrades a reasonless row without an empty box', () => {
-  it('shows the level word and offers no disclosure body when reason is absent', () => {
-    const block = detailsBlock(harnessCases()[0]!);
-    assert.match(block, SUMMARY_OPENS_WITH_LEVEL_WORD, `the level word must always render: ${block}`);
-    assert.equal(
-      nonSummaryContent(block),
-      '',
-      `no reason was published, so no non-summary child may render at all: ${block}`,
-    );
+  it('shows the level word and shape without a disclosure when reason is absent', () => {
+    assertQuietLevel(harnessCases()[0]!);
   });
 
-  it('shows the level word and offers no disclosure body when reason is an empty string, never a silent empty box', () => {
-    const block = detailsBlock(harnessCases()[1]!);
-    assert.match(block, SUMMARY_OPENS_WITH_LEVEL_WORD, `the level word must always render: ${block}`);
-    assert.equal(
-      nonSummaryContent(block),
-      '',
-      `an empty reason must degrade exactly like an absent one -- no empty box a surfer taps and finds blank, whatever tag or padding it might be wrapped in: ${block}`,
-    );
+  it('shows the level word and shape without a disclosure when reason is empty', () => {
+    assertQuietLevel(harnessCases()[1]!);
   });
 
   it('shows the level word and the published reason verbatim when a reason exists', () => {

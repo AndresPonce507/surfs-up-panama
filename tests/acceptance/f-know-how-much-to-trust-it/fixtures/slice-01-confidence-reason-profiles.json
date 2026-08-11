@@ -11,35 +11,55 @@
     "technical text. Illustrative Spanish, not settled copy: Pre-requisite 1",
     "is open, so no scenario pins any of these strings word for word."
   ],
-  "default_profile": "capped_by_tide",
+  "default_profile": { "today": "capped_by_tide_today", "tomorrow": "capped_by_tide_tomorrow" },
   "by_spot": {
-    "playa-venao": { "today": "capped_by_tide", "tomorrow": "period_split" },
-    "playa-guanico": { "today": "period_split", "tomorrow": "capped_by_tide" },
-    "playa-cambutal": { "today": "no_track_record", "tomorrow": "no_track_record" },
-    "playa-reina": { "today": "one_model", "tomorrow": "one_model" },
+    "playa-venao": { "today": "capped_by_tide_today", "tomorrow": "period_split_tomorrow" },
+    "playa-guanico": { "today": "period_split_today", "tomorrow": "capped_by_tide_tomorrow" },
+    "playa-cambutal": { "today": "no_track_record_today", "tomorrow": "no_track_record_tomorrow" },
+    "playa-reina": { "today": "one_model_today", "tomorrow": "one_model_tomorrow" },
     "punta-brava": { "today": "no_reason", "tomorrow": "no_reason" },
-    "santa-catalina-la-punta": { "today": "longest", "tomorrow": "longest" }
+    "santa-catalina-la-punta": { "today": "longest_today", "tomorrow": "longest_tomorrow" }
   },
   "profiles": {
-    "capped_by_tide": {
+    "capped_by_tide_today": {
       "conf_level": "medium",
       "reason_es": "Hoy no tenemos el dato de la marea, así que el nivel no sube de media. Los modelos se parecen bastante entre ellos. Nadie ha reportado desde la playa."
     },
-    "period_split": {
-      "conf_level": "low",
-      "reason_es": "Los modelos se parten en el período: unos ven trece segundos y otros nueve. En el tamaño sí coinciden. Nadie ha reportado desde la playa todavía."
+    "capped_by_tide_tomorrow": {
+      "conf_level": "medium",
+      "reason_es": "Mañana no tenemos el dato de la marea, así que el nivel no sube de media. Los modelos se parecen bastante entre ellos. Nadie ha reportado desde la playa."
     },
-    "one_model": {
+    "period_split_today": {
+      "conf_level": "low",
+      "reason_es": "Hoy los modelos se parten en el período: unos ven trece segundos y otros nueve. En el tamaño sí coinciden. Nadie ha reportado desde la playa todavía."
+    },
+    "period_split_tomorrow": {
+      "conf_level": "low",
+      "reason_es": "Mañana los modelos se parten en el período: unos ven trece segundos y otros nueve. En el tamaño sí coinciden. Nadie ha reportado desde la playa todavía."
+    },
+    "one_model_today": {
       "conf_level": "low",
       "reason_es": "Hoy respondió un solo modelo, así que no hay con qué compararlo. Tampoco tenemos el dato de la marea. Nadie ha reportado desde la playa."
     },
-    "no_track_record": {
+    "one_model_tomorrow": {
       "conf_level": "low",
-      "reason_es": "Todavía no hay historial verificado de este spot y nadie ha reportado desde la playa. El nivel solo dice cuánto se parecen los modelos hoy."
+      "reason_es": "Mañana respondió un solo modelo, así que no hay con qué compararlo. Tampoco tenemos el dato de la marea. Nadie ha reportado desde la playa."
     },
-    "longest": {
+    "no_track_record_today": {
+      "conf_level": "low",
+      "reason_es": "Hoy no hay historial verificado de este spot y nadie ha reportado desde la playa. El nivel solo dice cuánto se parecen los modelos."
+    },
+    "no_track_record_tomorrow": {
+      "conf_level": "low",
+      "reason_es": "Mañana no hay historial verificado de este spot y nadie ha reportado desde la playa. El nivel solo dice cuánto se parecen los modelos."
+    },
+    "longest_today": {
       "conf_level": "medium",
       "reason_es": "Hoy no tenemos el dato de la marea en esta punta, así que el nivel se queda en media aunque los modelos se parezcan mucho. Nadie ha reportado de la playa."
+    },
+    "longest_tomorrow": {
+      "conf_level": "medium",
+      "reason_es": "Mañana no tenemos el dato de la marea en esta punta, así que el nivel se queda en media aunque los modelos se parezcan mucho. Nadie ha reportado de la playa."
     },
     "no_reason": {
       "conf_level": "low",

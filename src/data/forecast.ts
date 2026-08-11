@@ -43,6 +43,8 @@ export interface DaySummary {
    * value behind it stays in the PublishedCall log (domain-model section 13).
    */
   readonly conf_level?: ConfLevel;
+  /** Published Spanish explanation for that day's confidence level. */
+  readonly confidence_reason_es?: string;
 }
 
 export interface ForecastPlaceholder {
@@ -67,6 +69,7 @@ function summaries(calls: readonly SurfaceCall[]): readonly DaySummary[] {
   ...(call.wind_state === undefined ? {} : { wind_state: call.wind_state }),
   ...(call.best_window === undefined ? {} : { best_window: call.best_window }),
   ...(call.conf_level === undefined ? {} : { conf_level: call.conf_level }),
+  ...(call.confidence_reason_es === undefined ? {} : { confidence_reason_es: call.confidence_reason_es }),
   }));
 }
 

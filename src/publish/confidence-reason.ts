@@ -59,7 +59,7 @@ export const REASON_PHRASES_ES = {
    * naming those is not this step's job, so this states the one thing that
    * is true of every such morning. It is a placeholder, not settled copy.
    */
-  nothing_missing: 'Hoy no falta ningún dato para esta playa',
+  nothing_missing: 'No falta ningún dato para esta playa',
   /** Every participating factor lacks input. Low confidence is an honest
    * absence of signal, not a perfect product of neutral fallback values. */
   no_usable_signal: 'Todavía no hay una señal usable para medir la confianza',
@@ -74,7 +74,7 @@ export const REASON_PHRASES_ES = {
   spread_disagreement: 'Los modelos no se ponen de acuerdo en el {factor}',
   /** The spot has earned its own completed-day distribution. This remains a
    * qualitative comparison: the percentile never reaches the reader. */
-  spread_worse_than_spot_normal: 'Hoy los modelos se parten más de lo normal en este spot',
+  spread_worse_than_spot_normal: 'Los modelos se parten más de lo normal en este spot',
   /**
    * `c_fresh === null`: no beach report has ever reached this spot, so the
    * level is agreement between forecast models, never a confirmation from the
@@ -90,7 +90,7 @@ export const REASON_PHRASES_ES = {
    * `track_state` becomes `'measured'` and this clause drops itself with no
    * code edit.
    */
-  no_verified_record: 'Este spot todavía no tiene historial verificado',
+  no_verified_record: 'Este spot no tiene historial verificado',
   /**
    * `members_used === 1`: with a single member every spread term is forced
    * to zero (`confidence()`, 05-scoring-engine.md section 6.1's f(M) cap), so
@@ -120,14 +120,19 @@ export function composeConfidenceReasonEs(
   result: ConfidenceResult,
   vocab: FactorVocabEs,
   factors: ConfidenceFactors = DEFAULT_CONFIDENCE_FACTORS,
-  context: { readonly comparesAgainstSpotNormal?: boolean } = {},
+  context: { readonly comparesAgainstSpotNormal?: boolean; readonly day?: 'today' | 'tomorrow' } = {},
 ): string {
   const clauses = [
     bindingCauseClause(result, vocab, factors, context),
     ...singleModelClause(result),
     ...honestyClauses(result),
   ];
-  return `${clauses.join('. ')}.`;
+  const day = context.day === 'tomorrow' ? 'Mañana' : 'Hoy';
+  return `${day}, ${lowercaseFirst(clauses.join('. '))}.`;
+}
+
+function lowercaseFirst(text: string): string {
+  return `${text.slice(0, 1).toLocaleLowerCase('es-PA')}${text.slice(1)}`;
 }
 
 /**

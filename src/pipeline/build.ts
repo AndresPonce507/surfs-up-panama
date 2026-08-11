@@ -282,6 +282,7 @@ function callsForSpot(
       missing: score.missing,
       confidence_reason_es: composeConfidenceReasonEs(confidenceResult, FACTOR_VOCAB_ES, confidenceFactors, {
         comparesAgainstSpotNormal: spread.kind === 'climatology' && spread.pct >= 80,
+        day: validTs.startsWith(dates[0]!) ? 'today' : 'tomorrow',
       }),
       weakest_link: score.weakest_link,
     }];
