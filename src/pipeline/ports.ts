@@ -32,12 +32,30 @@ export interface BuildStore {
   listPredictions(prefix: string): Promise<string[]>;
   /** Learned corrections are optional build inputs. */
   getCorrection(key: string): Promise<string | null>;
+  /** The durable, region-scoped PublishedCall archive.  A caller never
+   * treats an adapter failure here as an empty (thin) history. */
+  listPublishedCallKeys(scope: PublishedCallHistoryScope): Promise<readonly string[]>;
+  /** Reads a listed immutable PublishedCall receipt.  A missing listed key is
+   * an adapter failure, never a null history row. */
+  getPublishedCall(key: string): Promise<string>;
+  /** Verifies that the selected region's archive can safely supply history
+   * before a production build is permitted to write. */
+  probePublishedCallHistory(scope: PublishedCallHistoryScope): Promise<PublishedCallHistoryProbe>;
   /** A call receipt is immutable after its first successful write. */
   putCallIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'>;
   /** The public bundle and manifest are the build's only mutable artifacts. */
   putBundle(key: string, body: string): Promise<void>;
   putManifest(key: string, body: string): Promise<void>;
 }
+
+export type PublishedCallHistoryScope = {
+  readonly region_id: string;
+  readonly prefix: 'log/calls/v1/';
+};
+
+export type PublishedCallHistoryProbe =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly reason: 'unavailable' | 'malformed'; readonly detail?: string };
 
 export interface Clock {
   now(): Date;

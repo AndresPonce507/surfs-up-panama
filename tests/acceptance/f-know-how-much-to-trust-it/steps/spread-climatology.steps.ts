@@ -21,8 +21,11 @@
 // and switching forms when the history is long enough (05 section 6.1:
 // "switching forms is a data availability change").
 
-import { Given, Then, When } from '@cucumber/cucumber';
+import { After, Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
+import { mkdtemp, mkdir, readdir, rm, stat, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import type { PipelineWorld } from '../../daily-call-with-permanent-receipts/steps/support/world';
 import '../../daily-call-with-permanent-receipts/steps/support/world';
@@ -45,6 +48,7 @@ import {
   sevenChecksOnRankedRow,
   type ObservedConfidence,
 } from './support/built-site';
+import { ProductionBuildRefused, runProductionBuild } from '../../../../src/pipeline/run-build-cli';
 
 const HISTORY_SPOT_ID = venaoSeed.spot_id;
 const HISTORY_MORNINGS = 60;
@@ -161,6 +165,90 @@ Then('ninguna razón publicada muestra un porcentaje ni habla de probabilidad', 
     findings,
     'el término del desacuerdo es una bandera cualitativa, jamás una barra de error calibrada ni un percentil en pantalla (investigación 09 sección 3.6; contradicción épica C4, cerrada para siempre).',
   );
+});
+
+// ---------------------------------------------------------------------------
+// Durable archive fault boundary. These are real filesystem scenarios driven
+// through the production CLI entry point, not a BuildStore cast or fake.
+// ---------------------------------------------------------------------------
+
+type HistoryFaultWorld = PipelineWorld & {
+  historyFaultRoot?: string;
+  historyFaultWorkDir?: string;
+  historyFaultBefore?: readonly string[];
+  historyFaultError?: unknown;
+};
+
+function faultWorld(world: PipelineWorld): HistoryFaultWorld {
+  return world as HistoryFaultWorld;
+}
+
+async function pathsBelow(root: string, prefix = ''): Promise<string[]> {
+  const target = join(root, prefix);
+  const metadata = await stat(target);
+  if (!metadata.isDirectory()) return [prefix || '.'];
+  const entries = await readdir(target, { withFileTypes: true });
+  const paths = await Promise.all(entries.map(async (entry) => {
+    const child = join(prefix, entry.name);
+    return entry.isDirectory() ? pathsBelow(root, child) : [child];
+  }));
+  return paths.flat().sort();
+}
+
+Given('un historial durable de PublishedCall de la región pedida que está {word}', async function (this: PipelineWorld, failure: string) {
+  assert.ok(['inaccesible', 'malformado'].includes(failure), `test fixture error: unsupported durable history fault ${failure}`);
+  const sandbox = await mkdtemp(join(tmpdir(), 'surfs-up-history-fault-'));
+  const world = faultWorld(this);
+  world.historyFaultWorkDir = join(sandbox, 'work');
+  await mkdir(world.historyFaultWorkDir, { recursive: true });
+  if (failure === 'inaccesible') {
+    world.historyFaultRoot = join(sandbox, 'archive-file');
+    await writeFile(world.historyFaultRoot, 'not a directory');
+  } else {
+    world.historyFaultRoot = join(sandbox, 'archive');
+    const malformed = join(world.historyFaultRoot, 'log/calls/v1/dt=not-a-date/build=11Z');
+    await mkdir(malformed, { recursive: true });
+    await writeFile(join(malformed, 'pa-pacific.jsonl.gz'), '{}');
+  }
+  world.historyFaultBefore = await pathsBelow(world.historyFaultRoot);
+});
+
+When('la mañana de hoy se intenta armar por el comando de producción', async function (this: PipelineWorld) {
+  const world = faultWorld(this);
+  assert.ok(world.historyFaultRoot && world.historyFaultWorkDir, 'test fixture error: configure the durable history fault first');
+  try {
+    await runProductionBuild([
+      '--at', '2026-08-09T11:22:00Z', '--predictions', world.historyFaultRoot, '--work-dir', world.historyFaultWorkDir,
+    ]);
+  } catch (error) {
+    world.historyFaultError = error;
+  }
+});
+
+Then('el comando se rehúsa antes de publicar con exactamente un evento {string}', function (this: PipelineWorld, type: string) {
+  const error = faultWorld(this).historyFaultError;
+  assert.ok(error instanceof ProductionBuildRefused, `the production command must refuse with a structured history event, got ${String(error)}`);
+  assert.equal(error.event.type, type);
+});
+
+Then('el evento tiene el componente {string}, scope.region_id de la región pedida, scope.prefix {string} y razón {string}', function (this: PipelineWorld, component: string, prefix: string, reason: string) {
+  const error = faultWorld(this).historyFaultError;
+  assert.ok(error instanceof ProductionBuildRefused, 'test fixture error: assert the structured production refusal first');
+  assert.deepEqual(error.event, {
+    type: 'health.startup.refused', component, scope: { region_id: 'pa-pacific', prefix }, reason,
+  });
+});
+
+Then('no se escribe ningún PublishedCall, bundle ni manifest', async function (this: PipelineWorld) {
+  const world = faultWorld(this);
+  assert.ok(world.historyFaultRoot && world.historyFaultWorkDir && world.historyFaultBefore, 'test fixture error: configure and run the fault first');
+  assert.deepEqual(await pathsBelow(world.historyFaultRoot), world.historyFaultBefore, 'the durable call archive must be byte-for-byte untouched after a failed probe');
+  assert.deepEqual(await pathsBelow(world.historyFaultWorkDir), [], 'a refused probe must write no bundle or manifest to the output root');
+});
+
+After({ tags: '@slice-05', timeout: 30_000 }, async function (this: PipelineWorld) {
+  const root = faultWorld(this).historyFaultWorkDir;
+  if (root !== undefined) await rm(join(root, '..'), { recursive: true, force: true });
 });
 
 // ---------------------------------------------------------------------------

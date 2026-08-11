@@ -13,7 +13,13 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
 
-import type { BuildStore, IngestStore, RawProviderPayload } from '../ports';
+import type {
+  BuildStore,
+  IngestStore,
+  PublishedCallHistoryProbe,
+  PublishedCallHistoryScope,
+  RawProviderPayload,
+} from '../ports';
 
 export class FilesystemStore implements IngestStore, BuildStore {
   constructor(private readonly root: string) {}
@@ -36,6 +42,47 @@ export class FilesystemStore implements IngestStore, BuildStore {
 
   async getCorrection(key: string): Promise<string | null> {
     return this.read(key);
+  }
+
+  async listPublishedCallKeys(scope: PublishedCallHistoryScope): Promise<readonly string[]> {
+    const allKeys = await this.list(scope.prefix);
+    const regionSuffix = `/${scope.region_id}.jsonl.gz`;
+    return allKeys.filter((key) => key.endsWith(regionSuffix));
+  }
+
+  async getPublishedCall(key: string): Promise<string> {
+    const body = await this.read(key);
+    if (body === null) throw new Error(`published call receipt unavailable: ${key}`);
+    return body;
+  }
+
+  async probePublishedCallHistory(scope: PublishedCallHistoryScope): Promise<PublishedCallHistoryProbe> {
+    let keys: readonly string[];
+    try {
+      keys = await this.listPublishedCallKeys(scope);
+    } catch (error) {
+      return unavailable(error);
+    }
+    const dawnRows = new Set<string>();
+    try {
+      for (const key of keys) {
+        const match = publishedCallKey(scope, key);
+        if (match === null) return malformed(`key:${key}`);
+        const body = await this.getPublishedCall(key);
+        for (const line of body.split('\n').filter((candidate) => candidate !== '')) {
+          const row = JSON.parse(line) as Record<string, unknown>;
+          if (!validPublishedCallRow(row)) return malformed(`receipt:${key}`);
+          if (match.buildHour !== '11' || !row.valid_ts.startsWith(`${match.date}T18:00`)) continue;
+          const grain = `${row.spot_id}\u0000${match.date}`;
+          if (dawnRows.has(grain)) return malformed(`duplicate:${key}`);
+          dawnRows.add(grain);
+        }
+      }
+      return { ok: true };
+    } catch (error) {
+      if (error instanceof SyntaxError) return malformed('receipt-json');
+      return unavailable(error);
+    }
   }
 
   async putCallIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
@@ -89,6 +136,45 @@ export class FilesystemStore implements IngestStore, BuildStore {
       .map((file) => relative(this.root, file).split(sep).join('/'))
       .sort();
   }
+}
+
+function publishedCallKey(scope: PublishedCallHistoryScope, key: string): { date: string; buildHour: string } | null {
+  const escapedRegion = scope.region_id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(`^${scope.prefix}dt=(\\d{4}-\\d{2}-\\d{2})/build=(\\d{2})Z/${escapedRegion}\\.jsonl\\.gz$`).exec(key);
+  if (match === null || !validCivilDate(match[1]!) || Number(match[2]!) > 23) return null;
+  return { date: match[1]!, buildHour: match[2]! };
+}
+
+function unavailable(error: unknown): PublishedCallHistoryProbe {
+  return { ok: false, reason: 'unavailable', detail: error instanceof Error ? error.name : 'filesystem' };
+}
+
+function malformed(detail: string): PublishedCallHistoryProbe {
+  return { ok: false, reason: 'malformed', detail };
+}
+
+function validPublishedCallRow(row: Record<string, unknown>): row is Record<string, string | number> & { spot_id: string; valid_ts: string } {
+  return typeof row.spot_id === 'string'
+    && row.spot_id.length > 0
+    && typeof row.valid_ts === 'string'
+    && validUtcTimestamp(row.valid_ts)
+    && typeof row.members_used === 'number'
+    && Number.isSafeInteger(row.members_used)
+    && row.members_used >= 0
+    && (row.spread_penalty === undefined || (typeof row.spread_penalty === 'number' && Number.isFinite(row.spread_penalty)));
+}
+
+function validCivilDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (match === null) return false;
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  return date.toISOString().slice(0, 10) === value;
+}
+
+function validUtcTimestamp(value: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{3})?)?Z$/.test(value)) return false;
+  const date = new Date(value);
+  return !Number.isNaN(date.getTime()) && validCivilDate(value.slice(0, 10));
 }
 
 async function collectFiles(directory: string, out: string[]): Promise<void> {

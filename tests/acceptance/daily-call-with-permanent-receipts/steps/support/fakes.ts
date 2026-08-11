@@ -9,6 +9,8 @@ import type {
   ForecastSource,
   IngestStore,
   MemberSeries,
+  PublishedCallHistoryProbe,
+  PublishedCallHistoryScope,
   RawProviderPayload,
   SourceFailure,
   SourceResult,
@@ -68,6 +70,20 @@ export class InMemoryStore implements IngestStore, BuildStore {
     return this.get(key);
   }
 
+  async listPublishedCallKeys(scope: { region_id: string; prefix: 'log/calls/v1/' }): Promise<readonly string[]> {
+    return (await this.list(scope.prefix)).filter((key) => key.endsWith(`/${scope.region_id}.jsonl.gz`));
+  }
+
+  async getPublishedCall(key: string): Promise<string> {
+    const body = await this.get(key);
+    if (body === null) throw new Error(`published call receipt unavailable: ${key}`);
+    return body;
+  }
+
+  async probePublishedCallHistory(scope: PublishedCallHistoryScope): Promise<PublishedCallHistoryProbe> {
+    return probeInMemoryPublishedCallHistory(this.objects, scope);
+  }
+
   async putCallIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
     return this.putIfAbsent(key, body);
   }
@@ -115,6 +131,18 @@ export class CrashingStore implements BuildStore {
     return this.inner.getCorrection(key);
   }
 
+  async listPublishedCallKeys(scope: { region_id: string; prefix: 'log/calls/v1/' }): Promise<readonly string[]> {
+    return this.inner.listPublishedCallKeys(scope);
+  }
+
+  async getPublishedCall(key: string): Promise<string> {
+    return this.inner.getPublishedCall(key);
+  }
+
+  async probePublishedCallHistory(scope: PublishedCallHistoryScope): Promise<PublishedCallHistoryProbe> {
+    return this.inner.probePublishedCallHistory(scope);
+  }
+
   async putCallIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
     this.guard(key);
     return this.inner.putCallIfAbsent(key, body);
@@ -129,6 +157,61 @@ export class CrashingStore implements BuildStore {
     this.guard(key);
     return this.inner.putManifest(key, body);
   }
+}
+
+/** The in-memory driven-port double preserves the production history fault
+ * contract. It is intentionally strict so acceptance tests cannot turn a
+ * malformed archive into a harmless empty history. */
+export async function probeInMemoryPublishedCallHistory(
+  objects: ReadonlyMap<string, string>,
+  scope: PublishedCallHistoryScope,
+): Promise<PublishedCallHistoryProbe> {
+  const keys = [...objects.keys()].filter((key) => key.startsWith(scope.prefix) && key.endsWith(`/${scope.region_id}.jsonl.gz`)).sort();
+  const grains = new Set<string>();
+  try {
+    for (const key of keys) {
+      const match = historyKey(scope, key);
+      if (match === null) return { ok: false, reason: 'malformed', detail: `key:${key}` };
+      const body = objects.get(key);
+      if (body === undefined) return { ok: false, reason: 'unavailable', detail: 'listed-key-disappeared' };
+      for (const line of body.split('\n').filter((value) => value !== '')) {
+        const row = JSON.parse(line) as Record<string, unknown>;
+        if (!validHistoryRow(row)) return { ok: false, reason: 'malformed', detail: `receipt:${key}` };
+        if (match.hour !== '11' || !row.valid_ts.startsWith(`${match.date}T18:00`)) continue;
+        const grain = `${row.spot_id}\u0000${match.date}`;
+        if (grains.has(grain)) return { ok: false, reason: 'malformed', detail: `duplicate:${key}` };
+        grains.add(grain);
+      }
+    }
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, reason: error instanceof SyntaxError ? 'malformed' : 'unavailable', detail: 'receipt-read' };
+  }
+}
+
+function historyKey(scope: PublishedCallHistoryScope, key: string): { date: string; hour: string } | null {
+  const region = scope.region_id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const match = new RegExp(`^${scope.prefix}dt=(\\d{4}-\\d{2}-\\d{2})/build=(\\d{2})Z/${region}\\.jsonl\\.gz$`).exec(key);
+  if (match === null || !validDate(match[1]!) || Number(match[2]!) > 23) return null;
+  return { date: match[1]!, hour: match[2]! };
+}
+
+function validHistoryRow(row: Record<string, unknown>): row is Record<string, string | number> & { spot_id: string; valid_ts: string } {
+  return typeof row.spot_id === 'string' && row.spot_id.length > 0
+    && typeof row.valid_ts === 'string' && validTimestamp(row.valid_ts)
+    && typeof row.members_used === 'number' && Number.isSafeInteger(row.members_used) && row.members_used >= 0
+    && (row.spread_penalty === undefined || (typeof row.spread_penalty === 'number' && Number.isFinite(row.spread_penalty)));
+}
+
+function validDate(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (match === null) return false;
+  return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]))).toISOString().slice(0, 10) === value;
+}
+
+function validTimestamp(value: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{3})?)?Z$/.test(value)
+    && !Number.isNaN(new Date(value).getTime()) && validDate(value.slice(0, 10));
 }
 
 export class FixedClock implements Clock {

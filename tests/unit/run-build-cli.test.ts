@@ -4,13 +4,15 @@
 // Real I/O, tmp_path (Mandate 6): the store is a real FilesystemStore, never
 // a mock of one.
 
-import { mkdtemp, readFile, rm, writeFile, mkdir } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile, mkdir, readdir } from 'node:fs/promises';
+import { spawn } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { runProductionBuild } from '../../src/pipeline/run-build-cli';
+import { FilesystemStore } from '../../src/pipeline/adapters/filesystem-store';
+import { ProductionBuildRefused, runProductionBuild } from '../../src/pipeline/run-build-cli';
 import type { RegionBundle } from '../../src/publish/region-bundle';
 import type { SpotSeed } from '../../src/scoring/engine';
 
@@ -71,6 +73,29 @@ async function seedPredictions(predictionsRoot: string): Promise<void> {
   }
 }
 
+async function filesUnder(root: string, prefix = ''): Promise<string[]> {
+  const entries = await readdir(join(root, prefix), { withFileTypes: true });
+  const children = await Promise.all(entries.map(async (entry) => {
+    const child = join(prefix, entry.name);
+    return entry.isDirectory() ? filesUnder(root, child) : [child];
+  }));
+  return children.flat().sort();
+}
+
+async function runCli(argv: readonly string[]): Promise<{ status: number; stdout: string; stderr: string }> {
+  return new Promise((done, reject) => {
+    const child = spawn(process.execPath, ['--import', 'tsx', 'src/pipeline/run-build-cli.ts', ...argv], {
+      cwd: process.cwd(), stdio: ['ignore', 'pipe', 'pipe'], shell: false,
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (data) => { stdout += String(data); });
+    child.stderr.on('data', (data) => { stderr += String(data); });
+    child.on('error', reject);
+    child.on('close', (status) => done({ status: status ?? 1, stdout, stderr }));
+  });
+}
+
 describe('runProductionBuild (the missing production caller for runBuildOnce)', () => {
   let predictionsRoot: string;
   let workDir: string;
@@ -121,5 +146,86 @@ describe('runProductionBuild (the missing production caller for runBuildOnce)', 
     await expect(
       runProductionBuild(['--at', AT, '--predictions', predictionsRoot, '--work-dir', workDir], { spots }),
     ).rejects.toThrow(/no usable wave members/);
+  });
+
+  it('reuses the durable archive for history and call writes across output directories', async () => {
+    await seedPredictions(predictionsRoot);
+    const spots = [seed('playa-venao', 'Playa Venao'), seed('playa-cambutal', 'Playa Cambutal')];
+    const first = await runProductionBuild(['--at', AT, '--predictions', predictionsRoot, '--work-dir', workDir], { spots });
+    expect(await readFile(join(first.bundlePath), 'utf8')).toContain('region-bundle/1');
+    const durableCall = join(predictionsRoot, 'log/calls/v1/dt=2026-08-09/build=11Z/pa-pacific.jsonl.gz');
+    const firstReceipt = await readFile(durableCall, 'utf8');
+    expect(firstReceipt).toContain('playa-venao');
+    await expect(readFile(join(workDir, 'log/calls/v1/dt=2026-08-09/build=11Z/pa-pacific.jsonl.gz'), 'utf8')).rejects.toThrow();
+
+    const nextWorkDir = await mkdtemp(join(tmpdir(), 'surfs-up-next-work-'));
+    try {
+      await runProductionBuild(['--at', AT, '--predictions', predictionsRoot, '--work-dir', nextWorkDir], { spots });
+      expect(await readFile(durableCall, 'utf8')).toBe(firstReceipt);
+    } finally {
+      await rm(nextWorkDir, { recursive: true, force: true });
+    }
+  });
+
+  it('refuses malformed durable history before any production output write', async () => {
+    const malformed = join(predictionsRoot, 'log/calls/v1/dt=broken/build=11Z');
+    await mkdir(malformed, { recursive: true });
+    await writeFile(join(malformed, 'pa-pacific.jsonl.gz'), '{}');
+
+    let refusal: unknown;
+    try {
+      await runProductionBuild(['--at', AT, '--predictions', predictionsRoot, '--work-dir', workDir]);
+    } catch (error) {
+      refusal = error;
+    }
+    expect(refusal).toBeInstanceOf(ProductionBuildRefused);
+    expect((refusal as ProductionBuildRefused).event).toEqual({
+      type: 'health.startup.refused', component: 'published_call_history',
+      scope: { region_id: 'pa-pacific', prefix: 'log/calls/v1/' }, reason: 'malformed',
+    });
+    expect(await filesUnder(workDir)).toEqual([]);
+    expect(await readFile(join(malformed, 'pa-pacific.jsonl.gz'), 'utf8')).toBe('{}');
+  });
+
+  it('emits exactly one structured refusal and nonzero exit for an unavailable durable archive', async () => {
+    const blockedArchive = join(predictionsRoot, 'not-a-directory');
+    await writeFile(blockedArchive, 'blocked');
+    const result = await runCli(['--at', AT, '--predictions', blockedArchive, '--work-dir', workDir]);
+
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toBe('');
+    const lines = result.stderr.trim().split('\n');
+    expect(lines).toHaveLength(1);
+    expect(JSON.parse(lines[0]!)).toEqual({
+      type: 'health.startup.refused', component: 'published_call_history',
+      scope: { region_id: 'pa-pacific', prefix: 'log/calls/v1/' }, reason: 'unavailable',
+    });
+    expect(await filesUnder(workDir)).toEqual([]);
+  });
+
+  it('turns a receipt that disappears after a successful probe into the same no-write structured refusal', async () => {
+    await seedPredictions(predictionsRoot);
+    const historyKey = join(predictionsRoot, 'log/calls/v1/dt=2026-08-08/build=11Z/pa-pacific.jsonl.gz');
+    await mkdir(join(predictionsRoot, 'log/calls/v1/dt=2026-08-08/build=11Z'), { recursive: true });
+    await writeFile(historyKey, JSON.stringify({
+      spot_id: 'playa-venao', valid_ts: '2026-08-08T18:00:00Z', members_used: 2, spread_penalty: 0.1,
+    }));
+    const original = FilesystemStore.prototype.getPublishedCall;
+    let reads = 0;
+    vi.spyOn(FilesystemStore.prototype, 'getPublishedCall').mockImplementation(async function (this: FilesystemStore, key: string) {
+      reads += 1;
+      if (reads > 1) throw new Error(`published call receipt unavailable: ${key}`);
+      return original.call(this, key);
+    });
+    try {
+      await expect(runProductionBuild(['--at', AT, '--predictions', predictionsRoot, '--work-dir', workDir], {
+        spots: [seed('playa-venao', 'Playa Venao'), seed('playa-cambutal', 'Playa Cambutal')],
+      })).rejects.toMatchObject({
+        event: { type: 'health.startup.refused', component: 'published_call_history', reason: 'unavailable' },
+      });
+      expect(await filesUnder(workDir)).toEqual([]);
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 });

@@ -15,7 +15,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import type { BuildDeps, BuildOutcome, BuildStore } from './ports';
+import type { BuildDeps, BuildOutcome, PublishedCallHistoryScope } from './ports';
 import {
   confidence,
   DEFAULT_CONFIDENCE_FACTORS,
@@ -373,40 +373,43 @@ type HistoricalCallRecord = {
   readonly row: HistoricalCallRow;
 };
 
-type PublishedCallHistoryStore = {
-  list(prefix: string): Promise<string[]>;
-  get(key: string): Promise<string | null>;
-};
+/** A history fault is deliberately distinct from valid thin history. The
+ * composition root turns it into the single public startup-refusal event. */
+export class PublishedCallHistoryFailure extends Error {
+  constructor(readonly reason: 'unavailable' | 'malformed') {
+    super(`published call history ${reason}`);
+  }
+}
 
-/**
- * The live history adapter is intentionally optional while its source is
- * being wired. An absent, unreadable, or malformed source produces no
- * climatology input, which preserves the absolute form. The production
- * adapter must expose this same read pair before it can activate history.
- */
+const PUBLISHED_CALL_HISTORY_SCOPE = (region_id: string): PublishedCallHistoryScope => ({
+  region_id,
+  prefix: 'log/calls/v1/',
+});
+
+/** Valid history below policy threshold keeps the absolute form. Availability
+ * faults are deliberately allowed to escape: the production composition
+ * probes before this build, and later read faults must still refuse it. */
 async function completedSpreadHistory(
   deps: BuildDeps,
   spots: readonly NonNullable<BuildDeps['spots']>[number][],
   currentInstant: Date,
 ): Promise<Map<string, readonly number[]>> {
-  const store = deps.store as BuildStore & Partial<PublishedCallHistoryStore>;
-  if (typeof store.list !== 'function' || typeof store.get !== 'function') return new Map();
   try {
-    const keys = await store.list('log/calls/v1/');
+    const keys = await deps.store.listPublishedCallKeys(PUBLISHED_CALL_HISTORY_SCOPE(deps.region_id));
     const dawnKeys = keys.filter((key) => /\/build=11Z\//.test(key));
     const records = await Promise.all(dawnKeys.map(async (key) => {
       const publishedCivilDate = /\/dt=(\d{4}-\d{2}-\d{2})\//.exec(key)?.[1];
-      if (publishedCivilDate === undefined) throw new Error(`malformed published call key: ${key}`);
-      const body = await store.get!(key);
-      if (body === null) throw new Error(`published call disappeared: ${key}`);
+      if (publishedCivilDate === undefined) throw new PublishedCallHistoryFailure('malformed');
+      const body = await deps.store.getPublishedCall(key);
       return body.split('\n').filter((line) => line !== '').map((line) => ({
         publishedCivilDate,
         row: JSON.parse(line) as HistoricalCallRow,
       }));
     }));
     return historicalSpreadBySpot(records.flat(), spots, currentInstant);
-  } catch {
-    return new Map();
+  } catch (error) {
+    if (error instanceof PublishedCallHistoryFailure) throw error;
+    throw new PublishedCallHistoryFailure(error instanceof SyntaxError ? 'malformed' : 'unavailable');
   }
 }
 
@@ -426,7 +429,7 @@ function historicalSpreadBySpot(
     const currentCivilDate = regionalCivilDate(currentInstant, spot.timezone);
     if (civilDate >= currentCivilDate) continue;
     const key = `${row.spot_id}\u0000${civilDate}`;
-    if (bySpotAndDay.has(key)) return new Map();
+    if (bySpotAndDay.has(key)) throw new PublishedCallHistoryFailure('malformed');
     bySpotAndDay.set(key, row.spread_penalty);
   }
   const history = new Map<string, number[]>();

@@ -31,6 +31,7 @@ import { describe, it } from 'vitest';
 import { runBuildOnce } from '../../src/pipeline/build';
 import type { BuildStore, Clock } from '../../src/pipeline/ports';
 import type { SpotSeed } from '../../src/scoring/engine';
+import { probeInMemoryPublishedCallHistory } from '../acceptance/daily-call-with-permanent-receipts/steps/support/fakes';
 
 const BUILD_INSTANT = '2026-08-09T11:22:00Z';
 const TODAY = '2026-08-09';
@@ -53,6 +54,20 @@ class RecordingStore implements BuildStore {
 
   async getCorrection(): Promise<string | null> {
     return null;
+  }
+
+  async listPublishedCallKeys(scope: { region_id: string; prefix: 'log/calls/v1/' }): Promise<readonly string[]> {
+    return [...this.objects.keys()].filter((key) => key.startsWith(scope.prefix) && key.endsWith(`/${scope.region_id}.jsonl.gz`)).sort();
+  }
+
+  async getPublishedCall(key: string): Promise<string> {
+    const body = this.objects.get(key);
+    if (body === undefined) throw new Error(`published call receipt unavailable: ${key}`);
+    return body;
+  }
+
+  async probePublishedCallHistory(scope: { region_id: string; prefix: 'log/calls/v1/' }) {
+    return probeInMemoryPublishedCallHistory(this.objects, scope);
   }
 
   async putCallIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {

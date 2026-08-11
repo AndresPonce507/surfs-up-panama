@@ -13,6 +13,8 @@
 
 set -euo pipefail
 
+node scripts/check-published-call-history-probe.mjs
+
 GOOD_EMAILS=(
   "andresponce0001@gmail.com"
   "andres@tradelyhq.com"
