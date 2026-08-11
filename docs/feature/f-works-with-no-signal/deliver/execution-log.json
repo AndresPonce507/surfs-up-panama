@@ -750,6 +750,13 @@
       "s": "EXECUTED",
       "d": "PASS: source-blind rerun on quiet cadc46a executed only the exact duplicate-receipt Chromium scenario, passing 1 scenario, 24 steps, and 3 hooks in 2.429s. A 390x844 post-hydration local surface showed the surf heading, day navigation, 20 ranked calls, and no browser-visible error. Examiner read no source, tests, diffs, logs, or git material and made no edits. Deployed Function URL and physical-device proof remain unclaimed.",
       "t": "2026-08-11T15:55:00Z"
+    },
+    {
+      "sid": "04-01..04-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS_SCOPED: evidence revision e9de678 records the inherited-green classification, canonical RED decision, controlled replay falsification, cadc46a scoped green recheck, full-gate result, and fresh U8. Independent review iteration 3 approved the Signal-only evidence: 3 Chromium scenarios/74 steps, 4 focused public-worker tests, and semantic lost-ack failure then restoration. Global ci:local is explicitly NOT_MET due 40 non-Signal acceptance failures and is not represented as green. No deployment or physical-device proof is claimed.",
+      "t": "2026-08-11T15:56:00Z"
     }
   ]
 }
