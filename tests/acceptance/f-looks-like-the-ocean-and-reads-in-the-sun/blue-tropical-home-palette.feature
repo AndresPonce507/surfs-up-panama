@@ -8,13 +8,14 @@ Feature: La portada se ve como agua tropical profunda, no como una lista gris, y
   la tarjeta y en la lista, sigue leyéndose con margen de sobra bajo el sol, y nada de esto cambia
   ningún número, palabra o ruta del sitio.
 
-  @slice-01 @step-01-01 @walking_skeleton @driving_port @real-io @ui-u7
+  @slice-01 @step-01-01 @walking_skeleton @driving_port @real-io @ui-u5 @ui-u7
   Scenario Outline: La tarjeta destacada se ve como agua tropical profunda y la lista se mantiene clara, en tema <tema>
     Given la superficie publicada real, sin modificar
     When el surfista abre la portada a 390 px, con tema "<tema>"
     Then el fondo de la tarjeta destacada es el degradado de agua tropical profundo del sistema de diseño, no la lista casi blanca de antes
     And el fondo de las filas de la lista, debajo de la tarjeta destacada, se mantiene claro y distinto del fondo de la tarjeta
     And ningún color de la interfaz aparece fuera de los tokens con nombre
+    And la portada publicada llega lista con su ranking, sin una espera, vacío o error inventado
 
     Examples:
       | tema   |
@@ -47,8 +48,8 @@ Feature: La portada se ve como agua tropical profunda, no como una lista gris, y
       | oscuro |
 
   @slice-01 @step-01-02 @driving_port @real-io @negative @error
-  Scenario: Un build cuyo texto de la tarjeta destacada vuelve a heredar la tinta pensada para fondos claros se rechaza
-    Given una copia aislada cuyo texto de la tarjeta destacada vuelve a heredar la tinta pensada para fondos claros
+  Scenario: Un build cuyo alcance de tinta de la tarjeta destacada vuelve a heredar la tinta pensada para fondos claros se rechaza
+    Given una copia aislada cuyo alcance de tokens de la tarjeta destacada vuelve a heredar la tinta pensada para fondos claros
     When esa copia se abre a 390 px, con tema "claro"
     Then el texto del cuerpo de la tarjeta destacada no despeja 7 a 1 contra su fondo real, y la medición nombra el color y la proporción exactos
 

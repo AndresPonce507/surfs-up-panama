@@ -273,7 +273,7 @@ async function contrastFindings(page: Page): Promise<ContrastAudit> {
     // accepts ~6.92 for that pairing, i.e. AA, not AAA) rather than the
     // stricter 7:1 body floor that only the hero's primary call text and
     // every --ink-toned element carry.
-    const elements = [...document.querySelectorAll('ol.ranked > li a, ol.ranked > li strong, ol.ranked > li p')]
+    const elements = [...document.querySelectorAll('ol.ranked > li a, ol.ranked > li strong, ol.ranked > li p, ol.ranked > li details.confidence > summary, ol.ranked > li details.confidence > div')]
       .filter((el) => (el.textContent || '').trim().length > 0);
     const findings = [];
     for (const el of elements) {
@@ -302,6 +302,10 @@ async function contrastFindings(page: Page): Promise<ContrastAudit> {
           tag + ' (' + role + ') queda en ' + worstRatio.toFixed(2) + ':1 contra ' + worstBgHex
           + ', color de texto ' + rgbToHex(fg) + ', piso requerido ' + floor.toFixed(1) + ':1',
         );
+      }
+      const requiresHeroSecondaryInk = isHero && ['p', 'summary', 'div'].includes(tag);
+      if (requiresHeroSecondaryInk && rgbToHex(fg).toLowerCase() !== '#e8f7fa') {
+        findings.push(tag + ' (' + role + ') usa ' + rgbToHex(fg) + ' en vez de la tinta secundaria hero #e8f7fa');
       }
     }
     return { findings, stopHexes, elementCount: elements.length };
@@ -544,21 +548,17 @@ Given('una copia aislada cuyo archivo de componentes introduce un color fuera de
   });
 });
 
-Given('una copia aislada cuyo texto de la tarjeta destacada vuelve a heredar la tinta pensada para fondos claros', function (this: PaletteWorld) {
+Given('una copia aislada cuyo alcance de tokens de la tarjeta destacada vuelve a heredar la tinta pensada para fondos claros', function (this: PaletteWorld) {
   const root = prepareIsolatedRoot((copyRoot) => {
-    const componentsCopyPath = join(copyRoot, 'src/styles/components.css');
-    const original = readFileSync(componentsCopyPath, 'utf8');
-    // Recreates the exact pre-d90f635 defect this scenario guards against:
-    // every hero text selector wired back to var(--ink), the dark-on-light
-    // ink meant for the page's light surfaces, which measures ~1.30:1
-    // against the day-theme deep-water gradient. The replacement order
-    // matters not: 'var(--hero-ink)' cannot match inside 'var(--hero-ink-2)'
-    // because the closing paren anchors the shorter name.
+    const tokensCopyPath = join(copyRoot, TOKENS_RELATIVE);
+    const original = readFileSync(tokensCopyPath, 'utf8');
+    // Recreates the daylight defect without editing a component. The hero's
+    // scope is part of the token surface: removing it makes the pre-existing
+    // component rules resolve to page ink on deep water.
     const mutated = original
-      .replaceAll('var(--hero-ink-2)', 'var(--ink)')
-      .replaceAll('var(--hero-ink)', 'var(--ink)');
-    assert.notEqual(mutated, original, 'test fixture error: no var(--hero-ink)/var(--hero-ink-2) usages found in components.css to rewire back to var(--ink)');
-    writeFileSync(componentsCopyPath, mutated);
+      .replace(/\n:root ol\.ranked li:first-child \{[\s\S]*?\n\}\n\n:root ol\.ranked li:first-child > p \{[\s\S]*?\n\}\n\n:root ol\.ranked li:first-child > details\.confidence > summary,[\s\S]*?\n\}\n/, '\n');
+    assert.notEqual(mutated, original, 'test fixture error: no se encontró el alcance de tokens de la tarjeta para retirarlo');
+    writeFileSync(tokensCopyPath, mutated);
   });
   openedSurfaces.set(this, {
     root,
@@ -681,6 +681,22 @@ Then('ningún color de la interfaz aparece fuera de los tokens con nombre', func
   const gate = uiGateResults.get(this);
   assert.ok(gate, 'test fixture error: no ui-quality gate result captured');
   assert.equal(gate.status, 0, `el gate de calidad de interfaz falló: ${gate.output}`);
+});
+
+Then('la portada publicada llega lista con su ranking, sin una espera, vacío o error inventado', async function (this: PaletteWorld) {
+  const state = await requiredPage(this).evaluate(() => ({
+    ready: document.readyState,
+    rows: document.querySelectorAll('ol.ranked > li').length,
+    busy: document.querySelectorAll('[aria-busy="true"]').length,
+    visibleErrors: [...document.querySelectorAll('body *')]
+      .filter((element) => (element as HTMLElement).offsetParent !== null)
+      .map((element) => element.textContent?.trim() ?? '')
+      .filter((text) => /\b(error|loading|cargando)\b/i.test(text)),
+  }));
+  assert.equal(state.ready, 'complete', `la portada no llegó lista: ${state.ready}`);
+  assert.ok(state.rows > 0, 'la portada llegó vacía en vez de mostrar el ranking publicado');
+  assert.equal(state.busy, 0, 'la portada declara una espera artificial después de publicar el ranking');
+  assert.deepEqual(state.visibleErrors, [], `la portada visible muestra estado no diseñado: ${state.visibleErrors.join(' | ')}`);
 });
 
 Then('la comprobación de banda-no-página falla nombrando el fondo medido de las filas de la lista', async function (this: PaletteWorld) {
