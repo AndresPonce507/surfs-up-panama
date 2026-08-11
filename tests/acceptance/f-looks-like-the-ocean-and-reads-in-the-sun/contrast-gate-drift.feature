@@ -36,3 +36,11 @@ Feature: La tabla de contraste dice lo mismo que la portada que un surfista real
     When el surfista las recorre a 390 px, con tema claro y oscuro, y pide quietud
     Then las palabras, los controles y el ancho de cada ruta publicada conservan un margen de lectura cómodo
     And la revisión local publica ese recorrido dentro de su aceptación de navegador sin inventar otra revisión
+
+  @slice-04 @step-04-03 @driving_port @real-io @negative @error
+  Scenario: Una pareja anotada que se separa de la página hace sonar la alarma y vuelve intacta
+    Given la promesa de contraste publicada tiene su pareja clara de agua más exigente
+    When una copia aislada anota esa pareja como menos legible de lo que la página pinta
+    Then la alarma nombra la pareja de agua que dejó de coincidir
+    And el documento publicado queda exactamente como estaba antes de probar la alarma
+    And la revisión local termina sus comprobaciones de presentación y navegador sin omitir ninguna
