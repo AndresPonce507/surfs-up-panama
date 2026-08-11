@@ -1,0 +1,15 @@
+{
+  "sid": "03-06",
+  "event": "U8_SOURCE_BLIND_EXAMINATION",
+  "status": "PASS",
+  "examiner": "independent nw-user-examiner",
+  "charter": "docs/product/expectations/f-works-with-no-signal/a-report-filed-with-no-signal-sends-itself-when-the-surfer-walks-back-into-coverage-the-queue.md",
+  "surface_constraint": "The examiner was instructed not to read source, git history, roadmap, or execution log, and made no file changes.",
+  "observations": [
+    "npm run test:at -- --name 'Sent from the road': 1 scenario and 20 steps passed.",
+    "npm run test:at -- --tags '@feature-f-works-with-no-signal and @slice-03': 8 scenarios and 178 steps passed.",
+    "The supplied public browser surface covered the send-on-return, pending-state, refusal, offline-page, and count paths without a reported breach."
+  ],
+  "verdict": "PASS",
+  "t": "2026-08-11T13:23:42Z"
+}
