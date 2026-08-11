@@ -205,3 +205,58 @@ yet.
 | UI quality gate | `scripts/check-ui-quality.mjs` | U1 to U7 mechanics | REUSE | Feature-level fixture reuse is the HANDOFF §4 rule; each visible slice proves its own affected states, viewport, targets, motion, tokens and contrast against the real backdrop |
 | Infra guardrail acceptance pattern | `tests/acceptance/daily-call-with-permanent-receipts/infrastructure-guardrails.feature` + `runLocalCi` entry | Production-owned in-process CI driving, declaration-only fixtures, WHAT/WHY/HOW oracles | PATTERN REUSE | slice-02 writes its own scenarios in this feature's own test directory against the same production entry, amended assert population per 07 §11 |
 | Anti-leak gate + poisoned fixture | none, does not exist | n/a | CREATE_NEW | `application-architecture.md` §9: dist grep over the report routes plus dependency-cruiser rule, proven against one deliberately poisoned fixture at gate-authoring time. Belongs to slice-01, the slice that first ships the island |
+
+## Wave: DISTILL / [REF] Slice-03 through Slice-05 acceptance mapping
+
+### [REF] Scenarios
+
+| Slice | Contract | Tags | Tier |
+| --- | --- | --- | --- |
+| slice-03 | A surfer sends a saved report and sees it arrive | `@walking_skeleton @driving_port @real-io @requires_external` | A |
+| slice-03 | Repeated send, real-handler quota deferral, real-handler unknown beach, page-open send | `@error @real-io @requires_external` | A |
+| slice-04 | A surfer sees how the call did after sending their label | `@walking_skeleton @driving_port @real-io @requires_external` | A |
+| slice-04 | No call to compare; direct visitor receives no comparison | `@error @real-io @requires_external` | A |
+| slice-05 | A wrong phone clock keeps the label and explains itself | `@walking_skeleton @driving_port @real-io @requires_external @error` | A |
+| slice-05 | Refusal does not retry; corrected clock recovers | `@error @real-io @requires_external` | A |
+
+### [REF] Walking-skeleton and adapter strategy
+
+Production report page plus the real write handler is the Tier-A driving surface. The report
+store, published-call lookup and spot-index lookup use their production adapters. The browser
+clock is controlled only to make the wrong-clock example reproducible. No endpoint, response or
+prediction lookup is faked. Tier B is intentionally absent: these are real-I/O journeys, and the
+state-rich exploration belongs in the handler's layer-1 or layer-2 unit suite once its production
+composition exists.
+
+### [REF] Scaffolds and placement
+
+`report-arrives-once.feature`, `the-call-is-revealed-only-after-arrival.feature`,
+`a-wrong-clock-keeps-the-label.feature`, and `steps/report-arrival-and-reveal.steps.ts` are
+RED-ready Tier-A scaffolds under the existing feature-nested acceptance tree. Their assertion
+message names the real missing driving surface rather than creating an import failure. The
+project-wide TypeScript state-delta port is now `tests/common/state_delta.ts`.
+
+### [REF] External prerequisites
+
+`REPORT_ACCEPTANCE_ORIGIN` must name the production page connected to the real report handler.
+Before deploy evidence, the account concurrency quota, write-stack owner and spot-index producer
+(Pre-requisites 2, 5 and 6) need recorded resolution. These tests do not deploy and do not use a
+fake endpoint. The missing journey is active RED, not a substitute for those decisions.
+
+The real call and real no-call launch examples additionally require their respective published
+artifact environments. Those two `@indeterminate` launch proofs stay INDETERMINATE until supplied;
+the contracts do not fabricate them. Duplicate, unknown-beach and quota cases instead use the real
+public handler with a browser-created durable record, because the page properly has no control for
+those invalid inputs.
+
+### [REF] Traceability fallback
+
+The legacy `discuss/user-stories.md`, `discuss/story-map.md` and `devops/environments.yaml` files
+are absent. For this feature, the accepted `DISCUSS / [REF] Slice Plan` above is the authoritative
+replacement: its slice-03 row maps to `@covers-R19` through `@covers-R26`, slice-04 maps to
+`@covers-R27` through `@covers-R33`, and slice-05 maps to `@covers-R34` through `@covers-R37`.
+The requirement checklist maps the feature-wide anti-leak and UI rows. The generic legacy
+environments (`clean`, `with-pre-commit`, `with-stale-config`) do not alter a surfer's report
+journey, so each walking skeleton instead requires the one relevant environment: a real report
+page, real handler and real store supplied at `REPORT_ACCEPTANCE_ORIGIN`. Source-tree hooks and
+stale developer configuration remain CI concerns, not report-journey fixtures.

@@ -213,3 +213,42 @@ the checkout safety assertion runs even on RED. No scenario is BROKEN.
 - Slice-04 and Slice-05 stay absent under the JIT rule. Slice-04 additionally needs the Slice-03
   write response and logged-call lookup; Slice-05 needs that same submission path. No acceptance
   contract for either later slice was authored or changed here.
+
+## Slice-03 through Slice-05 observed RED classification (2026-08-10)
+
+The acceptance contracts are bound: a dry run selecting `@slice-03`, `@slice-04` and `@slice-05`
+finds 11 scenarios and 187 steps with no undefined or ambiguous step. Their only driving surface
+is an explicitly supplied `REPORT_ACCEPTANCE_ORIGIN`; there is no default local route, mock,
+intercept, invented prediction or fake receipt.
+
+Command:
+
+```
+npm run test:at -- --tags "@feature-f-tell-us-what-you-saw-cold and (@slice-03 or @slice-04 or @slice-05)"
+```
+
+Current result: exit **1**. Nine executable scenarios reach the business prerequisite step and fail as an
+`AssertionError` because `REPORT_ACCEPTANCE_ORIGIN` is not set and no production report journey
+exists. The error states WHAT is absent, WHY the static page cannot claim a sent report, and HOW to
+provide the guarded production handler or its real local-store composition. This is
+`MISSING_FUNCTIONALITY`, not `BROKEN`: TypeScript type-checks, Cucumber binds every step, and the
+failure is deliberately an assertion in the acceptance vocabulary rather than an import, fixture
+or browser-startup error.
+
+The two `@indeterminate` Slice-04 artifact journeys are skipped until
+`REPORT_ACCEPTANCE_PUBLISHED_ARTIFACT` identifies a real compared/no-call environment. Their
+skipped result is an explicit INDETERMINATE verdict, not a green pass and not a fake response.
+
+The configured-origin guard was also exercised with `REPORT_ACCEPTANCE_ORIGIN=http://127.0.0.1:9`.
+The first walking skeleton opened a real Chromium browser and attempted the report-page navigation;
+the browser returned `net::ERR_UNSAFE_PORT`, carried inside the semantic assertion. This proves the
+origin is used as the driving surface and not merely parsed.
+
+| Slices | First failing business step | Classification |
+| --- | --- | --- |
+| 03 | `Given Playa Venao can receive reports now` | `MISSING_FUNCTIONALITY` — no real report journey exists yet |
+| 04 | `Given Playa Venao can receive reports now` | `MISSING_FUNCTIONALITY` — Slice-03 receipt and real published-call lookup do not exist yet |
+| 05 | `Given Playa Venao can receive reports now` | `MISSING_FUNCTIONALITY` — no real handler can issue the clock refusal yet |
+
+Deployment was not attempted. Pre-requisites 2, 5 and 6 remain external write/deploy conditions;
+their absence is documented in the charters and policy instead of concealed with a fake endpoint.
