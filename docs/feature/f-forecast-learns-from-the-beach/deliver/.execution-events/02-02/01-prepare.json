@@ -1,0 +1,7 @@
+{
+  "sid": "02-02",
+  "p": "PREPARE",
+  "s": "EXECUTED",
+  "d": "PASS: verified declared dependency 02-01 is genuinely sealed rather than merely committed. Ran the full suite on the tree as inherited: 80 files / 400 tests green, tsc --noEmit exit 0, matching 02-01's own recorded figures. Then re-ran one of 02-01's two claimed falsifiability mutations first-hand (units pin disabled in load-correction.ts): the foreign-unit example failed semantically on 'a file the reader cannot make sense of must yield no correction at all', exactly as its contract records. Reverted; git diff --stat over src was empty. 02-01 stands. Also read the AUTHORED cucumber scenarios for slice-02 off recover/learning-build (git show f07943d) rather than trusting the inherited Vitest file to be faithful to them, and confirmed both forged scenarios there assert that the waves AND score stay at day zero, which is the whole-record verdict this step encodes.",
+  "t": "2026-08-11T23:55:00Z"
+}

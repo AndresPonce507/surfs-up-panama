@@ -50,10 +50,21 @@ export type GateInput = {
   readonly sigma_eff?: number;
 };
 
+/**
+ * Every verdict this ladder can reach. Narrowed to a union rather than left
+ * as a bare string so that a reader on the APPLY side can carry the verdict
+ * this module reached straight into its own archived outcome, instead of
+ * writing the token itself: the whole-source examination in
+ * src/learning/declarations.ts privileges this module's basename and no
+ * other, so a carried token is the only way a second module can name a gate
+ * without becoming a marking site.
+ */
+export type GateReason = "n_lt_10" | "reporters_lt_5" | "not_significant" | "applied";
+
 /** The gate's verdict: whether the key may be marked applied, and why (or why not). */
 export type GateVerdict = {
   readonly applied: boolean;
-  readonly reason: string;
+  readonly reason: GateReason;
   readonly se: number;
 };
 

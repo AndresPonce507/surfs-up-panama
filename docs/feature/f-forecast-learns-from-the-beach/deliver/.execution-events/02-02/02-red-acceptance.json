@@ -1,0 +1,7 @@
+{
+  "sid": "02-02",
+  "p": "RED_ACCEPTANCE",
+  "s": "EXECUTED",
+  "d": "PASS: the acceptance file was inherited uncommitted from a stalled prior agent. Judged well-formed and faithful to the authored .feature, with one bug: a three-argument memberHBias call against the two-argument port 05 section 5 declares, which tsc rejected with TS2554 and which vitest would never have caught because esbuild does not typecheck. The unused third argument was removed rather than widening the shipped signature, and one anti-vacuity guard was added. With the shipped inert stub in place, 3 of 4 examples then failed on real AssertionErrors naming the gate that was not reported (expected n_lt_10, not_significant and applied; it said no_file each time); 0 collection errors; typecheck clean, so the red was behavioural rather than a compile artefact. The fourth example, the no-file launch identity, passed against the stub and is the preserved fence.",
+  "t": "2026-08-11T23:55:00Z"
+}

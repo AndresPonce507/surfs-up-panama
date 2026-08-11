@@ -666,6 +666,34 @@
       "s": "EXECUTED",
       "d": "PASS: production step committed as 70feeb6 (feat(learning): read the correction file without ever taking a build down)",
       "t": "2026-08-11T19:44:00Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified declared dependency 02-01 is genuinely sealed rather than merely committed. Ran the full suite on the tree as inherited: 80 files / 400 tests green, tsc --noEmit exit 0, matching 02-01's own recorded figures. Then re-ran one of 02-01's two claimed falsifiability mutations first-hand (units pin disabled in load-correction.ts): the foreign-unit example failed semantically on 'a file the reader cannot make sense of must yield no correction at all', exactly as its contract records. Reverted; git diff --stat over src was empty. 02-01 stands. Also read the AUTHORED cucumber scenarios for slice-02 off recover/learning-build (git show f07943d) rather than trusting the inherited Vitest file to be faithful to them, and confirmed both forged scenarios there assert that the waves AND score stay at day zero, which is the whole-record verdict this step encodes.",
+      "t": "2026-08-11T23:55:00Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: the acceptance file was inherited uncommitted from a stalled prior agent. Judged well-formed and faithful to the authored .feature, with one bug: a three-argument memberHBias call against the two-argument port 05 section 5 declares, which tsc rejected with TS2554 and which vitest would never have caught because esbuild does not typecheck. The unused third argument was removed rather than widening the shipped signature, and one anti-vacuity guard was added. With the shipped inert stub in place, 3 of 4 examples then failed on real AssertionErrors naming the gate that was not reported (expected n_lt_10, not_significant and applied; it said no_file each time); 0 collection errors; typecheck clean, so the red was behavioural rather than a compile artefact. The fourth example, the no-file launch identity, passed against the stub and is the preserved fence.",
+      "t": "2026-08-11T23:55:00Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: four fast-check laws written over generated records, with each key's stored applied boolean drawn INDEPENDENTLY of the evidence beside it, which is exactly the shape a forged or stale file has. Two failed against the stub with shrunk counterexamples ('a stored difference of 4.419417382415922 display points must move the score by -0.01 ... it moved 0'; 'ecmwf_wam at lead_24_48 must be corrected by the metres stored at its OWN key (-0.12828539611796372)'). The other two are one-directional safety laws that an inert stub satisfies by moving nothing; recorded as such rather than claimed as drivers, since they acquire their force only once the body moves numbers.",
+      "t": "2026-08-11T23:55:00Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the ladder is re-run from the record's own stated evidence by calling gateCorrection rather than restating it, so apply and fit cannot drift apart, and the record's stored verdict is never read at all. The gate token is CARRIED out of gates.ts (GateVerdict.reason narrowed from string to a GateReason union) so engine.ts never constructs the literal that declarations.ts forbids outside the gate module; the whole-source examination reports zero violations. Score move is MINUS b/100 saturated at the record's own clamp.max_abs_score; height is per (source, lead bucket) with its own re-check; the 0.40-of-member-height clamp is deferred with its reason recorded, because the port carries no member height and the only call site that knows it is build.ts, owned by a concurrent lane. Full vitest 409/409 across 82 files at --maxWorkers=4 (up from 400/80), tsc --noEmit exit 0, npm run build exit 0 with 105 pages under every page-weight ceiling. Post-GREEN wiring check: src/scoring/engine.ts and src/learning/gates.ts are both in the diff, so this is not fixture theatre; src/pipeline/build.ts is NOT in the diff. Falsifiability proven by three reverted mutations (trust the stored flag; flip the score sign; drop the record's own clamp), each failing semantically. UI checks N/A: non-visual step, and build.ts still hands applyCorrection a literal null, so no published byte can move on this step at all.",
+      "t": "2026-08-11T23:55:00Z"
     }
   ]
 }
