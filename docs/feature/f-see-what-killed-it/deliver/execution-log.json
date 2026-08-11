@@ -855,6 +855,48 @@
       "s": "EXECUTED",
       "d": "PASS: Historical commit-identity reconciliation. Original recorded commit b68d18a80119db187478419be8cbacbab080e139 was superseded by reachable rebased equivalent 3be5aebdf287755b1a77befbb8c53994bf88ae37 at current HEAD; same Step-Id 03-05 subject and body. Prior row preserved.",
       "t": "2026-08-11T12:17:55Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: Forward-only identity correction. Metadata bridge 8e3398c99237d75eb9535098ac7c196bd4d8a005 carries parseable Step-ID: 03-01 and attests reachable implementation f0265126f01a113dbae2fa8289fc1993ad3736ad. This supersedes the prior row only as the auditable step identity; historical rows remain preserved.",
+      "t": "2026-08-11T12:20:43Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: Forward-only identity correction. Metadata bridge 8879ff83cbdccf50486b00d5017b3d77b4f6abdd carries parseable Step-ID: 03-02 and attests reachable implementation d20e9c8b742730cff76b9766c7000be9734d8171. This supersedes the prior row only as the auditable step identity; historical rows remain preserved.",
+      "t": "2026-08-11T12:20:43Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: Forward-only identity correction. Metadata bridge cc6f7b94833500f1f9373cff5b85f2546e8cba60 carries parseable Step-ID: 03-03 and attests reachable implementation 1a7cce25100944e087e25e84f675b6738df3d790. This supersedes the prior row only as the auditable step identity; historical rows remain preserved.",
+      "t": "2026-08-11T12:20:43Z"
+    },
+    {
+      "sid": "03-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: Forward-only identity correction. Metadata bridge 642e0e9c5ecfdc9aa0717b4c8de19c012d592e78 carries parseable Step-ID: 03-04 and attests reachable implementation a428388b18c258aac1f263b16f27f7f07c509101. This supersedes the prior row only as the auditable step identity; historical rows remain preserved.",
+      "t": "2026-08-11T12:20:43Z"
+    },
+    {
+      "sid": "03-05",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: Forward-only identity correction. Metadata bridge 712f45da211554932126cfefb841f75dcc85232a carries parseable Step-ID: 03-05 and attests reachable implementation 3be5aebdf287755b1a77befbb8c53994bf88ae37. This supersedes the prior row only as the auditable step identity; historical rows remain preserved.",
+      "t": "2026-08-11T12:20:43Z"
+    },
+    {
+      "sid": "03-06",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: Forward-only identity correction. Metadata bridge 4e227864c1ecbaf605d3df333959c068aafb7355 carries parseable Step-ID: 03-06 and attests reachable implementation 3f0d1ae6d196843bfa1219616d27ec8d7d110f8b. This supersedes the prior row only as the auditable step identity; historical rows remain preserved.",
+      "t": "2026-08-11T12:20:43Z"
     }
   ]
 }
