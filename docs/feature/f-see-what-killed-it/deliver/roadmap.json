@@ -406,9 +406,13 @@
           "files_to_modify": [
             "src/publish/display-format.ts",
             "src/components/WeakestLink.astro",
-            "tests/unit/published-display-format.test.ts"
+            "tests/unit/published-display-format.test.ts",
+            "tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature",
+            "tests/acceptance/f-see-what-killed-it/steps/weakest-link-callout.steps.ts",
+            "tests/acceptance/f-see-what-killed-it/fixtures/slice-01-weakest-link-profiles.json",
+            "docs/product/expectations/f-see-what-killed-it/a-surfer-taps-una-playa-y-lee-el-factor-publicado-con-su-valor.md"
           ],
-          "implementation_notes": "EXEMPT FROM PARADIGM for the markup edit: the existing component is publish-time static composition; compensate with properties in the formatter and reader plus future built-surface acceptance checks. Create the stated expectation charter only when Slice-02 enters JIT DISTILL, then run U1-U7 and a fresh U8 examiner before COMMIT. Do not change SpotDetail.astro: Slice-01 already owns the sole mount."
+          "implementation_notes": "EXEMPT FROM PARADIGM for the markup edit: the existing component is publish-time static composition; compensate with properties in the formatter and reader plus the JIT built-surface contract now bound at tests/acceptance/f-see-what-killed-it/lo-que-lo-tumba.feature. The source-blind charter lives at the stated path. Its two real-I/O Chromium examples carry @slice-02 plus @ui-u1 through @ui-u7, drive the copied production build over emitted dist and HTTP, and check the published 0.18 today / 0.62 tomorrow pairing before the existing real-backdrop visual audit. The fixture plants only row-shaped input, never rendered text. Future Slice-02 negative breadth remains 02-05; do not pre-author Slice-03 counterfactual or Slice-04 disclosure. A fresh U8 examiner result is still required before a production commit. Do not change SpotDetail.astro: Slice-01 already owns the sole mount."
         },
         {
           "id": "02-05",
@@ -441,7 +445,7 @@
             "tests/acceptance/f-see-what-killed-it/steps/weakest-link-callout.steps.ts",
             "tests/acceptance/f-see-what-killed-it/fixtures/slice-02-weakest-link-subscores.json"
           ],
-          "implementation_notes": "JIT DISTILL ONLY: do not author these test files while mapping. On legal entry, add five example-based real-I/O scenarios from slice-02-contract.md, run the explicit RED classification, and leave every Slice-01 test and evidence unchanged. The two browser negative cases make the missing field and false-minimum failures falsifiable."
+          "implementation_notes": "JIT DISTILL FOLLOW-UP: 02-04 now owns the positive two-day formatter scenario and its U1-U7 tags. This step retains the four additional example-based real-I/O cases from slice-02-contract.md: anti-minimum, legacy named row, clean row, and the broader quality/degrade sweep. Add them only when 02-05 opens, record the explicit RED classification, and leave Slice-01 evidence unchanged. The two browser negative cases make the missing field and false-minimum failures falsifiable."
         }
       ]
     },
