@@ -491,6 +491,34 @@
       "s": "EXECUTED",
       "d": "PASS: approved acceptance-evidence slice committed as 0f0310ba3e3e2cac2d6a958ecf8f456e8deebb07 (test(learning): prove a forecast-less morning skips the score)",
       "t": "2026-08-11T18:02:59Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified 01-14 is sealed, no competing Learning writer owns fit.ts or correction-file.ts, and the shipped emitter already forms no wind residual and stamps only the injected clock",
+      "t": "2026-08-11T18:07:24Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: a controlled wind_bias emitted from the reported wind word fails the prefix byte-identity oracle, and a hardcoded computed_at literal fails the clock-provenance oracle. Inherited production itself is already green; no production red is claimed.",
+      "t": "2026-08-11T18:07:24Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: added a fast-check law over buildCorrectionRecords requiring identical serialised records under any wind rotation and on re-emission, which fails under the same wind_bias mutation with 'rotating the wind word must leave every emitted byte identical'",
+      "t": "2026-08-11T18:07:24Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: 20 generated wind rotations leave the whole corrections prefix byte-identical, no stored body matches /wind/i, and computed_at tracks the injected clock across two different clocks; focused acceptance/unit 7/7 passes with no production edit. Full vitest 384/384 across 74 files, typecheck and build pass. UI checks N/A: non-visual step, the observable is stored bytes.",
+      "t": "2026-08-11T18:07:24Z"
     }
   ]
 }
