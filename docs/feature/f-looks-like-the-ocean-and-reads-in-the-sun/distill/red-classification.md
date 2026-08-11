@@ -108,3 +108,27 @@ The 04-01 steps typecheck, all three scenarios bind, and the real target run is 
 intended document drift. It does not modify the blocked Slice-02/02-02 work or any completed
 Slice-03 evidence. The later browser-wide gate and mutated-build proof remain unarmed 04-02 and
 04-03 work, respectively.
+
+## Slice-05 / 05-01 commands observed
+
+```sh
+npm run typecheck
+npm run test:at -- --dry-run --tags '@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05'
+npm run test:at -- --tags '@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-01'
+npm run test:at -- --tags '@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-02'
+npm run test:at -- --tags '@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-05 and @step-05-03'
+```
+
+## Slice-05 / 05-01 classification
+
+| Scenario group | Observable exercised | Classification | Evidence |
+|---|---|---|---|
+| Length-only score bars on today and tomorrow | Production `npm run build`, emitted `/` and `/manana.html`, Chromium at 390px in clear and dark themes | `MISSING_FUNCTIONALITY` | The real build, preview, browser, both routes, both themes, and all 40 ranked rows complete before the first business assertion. It fails only because each row reports `no tiene una barra completa`; no import, fixture, build, browser, preview, route, or data-order failure occurs. |
+| Confidence shape plus word | Same rendered rows and production component contract | `MISSING_FUNCTIONALITY` | The real built routes, both themes, and all 40 ranked rows complete before the business assertion. Each row then reports `no conserva palabra y puntos` because the current emitted confidence disclosure has its word but no settled `.dots` shape. |
+| Full colour-independent reading pass | Same production build and browser surface, then an emitted-page grayscale and zero-saturation pass | `MISSING_FUNCTIONALITY` | The executed terminal scenario reaches the production build and browser surface, then fails at the first missing-bar assertion. Its post-GREEN path removes hue from the emitted page and compares the remaining visible bar lengths, words, and points rather than claiming colour safety from source text. |
+
+The Slice-05 feature file binds five scenarios and 80 steps, including two contained rendered-surface
+regressions that reject a removed bar or removed confidence points. `npm run typecheck` passes and the
+dry run discovers all bindings. The executed 05-01 run is a right-reason RED: it reaches the
+production-built surface and fails at the observable absence of the requested bar, not test setup.
+The charter's U8 session log is intentionally unsealed until a post-GREEN source-blind examination.

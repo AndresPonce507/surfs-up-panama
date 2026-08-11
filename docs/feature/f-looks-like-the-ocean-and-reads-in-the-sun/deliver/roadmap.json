@@ -446,7 +446,7 @@
             "The bar is non-text UI and clears 3:1 against --sunken in both themes, reusing --ink-2 and --danger exactly as recipes.css already specifies."
           ],
           "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/score-bar-and-confidence-shape.feature",
-          "scenario_name": "84 y 6 se ven distintos de un vistazo, con una barra que mide solo por longitud",
+          "scenario_name": "Cada puntaje conserva su lugar y gana una barra proporcional, sin otro significado de color",
           "slice_id": "slice-05",
           "surface_classification": "user-visible",
           "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/a-surfer-reads-the-ranking-at-a-glance-84-and-6-look-different-and-confidence-is-legible-without-.md",
@@ -479,7 +479,7 @@
             "Confidence.astro's public contract (a single `level` prop) is unchanged, since another feature's slice imports this component unmodified."
           ],
           "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/score-bar-and-confidence-shape.feature",
-          "scenario_name": "La confianza se lee por forma y palabra, nunca solo por color",
+          "scenario_name": "La confianza conserva su palabra y suma puntos que se entienden sin color",
           "slice_id": "slice-05",
           "surface_classification": "user-visible",
           "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/a-surfer-reads-the-ranking-at-a-glance-84-and-6-look-different-and-confidence-is-legible-without-.md",
@@ -508,11 +508,11 @@
           "criteria": [
             "The full slice-05 tag run passes with a real exit code zero, captured by redirect and status read, never through a pipeline.",
             "The score bar and the confidence shape are both provably readable with a colour-vision simulation applied (no information is lost when hue is removed).",
-            "npm run build succeeds with the page-weight gate green; the two-element addition measures close to the ~230 B gz feature-delta.md recorded.",
-            "score_q, rank order and every confidence level's underlying reason are byte-identical to before this slice; only presentation changed."
+            "npm run build succeeds with the page-weight gate green.",
+            "score_q, rank order and every confidence level are unchanged; only presentation changed."
           ],
           "test_file": "tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/score-bar-and-confidence-shape.feature",
-          "scenario_name": "84 y 6 se ven distintos de un vistazo, con una barra que mide solo por longitud",
+          "scenario_name": "El recorrido completo mantiene la historia de los puntajes aun cuando el color no ayuda",
           "slice_id": "slice-05",
           "surface_classification": "user-visible",
           "charter_path": "docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/a-surfer-reads-the-ranking-at-a-glance-84-and-6-look-different-and-confidence-is-legible-without-.md",

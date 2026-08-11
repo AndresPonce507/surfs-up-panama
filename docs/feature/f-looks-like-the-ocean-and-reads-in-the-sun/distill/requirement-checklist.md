@@ -105,13 +105,36 @@ manufacturing markup or treating the absent control as current user functionalit
 | U7 named tokens | The emitted home mechanism and its sources prove named colour, spacing, radius, elevation and motion tokens; the local CI acceptance and build path discovers this contract. |
 | U8 charter | `docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/the-contrast-table-in-the-design-system-says-what-the-code-actually-does-and-ci-refuses-a-build-t.md` supplies the source-blind observation and explicit stale-record failure. |
 
+## Slice-05 / contract coverage
+
+| Requirement | Scenario / driving surface | Evidence shape |
+|---|---|---|
+| Every visible score gains a length-only bar without changing forecast facts | `Cada puntaje conserva su lugar y gana una barra proporcional...` / production `npm run build`, then emitted `/` and `/manana.html` through Chromium | The browser compares every rendered score and its descending order to the published surface, requires one complete bar per row, measures each fill against its own score, and rejects a second bar colour vocabulary. |
+| Every visible confidence level keeps its word and gains the settled filled/empty-point shape | `La confianza conserva su palabra y suma puntos...` / same production-built routes | The browser observes every rendered confidence disclosure, checks its published level, full Spanish word, settled point shape, shared colour, touch size, reduced-motion behaviour, and contrast against the painted reading backdrop. |
+| The presentation change preserves phone reading and the named design system | all Slice-05 scenarios / real built routes at 390px in light and dark themes | The browser rejects overflow, a busy page, moving new elements, weak bar contrast, missing named measures, and a missing visible bar or confidence point. |
+| Source-blind U8 observation | `a-surfer-reads-the-ranking-at-a-glance-84-and-6-look-different-and-confidence-is-legible-without-.md` | The charter carries the exact three roadmap observations for 05-01 through 05-03. It intentionally awaits a post-GREEN human observation rather than inventing a visual verdict in DISTILL. |
+
+## Slice-05 / UI mandate coverage
+
+| Mandate | Executable evidence |
+|---|---|
+| U1 contrast | The real browser measures every score-bar fill against its rendered track at the 3:1 non-text floor, and keeps visible confidence word and point colours aligned. |
+| U2 small viewport | Both emitted ranking routes reject horizontal overflow at 390px in light and dark themes. |
+| U3 touch | Score bars and points add no action; every existing confidence disclosure still measures at least 44 by 44px. |
+| U4 motion | With reduced motion emulated, new fills and confidence points declare neither transition nor animation. |
+| U5 states | Both static reading routes must arrive complete with all published rows and no busy state. |
+| U6 type rhythm | The emitted routes must resolve the named caption, spacing, and radius measures that keep scores and confidence in the existing reading rhythm. |
+| U7 named tokens | The emitted ranking routes must resolve the product's named spacing, radius, type, secondary-ink, and sunken-surface measures. |
+| U8 charter | The source-blind charter names the three required observations. Its append-only session log remains empty until a post-GREEN examiner can observe the finished surface. |
+
 ## Deferred inventory, not authored
 
 | Slice | Build map | Charter | Acceptance suite | Status |
 |---|---|---|---|---|
 | slice-03 | Existing roadmap rows 03-01..03-03 | 03-01, 03-02 and 03-03 present | 03-01 green; 03-02 depends on its recorded product fix; 03-03 terminal sweep armed | 03-03 is a contract-only terminal sweep; it changes no product source. |
 | slice-04 | Existing roadmap row 04-01 mapped to `@slice-04 @step-04-01`; 04-02..04-03 remain unarmed | 04-01 present | `contrast-gate-drift.feature` and matching steps present, deliberately RED until §3 is rewritten | 04-01 is contract-only and owns no product source; it preserves the blocked 02-02 and completed Slice-03 evidence. |
-| slice-05 | Existing roadmap rows 05-01..05-03 | Present | Missing | JIT DISTILL has not opened it. |
+| slice-05 | Existing roadmap rows 05-01..05-03, corrected to the current published 70-to-0 spread | Present | `score-bar-and-confidence-shape.feature` with matching TypeScript steps | Armed RED: all three step tags bind; 05-01 reaches the real built home and Mañana surfaces before failing only on the missing score bars. |
 
-No future-slice feature file, charter, or step definition was created in this turn. The new
-Slice-03 contract covers only the dependency-ready 03-01 and 03-02 route groups.
+No further future-slice feature file, charter, or step definition was created in this turn. The
+new Slice-05 contract covers only the dependency-ready ranking routes and leaves other feature
+slices unchanged.
