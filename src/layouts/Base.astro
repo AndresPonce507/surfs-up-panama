@@ -72,7 +72,10 @@ const inlineCss = minify(`${tokens}\n${base}\n${components}`);
   <body>
     <slot />
     <script>
-      if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js');
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js');
+        window.addEventListener('online', () => navigator.serviceWorker.controller?.postMessage({ type: 'flush-report-queue' }));
+      }
     </script>
   </body>
 </html>
