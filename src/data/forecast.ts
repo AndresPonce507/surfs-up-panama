@@ -28,8 +28,8 @@ export interface DaySummary {
   readonly spot_id: string;
   /** Published score: an integer 0 to 100, rendered as-is, never rescaled. */
   readonly score_q: number;
-  /** The Spanish call text rendered into the static reading surface. */
-  readonly call: Partial<Record<Locale, string>>;
+  /** Producer-composed call text. Pages select a locale and never compose it. */
+  readonly call: Record<Locale, string>;
   /** Structured publish fields let the reading surface repeat the call without
    * trusting a free-form narrative. Render them through
    * `src/publish/display-format.ts`; never format a size or a window inline. */
@@ -61,12 +61,12 @@ function summaries(calls: readonly SurfaceCall[]): readonly DaySummary[] {
   return calls.map((call) => ({
   spot_id: call.spot_id,
   score_q: call.score_q,
-  call: { es: call.call_es },
+  call: { es: call.call_es, en: call.call_en },
   ...(call.size_band === undefined ? {} : { size_band: call.size_band }),
   ...(call.size_range_m === undefined ? {} : { size_range_m: call.size_range_m }),
-  ...(call.wind_state === undefined ? {} : { wind_state: call.wind_state }),
-  ...(call.best_window === undefined ? {} : { best_window: call.best_window }),
-  ...(call.conf_level === undefined ? {} : { conf_level: call.conf_level }),
+  ...(call.wind_state === null ? {} : { wind_state: call.wind_state }),
+  ...(call.best_window === null ? {} : { best_window: call.best_window }),
+  conf_level: call.conf_level,
   }));
 }
 

@@ -144,8 +144,8 @@ describe('a missing wind observation is never published as the best-case reading
 
           assert.equal(
             todaySurfaceCall.wind_state,
-            undefined,
-            `A null wind observation must never publish a structured wind token (never a fabricated "clean"). Got ${JSON.stringify(todaySurfaceCall.wind_state)}.`,
+            null,
+            `A null wind observation must publish the honest structured null, never a fabricated "clean" or an ambiguous omitted fact. Got ${JSON.stringify(todaySurfaceCall.wind_state)}.`,
           );
           assert.equal(
             todayReceiptRow.wind_state,
@@ -160,6 +160,11 @@ describe('a missing wind observation is never published as the best-case reading
           assert.ok(
             callEs.includes('sin datos'),
             `The baked call sentence must state the absence honestly. Got: ${callEs}`,
+          );
+          const callEn = todaySurfaceCall.call_en as string;
+          assert.ok(
+            callEn.includes('no wind data') && !callEn.includes('clean wind'),
+            `The English call must project the same null wind fact honestly. Got: ${callEn}`,
           );
         },
       ),

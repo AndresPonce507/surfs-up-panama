@@ -179,6 +179,17 @@ describe('published region bundle contract', () => {
           Object.hasOwn(spotDetail, String(summary.spot_id)),
           `Every ranked spot must resolve to one identity in spot_detail; ${String(summary.spot_id)} does not.`,
         );
+        const call = summary.call as Record<string, unknown>;
+        assert.deepEqual(
+          Object.keys(call).sort(),
+          ['en', 'es'],
+          `Day ${index} call for ${String(summary.spot_id)} must publish both locales from the same day summary.`,
+        );
+        assert.ok(
+          typeof call.es === 'string' && call.es.trim() !== ''
+            && typeof call.en === 'string' && call.en.trim() !== '',
+          `Day ${index} call for ${String(summary.spot_id)} must carry two non-empty producer-composed members.`,
+        );
       }
     }
 

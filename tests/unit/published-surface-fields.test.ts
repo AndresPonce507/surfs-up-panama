@@ -1,9 +1,9 @@
-// GUARD: every published call, on both days, must carry conf_level,
-// size_band, size_range_m, wind_state and best_window. These five fields
-// are declared OPTIONAL on SurfaceCall (src/publish/static-surface.ts), so
-// `npm run typecheck` passes and every existing CI job stays green even
-// when they are silently missing on 19 of 20 spots per day — that gap is
-// exactly what shipped. This is the gate that would have caught it.
+// GUARD: every current published call, on both days, must carry conf_level,
+// size_band, size_range_m, wind_state and best_window. Wind/window may be the
+// explicit value null, which is an honest structured fact; omission is never
+// equivalent to null. SurfaceCall now requires the fields statically and its
+// runtime validator refuses omissions. This committed-artifact guard protects
+// the other end of the path so generated data cannot silently drift.
 //
 // Reads the COMMITTED file directly, never a freshly-built in-memory
 // bundle: a guard that only inspects runBuildOnce's own fixture output
@@ -38,6 +38,13 @@ function loadSurface(): StaticSurface {
 
 function fieldFindings(call: SurfaceCall, where: string): string[] {
   const findings: string[] = [];
+  const bilingualCall = call as SurfaceCall & { readonly call_en?: string };
+  if (typeof call.call_es !== 'string' || call.call_es.trim() === '') {
+    findings.push(`${where} ${call.spot_id}: call_es missing or empty`);
+  }
+  if (typeof bilingualCall.call_en !== 'string' || bilingualCall.call_en.trim() === '') {
+    findings.push(`${where} ${call.spot_id}: call_en missing or empty`);
+  }
   if (!['low', 'medium', 'high'].includes(String(call.conf_level))) {
     findings.push(`${where} ${call.spot_id}: conf_level is ${JSON.stringify(call.conf_level)}, not one of low/medium/high`);
   }
@@ -47,11 +54,12 @@ function fieldFindings(call: SurfaceCall, where: string): string[] {
   if (!Array.isArray(call.size_range_m) || call.size_range_m.length !== 2 || !call.size_range_m.every((n) => typeof n === 'number' && Number.isFinite(n))) {
     findings.push(`${where} ${call.spot_id}: size_range_m missing or malformed`);
   }
-  if (!['clean', 'choppy', 'blown_out'].includes(String(call.wind_state))) {
-    findings.push(`${where} ${call.spot_id}: wind_state is ${JSON.stringify(call.wind_state)}, not one of clean/choppy/blown_out`);
+  if (call.wind_state !== null && !['clean', 'choppy', 'blown_out'].includes(String(call.wind_state))) {
+    findings.push(`${where} ${call.spot_id}: wind_state is ${JSON.stringify(call.wind_state)}, not null or one of clean/choppy/blown_out`);
   }
-  if (!/^\d{2}:\d{2}$/.test(call.best_window?.start ?? '') || !/^\d{2}:\d{2}$/.test(call.best_window?.end ?? '')) {
-    findings.push(`${where} ${call.spot_id}: best_window missing or malformed`);
+  if (call.best_window !== null
+    && (!/^\d{2}:\d{2}$/.test(call.best_window?.start ?? '') || !/^\d{2}:\d{2}$/.test(call.best_window?.end ?? ''))) {
+    findings.push(`${where} ${call.spot_id}: best_window is neither null nor a valid local-time pair`);
   }
   return findings;
 }
@@ -69,7 +77,7 @@ function fieldFindings(call: SurfaceCall, where: string): string[] {
 //   npm run pipeline:build -- --at 2026-08-09T11:22:00Z
 //   npm run publish:surface -- --input .pipeline-out/pub/v1/regions/pa-pacific/bundle.json
 // and this guard is unskipped and green against it.
-describe('published surface: every spot, both days, carries the five structured fields', () => {
+describe('published surface: every spot, both days, carries both calls and the five structured fields', () => {
   it('has no gaps in current.days[0], current.days[1], or current.calls', () => {
     const surface = loadSurface();
 

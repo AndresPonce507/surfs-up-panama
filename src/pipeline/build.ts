@@ -16,6 +16,7 @@ import type { BuildDeps, BuildOutcome } from './ports';
 import { confidence } from '../scoring/confidence';
 import { loadLaunchSpotSeeds } from '../data/launch-spots';
 import { sizeBands, type SizeBandToken } from '../data/size-bands';
+import { composeDailyCall } from '../publish/daily-call';
 import type {
   BundleDay,
   BundleDaySummary,
@@ -259,7 +260,10 @@ function daySummary(call: CallRow): BundleDaySummary {
     spot_id: call.spot_id,
     score_q: call.score_q,
     conf_level: call.conf_level,
-    call: { es: spanishCall(call) },
+    call: {
+      es: composeDailyCall('es', call),
+      en: composeDailyCall('en', call),
+    },
     size_band: call.size_band,
     size_range_m: call.size_range_m,
     wind_state: call.wind_state,
@@ -272,26 +276,17 @@ function surfaceCall(call: CallRow): SurfaceCall {
   return {
     spot_id: call.spot_id,
     score_q: call.score_q,
-    call_es: spanishCall(call),
+    call_es: composeDailyCall('es', call),
+    call_en: composeDailyCall('en', call),
     conf_level: call.conf_level,
     size_band: call.size_band,
     size_range_m: call.size_range_m,
-    // wind_state and best_window are optional on the wire (SurfaceCall),
-    // never null: an unknown wind reading, or a day with no genuine peak,
-    // omits the field rather than publishing a null the reading routes
-    // don't expect and RankedList.astro already degrades gracefully around
-    // (application-architecture.md section 7: absent structured fields fall
-    // back to the baked call sentence, never a raw null).
-    ...(call.wind_state === null ? {} : { wind_state: call.wind_state }),
-    ...(call.best_window === null ? {} : { best_window: call.best_window }),
+    // Current rows retain explicit nulls. Absence of a field is not evidence
+    // that the observation or peak was absent, and both locale calls must stay
+    // reproducible from this exact row without consulting a receipt.
+    wind_state: call.wind_state,
+    best_window: call.best_window,
   };
-}
-
-function spanishCall(call: CallRow): string {
-  const windowPhrase = call.best_window === null
-    ? 'sin ventana estimada'
-    : `mejor de ${call.best_window.start} a ${call.best_window.end}`;
-  return `${spanishSizeBand(call.size_band)}, viento ${spanishWind(call.wind_state)}, ${windowPhrase}.`;
 }
 
 function followingCivilDate(civilDate: string): string { const date = new Date(`${civilDate}T12:00:00Z`); date.setUTCDate(date.getUTCDate() + 1); return date.toISOString().slice(0, 10); }
@@ -426,22 +421,4 @@ function longestHighScoreRun(
     start: localHhmm(daylight[startIndex]!.validTs, timezone),
     end: localHhmm(daylight[endIndex]!.validTs, timezone),
   };
-}
-
-function spanishWind(windState: CallRow['wind_state']): string {
-  if (windState === null) return 'sin datos';
-  return ({ clean: 'limpio', choppy: 'picado', blown_out: 'destrozado' })[windState];
-}
-
-function spanishSizeBand(sizeBand: string): string {
-  const labels: Readonly<Record<string, string>> = {
-    flat: 'Plano',
-    ankle_knee: 'Tobillo a rodilla',
-    knee_waist: 'Rodilla a cintura',
-    waist_chest: 'Cintura a pecho',
-    chest_head: 'Pecho a cabeza',
-    head_overhead: 'Cabeza a un metro más',
-    double_overhead_plus: 'Doble o más',
-  };
-  return labels[sizeBand] ?? 'Condiciones variables';
 }

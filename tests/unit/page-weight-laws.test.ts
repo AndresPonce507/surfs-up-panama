@@ -155,6 +155,8 @@ describe('page-weight gate laws', () => {
         const { exitCode, output, measured } = await measure([
           { path: 'index.html' },
           { path: 'manana.html' },
+          { path: 'en.html' },
+          { path: 'en/tomorrow.html' },
           { path: `spots/${slug}.html` },
           { path: `spots/${slug}/ayer.html` },
           { path: `spots/${slug}/reportar.html` },
@@ -165,6 +167,8 @@ describe('page-weight gate laws', () => {
           measured.map((entry) => entry.route).sort(),
           [
             '/',
+            '/en/',
+            '/en/tomorrow',
             '/manana',
             `/spots/${slug}`,
             `/spots/${slug}/ayer`,

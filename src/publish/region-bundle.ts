@@ -44,7 +44,7 @@ export type BundleDaySummary = {
   /** Integer 0 to 100, published verbatim, never rescaled. */
   readonly score_q: number;
   readonly conf_level: ConfLevel;
-  readonly call: { readonly es: string };
+  readonly call: { readonly es: string; readonly en: string };
   readonly size_band: SizeBandToken;
   readonly size_range_m: SizeRangeM;
   /** null: wind was never observed this day, never fabricated as "clean" (05-scoring-engine.md section 3.6). */

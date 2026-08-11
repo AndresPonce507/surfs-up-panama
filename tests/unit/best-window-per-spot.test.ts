@@ -95,7 +95,7 @@ function seed(spot_id: string, name: string): SpotSeed {
  * makes the "one peak hour, every other hour zero" fixture exact by
  * construction, without needing to hand-replicate the scoring arithmetic.
  */
-function hourLines(spotId: string, utcHour: number, heightM: number): string {
+function hourLines(spotId: string, utcHour: number, heightM: number, windObserved = true): string {
   const validTs = `${TODAY}T${String(utcHour).padStart(2, '0')}:00Z`;
   return MEMBER_SOURCES.map((source) => JSON.stringify({
     spot_id: spotId,
@@ -106,8 +106,8 @@ function hourLines(spotId: string, utcHour: number, heightM: number): string {
     swell_h_m: heightM,
     swell_t_s: 15.5,
     swell_dir_deg: 204,
-    wind_speed_kt: 7,
-    wind_dir_deg: 40,
+    wind_speed_kt: windObserved ? 7 : null,
+    wind_dir_deg: windObserved ? 40 : null,
     tide_m: null,
     tide_day_low_m: null,
     tide_day_high_m: null,
@@ -124,7 +124,7 @@ function daySweepWithPeak(spotId: string, peakUtcHour: number): string {
 
 /** A full daylight sweep with no peak anywhere: every hour scores zero. */
 function flatDaySweep(spotId: string): string {
-  return DAYLIGHT_UTC_HOURS.map((hour) => hourLines(spotId, hour, 0)).join('\n');
+  return DAYLIGHT_UTC_HOURS.map((hour) => hourLines(spotId, hour, 0, false)).join('\n');
 }
 
 function tomorrowLine(spotId: string, heightM: number): string {
@@ -219,12 +219,17 @@ describe('best_window is derived from each spot\'s own hourly series', () => {
 
     assert.equal(
       venao.best_window,
-      undefined,
-      `A day whose every daylight hour scores zero has no genuine peak to build a window around (05-scoring-engine.md section 7: "null when max_q = 0"); the published surface must omit the field rather than invent a span. Got ${JSON.stringify(venao.best_window)}.`,
+      null,
+      `A day whose every daylight hour scores zero has no genuine peak to build a window around (05-scoring-engine.md section 7: "null when max_q = 0"); the published surface must retain that honest null rather than omit it or invent a span. Got ${JSON.stringify(venao.best_window)}.`,
     );
+    assert.equal(venao.wind_state, null, 'The same full-path fixture must retain its honest null wind fact.');
     assert.ok(
       !(venao.call_es as string).includes('mejor de'),
       'A day with no genuine window must not claim one in the baked call sentence.',
+    );
+    assert.ok(
+      (venao.call_en as string).includes('no wind data, no estimated window.'),
+      `The English call must compose both null facts from the same published row. Got ${String(venao.call_en)}.`,
     );
   });
 });

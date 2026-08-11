@@ -1,5 +1,5 @@
 import type { WindStateToken } from '../data/report-vocab';
-import type { SizeBandToken } from '../data/size-bands';
+import { sizeBands, type SizeBandToken } from '../data/size-bands';
 
 /** Spot-local `HH:MM` strings, precomputed at publish time; pages never compute them. */
 export type BestWindow = {
@@ -30,14 +30,22 @@ export type SurfaceCall = {
   readonly spot_id: string;
   readonly score_q: number;
   readonly call_es: string;
-  // Structured publish fields. Optional on this wire type because the surface
-  // committed for slice-01 predates them; the region bundle requires them.
-  readonly conf_level?: ConfLevel;
-  readonly size_band?: SizeBandToken;
-  readonly size_range_m?: SizeRangeM;
-  readonly wind_state?: WindState;
-  readonly best_window?: BestWindow;
+  readonly call_en: string;
+  readonly conf_level: ConfLevel;
+  readonly size_band: SizeBandToken;
+  readonly size_range_m: SizeRangeM;
+  /** null is an observed absence. Omission is invalid on a current row. */
+  readonly wind_state: WindState | null;
+  /** null means no genuine daylight peak. Omission is invalid on a current row. */
+  readonly best_window: BestWindow | null;
 };
+
+/**
+ * Receipts are immutable facts. Some predate the English current-publish
+ * contract, so absence of call_en is honest only at this historical boundary.
+ */
+export type DawnReceiptCall = Pick<SurfaceCall, 'spot_id' | 'score_q' | 'call_es'>
+  & Partial<Omit<SurfaceCall, 'spot_id' | 'score_q' | 'call_es'>>;
 
 export type PublishedSurfaceDay = {
   /** Panama civil date for this independently ranked list. */
@@ -65,7 +73,7 @@ export type DawnReceipt = {
   readonly surf_date: string;
   readonly published_at: string;
   readonly build_kind: 'dawn' | 'hourly';
-  readonly calls: readonly SurfaceCall[];
+  readonly calls: readonly DawnReceiptCall[];
 };
 
 export type StaticSurface = {
@@ -140,7 +148,26 @@ function isSurfaceCall(value: unknown): value is SurfaceCall {
   return isRecord(value)
     && typeof value.spot_id === 'string'
     && typeof value.score_q === 'number'
-    && typeof value.call_es === 'string';
+    && typeof value.call_es === 'string'
+    && value.call_es.trim() !== ''
+    && typeof value.call_en === 'string'
+    && value.call_en.trim() !== ''
+    && (value.conf_level === 'low' || value.conf_level === 'medium' || value.conf_level === 'high')
+    && typeof value.size_band === 'string'
+    && sizeBands.some((band) => band.value === value.size_band)
+    && Array.isArray(value.size_range_m)
+    && value.size_range_m.length === 2
+    && value.size_range_m.every((metres) => typeof metres === 'number' && Number.isFinite(metres))
+    && (value.wind_state === null || value.wind_state === 'clean' || value.wind_state === 'choppy' || value.wind_state === 'blown_out')
+    && (value.best_window === null || isBestWindow(value.best_window));
+}
+
+function isBestWindow(value: unknown): value is BestWindow {
+  return isRecord(value)
+    && typeof value.start === 'string'
+    && typeof value.end === 'string'
+    && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value.start)
+    && /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value.end);
 }
 
 function sameRankedCalls(left: readonly SurfaceCall[], right: readonly SurfaceCall[]): boolean {
@@ -149,7 +176,8 @@ function sameRankedCalls(left: readonly SurfaceCall[], right: readonly SurfaceCa
     return other !== undefined
       && call.spot_id === other.spot_id
       && call.score_q === other.score_q
-      && call.call_es === other.call_es;
+      && call.call_es === other.call_es
+      && call.call_en === other.call_en;
   });
 }
 

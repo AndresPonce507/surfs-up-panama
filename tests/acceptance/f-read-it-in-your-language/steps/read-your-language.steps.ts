@@ -22,6 +22,8 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve, sep } from 'node:path';
 
+import { region } from '../../../../src/data/region';
+
 interface ReadWorld {
   currentPath?: string;
   englishDocs?: string[];
@@ -90,6 +92,12 @@ function strippedText(html: string): string {
     .replace(/<style[\s\S]*?<\/style>/gi, ' ')
     .replace(/<[^>]+>/g, ' ')
     .replace(/\s+/g, ' ');
+}
+
+function translatedCopy(html: string): string {
+  let text = strippedText(html);
+  for (const spot of region.spots) text = text.replaceAll(spot.name, ' ');
+  return text;
 }
 
 const SEG_ES_TO_EN: Readonly<Record<string, string>> = {
@@ -242,7 +250,7 @@ Then('the visitor is reading tomorrow\'s ranking in English', function (this: Re
 });
 
 Then('every ranked row reads in English words', function (this: ReadWorld) {
-  const text = strippedText(readDoc(this.currentPath ?? '/en/tomorrow/', 'the rows just read'));
+  const text = translatedCopy(readDoc(this.currentPath ?? '/en/tomorrow/', 'the rows just read'));
   assert.ok(
     !SPANISH_DIACRITICS.test(text) && !SPANISH_SURFACE_WORDS.test(text),
     'WHAT: the English page renders Spanish words. WHY: partial translation is a failure state, not a milestone. HOW: every row string flows from the English copy tree.',
@@ -421,7 +429,7 @@ Then('no English page renders a bracketed placeholder', function (this: ReadWorl
 
 Then('no English page renders Spanish copy', function (this: ReadWorld) {
   for (const doc of this.englishDocs ?? englishDocsOrFail()) {
-    const text = strippedText(readFileSync(doc, 'utf8'));
+    const text = translatedCopy(readFileSync(doc, 'utf8'));
     assert.ok(
       !SPANISH_DIACRITICS.test(text) && !SPANISH_SURFACE_WORDS.test(text),
       `WHAT: the page at ${urlOf(doc)} renders Spanish copy. WHY: partial translation is a failure state. HOW: every visible string flows from the English copy tree.`,
