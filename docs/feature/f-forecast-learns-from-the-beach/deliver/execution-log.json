@@ -1149,6 +1149,13 @@
       "s": "EXECUTED",
       "d": "{\"focused_acceptance\":\"feature-qualified Slice-05: 7 scenarios/131 steps PASS\",\"learning_units\":\"13 files, 78 tests PASS\",\"typecheck\":\"PASS\",\"falsification\":\"changing the 60-percent boundary from >= to > made the acceptance scenario fail with flagged false; restored the inclusive threshold\",\"projection\":\"one deterministic row per applied spot correction, using its fullest stored key; metrics reads correction evidence but writes no correction\",\"test_budget\":\"2 behaviors x 2 = 4; 1 new property, within budget\",\"global_qualification\":\"npm run build remains blocked by the unrelated stale published surface dated 2026-08-09 versus Panama 2026-08-10; an unqualified @slice-05 command also includes an unrelated Daily Call scenario that correctly encounters that guard\",\"non_visual_rationale\":\"the alarm is operator-only metrics JSON and cannot trigger automatic behavior or any rendered change\"}",
       "t": "2026-08-11T02:43:00Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "{\"commit\":\"a3bc2c4\",\"message\":\"feat(learning): flag misconfigured shrinkage - step 05-05\",\"status\":\"scoped green; the operator alarm reads stored correction evidence and performs no automatic correction or scoring change\",\"commands\":{\"typecheck\":\"npm run typecheck PASS\",\"learning_units\":\"npx vitest run tests/unit/learning-*.test.ts: 13 files, 78 tests PASS\",\"feature_qualified_slice_05_acceptance\":\"npm run test:at -- --tags @feature-f-forecast-learns-from-the-beach and @slice-05: 7 scenarios, 131 steps PASS\",\"build\":\"qualified stale-surface refusal, unrelated to Learning\"},\"g7\":\"The established rolling-origin correction-kill behavior remained covered by the passing feature-qualified Slice-05 acceptance suite; this step only adds a read-only alarm projection.\"}",
+      "t": "2026-08-11T02:44:00Z"
     }
   ]
 }
