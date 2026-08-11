@@ -16,11 +16,22 @@ export interface StoredCredential {
 }
 
 export interface Receipt {
-  readonly outcome: 'no_snapshot' | 'queued_duplicate';
+  readonly outcome: 'compared' | 'no_snapshot' | 'queued_duplicate';
   readonly report_id: string;
-  readonly predicted: null;
+  readonly predicted: PredictedCall | null;
+  readonly delta?: { readonly score_points: number; readonly size_bands: number };
   readonly counter: { readonly n_reports: number; readonly threshold: number };
 }
+
+export interface PredictedCall {
+  readonly score_q: number;
+  readonly size_band: string;
+  readonly size_range_m: readonly [number, number];
+  readonly wind_state: string;
+  readonly conf_level: string;
+}
+
+export type ReportReveal = Omit<Receipt, 'report_id' | 'counter'>;
 
 type StoredReport = {
   readonly device_id: string;
@@ -56,6 +67,7 @@ export class LocalWriteStore {
     quotaLimit: number,
     receivedAt: string,
     credentialIssuedAt: string,
+    reveal: ReportReveal,
   ): Promise<StoredReportResult> {
     return this.withStoreLock(async () => {
       const reportPath = join(this.root, 'reports', `${record.report_id}.json`);
@@ -67,9 +79,8 @@ export class LocalWriteStore {
       if (quotaUsed >= quotaLimit) return { kind: 'quota_exceeded' };
       const counter = reports.filter((stored) => stored.record.spot_id === record.spot_id).length + 1;
       const receipt: Receipt = {
-        outcome: 'no_snapshot',
+        ...reveal,
         report_id: record.report_id,
-        predicted: null,
         counter: { n_reports: counter, threshold: 30 },
       };
       await writeJson(reportPath, {

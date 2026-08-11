@@ -7,7 +7,13 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { QUALITY_TOKENS, WIND_STATE_TOKENS, type QualityToken, type WindStateToken } from '../data/report-vocab';
 import { sizeBands, type SizeBandToken } from '../data/size-bands';
 import { SIZE_BAND_SCHEMA, type ReportRecord, type ReportTrigger } from './report-record';
-import { LocalWriteStore, type Receipt } from './local-write-store';
+import {
+  LocalWriteStore,
+  type Receipt,
+  type ReportReveal,
+  type StoredCredential,
+  type StoredReportResult,
+} from './local-write-store';
 
 const DEVICE_PATTERN = /^d_[0-9a-f]{32}$/;
 const ULID_PATTERN = /^[0-9A-HJKMNP-TV-Z]{26}$/;
@@ -50,10 +56,43 @@ export interface LocalWriteLambdaDependencies {
   readonly clock: () => Date;
 }
 
+/**
+ * The only durable capabilities the decision core needs.  The filesystem
+ * adapter backs local tests; the Lambda composition supplies DynamoDB.
+ */
+export interface WriteStore {
+  mintCredential(candidate: StoredCredential): Promise<StoredCredential>;
+  storeReport(
+    record: ReportRecord,
+    deviceId: string,
+    receivedDay: string,
+    quotaLimit: number,
+    receivedAt: string,
+    credentialIssuedAt: string,
+    reveal: ReportReveal,
+  ): Promise<StoredReportResult>;
+}
+
+export interface WriteLambdaDependencies {
+  readonly store: WriteStore;
+  readonly credentialSecret: string;
+  readonly knownSpotIds: readonly string[];
+  readonly clock: () => Date;
+  readonly resolveReveal?: (record: ReportRecord) => Promise<ReportReveal>;
+}
+
 /** Composes the two write-path operations with a real local durable store. */
 export function createLocalWriteLambda(dependencies: LocalWriteLambdaDependencies): LocalWriteLambda {
+  return createWriteLambda({
+    ...dependencies,
+    store: new LocalWriteStore(dependencies.storeRoot),
+  });
+}
+
+/** The report/mint decision core, composed with a deliberately narrow store. */
+export function createWriteLambda(dependencies: WriteLambdaDependencies): LocalWriteLambda {
   if (Buffer.byteLength(dependencies.credentialSecret, 'utf8') < 32) throw new Error('report write Lambda refused: credential secret must be at least 256 bits');
-  const store = new LocalWriteStore(dependencies.storeRoot);
+  const store = dependencies.store;
   const knownSpotIds = new Set(dependencies.knownSpotIds);
   return {
     async handle(request): Promise<LocalWriteResponse> {
@@ -61,7 +100,7 @@ export function createLocalWriteLambda(dependencies: LocalWriteLambdaDependencie
       if (!isJson(header(request.headers, 'content-type'))) return error(400, 'schema_invalid', 'El reporte debe enviarse como JSON.', 'El servidor necesita leer el registro con su formato acordado.', 'Envía el reporte con Content-Type application/json.');
       try {
         if (request.path === '/api/mint') return await mint(request, store, dependencies.credentialSecret, dependencies.clock);
-        return await submit(request, store, knownSpotIds, dependencies.credentialSecret, dependencies.clock);
+        return await submit(request, store, knownSpotIds, dependencies.credentialSecret, dependencies.clock, dependencies.resolveReveal ?? noSnapshot);
       } catch {
         return error(503, 'store_unavailable', 'No pudimos guardar el reporte ahora.', 'El almacenamiento local de escritura no está disponible.', 'Conserva el reporte y vuelve a intentar cuando el servicio responda.');
       }
@@ -71,7 +110,7 @@ export function createLocalWriteLambda(dependencies: LocalWriteLambdaDependencie
 
 async function mint(
   request: LocalWriteRequest,
-  store: LocalWriteStore,
+  store: WriteStore,
   secret: string,
   clock: () => Date,
 ): Promise<LocalWriteResponse> {
@@ -96,10 +135,11 @@ async function mint(
 
 async function submit(
   request: LocalWriteRequest,
-  store: LocalWriteStore,
+  store: WriteStore,
   knownSpotIds: ReadonlySet<string>,
   secret: string,
   clock: () => Date,
+  resolveReveal: (record: ReportRecord) => Promise<ReportReveal>,
 ): Promise<LocalWriteResponse> {
   if (Buffer.byteLength(request.body, 'utf8') > MAX_REPORT_BYTES) {
     return error(413, 'payload_too_large', 'El reporte es demasiado grande.', 'El servidor solo acepta el registro breve del surfista.', 'Quita datos adicionales y conserva solo las respuestas del reporte.');
@@ -126,11 +166,16 @@ async function submit(
     DAILY_REPORT_LIMIT,
     now.toISOString(),
     new Date(credential.issuedAtEpoch * 1000).toISOString(),
+    await resolveReveal(record),
   );
   if (result.kind === 'quota_exceeded') {
     return error(429, 'quota_exceeded', 'Este dispositivo ya llegó a su límite de hoy.', 'El límite diario protege los reportes de la comunidad.', 'Deja el reporte guardado y vuelve a intentar mañana.', { 'retry-after': secondsUntilNextUtcDay(now).toString() });
   }
   return ok(result.receipt);
+}
+
+async function noSnapshot(): Promise<ReportReveal> {
+  return { outcome: 'no_snapshot', predicted: null };
 }
 
 function parseBody(body: string, maximumBytes: number): Record<string, unknown> | null {
