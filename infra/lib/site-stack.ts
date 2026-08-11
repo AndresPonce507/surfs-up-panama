@@ -12,6 +12,7 @@ import { siteBucketName, siteOriginExportName } from './physical-names.js';
 export const predictionLogPrefix = 'predictions/';
 
 export const siteLifecycleDeclarations = [
+  { id: 'probe-expiration', prefix: 'probes/', expirationAfterDays: 1 },
   { id: 'raw-archive-expiration', prefix: 'raw/', expirationAfterDays: 30 },
   { id: 'photo-expiration', prefix: 'photos/', expirationAfterDays: 90 },
   { id: 'incomplete-multipart-abort', abortAfterDays: 7 },
@@ -41,6 +42,7 @@ export class SiteStack extends Stack {
       enforceSSL: true,
       removalPolicy: RemovalPolicy.RETAIN,
       lifecycleRules: [
+        { id: 'probe-expiration', prefix: 'probes/', expiration: Duration.days(1) },
         { id: 'raw-archive-expiration', prefix: 'raw/', expiration: Duration.days(30) },
         { id: 'photo-expiration', prefix: 'photos/', expiration: Duration.days(90) },
         { id: 'incomplete-multipart-abort', abortIncompleteMultipartUploadAfter: Duration.days(7) },
@@ -68,6 +70,7 @@ export class SiteStack extends Stack {
       maxTtl: Duration.days(1),
       enableAcceptEncodingGzip: true,
       enableAcceptEncodingBrotli: true,
+      queryStringBehavior: cloudfront.CacheQueryStringBehavior.all(),
     });
 
     // Security headers via the managed Response Headers Policy, NOT a

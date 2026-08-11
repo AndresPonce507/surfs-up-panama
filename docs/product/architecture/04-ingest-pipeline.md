@@ -82,9 +82,12 @@ only ever read it. Ordering per source, inside one fetch run (hourly at :17):
    (timeout, 5xx). Non-transient responses (4xx) are not retried: they are recorded as
    `provider_error` immediately since retrying a permission or contract failure only
    burns the time budget.
-4. **Durable side effect #1: PUT the verbatim payload batch to `raw/<provider>/dt=<date>/<HH>/`**,
+4. **Durable side effect #1: PUT the verbatim payload batch to `raw/<provider>/dt=<date>/<HH>/spot=<spot_id>/run=<capture_ts>/execution=<execution_id>.json.gz`**,
    before parsing. A parser crash after this point loses nothing: the hour is
-   reconstructible from `raw/` for 30 days.
+   reconstructible from `raw/` for 30 days. `capture_ts` is the received UTC
+   instant rendered `YYYY-MM-DDTHH-mm-ss.sssZ`, and `execution_id` is the
+   Scheduler/Lambda delivery identity; every raw body is actual gzip bytes,
+   never plaintext under a `.gz` suffix.
 5. ACL normalize: units (kt, m, degrees), UTC timestamps, schema validation, freshness
    probe (newest `valid_ts` in payload < 12 h old, System Architecture §10), and the
    land-mask translation: `H==0 && T==0 && dir==0` on a row becomes `land_masked: true`

@@ -16,7 +16,7 @@
 // so scoring's null-tide branch (sTide, confidence capped at 0.7) runs
 // honestly instead.
 
-import type { Clock, ForecastSource, MemberSeries, SourceFailure, SourceResult, TideHour, WindHour } from '../ports';
+import type { Clock, ForecastSource, MemberSeries, ReceivedSourcePayload, SourceResult, TideHour, WindHour } from '../ports';
 import type { SpotCoordinate } from './spot-coordinates';
 
 const WAVE_MODELS = ['ncep_gfswave016', 'ncep_gfswave025', 'meteofrance_wave', 'dwd_gwam'] as const;
@@ -24,6 +24,8 @@ type WaveModel = (typeof WAVE_MODELS)[number];
 
 const MARINE_ENDPOINT = 'https://marine-api.open-meteo.com/v1/marine';
 const WEATHER_ENDPOINT = 'https://api.open-meteo.com/v1/forecast';
+const REQUEST_TIMEOUT_MS = 10_000;
+const MAX_STALENESS_MS = 12 * 60 * 60 * 1000;
 
 /** Cycle schedule + conservative availability latency, from the source-by-source
  * table in 04-ingest-pipeline.md §2 and the unsure-items' stated defaults
@@ -38,6 +40,7 @@ const CYCLE_REGISTRY: Readonly<Record<WaveModel, { readonly cycleHoursUtc: reado
 type HourlyPayload = { readonly time: readonly string[] } & Readonly<Record<string, readonly (number | null)[]>>;
 
 export class OpenMeteoForecastSource implements ForecastSource {
+  private lastProviderDate: string | null = null;
   constructor(
     private readonly spotsById: ReadonlyMap<string, SpotCoordinate>,
     private readonly clock: Clock,
@@ -45,42 +48,75 @@ export class OpenMeteoForecastSource implements ForecastSource {
     private readonly forecastDays = 2,
   ) {}
 
-  async fetchWaveMembers(spot_id: string): Promise<SourceResult<MemberSeries[]>> {
+  async fetchWavePayload(spot_id: string): Promise<ReceivedSourcePayload> {
     const spot = this.requireSpot(spot_id);
-    const fetched = await this.get(marineUrl(spot, this.forecastDays));
-    if (!fetched.ok) return fetched;
+    return this.get(marineUrl(spot, this.forecastDays));
+  }
+
+  parseWaveMembers(verbatim: string): SourceResult<MemberSeries[]> {
     try {
-      const data = parseMarineResponse(JSON.parse(fetched.verbatim) as unknown, this.clock.now());
-      return { ok: true, verbatim: fetched.verbatim, data };
+      const data = parseMarineResponse(JSON.parse(verbatim) as unknown, this.clock.now());
+      return isFresh(data.flatMap((member) => member.hours.map((hour) => hour.valid_ts)), this.clock.now())
+        ? { ok: true, data }
+        : { ok: false, reason: 'stale' };
     } catch {
       return { ok: false, reason: 'malformed' };
     }
   }
 
-  async fetchWind(spot_id: string): Promise<SourceResult<WindHour[]>> {
+  async fetchWindPayload(spot_id: string): Promise<ReceivedSourcePayload> {
     const spot = this.requireSpot(spot_id);
-    const fetched = await this.get(windUrl(spot, this.forecastDays));
-    if (!fetched.ok) return fetched;
+    return this.get(windUrl(spot, this.forecastDays));
+  }
+
+  parseWind(verbatim: string): SourceResult<WindHour[]> {
     try {
-      const data = parseWindResponse(JSON.parse(fetched.verbatim) as unknown);
-      return { ok: true, verbatim: fetched.verbatim, data };
+      const data = parseWindResponse(JSON.parse(verbatim) as unknown);
+      return isFresh(data.map((hour) => hour.valid_ts), this.clock.now())
+        ? { ok: true, data }
+        : { ok: false, reason: 'stale' };
     } catch {
       return { ok: false, reason: 'malformed' };
     }
   }
 
-  fetchTide(_spot_id: string): Promise<SourceResult<TideHour[]>> {
+  fetchTidePayload(_spot_id: string): Promise<ReceivedSourcePayload> {
     return Promise.resolve({ ok: false, reason: 'dark' });
   }
 
-  private async get(url: string): Promise<{ ok: true; verbatim: string } | { ok: false; reason: SourceFailure }> {
-    try {
-      const response = await this.fetchImpl(url);
-      if (!response.ok) return { ok: false, reason: 'error' };
-      return { ok: true, verbatim: await response.text() };
-    } catch {
-      return { ok: false, reason: 'error' };
+  async probeClockSkew(): Promise<void> {
+    const firstSpot = this.spotsById.values().next().value as SpotCoordinate | undefined;
+    if (firstSpot === undefined) throw new Error('clock-skew probe has no spot coordinate');
+    const response = await this.get(marineUrl(firstSpot, 1));
+    if (!response.ok) throw new Error('clock-skew probe provider request failed');
+    const providerTime = this.lastProviderDate === null ? Number.NaN : Date.parse(this.lastProviderDate);
+    if (!Number.isFinite(providerTime) || Math.abs(providerTime - this.clock.now().getTime()) > 60_000) {
+      throw new Error('clock-skew probe exceeds 60 seconds or provider Date header is absent');
     }
+  }
+
+  parseTide(_verbatim: string): SourceResult<TideHour[]> {
+    return { ok: false, reason: 'dark' };
+  }
+
+  private async get(url: string): Promise<ReceivedSourcePayload> {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      try {
+        const response = await this.fetchImpl(url, { signal: controller.signal });
+        if (response.ok) {
+          this.lastProviderDate = response.headers.get('date');
+          return { ok: true, verbatim: await response.text() };
+        }
+        if (response.status < 500) return { ok: false, reason: 'error' };
+      } catch {
+        // One retry covers transport failures and the abort timeout.
+      } finally {
+        clearTimeout(timeout);
+      }
+    }
+    return { ok: false, reason: 'error' };
   }
 
   private requireSpot(spot_id: string): SpotCoordinate {
@@ -90,6 +126,11 @@ export class OpenMeteoForecastSource implements ForecastSource {
     }
     return spot;
   }
+}
+
+function isFresh(timestamps: readonly string[], now: Date): boolean {
+  const newest = Math.max(...timestamps.map((timestamp) => Date.parse(timestamp)));
+  return Number.isFinite(newest) && newest >= now.getTime() - MAX_STALENESS_MS;
 }
 
 export function parseMarineResponse(payload: unknown, capturedAt: Date): MemberSeries[] {

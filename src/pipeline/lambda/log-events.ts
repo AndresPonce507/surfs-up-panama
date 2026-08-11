@@ -1,0 +1,65 @@
+// Pure mapping from pipeline outcomes to the exact structured log lines the
+// already-deployed dead-man alarm chain watches. infra/lib/ingest-stack.ts's
+// three MetricFilters match `$.event` against these three literal strings;
+// import the constants from here on both sides so the strings can never
+// silently drift apart.
+//
+// The one rule the whole product rests on: never claim more than the data
+// earned. `IngestOutcome.completed` alone is not honest proof of success --
+// it stays `true` even when the source loop ran to the end with every
+// provider failing and zero predictions written (runIngestOnce hardcodes it;
+// see src/pipeline/ingest.ts). So the success gate requires either a
+// confirmed durable prediction write or an exact persisted-series match that
+// deliberately made no prediction PUT. The latter is separately logged and
+// never masquerades as a synthetic prediction receipt.
+
+import type { BuildOutcome, IngestOutcome } from '../ports';
+
+export const INGEST_SUCCESS_EVENT = 'ingest.success';
+export const PROVIDER_ERROR_EVENT = 'provider.error';
+export const BUILD_SUCCESS_EVENT = 'build.success';
+/** Informational only: no metric filter watches this. Lets a human read why
+ * an hourly build cycle produced no new page without paging anyone. */
+export const BUILD_REFUSED_EVENT = 'build.refused';
+export const STARTUP_REFUSED_EVENT = 'health.startup.refused';
+export const CYCLE_FROZEN_EVENT = 'health.provider.cycle_frozen';
+export const UNCHANGED_CYCLE_EVENT = 'ingest.cycle_unchanged';
+
+export type LogLine = Readonly<Record<string, unknown>>;
+
+const DURABLE_WRITE_EVENT_TYPES: ReadonlySet<string> = new Set(['prediction_created', 'prediction_duplicate']);
+const SUCCESSFUL_CYCLE_EVENT_TYPES: ReadonlySet<string> = new Set([...DURABLE_WRITE_EVENT_TYPES, 'cycle_unchanged']);
+
+export function deriveIngestLogLines(outcome: IngestOutcome): readonly LogLine[] {
+  const providerErrorLines = outcome.events
+    .filter((event) => event.type.endsWith('_source_unavailable'))
+    .map((event): LogLine => ({ event: PROVIDER_ERROR_EVENT, source: event.type.replace('_source_unavailable', ''), reason: event.detail }));
+  const startupLines = outcome.events
+    .filter((event) => event.type === STARTUP_REFUSED_EVENT)
+    .map((event): LogLine => ({ event: STARTUP_REFUSED_EVENT, detail: event.detail }));
+  const frozenCycleLines = outcome.events
+    .filter((event) => event.type === CYCLE_FROZEN_EVENT)
+    .map((event): LogLine => ({ event: CYCLE_FROZEN_EVENT, detail: event.detail }));
+  const unchangedCycleLines = outcome.events
+    .filter((event) => event.type === 'cycle_unchanged')
+    .map((event): LogLine => ({ event: UNCHANGED_CYCLE_EVENT, cycle: event.detail }));
+
+  const hasSuccessfulCycle = outcome.events.some((event) => SUCCESSFUL_CYCLE_EVENT_TYPES.has(event.type));
+  const successLines: readonly LogLine[] = outcome.completed && hasSuccessfulCycle
+    ? [{
+      event: INGEST_SUCCESS_EVENT,
+      predictions_created: outcome.events.filter((event) => event.type === 'prediction_created').length,
+      predictions_confirmed_duplicate: outcome.events.filter((event) => event.type === 'prediction_duplicate').length,
+      unchanged_cycles: outcome.events.filter((event) => event.type === 'cycle_unchanged').length,
+    }]
+    : [];
+
+  return [...startupLines, ...frozenCycleLines, ...unchangedCycleLines, ...providerErrorLines, ...successLines];
+}
+
+export function deriveBuildLogLines(outcome: BuildOutcome): readonly LogLine[] {
+  if (outcome.published) {
+    return [{ event: BUILD_SUCCESS_EVENT, build_id: outcome.build_id }];
+  }
+  return [{ event: BUILD_REFUSED_EVENT, reason: outcome.reason }];
+}

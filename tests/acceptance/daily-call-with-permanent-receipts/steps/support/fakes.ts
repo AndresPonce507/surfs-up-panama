@@ -9,6 +9,7 @@ import type {
   ForecastSource,
   IngestStore,
   MemberSeries,
+  ReceivedSourcePayload,
   SourceFailure,
   SourceResult,
   TideHour,
@@ -46,8 +47,8 @@ export class InMemoryStore implements IngestStore, BuildStore {
     return [...this.objects.keys()].filter((k) => k.startsWith(prefix)).sort();
   }
 
-  async putRaw(key: string, body: string): Promise<void> {
-    return this.put(key, body);
+  async putRawIfAbsent(record: { readonly key: string; readonly verbatim: string }): Promise<'created' | 'already-exists'> {
+    return this.putIfAbsent(record.key, record.verbatim);
   }
 
   async putPredictionIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
@@ -142,10 +143,8 @@ export class FixedClock implements Clock {
 }
 
 /**
- * The fixture forecast source. Speaks the post-ACL domain language of
- * ForecastSourcePort: normalized units, UTC, land-mask already a flag,
- * run_ts already attributed (the wire-format ladder is the adapter's own
- * unit-tested concern in DELIVER, per 04 section 3 step 5).
+ * Fixture bytes travel through the same receive-archive-parse boundary as the
+ * real adapter. Its parse methods return deterministic normalized fixtures.
  */
 export class FixtureSource implements ForecastSource {
   members: readonly MemberSpec[] = venaoMorningMembers;
@@ -169,8 +168,12 @@ export class FixtureSource implements ForecastSource {
     return `${this.date}T${this.cycleHour}:00Z`;
   }
 
-  async fetchWaveMembers(_spot_id: string): Promise<SourceResult<MemberSeries[]>> {
+  async fetchWavePayload(_spot_id: string): Promise<ReceivedSourcePayload> {
     if (this.waveFailure !== null) return { ok: false, reason: this.waveFailure };
+    return { ok: true as const, verbatim: JSON.stringify({ provider: 'open-meteo-marine', run_ts: this.runTs }) };
+  }
+
+  parseWaveMembers(): SourceResult<MemberSeries[]> {
     const series: MemberSeries[] = this.members
       .filter((m) => !this.dark.has(m.source))
       .map((m) => ({
@@ -185,32 +188,28 @@ export class FixtureSource implements ForecastSource {
           land_masked: this.masked.has(m.source),
         }))),
       }));
-    return {
-      ok: true,
-      verbatim: JSON.stringify({ provider: 'open-meteo-marine', run_ts: this.runTs, members: series.map((s) => s.source) }),
-      data: series,
-    };
+    return { ok: true, data: series };
   }
 
-  async fetchWind(_spot_id: string): Promise<SourceResult<WindHour[]>> {
+  async fetchWindPayload(_spot_id: string): Promise<ReceivedSourcePayload> {
     if (this.windDark) return { ok: false, reason: 'dark' };
-    return {
-      ok: true,
-      verbatim: JSON.stringify({ provider: 'open-meteo-wind', date: this.date }),
-      data: [this.date, nextCivilDate(this.date)].flatMap((date) => VALID_HOURS_UTC.map((h) => ({
+    return { ok: true as const, verbatim: JSON.stringify({ provider: 'open-meteo-wind', date: this.date }) };
+  }
+
+  parseWind(): SourceResult<WindHour[]> {
+    return { ok: true, data: [this.date, nextCivilDate(this.date)].flatMap((date) => VALID_HOURS_UTC.map((h) => ({
         valid_ts: utcHourKey(date, h),
         wind: { speed_kt: venaoWind.speed_kt, dir_deg: venaoWind.dir_deg },
-      }))),
-    };
+      }))) };
   }
 
-  async fetchTide(_spot_id: string): Promise<SourceResult<TideHour[]>> {
+  async fetchTidePayload(_spot_id: string): Promise<ReceivedSourcePayload> {
     if (this.tideDark) return { ok: false, reason: 'dark' };
-    return {
-      ok: true,
-      verbatim: JSON.stringify({ provider: 'coops', date: this.date }),
-      data: [this.date, nextCivilDate(this.date)].flatMap((date) => venaoTideCurve.map(([h, m]) => ({ valid_ts: utcHourKey(date, h), tide_m: m }))),
-    };
+    return { ok: true as const, verbatim: JSON.stringify({ provider: 'coops', date: this.date }) };
+  }
+
+  parseTide(): SourceResult<TideHour[]> {
+    return { ok: true, data: [this.date, nextCivilDate(this.date)].flatMap((date) => venaoTideCurve.map(([h, m]) => ({ valid_ts: utcHourKey(date, h), tide_m: m }))) };
   }
 }
 

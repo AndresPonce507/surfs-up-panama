@@ -21,10 +21,20 @@ const JOBS = [
     steps: [['tsc --noEmit', 'npm', ['run', 'typecheck']]],
   },
   {
+    name: 'supply-chain',
+    default: true,
+    needs: ['npm'],
+    steps: [
+      ['SBOM', 'npx', ['--yes', '@cyclonedx/cyclonedx-npm@4.2.1', '--output-file', '.ci-local-logs/sbom.cdx.json']],
+      ['SBOM checksum', 'node', ['scripts/write-sbom-checksum.mjs', '.ci-local-logs/sbom.cdx.json']],
+      ['dependency audit', 'node', ['scripts/check-npm-audit.mjs']],
+    ],
+  },
+  {
     name: 'secrets',
     default: true,
     needs: ['gitleaks'],
-    steps: [['gitleaks detect', 'gitleaks', ['detect', '--source', '.', '--redact', '--exit-code', '1', '--no-banner']]],
+    steps: [['gitleaks detect', 'gitleaks', ['detect', '--source', '.', '--config', 'gitleaks.toml', '--redact', '--exit-code', '1', '--no-banner']]],
   },
   {
     name: 'deps',
@@ -92,6 +102,20 @@ const JOBS = [
   {
     name: 'infra',
     default: true,
+    serial: true,
+  },
+  {
+    // The packages must execute under Linux/ARM64 before any merge. Keep
+    // this after credential-free synth and serial because both scripts use
+    // CDK's shared output directory.
+    name: 'lambda-arm64-smokes',
+    default: true,
+    serial: true,
+    needs: ['npm'],
+    steps: [
+      ['Build Lambda Linux/arm64 smoke', 'npm', ['run', 'smoke:build-lambda-arm64']],
+      ['Fetch Lambda Linux/arm64 smoke', 'npm', ['run', 'smoke:fetch-lambda-arm64']],
+    ],
   },
 ];
 

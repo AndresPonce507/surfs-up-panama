@@ -92,6 +92,18 @@ export class ObservabilityStack extends Stack {
     deadMan.addAlarmAction(snsAction);
     deadMan.addOkAction(snsAction);
 
+    const buildDeadMan = new cloudwatch.Alarm(this, 'BuildDeadMansSwitch', {
+      alarmName: 'surfs-up-panama-build-dead-mans-switch',
+      alarmDescription: 'BuildSuccess absent for 2 consecutive hours: public forecast publication may be stale',
+      metric: new cloudwatch.Metric({ namespace: metricNamespace, metricName: 'BuildSuccess', statistic: 'Sum', period: Duration.hours(1) }),
+      threshold: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
+      evaluationPeriods: 2,
+      treatMissingData: cloudwatch.TreatMissingData.BREACHING,
+    });
+    buildDeadMan.addAlarmAction(snsAction);
+    buildDeadMan.addOkAction(snsAction);
+
     // Alarm 2: a source went dark; the site keeps serving stale-but-correct.
     const providerErrors = new cloudwatch.Alarm(this, 'ProviderErrors', {
       alarmName: 'surfs-up-panama-provider-errors',
@@ -108,6 +120,41 @@ export class ObservabilityStack extends Stack {
       treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
     });
     providerErrors.addAlarmAction(snsAction);
+
+    const windSourceErrors = new cloudwatch.Alarm(this, 'WindSourceErrors', {
+      alarmName: 'surfs-up-panama-wind-source-errors',
+      alarmDescription: 'Wind observations repeatedly failed while wave forecasts may remain available',
+      metric: new cloudwatch.Metric({
+        namespace: metricNamespace,
+        metricName: 'WindSourceErrors',
+        statistic: 'Sum',
+        period: Duration.hours(1),
+      }),
+      threshold: 3,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      evaluationPeriods: 1,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
+    windSourceErrors.addAlarmAction(snsAction);
+
+    // A cycle older than 24 hours is refused by Fetch and increments this
+    // metric. Page on the first occurrence: serving a known frozen wave
+    // cycle is a correctness failure, not a noisy transient provider error.
+    const frozenCycle = new cloudwatch.Alarm(this, 'FrozenCycle', {
+      alarmName: 'surfs-up-panama-frozen-provider-cycle',
+      alarmDescription: 'Fetch refused a wave provider cycle older than 24 hours',
+      metric: new cloudwatch.Metric({
+        namespace: metricNamespace,
+        metricName: 'FrozenCycles',
+        statistic: 'Sum',
+        period: Duration.hours(1),
+      }),
+      threshold: 1,
+      comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_OR_EQUAL_TO_THRESHOLD,
+      evaluationPeriods: 1,
+      treatMissingData: cloudwatch.TreatMissingData.NOT_BREACHING,
+    });
+    frozenCycle.addAlarmAction(snsAction);
 
     // Alarm 3: errors across the four write functions. Function names are
     // deterministic literals, so this stack deploys before the write stack
