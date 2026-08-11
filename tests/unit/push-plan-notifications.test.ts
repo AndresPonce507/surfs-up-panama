@@ -49,11 +49,12 @@ describe('planNotifications -- afternoon follow-up (R41)', () => {
       fc.property(
         fc.integer({ min: 14, max: 16 }),
         fc.constantFrom<StoredSub['followup_date']>(null, '2026-08-09', '2026-08-10', '2026-08-11'),
-        (hour, followupDate) => {
+        fc.integer({ min: 0, max: 100 }),
+        (hour, followupDate, laterScore) => {
         const plan = planNotifications({
           now: `2026-08-10T${String(hour).padStart(2, '0')}:25:00-05:00`,
           spots: [{ spot_id: 'playa-venao', slug: 'playa-venao', name: 'Playa Venao', timezone: 'America/Panama' }],
-          scores: { 'playa-venao': 0 },
+          scores: { 'playa-venao': laterScore },
           subscriptions: [{
             spot_id: 'playa-venao', endpoint_hash: 'telefono-03', lang: 'es', threshold_score: 70,
             last_notified_date: '2026-08-10', followup_date: followupDate, device_id: 'telefono-03',

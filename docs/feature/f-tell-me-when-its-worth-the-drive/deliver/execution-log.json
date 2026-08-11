@@ -36,6 +36,27 @@
       "s": "EXECUTED",
       "d": "QUALIFIED: implementation and pre-commit evidence committed as 6995fd9f5b31b9f4ae26f77815e37b0b3393a739. Independent review accepted the functional change and scoped test budget but withheld unqualified all-green approval because the pre-existing stale static surface blocks global build-dependent gates. Parent explicitly authorized this scoped commit with that factual qualification; generated data remains untouched.",
       "t": "2026-08-10T23:55:00-05:00"
+    },
+    {
+      "sid": "03-02",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS: the initial controlled mutation added a current-score guard and made the canonical scenario fail at its Then oracle with 0 questions instead of one. After the property was strengthened across scores 0..100, a second controlled score-read mutation made the property fail and shrink to [14, null, 0]. Both mutations were removed unchanged before GREEN.",
+      "t": "2026-08-11T00:00:45-05:00"
+    },
+    {
+      "sid": "03-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: no production change was required because 03-01's planner already excludes current scores and calls. The existing fast-check property was extended to quantify every later score 0..100. Target acceptance 1 scenario/13 steps, non-external Slice-03 acceptance 6 scenarios/74 steps, focused unit, typecheck, and 20 test files/92 tests excluding the unrelated stale-surface test passed.",
+      "t": "2026-08-11T00:00:56-05:00"
+    },
+    {
+      "sid": "03-02",
+      "p": "QUALITY_GATES_G1_G11",
+      "s": "EXECUTED",
+      "d": "QUALIFIED_PASS: one observable behavior x 2 = 2 unit-test budget, one extended property test. Pure core has no mocks or adapter. Global build-dependent gates remain blocked only by the unchanged static surface dated 2026-08-09 while Panama is 2026-08-11; generated data was not modified.",
+      "t": "2026-08-11T00:00:56-05:00"
     }
   ]
 }

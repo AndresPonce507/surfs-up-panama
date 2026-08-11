@@ -1,0 +1,19 @@
+{
+  "sid": "03-02",
+  "phase": "RED_GREEN",
+  "controlled_mutation": {
+    "change": "Suppress follow-ups whenever a current score is supplied.",
+    "command": "npm run test:at -- --name 'La pregunta llega aunque la mañana se haya puesto mala después del aviso'",
+    "status": "FAIL_AS_EXPECTED",
+    "evidence": "Then oracle reported zero questions where exactly one was required."
+  },
+  "restored_green": {
+    "target_acceptance": "PASS: 1 scenario, 13 steps",
+    "slice03_non_external": "PASS: 6 scenarios, 74 steps",
+    "focused_unit": "PASS: 1 test",
+    "typecheck": "PASS",
+    "unit_except_known_stale_surface": "PASS: 20 files, 92 tests"
+  },
+  "property_extension": "The existing fast-check property generates every later score from 0 through 100 and asserts identical eligible follow-up behavior.",
+  "known_external_qualification": "Global test/build/UI/budget/fast-CI gates remain blocked by the existing static surface dated 2026-08-09 on Panama 2026-08-11. Generated data was not changed."
+}
