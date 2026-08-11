@@ -414,6 +414,13 @@
       "s": "EXECUTED",
       "d": "PASS: 20 isolated generated fit runs each persist a refused correction with observed n/reporters and the physical floor; focused property 1/1 passes with no production edit",
       "t": "2026-08-11T15:21:50Z"
+    },
+    {
+      "sid": "01-12",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: approved acceptance-evidence slice committed as ec508eb6d756fba8eff11c5ce92aa7527c22aec9 (test(learning): prove sub-floor differences refuse)",
+      "t": "2026-08-11T15:24:41Z"
     }
   ]
 }
