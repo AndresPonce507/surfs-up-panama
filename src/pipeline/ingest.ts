@@ -12,6 +12,7 @@
 
 import { loadLaunchSpotSeeds } from '../data/launch-spots';
 import type { IngestDeps, IngestOutcome, MemberSeries, TideHour, WindHour } from './ports';
+import { rawArchiveRecord } from './raw-archive';
 
 type PredictionRow = {
   spot_id: string;
@@ -39,16 +40,28 @@ export async function runIngestOnce(deps: IngestDeps): Promise<IngestOutcome> {
   const recordsByKey = new Map<string, PredictionRow[]>();
   const spots = deps.spots ?? loadLaunchSpotSeeds(deps.launchData);
   for (const spot of spots) {
-    const waves = await deps.source.fetchWaveMembers(spot.spot_id);
+    const wavePayload = await deps.source.fetchWavePayload(spot.spot_id);
+    const windPayload = await deps.source.fetchWindPayload(spot.spot_id);
+    const tidePayload = await deps.source.fetchTidePayload(spot.spot_id);
+
+    // The received bytes become durable evidence before any parser can
+    // reject them. The key contains provider, spot and capture instant, so
+    // captures made during one hour never overwrite each other.
+    if (wavePayload.ok) await deps.store.putRaw(rawArchiveRecord('open-meteo-marine', spot.spot_id, deps.clock.now(), wavePayload.verbatim));
+    if (windPayload.ok) await deps.store.putRaw(rawArchiveRecord('open-meteo-wind', spot.spot_id, deps.clock.now(), windPayload.verbatim));
+    if (tidePayload.ok) await deps.store.putRaw(rawArchiveRecord('coops', spot.spot_id, deps.clock.now(), tidePayload.verbatim));
+
+    if (!wavePayload.ok) {
+      events.push({ type: 'wave_source_unavailable', detail: wavePayload.reason });
+      continue;
+    }
+    const waves = deps.source.parseWaveMembers(wavePayload.verbatim);
     if (!waves.ok) {
       events.push({ type: 'wave_source_unavailable', detail: waves.reason });
       continue;
     }
-    await deps.store.putRaw(rawKey('open-meteo-marine', deps.clock.now()), waves.verbatim);
-    const wind = await deps.source.fetchWind(spot.spot_id);
-    if (wind.ok) await deps.store.putRaw(rawKey('open-meteo-wind', deps.clock.now()), wind.verbatim);
-    const tide = await deps.source.fetchTide(spot.spot_id);
-    if (tide.ok) await deps.store.putRaw(rawKey('coops', deps.clock.now()), tide.verbatim);
+    const wind = windPayload.ok ? deps.source.parseWind(windPayload.verbatim) : windPayload;
+    const tide = tidePayload.ok ? deps.source.parseTide(tidePayload.verbatim) : tidePayload;
 
     for (const member of waves.data) {
       addMemberRows(recordsByKey, member, spot.spot_id, deps.clock.now(), wind.ok ? wind.data : [], tide.ok ? tide.data : []);
@@ -105,10 +118,4 @@ function addMemberRows(
 
 function differenceInHours(validTimestamp: string, runTimestamp: string): number {
   return Math.round((Date.parse(validTimestamp) - Date.parse(runTimestamp)) / 3_600_000);
-}
-
-function rawKey(provider: string, now: Date): string {
-  const date = now.toISOString().slice(0, 10);
-  const hour = now.toISOString().slice(11, 13);
-  return `raw/${provider}/dt=${date}/${hour}/payload.json`;
 }

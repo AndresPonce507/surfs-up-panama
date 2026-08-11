@@ -21,10 +21,17 @@ import type { SpotSeed, SwellTrain, WindObs } from '../scoring/engine';
 
 export interface IngestStore {
   /** Archive a verbatim provider response in the raw forensic prefix. */
-  putRaw(key: string, body: string): Promise<void>;
+  putRaw(record: RawArchiveRecord): Promise<void>;
   /** S3 conditional PUT (If-None-Match:*): first prediction write wins. */
   putPredictionIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'>;
 }
+
+/** An uncompressed provider response. Archive adapters persist gzip bytes
+ * when the canonical key ends in .json.gz. */
+export type RawArchiveRecord = {
+  readonly key: string;
+  readonly verbatim: string;
+};
 
 export interface BuildStore {
   /** Read a durable prediction receipt, never a raw provider payload. */
@@ -46,7 +53,12 @@ export interface Clock {
 export type SourceFailure = 'error' | 'malformed' | 'stale' | 'dark';
 
 export type SourceResult<T> =
-  | { ok: true; verbatim: string; data: T }
+  | { ok: true; data: T }
+  | { ok: false; reason: SourceFailure };
+
+/** Successful received bytes are archived before any source parser runs. */
+export type ReceivedSourcePayload =
+  | { ok: true; verbatim: string }
   | { ok: false; reason: SourceFailure };
 
 /** One normalized hour of one wave member. land_masked per domain-model section 17. */
@@ -68,10 +80,14 @@ export type WindHour = { valid_ts: string; wind: WindObs | null };
 export type TideHour = { valid_ts: string; tide_m: number | null };
 
 export interface ForecastSource {
-  /** One call returns every wave member's normalized series for the spot. */
-  fetchWaveMembers(spot_id: string): Promise<SourceResult<MemberSeries[]>>;
-  fetchWind(spot_id: string): Promise<SourceResult<WindHour[]>>;
-  fetchTide(spot_id: string): Promise<SourceResult<TideHour[]>>;
+  /** Receive first, archive, then parse. A malformed response remains
+   * forensic evidence instead of disappearing with its parse failure. */
+  fetchWavePayload(spot_id: string): Promise<ReceivedSourcePayload>;
+  parseWaveMembers(verbatim: string): SourceResult<MemberSeries[]>;
+  fetchWindPayload(spot_id: string): Promise<ReceivedSourcePayload>;
+  parseWind(verbatim: string): SourceResult<WindHour[]>;
+  fetchTidePayload(spot_id: string): Promise<ReceivedSourcePayload>;
+  parseTide(verbatim: string): SourceResult<TideHour[]>;
 }
 
 export interface IngestDeps {
