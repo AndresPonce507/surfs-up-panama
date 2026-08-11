@@ -6,10 +6,11 @@
 
 import { After, Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
-import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { gzipSync } from 'node:zlib';
 
 type ChromeWorld = object;
 type Theme = 'claro' | 'oscuro';
@@ -26,6 +27,7 @@ const projectRoot = process.cwd();
 const built = new WeakMap<ChromeWorld, BuiltChrome>();
 const regressions = new WeakMap<ChromeWorld, BuiltChrome>();
 const copiedArtifacts = new WeakMap<ChromeWorld, string>();
+const REPORTED_DOCUMENT_CEILING_BYTES = 4 * 1024;
 
 function credentialFreeEnvironment(): NodeJS.ProcessEnv {
   const environment = { ...process.env };
@@ -97,6 +99,22 @@ function lightChromeFinding(surface: BuiltChrome): string | undefined {
   return undefined;
 }
 
+function assertReportedDocumentsFitPublishedCeiling(): void {
+  const spotsRoot = join(projectRoot, 'dist', 'spots');
+  const reported = readdirSync(spotsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => join(spotsRoot, entry.name, 'reportado.html'))
+    .filter((path) => existsSync(path));
+  assert.ok(reported.length > 0, 'la publicación no emitió ninguna pantalla reportado para medir');
+  for (const document of reported) {
+    const bytes = gzipSync(readFileSync(document)).length;
+    assert.ok(
+      bytes <= REPORTED_DOCUMENT_CEILING_BYTES,
+      `${document} pesa ${bytes} B gz, por encima del techo publicado de ${REPORTED_DOCUMENT_CEILING_BYTES} B gz`,
+    );
+  }
+}
+
 Given('la superficie publicada real está construida sin modificarla', function (this: ChromeWorld) {
   built.set(this, buildPublishedChrome());
 });
@@ -144,6 +162,7 @@ Then('ninguna fuente de la barra del navegador ni del manifiesto guarda un color
 Then('la construcción conserva el límite de peso de cada página y no cambia números, palabras ni rutas', function (this: ChromeWorld) {
   const surface = required(this);
   assert.match(surface.buildOutput, /page weight|page-weight|weight gate/i, 'la prueba debe observar la evidencia de peso de la construcción');
+  assertReportedDocumentsFitPublishedCeiling();
   assert.ok(surface.document.includes('ol class="ranked"'), 'la portada dejó de publicar el ranking existente');
 });
 
