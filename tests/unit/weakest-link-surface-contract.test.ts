@@ -767,7 +767,13 @@ describe('resolveWeakestLink: the publish-side reader for one spot, one day', ()
   function readOwnWeakestLink(row: SurfaceCall | undefined): WeakestLinkReading {
     if (row === undefined || withoutOwnKey(row, 'weakest_link')) return { kind: 'unknown' };
     if (row.weakest_link === null) return { kind: 'clean' };
-    return { kind: 'named', factor: row.weakest_link as FactorToken };
+    return typeof row.weakest_link_subscore === 'number'
+      ? {
+        kind: 'named',
+        factor: row.weakest_link as FactorToken,
+        weakest_link_subscore: row.weakest_link_subscore,
+      }
+      : { kind: 'named', factor: row.weakest_link as FactorToken };
   }
 
   it('reads a real culprit or an honest absence from the committed data/published-surface.json, matching the row itself', () => {

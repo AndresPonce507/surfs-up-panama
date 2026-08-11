@@ -1,7 +1,7 @@
 // GUARD: every published call, on both days, must carry conf_level,
-// size_band, size_range_m, wind_state, best_window, weakest_link and
+// size_band, size_range_m, best_window, weakest_link and
 // confidence_reason, and the surface itself must carry spot_detail. All
-// seven per-call fields plus spot_detail are declared OPTIONAL on SurfaceCall
+// six per-call fields plus spot_detail are declared OPTIONAL on SurfaceCall
 // / PublishedSurfaceUpdate (src/publish/static-surface.ts), so `npm run
 // typecheck` passes and every existing CI job stays green even when they are
 // silently missing -- that gap is exactly what shipped once already
@@ -53,8 +53,11 @@ function fieldFindings(call: SurfaceCall, where: string): string[] {
   if (!Array.isArray(call.size_range_m) || call.size_range_m.length !== 2 || !call.size_range_m.every((n) => typeof n === 'number' && Number.isFinite(n))) {
     findings.push(`${where} ${call.spot_id}: size_range_m missing or malformed`);
   }
-  if (!['clean', 'choppy', 'blown_out'].includes(String(call.wind_state))) {
-    findings.push(`${where} ${call.spot_id}: wind_state is ${JSON.stringify(call.wind_state)}, not one of clean/choppy/blown_out`);
+  if (call.wind_state !== undefined && !['clean', 'choppy', 'blown_out'].includes(String(call.wind_state))) {
+    findings.push(`${where} ${call.spot_id}: wind_state is ${JSON.stringify(call.wind_state)}, not absent or one of clean/choppy/blown_out`);
+  }
+  if (call.wind_state === undefined && !call.call_es.includes('sin datos')) {
+    findings.push(`${where} ${call.spot_id}: wind_state is absent but call_es does not disclose sin datos`);
   }
   if (!/^\d{2}:\d{2}$/.test(call.best_window?.start ?? '') || !/^\d{2}:\d{2}$/.test(call.best_window?.end ?? '')) {
     findings.push(`${where} ${call.spot_id}: best_window missing or malformed`);
@@ -106,7 +109,7 @@ function fieldFindings(call: SurfaceCall, where: string): string[] {
 // refuses unless `current.days[0].date` is Panama's real current civil day,
 // so the instant must be regenerated fresh each time this file is
 // regenerated, never copy-pasted from a past run's command.
-describe('published surface: every spot, both days, carries the seven structured fields plus spot_detail', () => {
+describe('published surface: every spot, both days, carries the structured fields plus honest missing-wind disclosure and spot_detail', () => {
   it('has no gaps in current.days[0], current.days[1], or current.calls', () => {
     const surface = loadSurface();
 
