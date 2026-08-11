@@ -257,6 +257,39 @@ describe('decideSubscribe', () => {
   });
 });
 
+const invalidThresholdScore = fc.oneof(
+  fc.integer({ max: -1 }),
+  fc.integer({ min: 101 }),
+  fc.double({ min: -1_000, max: 1_000, noNaN: true, noDefaultInfinity: true }).filter((value) => !Number.isInteger(value)),
+);
+
+describe('decideSubscribe -- selected-bar boundary (Slice-04 04-02)', () => {
+  it('rejects every out-of-scale or fractional bar in Spanish without changing the declared stored-subscription universe', () => {
+    fc.assert(
+      fc.property(invalidThresholdScore, (invalidBar) => {
+        const existing: StoredSub[] = [
+          { spot_id: 'playa-venao', endpoint_hash: 'mi-aviso', lang: 'es', threshold_score: 67, last_notified_date: '2026-08-10', followup_date: '2026-08-09', device_id: 'telefono-04' },
+          { spot_id: 'otro-spot', endpoint_hash: 'aviso-ajeno', lang: 'en', threshold_score: 42, last_notified_date: null, followup_date: null, device_id: 'otro-telefono' },
+        ];
+        const before = structuredClone(existing);
+        const decision = decideSubscribe({
+          ...requestFor('playa-venao', 'https://fcm.googleapis.com/fcm/send/threshold-invalid', { lang: 'es', threshold_score: invalidBar, device_id: 'telefono-04', now: '2026-08-10T07:25:00-05:00' }),
+          existing,
+        });
+        const explanation = [decision.rejection?.what, decision.rejection?.why, decision.rejection?.how].join(' ');
+
+        assert.equal(decision.outcome, 'rejected', 'An invalid chosen bar must be refused, never rounded, clamped, or defaulted.');
+        assert.match(explanation, /entero/i, 'The refusal must tell the surfer the bar needs to be whole.');
+        assert.match(explanation, /0/, 'The refusal must name the lower bound.');
+        assert.match(explanation, /100/, 'The refusal must name the upper bound.');
+        assert.deepEqual(decision.stored, before, 'A rejected bar must leave every stored subscription exactly unchanged.');
+        assert.deepEqual(existing, before, 'The declared input universe must not be mutated during rejection.');
+      }),
+      { numRuns: 100 },
+    );
+  });
+});
+
 // ------------------------------------------------ endpoint-allowlist (R12)
 //
 // The law is host membership (implementation notes, step 01-02): any

@@ -477,6 +477,34 @@
       "s": "EXECUTED",
       "d": "PASS: 027174c committed the corrected declared planner input, one state-delta property, and factual RED/GREEN/review evidence. Independent review iteration 3 approved under the stale-generated-surface qualification.",
       "t": "2026-08-11T05:24:06Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: 04-01 is sealed; 04-02 is the next serial non-visual public decision step and touches only decideSubscribe plus its unit law.",
+      "t": "2026-08-11T05:24:49Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: the active three-example invalid-bar scenario failed semantically because -1, 101, and 67.5 overwrote the saved bar.",
+      "t": "2026-08-11T05:24:49Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: the new generated invalid-number public-port property failed with shrunk counterexample 101 because decideSubscribe returned subscribed instead of rejected.",
+      "t": "2026-08-11T05:24:50Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: a threshold guard rejects non-integers and values outside 0..100 with Spanish what/why/how while returning the unmodified declared stored universe. Acceptance 3/3, focused units 12/12, typecheck, and qualified full units 103/103 passed. Build correctly remains qualified by preserved stale generated surface.",
+      "t": "2026-08-11T05:25:11Z"
     }
   ]
 }
