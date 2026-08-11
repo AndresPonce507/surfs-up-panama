@@ -439,6 +439,81 @@ describe('resolveWeakestLink: the publish-side reader for one spot, one day', ()
     );
   });
 
+  it('pairs a named factor with only its own row and day scalar, never a lower neighbor or an invented legacy value', () => {
+    fc.assert(
+      fc.property(
+        tokenArb,
+        tokenArb,
+        tokenArb,
+        fc.integer({ min: 1, max: 100 }),
+        fc.integer({ min: 1, max: 100 }),
+        fc.integer({ min: 0, max: 100 }),
+        (todayFactor, tomorrowFactor, legacyFactor, todayHundredths, tomorrowHundredths, decoyHundredths) => {
+          const surfDate = civilDate(0);
+          const tomorrowDate = nextCivilDate(surfDate);
+          const todayScalar = todayHundredths / 100;
+          const tomorrowScalar = tomorrowHundredths / 100;
+          const dayZeroDecoyScalar = decoyHundredths / 100;
+          const named = (spotId: string, scoreQ: number, label: string, factor: FactorToken, scalar: number): SurfaceCall => ({
+            ...baseCall(spotId, scoreQ, label),
+            weakest_link: factor,
+            weakest_link_subscore: scalar,
+          });
+          const legacy = (spotId: string, scoreQ: number, label: string, factor: FactorToken): SurfaceCall => ({
+            ...baseCall(spotId, scoreQ, label),
+            weakest_link: factor,
+          });
+          const clean = (spotId: string, scoreQ: number, label: string): SurfaceCall => ({
+            ...baseCall(spotId, scoreQ, label),
+            weakest_link: null,
+          });
+          const calls = [
+            named('playa-pareada', 1, 'hoy', todayFactor, todayScalar),
+            legacy('playa-legada', 2, 'hoy', legacyFactor),
+            clean('playa-limpia', 3, 'hoy'),
+          ];
+          const dayZeroSpots = [
+            named('playa-pareada', 1, 'espejo', legacyFactor, dayZeroDecoyScalar),
+            legacy('playa-legada', 2, 'espejo', todayFactor),
+            clean('playa-limpia', 3, 'espejo'),
+          ];
+          const tomorrowSpots = [
+            named('playa-pareada', 101, 'mañana', tomorrowFactor, tomorrowScalar),
+            // Its zero can be lower than playa-pareada's raw value, but it
+            // is a different row and must never replace the published pair.
+            named('playa-vecina', 102, 'mañana', legacyFactor, 0),
+            legacy('playa-legada', 103, 'mañana', legacyFactor),
+            clean('playa-limpia', 104, 'mañana'),
+          ];
+          const surface: PublishedSurfaceUpdate = {
+            schema: 'published-surface-update/v1',
+            surf_date: surfDate,
+            published_at: `${surfDate}T11:00:00.000Z`,
+            build_kind: 'dawn',
+            calls,
+            days: [
+              { date: surfDate, spots: dayZeroSpots },
+              { date: tomorrowDate, spots: tomorrowSpots },
+            ],
+          };
+          const validated = assertStrictTwoDayUpdate(surface);
+          const before = structuredClone(validated);
+
+          assert.deepEqual(resolveWeakestLink(validated, 'playa-pareada', 0), {
+            kind: 'named', factor: todayFactor, weakest_link_subscore: todayScalar,
+          });
+          assert.deepEqual(resolveWeakestLink(validated, 'playa-pareada', 1), {
+            kind: 'named', factor: tomorrowFactor, weakest_link_subscore: tomorrowScalar,
+          });
+          assert.deepEqual(resolveWeakestLink(validated, 'playa-legada', 0), { kind: 'named', factor: legacyFactor });
+          assert.deepEqual(resolveWeakestLink(validated, 'playa-limpia', 1), { kind: 'clean' });
+          assert.deepEqual(resolveWeakestLink(validated, 'playa-ausente', 0), { kind: 'unknown' });
+          assert.deepEqual(validated, before, 'reader changed the published rows it only reads');
+        },
+      ),
+    );
+  });
+
   // Pins src/data/forecast.ts line 77 exactly. The acceptance suite cannot
   // catch a reversal of this rule (its own fixture plants the same today
   // plan into both `calls` and `days[0].spots`), so this is a UNIT-TEST
