@@ -806,6 +806,13 @@
       "s": "EXECUTED",
       "d": "PASS: exact outline 2/2 and full Slice-03 7/7 scenarios (128 steps), units 241/241, typecheck, build, ci:local --jobs=1, U1-U7 each 2/2. Emitted callout route has no calculation or telemetry in inline/referenced JS. Vera current source-blind PASS is in the charter; prior FAIL and INDETERMINATE rows preserved.",
       "t": "2026-08-11T12:10:04Z"
+    },
+    {
+      "sid": "03-06",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 3f0d1ae6d196843bfa1219616d27ec8d7d110f8b is the scoped 03-06 implementation/evidence commit. It stages only the nested-publisher harness correction, preserved Vera history, and factual PREPARE/RED/GREEN records; generated data and progress dirt remain excluded.",
+      "t": "2026-08-11T12:11:27Z"
     }
   ]
 }
