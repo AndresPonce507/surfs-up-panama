@@ -80,6 +80,12 @@ type Factor = 'dir' | 'size' | 'wind' | 'tide';
 
 type ProfileDay = {
   readonly link?: Factor | null;
+  /**
+   * The one scalar the published row has already paired with its named
+   * factor. This is only a morning input for Slice-02's browser contract,
+   * never a sentence the fixture expects the page to produce.
+   */
+  readonly subscore?: number;
   readonly omit?: boolean;
   readonly drop_wind_state?: boolean;
 };
@@ -102,7 +108,12 @@ const FACTOR_WORD: Readonly<Record<Factor, RegExp>> = {
   tide: new RegExp(fixture.factor_words.tide, 'i'),
 };
 
-type DayPlan = { readonly link: Factor | null; readonly omit: boolean; readonly dropWindState: boolean };
+type DayPlan = {
+  readonly link: Factor | null;
+  readonly subscore?: number;
+  readonly omit: boolean;
+  readonly dropWindState: boolean;
+};
 type SpotPlan = { readonly today: DayPlan; readonly tomorrow: DayPlan };
 
 function requiredProfile(name: string): { spot_id: string; today: ProfileDay; tomorrow: ProfileDay } {
@@ -115,6 +126,7 @@ function dayPlan(declared: ProfileDay | undefined, fallback: Factor): DayPlan {
   if (declared === undefined) return { link: fallback, omit: false, dropWindState: false };
   return {
     link: declared.omit === true ? null : declared.link === undefined ? fallback : declared.link,
+    ...(declared.subscore === undefined ? {} : { subscore: declared.subscore }),
     omit: declared.omit === true,
     dropWindState: declared.drop_wind_state === true,
   };
@@ -183,7 +195,12 @@ function copyProjectForSurface(): string {
   return root;
 }
 
-type SurfaceRow = { spot_id: string; weakest_link?: Factor | null; wind_state?: string };
+type SurfaceRow = {
+  spot_id: string;
+  weakest_link?: Factor | null;
+  weakest_link_subscore?: number;
+  wind_state?: string;
+};
 
 function applyDayPlan(rows: SurfaceRow[], which: 'today' | 'tomorrow'): void {
   for (const row of rows) {
@@ -193,13 +210,19 @@ function applyDayPlan(rows: SurfaceRow[], which: 'today' | 'tomorrow'): void {
     } else {
       row.weakest_link = planned.link;
     }
+    if (typeof planned.subscore === 'number' && planned.link !== null && !planned.omit) {
+      row.weakest_link_subscore = planned.subscore;
+    } else {
+      delete row.weakest_link_subscore;
+    }
     if (planned.dropWindState) delete row.wind_state;
   }
 }
 
 /**
- * Plants the pipeline's own output on the reading surface: one weakest_link
- * per spot-day. This is an INPUT, never an expected rendering.
+ * Plants the pipeline's own output on the reading surface: one named cause,
+ * and where supplied, its already-paired value, per spot-day. This is an
+ * INPUT, never an expected rendering.
  */
 function applyPublishedCulprits(root: string): void {
   const path = join(root, 'data/published-surface.json');
@@ -478,6 +501,12 @@ function calloutFindings(label: string, text: string | null, expected: Factor | 
   return [];
 }
 
+/** A printed value is a whole two-place decimal token, never a prefix of a longer number. */
+function hasPrintedTwoPlaceValue(text: string, value: number): boolean {
+  const token = value.toFixed(2).replace('.', '\\.')
+  return new RegExp(`(?:^|[^0-9.])${token}(?![0-9])`).test(text);
+}
+
 // ------------------------------------------------------------------ Given --
 
 Given(
@@ -485,6 +514,17 @@ Given(
   { timeout: 600_000 },
   async function (this: PipelineWorld) {
     await ensureHarness();
+  },
+);
+
+Given(
+  'una mañana publicada donde cada playa trae la causa y el valor que le corresponde',
+  { timeout: 600_000 },
+  async function (this: PipelineWorld) {
+    await ensureHarness();
+    const { plan } = plannedFor('nombre-mas-largo');
+    assert.equal(plan.today.subscore, 0.18, 'test fixture error: hoy must carry the published value 0.18');
+    assert.equal(plan.tomorrow.subscore, 0.62, 'test fixture error: mañana must carry the published value 0.62');
   },
 );
 
@@ -629,6 +669,59 @@ Then('ninguna de las dos secciones nombra el punto débil del otro día', functi
     }
   }
   assertBehavior(findings, 'leer el weakest_link del día que esa sección muestra, nunca el del otro día.');
+});
+
+Then('la sección de hoy nombra el punto débil publicado para hoy con el valor que le corresponde', function (this: PipelineWorld) {
+  const world = world01(this);
+  const { plan } = plannedFor(world.killedItOpened ?? '');
+  const text = requiredReading(world).today;
+  const findings = calloutFindings('hoy', text, plan.today.link);
+  const expected = plan.today.subscore;
+  if (expected === undefined) {
+    findings.push('la mañana de hoy no trae el valor que este escenario necesita comprobar');
+  } else if (text === null || !hasPrintedTwoPlaceValue(text, expected)) {
+    findings.push(`hoy no deja leer el valor publicado ${expected.toFixed(2)} dentro de su frase`);
+  }
+  assertBehavior(
+    findings,
+    'leer la causa y el valor que la misma fila publicada ya emparejó para hoy; la página no elige ni calcula otro número.',
+  );
+});
+
+Then('la sección de mañana nombra el punto débil publicado para mañana con el valor que le corresponde', function (this: PipelineWorld) {
+  const world = world01(this);
+  const { plan } = plannedFor(world.killedItOpened ?? '');
+  const text = requiredReading(world).tomorrow;
+  const findings = calloutFindings('mañana', text, plan.tomorrow.link);
+  const expected = plan.tomorrow.subscore;
+  if (expected === undefined) {
+    findings.push('la mañana de mañana no trae el valor que este escenario necesita comprobar');
+  } else if (text === null || !hasPrintedTwoPlaceValue(text, expected)) {
+    findings.push(`mañana no deja leer el valor publicado ${expected.toFixed(2)} dentro de su frase`);
+  }
+  assertBehavior(
+    findings,
+    'leer la causa y el valor que la misma fila publicada ya emparejó para mañana; la página no elige ni calcula otro número.',
+  );
+});
+
+Then('ninguna sección toma el valor publicado del otro día', function (this: PipelineWorld) {
+  const world = world01(this);
+  const { plan } = plannedFor(world.killedItOpened ?? '');
+  const reading = requiredReading(world);
+  const today = plan.today.subscore?.toFixed(2);
+  const tomorrow = plan.tomorrow.subscore?.toFixed(2);
+  const findings: string[] = [];
+  if (today !== undefined && reading.tomorrow !== null && hasPrintedTwoPlaceValue(reading.tomorrow, Number(today))) {
+    findings.push(`mañana toma el valor de hoy (${today})`);
+  }
+  if (tomorrow !== undefined && reading.today !== null && hasPrintedTwoPlaceValue(reading.today, Number(tomorrow))) {
+    findings.push(`hoy toma el valor de mañana (${tomorrow})`);
+  }
+  assertBehavior(
+    findings,
+    'mantener cada valor junto a la causa de su propio día: hoy y mañana nunca se prestan una cifra entre sí.',
+  );
 });
 
 Then('ninguna de las dos secciones nombra un culpable', function (this: PipelineWorld) {

@@ -19,6 +19,20 @@ Feature: La playa dice qué fue lo que la tumbó
     And la sección de mañana nombra en palabras el punto débil publicado para mañana
     And ninguna de las dos secciones nombra el punto débil del otro día
 
+  @slice-02 @driving_port @real-io @adapter-integration @ui-u1 @ui-u2 @ui-u3 @ui-u4 @ui-u5 @ui-u6 @ui-u7 @covers-R7 @covers-R8 @covers-R21 @covers-R22 @covers-R23 @covers-R24 @covers-R25 @covers-R26 @covers-R27
+  Scenario Outline: El surfista ve el valor de la misma cosa que la tumbó
+    Given una mañana publicada donde cada playa trae la causa y el valor que le corresponde
+    When el surfista abre la playa "nombre-mas-largo" a 390 px, con tema "<tema>" y movimiento "<movimiento>"
+    Then la sección de hoy nombra el punto débil publicado para hoy con el valor que le corresponde
+    And la sección de mañana nombra el punto débil publicado para mañana con el valor que le corresponde
+    And ninguna sección toma el valor publicado del otro día
+    And la frase del punto débil cumple las siete comprobaciones visuales sobre el fondo real
+
+    Examples:
+      | tema   | movimiento |
+      | claro  | normal     |
+      | oscuro | reducido   |
+
   @slice-01 @driving_port @real-io @adapter-integration @negative @error @covers-R2 @covers-R25
   Scenario: Un día perfecto no tiene culpable, y la página no parece rota por eso
     Given una mañana publicada donde cada playa trae el punto débil que salió del cálculo
