@@ -1,0 +1,18 @@
+{
+  "id": "01-12",
+  "name": "Nothing under the floor is ever applied",
+  "delivery_mode": "current-equivalence/acceptance-evidence",
+  "accepted_context": "recover/learning-build:docs/feature/f-forecast-learns-from-the-beach/deliver/roadmap.json",
+  "criteria": [
+    "Across generated sets of ten to forty mornings from five to nine people, nothing under the floor is ever applied.",
+    "The refusal holds however tightly the reports agree, at every generated count.",
+    "The fit records what it examined even when it refuses, in every generated case."
+  ],
+  "owned_paths": [
+    "src/learning/gates.ts",
+    "tests/unit/learning-gate-laws.test.ts",
+    "tests/acceptance/f-forecast-learns-from-the-beach/sub-floor-differences-refuse.test.ts"
+  ],
+  "production_change": false,
+  "acceptance": "Twenty isolated runLearningFitOnce executions generate 10-40 zero-spread mornings from 5-9 reporters with a difference under sigma_eff/sqrt(n); every stored correction is present, reports its observed n/reporters and physical floor, and refuses. The assertion rejects a controlled applied:true mutation."
+}
