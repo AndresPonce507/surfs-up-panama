@@ -85,8 +85,11 @@ export function assertStrictTwoDayUpdate(value: unknown): PublishedSurfaceUpdate
     || tomorrow.date !== nextCivilDate(today.date)) {
     throw new Error('published surface days must be today and the next consecutive civil date.');
   }
-  if (sameRankedCalls(value.calls, tomorrow.spots)) {
+  if (sameRankedCalls(today.spots, tomorrow.spots)) {
     throw new Error('published surface tomorrow ranking must be its own values, never a clone of today.');
+  }
+  if (!sameRankedCalls(value.calls, today.spots)) {
+    throw new Error('published surface legacy current calls must describe days[0], never a different ranking.');
   }
   return value as PublishedSurfaceUpdate;
 }
