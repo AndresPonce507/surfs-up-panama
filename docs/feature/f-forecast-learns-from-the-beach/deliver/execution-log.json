@@ -911,6 +911,41 @@
       "s": "EXECUTED",
       "d": "{\"commit\":\"6788ba1\",\"message\":\"feat(learning): weight rare volunteered mornings - step 04-04\",\"status\":\"scoped green\"}",
       "t": "2026-08-10T22:50:50Z"
+    },
+    {
+      "sid": "04-05",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: inherited 04-04, the active habit acceptance contract, the reporter-offset ADR, roadmap, and non-visual rationale inspected. The residual-to-correction seam needs transient cross-spot state, while no learned/ output may contain identity or u values.",
+      "t": "2026-08-11T02:00:00Z"
+    },
+    {
+      "sid": "04-05",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm run test:at -- --name A habit of calling it big, seen at two beaches, is measured and mostly subtracted\",\"exit\":1,\"classification\":\"expected behavioral RED\",\"failure\":\"habit movement 0.11154689880698729m exceeded half of the full-trust 0.10889246006872667m movement\"}",
+      "t": "2026-08-11T02:00:15Z"
+    },
+    {
+      "sid": "04-05",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npx vitest run tests/unit/learning-offset-laws.test.ts\",\"exit\":1,\"classification\":\"expected unit RED\",\"failure\":\"fitReporterOffsets and shrinkReporterOffset were absent\",\"test_budget\":\"2 behaviors x 2 = 4; 2 new tests\"}",
+      "t": "2026-08-11T02:00:30Z"
+    },
+    {
+      "sid": "04-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "{\"focused_acceptance\":\"completed 04-01 through 04-05 scenarios: 7 scenarios/142 steps PASS\",\"learning_units\":\"11 files, 70 tests PASS\",\"typecheck\":\"PASS\",\"roadmap_integrity\":\"PASS\",\"falsification\":\"changing REPORTER_OFFSET_BACKFIT_ITERATIONS from 3 to 0 made the habit acceptance scenario fail with 0.11154689880698729m movement; restored 3\",\"global_qualification\":\"npm run build remains blocked by the unrelated stale published surface dated 2026-08-09 versus Panama 2026-08-10. The broader @slice-04 run also includes that surface failure and future 04-06 incident-override behavior; neither is attributed to 04-05.\",\"non_visual_rationale\":\"only transient fit arithmetic and stored correction values change; no rendered surface changed\"}",
+      "t": "2026-08-11T02:04:00Z"
+    },
+    {
+      "sid": "04-05",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "{\"commit\":\"0caf672\",\"message\":\"feat(learning): backfit reporter offsets - step 04-05\",\"status\":\"scoped green\"}",
+      "t": "2026-08-11T02:04:24Z"
     }
   ]
 }
