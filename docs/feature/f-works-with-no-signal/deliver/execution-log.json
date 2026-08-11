@@ -498,6 +498,13 @@
       "s": "EXECUTED",
       "d": "PASS: public/sw.js is the actual classic worker shipped at /sw.js, so it is the necessary production surface rather than the roadmap's unshipped src/offline/flush.ts. The queue store initializes with the declared report_id key; 429, 5xx, and timeout retain the record, schedule 30s doubling with bounded jitter and a one-hour cap, and suppress premature overlapping replays. Target Chromium acceptance 1 scenario/15 steps; injected-timer direct-worker proof 1/1; full units 105/105; typecheck; build/page-weight; fast CI 8/8 passed with 0 skipped. Test budget: 2 behaviors x 2 = 4 maximum, 1 new unit test.",
       "t": "2026-08-11T02:44:00Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: revision commit 267c06e (feat(signal): back off queued report retries - step 03-03) contains the bounded retry implementation, direct worker timer proof, and preceding RED/GREEN evidence. G7 PASS: all mapped pre-commit gates were green before the resulting revision was created.",
+      "t": "2026-08-11T02:45:00Z"
     }
   ]
 }
