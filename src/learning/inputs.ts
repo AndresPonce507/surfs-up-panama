@@ -24,7 +24,7 @@
 
 import type { QualityToken, WindStateToken } from '../data/report-vocab';
 import type { SizeBandToken } from '../data/size-bands';
-import { selectionWeight } from './weights';
+import { selectionWeight, type ReporterOverrides } from './weights';
 
 /** The read half of the store the fit is handed: what reading inputs needs. */
 export interface LearningInputStore {
@@ -38,6 +38,8 @@ export const OBSERVATION_LOG_PREFIX = 'log/observations/v1/';
 export const PREDICTION_LOG_PREFIX = 'predictions/v1/';
 /** Published calls supply the pooled, trailing propensity denominator only. */
 export const CALL_LOG_PREFIX = 'log/calls/v1/';
+/** Human-PR incident file. It can name reporters, never individual reports. */
+export const REPORTER_OVERRIDES_KEY = 'learned/overrides/v1/reporter-weights.json';
 
 /**
  * One row of the nightly observation export, domain-model.md section 7.3,
@@ -58,6 +60,8 @@ export type ObservationRow = {
   trigger?: 'organic' | 'push_solicited';
   /** Fit-only derived state. It never reaches a stored observation or correction. */
   selection_weight?: number;
+  /** Fit-only incident weight, applied before every count and residual. */
+  override_weight?: number;
 };
 
 /** One prediction receipt row, the same shape src/pipeline/ingest.ts writes (04-ingest-pipeline.md). */
@@ -143,6 +147,25 @@ export async function readCallHistory(store: LearningInputStore): Promise<Publis
   return rows;
 }
 
+/** Missing or malformed incident files are the shipped all-ones default. */
+export async function readReporterOverrides(store: LearningInputStore): Promise<ReporterOverrides> {
+  const body = await store.get(REPORTER_OVERRIDES_KEY);
+  if (body === null) return {};
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (!isRecord(parsed)) return {};
+    return Object.fromEntries(
+      Object.entries(parsed).flatMap(([reporter, weight]) =>
+        reporter !== '' && typeof weight === 'number' && Number.isFinite(weight) && weight >= 0 && weight <= 1
+          ? [[reporter, weight]]
+          : [],
+      ),
+    );
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Add the inverse-propensity term to each usable observation.  The window is
  * the latest 90 published calendar days present in the immutable call log;
@@ -158,7 +181,10 @@ export function withSelectionWeights(
     return [{ spotId: call.spot_id, date, decile: scoreDecile(call.score_q) }];
   });
   const latestDate = usableCalls.map((call) => call.date).sort().at(-1);
-  if (latestDate === undefined) return observations.map((observation) => ({ ...observation, selection_weight: 1 }));
+  if (latestDate === undefined) return observations.map((observation) => ({
+    ...observation,
+    selection_weight: observation.override_weight ?? 1,
+  }));
   const firstDate = ninetyDaysBefore(latestDate);
   const windowCalls = usableCalls.filter((call) => call.date >= firstDate);
   const bySpotDay = new Map(windowCalls.map((call) => [`${call.spotId}\u0000${call.date}`, call]));
@@ -180,16 +206,17 @@ export function withSelectionWeights(
   return observations.map((observation) => {
     const date = utcDateOf(observation.observed_at);
     const call = date === undefined ? undefined : bySpotDay.get(`${observation.spot_id}\u0000${date}`);
-    if (call === undefined) return { ...observation, selection_weight: 1 };
+    if (call === undefined) return { ...observation, selection_weight: observation.override_weight ?? 1 };
     const totalDays = windowDays.length;
+    const propensityWeight = selectionWeight({
+      totalDays,
+      reportedDays: reportsByDecile.get(call.decile) ?? 0,
+      totalReportedDays: reportedSpotDays.size,
+      trigger: observation.trigger,
+    });
     return {
       ...observation,
-      selection_weight: selectionWeight({
-        totalDays,
-        reportedDays: reportsByDecile.get(call.decile) ?? 0,
-        totalReportedDays: reportedSpotDays.size,
-        trigger: observation.trigger,
-      }),
+      selection_weight: (observation.override_weight ?? 1) * propensityWeight,
     };
   });
 }

@@ -8,6 +8,7 @@ import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
 import {
+  applyReporterOverrides,
   collapseDeviceDayMedian,
   concordanceWeight,
   selectionWeight,
@@ -127,6 +128,31 @@ describe('selection propensity', () => {
               : Math.min(3, (boundedTotalReportedDays / totalDays) / (boundedReportedDays / totalDays));
           assert.equal(actual, expected);
           assert.ok(actual <= 3, 'a rare decile can never dominate the fit');
+        },
+      ),
+      { numRuns: 50 },
+    );
+  });
+});
+
+describe('incident reporter overrides', () => {
+  it('removes only reporters set to zero and leaves every absent override at full weight', () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.constantFrom('d_keep_a', 'd_keep_b', 'd_excise'), { minLength: 1, maxLength: 30 }),
+        (reporters) => {
+          const observations = reporters.map((device_id, index) => ({
+            spot_id: 'playa-venao',
+            device_id,
+            observed_at: `2026-07-${String(index + 1).padStart(2, '0')}T18:00:00Z`,
+          }));
+          const weighted = applyReporterOverrides(observations, { d_excise: 0 });
+
+          assert.deepEqual(
+            weighted.map((observation) => observation.device_id),
+            reporters.filter((reporter) => reporter !== 'd_excise'),
+          );
+          assert.ok(weighted.every((observation) => observation.override_weight === 1));
         },
       ),
       { numRuns: 50 },

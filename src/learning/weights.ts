@@ -17,6 +17,27 @@ export type SelectionWeightInput = {
   readonly trigger?: 'organic' | 'push_solicited' | undefined;
 };
 
+/** Human-reviewed incident weights, keyed only to the reporter identity. */
+export type ReporterOverrides = Readonly<Record<string, number>>;
+
+type ReporterOverrideInput = { readonly device_id?: string };
+
+/**
+ * A zero-weight reporter is absent from the fit, including every count. Other
+ * valid override values travel with the row for the later multiplicative
+ * weighting stage; report IDs are intentionally never read here.
+ */
+export function applyReporterOverrides<T extends ReporterOverrideInput>(
+  observations: readonly T[],
+  overrides: ReporterOverrides,
+): Array<T & { override_weight: number }> {
+  return observations.flatMap((observation) => {
+    const weight = observation.device_id === undefined ? 1 : overrides[observation.device_id] ?? 1;
+    if (weight === 0) return [];
+    return [{ ...observation, override_weight: weight }];
+  });
+}
+
 export type DeviceDaySample = {
   readonly spot_id?: string;
   readonly session_day?: string;
