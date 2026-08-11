@@ -19,7 +19,9 @@ type QueuedReport = Readonly<{
   trigger: string;
 }>;
 
-function queueDatabase(records: QueuedReport[]) {
+type QueuedEntry = QueuedReport & Readonly<{ refusal_what?: string | null }>;
+
+function queueDatabase(records: QueuedEntry[]) {
   const remaining = [...records];
   const request = <T>(result: T) => {
     const operation: { result?: T; onsuccess?: () => void } = {};
@@ -37,6 +39,12 @@ function queueDatabase(records: QueuedReport[]) {
         objectStore: () => mode === 'readonly'
           ? { getAll: () => request([...remaining]) }
           : {
+              put: (record: QueuedEntry) => {
+                const index = remaining.findIndex((candidate) => candidate.report_id === record.report_id);
+                if (index === -1) remaining.push(record);
+                else remaining[index] = record;
+                queueMicrotask(() => transaction.oncomplete?.());
+              },
               delete: (reportId: string) => {
                 const index = remaining.findIndex((record) => record.report_id === reportId);
                 if (index !== -1) remaining.splice(index, 1);
@@ -154,5 +162,107 @@ describe('offline queue flush', () => {
     await Promise.all(waits);
 
     assert.deepEqual(queue.remaining, [], 'the helper removes an activation-time replay only after the site answers');
+  });
+
+  it('keeps a refused label, stores the site\'s what, and never replays it on a later automatic trigger', async () => {
+    const record: QueuedReport = {
+      report_id: '01J0SIGNALSLICE04REFUSED1',
+      spot_id: 'playa-venao',
+      observed_at: '2026-08-10T14:00:00.000Z',
+      submitted_at: '2026-08-10T14:30:00.000Z',
+      size_band: 'waist_chest',
+      size_band_schema: 1,
+      wind: 'choppy',
+      quality: 'good',
+      trigger: 'organic',
+    };
+    const queue = queueDatabase([record]);
+    const listeners = new Map<string, ((event: unknown) => void)[]>();
+    const sent: Request[] = [];
+    const scheduled: number[] = [];
+    const fakeSelf = {
+      addEventListener(type: string, handler: (event: unknown) => void) {
+        listeners.set(type, [...(listeners.get(type) ?? []), handler]);
+      },
+      location: { origin: ORIGIN },
+      caches: { open: async () => ({ keys: async () => [] }), keys: async () => [], delete: async () => true },
+      clients: { claim: async () => {} },
+      skipWaiting: async () => {},
+      fetch: async (input: RequestInfo, init?: RequestInit) => {
+        sent.push(input instanceof Request ? input : new Request(new URL(input, ORIGIN), init));
+        return new Response(JSON.stringify({ error: { code: 'schema_invalid', what: 'El reporte no tiene la forma que esperamos.' } }), {
+          status: 400,
+          headers: { 'content-type': 'application/json' },
+        });
+      },
+    };
+
+    // eslint-disable-next-line no-new-func -- this test drives the shipped worker, never a copy.
+    new Function('self', 'indexedDB', 'setTimeout', SW_SOURCE)(fakeSelf, queue, (_callback: () => void, delay: number) => {
+      scheduled.push(delay);
+      return scheduled.length;
+    });
+    const message = listeners.get('message')?.[0];
+    assert.ok(message, 'the worker needs the returned-signal trigger before it can retain a refusal');
+    const waits: Promise<unknown>[] = [];
+    message({ data: { type: 'flush-report-queue' }, waitUntil: (work: Promise<unknown>) => waits.push(work) });
+    await Promise.all(waits);
+
+    assert.equal(sent.length, 1, 'the refused report reaches the site once to hear its reason');
+    assert.equal(await sent[0]!.text(), JSON.stringify(record), 'saved refusal metadata never changes the committed report replay');
+    assert.deepEqual(
+      queue.remaining,
+      [{ ...record, refusal_what: 'El reporte no tiene la forma que esperamos.' }],
+      'a permanent refusal keeps its label and retains only the site\'s plain reason beside it',
+    );
+    assert.deepEqual(scheduled, [], 'a 4xx other than 401 or 429 never schedules an automatic retry');
+
+    message({ data: { type: 'flush-report-queue' }, waitUntil: (work: Promise<unknown>) => waits.push(work) });
+    await Promise.all(waits);
+
+    assert.equal(sent.length, 1, 'a later returned-signal trigger never sends a permanently refused report again');
+  });
+
+  it('marks a permanent refusal without a readable reason so it cannot be retried', async () => {
+    const record: QueuedReport = {
+      report_id: '01J0SIGNALSLICE03REFUSEDNOREASON',
+      spot_id: 'playa-venao',
+      observed_at: '2026-08-10T14:00:00.000Z',
+      submitted_at: '2026-08-10T14:30:00.000Z',
+      size_band: 'waist_chest',
+      size_band_schema: 1,
+      wind: 'choppy',
+      quality: 'good',
+      trigger: 'organic',
+    };
+    const queue = queueDatabase([record]);
+    const listeners = new Map<string, ((event: unknown) => void)[]>();
+    const sent: Request[] = [];
+    const fakeSelf = {
+      addEventListener(type: string, handler: (event: unknown) => void) {
+        listeners.set(type, [...(listeners.get(type) ?? []), handler]);
+      },
+      location: { origin: ORIGIN },
+      caches: { open: async () => ({ keys: async () => [] }), keys: async () => [], delete: async () => true },
+      clients: { claim: async () => {} },
+      skipWaiting: async () => {},
+      fetch: async (input: RequestInfo, init?: RequestInit) => {
+        sent.push(input instanceof Request ? input : new Request(new URL(input, ORIGIN), init));
+        return new Response('', { status: 400 });
+      },
+    };
+
+    // eslint-disable-next-line no-new-func -- this test drives the shipped worker, never a copy.
+    new Function('self', 'indexedDB', SW_SOURCE)(fakeSelf, queue);
+    const message = listeners.get('message')?.[0];
+    assert.ok(message, 'the returned-signal trigger must retain every permanent refusal, even a malformed one');
+    const waits: Promise<unknown>[] = [];
+    message({ data: { type: 'flush-report-queue' }, waitUntil: (work: Promise<unknown>) => waits.push(work) });
+    await Promise.all(waits);
+    message({ data: { type: 'flush-report-queue' }, waitUntil: (work: Promise<unknown>) => waits.push(work) });
+    await Promise.all(waits);
+
+    assert.equal(sent.length, 1, 'a missing error.what may hide the explanation, never reopen automatic retries');
+    assert.deepEqual(queue.remaining, [{ ...record, refusal_what: null }], 'the retained null marker keeps the label and records that the refusal is final');
   });
 });

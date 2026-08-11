@@ -57,7 +57,8 @@ Feature: A queued report sends itself
     And a report is waiting on the phone because it was filed with no signal
     And the site is refusing sends with a reason
     When the signal comes back
-    Then the label stays on the phone
+    Then the refusal reason is not shown on the home page
+    And the label stays on the phone
     And the phone does not try the same send again by itself
 
   @slice-03 @driving_port @real-io @error @covers-R24 @covers-R26 @covers-R38 @covers-R41

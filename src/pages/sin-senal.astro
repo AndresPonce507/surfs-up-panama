@@ -2,9 +2,9 @@
 // The precached offline fallback: what a surfer with nothing kept on their
 // phone lands on when there is no signal to fetch a live page
 // (application-architecture.md section 4, route `/sin-senal`). Ships today;
-// the second settled sentence, "Los reportes que mandes quedan guardados.",
-// is FALSE until slice-03 builds the report queue, so it is deliberately
-// absent here -- no step in this roadmap may add it before then.
+// Slice-03 makes the second settled sentence true: the worker reads the real
+// phone queue when it serves this fallback and adds the settled singular box
+// only when exactly one report is waiting.
 //
 // THE HOUR (revised after the source-blind FAIL on the first pass). The
 // first pass shipped the sentence with no hour clause at all, reasoning that
@@ -43,6 +43,8 @@ import { formatPanamaTime } from '../publish/reading-state';
 <Base locale="es" title="Sin señal" currentPath={paths.offline()}>
   <h1>Sin señal.</h1>
   <p>Esto es lo último que vimos, de las {formatPanamaTime(forecast.published_at)}</p>
+  <p>Los reportes que mandes quedan guardados.</p>
+  <div data-offline-queue></div>
   <nav>
     <a data-field="back-to-home" href={paths.home('es')}>Volver al inicio</a>
   </nav>

@@ -20,6 +20,7 @@ import assert from 'node:assert/strict';
 import {
   OFFLINE_SENTENCE_TWO,
   REFUSAL_REASON_ES,
+  UNVISITED_SPOT,
   VISITED_SPOT,
   assertBuiltSite,
   controllerMessages,
@@ -199,6 +200,17 @@ Given(
 When('the signal comes back', { timeout: 60_000 }, async function (this: object) {
   await signalReturns(this, scenarioState(this));
 });
+
+When(
+  'the report is refused and the surfer opens a spot they have never opened without signal',
+  { timeout: 120_000 },
+  async function (this: object) {
+    const state = scenarioState(this);
+    await signalReturns(this, state);
+    setSignal(state, 'blackout');
+    await goTo(state, `/spots/${UNVISITED_SPOT}`, `open ${UNVISITED_SPOT} with the signal cut after the refusal`);
+  },
+);
 
 When('the signal comes back again later', { timeout: 60_000 }, async function (this: object) {
   const state = scenarioState(this);
@@ -412,6 +424,26 @@ Then('the label stays on the phone', { timeout: 60_000 }, async function (this: 
   );
 });
 
+Then('the refusal reason is not shown on the home page', { timeout: 60_000 }, async function (this: object) {
+  const state = scenarioState(this);
+  const page = await phonePage(state);
+  const now = await screenText(state);
+  const queueBridgeCount = await page.locator('[data-field="queued-report"], [role="alert"]').count();
+  assert.ok(
+    !now.includes(REFUSAL_REASON_ES),
+    `WHAT: the home page shows the refusal reason (${JSON.stringify(REFUSAL_REASON_ES)}). `
+      + 'WHY: a refusal belongs only on the explicit sin señal queue surface, never as a home-page bridge. '
+      + `HOW: retain error.what until the surfer navigates there.${failureContext(state)}`,
+  );
+  assert.equal(
+    queueBridgeCount,
+    0,
+    `WHAT: the home page renders ${queueBridgeCount} queue or alert bridge(s) after a refusal. `
+      + 'WHY: waiting status must not interrupt reading or look like a toast. '
+      + `HOW: leave the home surface unchanged until explicit offline navigation.${failureContext(state)}`,
+  );
+});
+
 Then('the phone does not hammer the throttled door', { timeout: 60_000 }, async function (this: object) {
   const state = scenarioState(this);
   const arrived = writePathReceived();
@@ -471,6 +503,22 @@ Then(
         + 'WHY: a refusal the surfer never learns about is a label they think was delivered. The '
         + 'site already speaks its reasons in plain words; the phone\'s only job is to show them. '
         + `HOW: surface the refusal reason where the queued report is shown.${failureContext(state)}`,
+    );
+  },
+);
+
+Then(
+  "the sin señal page shows the site's reason in plain Spanish",
+  { timeout: 60_000 },
+  async function (this: object) {
+    const state = scenarioState(this);
+    const now = await screenText(state);
+    assert.ok(
+      now.includes(REFUSAL_REASON_ES),
+      `WHAT: the sin señal page does not show the site's reason (${JSON.stringify(REFUSAL_REASON_ES)}). `
+        + `On screen: ${JSON.stringify(now.slice(0, 240))}. `
+        + 'WHY: a refused label waits on the phone until the surfer opens this real queue surface. '
+        + `HOW: render error.what beside the retained queue entry.${failureContext(state)}`,
     );
   },
 );
