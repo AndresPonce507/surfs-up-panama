@@ -470,6 +470,13 @@
       "s": "EXECUTED",
       "d": "PASS: after restoration acceptance 3/3, focused units 11/11, typecheck, and rerun qualified full units 102/102 passed. The first full-unit attempt had one unrelated page-weight property failure, then its immediate identical rerun passed; generated-surface build remains qualified by preserved stale user data. Test budget remains 3 behaviors x 2 = 6; 1 new unit test.",
       "t": "2026-08-11T05:23:06Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 027174c committed the corrected declared planner input, one state-delta property, and factual RED/GREEN/review evidence. Independent review iteration 3 approved under the stale-generated-surface qualification.",
+      "t": "2026-08-11T05:24:06Z"
     }
   ]
 }
