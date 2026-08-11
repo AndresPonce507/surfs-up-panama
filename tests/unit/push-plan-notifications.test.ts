@@ -48,26 +48,28 @@ describe('planNotifications -- afternoon follow-up (R41)', () => {
     fc.assert(
       fc.property(
         fc.integer({ min: 14, max: 16 }),
+        fc.constantFrom<StoredSub['last_notified_date']>(null, '2026-08-09', '2026-08-10', '2026-08-11'),
         fc.constantFrom<StoredSub['followup_date']>(null, '2026-08-09', '2026-08-10', '2026-08-11'),
         fc.integer({ min: 0, max: 100 }),
-        (hour, followupDate, laterScore) => {
+        (hour, notifiedDate, followupDate, laterScore) => {
         const plan = planNotifications({
           now: `2026-08-10T${String(hour).padStart(2, '0')}:25:00-05:00`,
           spots: [{ spot_id: 'playa-venao', slug: 'playa-venao', name: 'Playa Venao', timezone: 'America/Panama' }],
           scores: { 'playa-venao': laterScore },
           subscriptions: [{
             spot_id: 'playa-venao', endpoint_hash: 'telefono-03', lang: 'es', threshold_score: 70,
-            last_notified_date: '2026-08-10', followup_date: followupDate, device_id: 'telefono-03',
+            last_notified_date: notifiedDate, followup_date: followupDate, device_id: 'telefono-03',
           }],
           run_cap: 10_000,
         });
 
         const followups = plan.sends.filter((send) => send.kind === 'followup');
-          const eligible = followupDate === null || followupDate < '2026-08-10';
+          const eligible = notifiedDate === '2026-08-10' &&
+            (followupDate === null || followupDate < '2026-08-10');
           assert.equal(
             followups.length,
             eligible ? 1 : 0,
-            'A question is eligible only when the stored follow-up date is absent or strictly before the spot-local day.',
+            'A question is eligible only after a morning aviso today and when the stored follow-up date is absent or strictly before the spot-local day.',
           );
           if (eligible) {
             assert.equal(followups[0]?.spot_id, 'playa-venao');

@@ -71,6 +71,27 @@
       "s": "EXECUTED",
       "d": "QUALIFIED: with the parent-authorized, non-staged 2026-08-11/12 integration surface substituted temporarily, fast CI passed typecheck, dependencies, secrets, UI, infrastructure, SAST, and budget. The full unit job failed only because the integration surface omits wind_state for playa-malibu, which tests/unit/published-surface-fields.test.ts rejects. This lane's original generated surface was restored byte-for-byte (SHA-256 eb1b7ce3043e56a54b9eef8ae111c2e374994a848f853b1e2788d8337244d032) and no data file was staged or committed.",
       "t": "2026-08-11T00:02:58-05:00"
+    },
+    {
+      "sid": "03-03",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS: controlled mutation removed the last_notified_date=today guard. The strengthened fast-check property failed and shrank to [14, null, null, 0], proving a subscriber without a morning aviso would incorrectly receive one question. The mutation was removed unchanged before GREEN.",
+      "t": "2026-08-11T00:03:51-05:00"
+    },
+    {
+      "sid": "03-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the existing fast-check property was extended across last_notified_date states. Both named suppressions passed: already followed today and no morning aviso. Non-external Slice-03 acceptance 6 scenarios/74 steps, focused unit, typecheck, and 20 test files/92 tests excluding the stale surface test passed.",
+      "t": "2026-08-11T00:04:06-05:00"
+    },
+    {
+      "sid": "03-03",
+      "p": "QUALITY_GATES_G1_G11",
+      "s": "EXECUTED",
+      "d": "QUALIFIED_PASS: one observable suppression behavior x 2 = 2 unit-test budget, one extended property test. Pure core has no mocks or adapter. The current integration surface removes stale-build blockage but its unrelated playa-malibu wind_state omission still blocks the full unit job; generated data remains untouched.",
+      "t": "2026-08-11T00:04:06-05:00"
     }
   ]
 }

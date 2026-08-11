@@ -1,0 +1,19 @@
+{
+  "sid": "03-03",
+  "phase": "RED_GREEN",
+  "controlled_mutation": {
+    "change": "Remove the stored morning-aviso date requirement.",
+    "command": "npm test -- --run tests/unit/push-plan-notifications.test.ts",
+    "status": "FAIL_AS_EXPECTED",
+    "evidence": "fast-check shrank to [14, null, null, 0]; one question was planned despite no morning aviso."
+  },
+  "restored_green": {
+    "already_followed_acceptance": "PASS: 1 scenario, 12 steps",
+    "no_morning_acceptance": "PASS: 1 scenario, 12 steps",
+    "slice03_non_external": "PASS: 6 scenarios, 74 steps",
+    "focused_unit": "PASS: 1 test",
+    "typecheck": "PASS",
+    "unit_except_known_generated_surface": "PASS: 20 files, 92 tests"
+  },
+  "known_external_qualification": "The parent-authorized current integration surface still fails the full unit job only because playa-malibu lacks wind_state. Generated data was not changed."
+}
