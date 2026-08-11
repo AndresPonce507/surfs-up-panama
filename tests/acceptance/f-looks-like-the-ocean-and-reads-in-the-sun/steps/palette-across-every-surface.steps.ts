@@ -301,7 +301,11 @@ async function auditReportSurface(page: Page, kind: 'unknown' | 'capture' | 'rev
       const back = document.querySelector('[data-field="back-to-list"]');
       if (back?.getAttribute('href') !== '/') findings.push('la playa inexistente no ofrece volver a la lista');
     }
-    if (kind === 'reveal' && !document.querySelector('[data-reveal-shell]')) findings.push('la pantalla posterior al reporte no ofrece su lugar para la respuesta');
+    if (kind === 'reveal') {
+      const shell = document.querySelector('[data-reveal-shell]');
+      if (!shell) findings.push('la pantalla posterior al reporte no ofrece su lugar para la respuesta');
+      if (compact(shell?.textContent || '').length === 0) findings.push('la pantalla posterior al reporte llega vacía');
+    }
     if (kind !== 'unknown' && (document.querySelector('[data-forecast-score], [data-forecast-call], [data-forecast-size], [data-forecast-wind]') || forecastValues.some((value) => words.includes(value)))) {
       findings.push('la pantalla de reportar adelanta la llamada del pronóstico');
     }
@@ -323,9 +327,17 @@ async function reportState(page: Page): Promise<ReportState> {
       findings.push('la pantalla de reportar no ofrece una selección visible');
       return { selectionIsVisible: false, disabledActionIsVisible: false, findings };
     }
-    const before = getComputedStyle(label);
+    const before = {
+      borderColor: getComputedStyle(label).borderColor,
+      backgroundColor: getComputedStyle(label).backgroundColor,
+      boxShadow: getComputedStyle(label).boxShadow,
+    };
     choice.click();
-    const after = getComputedStyle(label);
+    const after = {
+      borderColor: getComputedStyle(label).borderColor,
+      backgroundColor: getComputedStyle(label).backgroundColor,
+      boxShadow: getComputedStyle(label).boxShadow,
+    };
     const nativeMark = getComputedStyle(choice).appearance !== 'none';
     const labelChanged = before.borderColor !== after.borderColor || before.backgroundColor !== after.backgroundColor || before.boxShadow !== after.boxShadow;
     const selectionIsVisible = choice.checked && nativeMark && labelChanged && label.getBoundingClientRect().height >= 44;
