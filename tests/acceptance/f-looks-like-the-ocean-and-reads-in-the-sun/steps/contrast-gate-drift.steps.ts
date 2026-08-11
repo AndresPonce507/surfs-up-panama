@@ -139,6 +139,7 @@ async function openPublishedHome(world: ContrastWorld, theme: Theme): Promise<vo
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
+  if (theme === 'oscuro') await page.addInitScript(() => localStorage.setItem('surfs-up-theme', 'dark'));
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   openedHomes.set(world, { browser, page, preview });
 }

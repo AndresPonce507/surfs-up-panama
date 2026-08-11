@@ -24,7 +24,8 @@ body {
 
 h1 {
   margin: 0 0 var(--sp-1);
-  /* keep clear of the fixed language pill at 390px */
+  /* Keep the reading title clear of the fixed controls at 390px. */
+  padding-left: 3.5rem;
   padding-right: 3.5rem;
   font-size: var(--text-title1);
   font-weight: 800;
@@ -74,6 +75,24 @@ a:active,
 button:active:not(:disabled),
 fieldset label:active {
   transform: scale(0.98);
+}
+
+.theme-toggle {
+  position: fixed;
+  z-index: 1;
+  top: var(--sp-2);
+  left: var(--sp-2);
+  display: inline-grid;
+  width: var(--tap);
+  height: var(--tap);
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--ctrl);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  color: var(--accent);
+  font: inherit;
+  line-height: 1;
 }
 
 /* cross-document crossfade on route navigation. Pure CSS, UA-driven,

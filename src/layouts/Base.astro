@@ -22,6 +22,7 @@ import base from '../styles/base.css?raw';
 import components from '../styles/components.css?raw';
 import offline from '../styles/offline.css?raw';
 import { darkChromeColor, lightChromeColor } from '../styles/chrome-colors';
+import { strings } from '../i18n/strings';
 
 interface Props {
   locale: Locale;
@@ -36,6 +37,7 @@ interface Props {
 }
 
 const { locale, title, currentPath, announcement, compactStyles = false } = Astro.props;
+const theme = strings[locale].theme;
 
 // Build-time CSS minifier: comments out, whitespace collapsed. Safe for this
 // codebase by construction: no CSS strings/content values contain spaces or
@@ -55,13 +57,28 @@ const inlineCss = minify(
 ---
 
 <!doctype html>
-<html lang={locale}>
+<html lang={locale} style={`color-scheme: light; background: ${lightChromeColor}`}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
     <meta name="theme-color" content={lightChromeColor} media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content={darkChromeColor} media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content={lightChromeColor} media="(prefers-color-scheme: dark)" />
+    <script is:inline define:vars={{ lightChromeColor, darkChromeColor }}>
+      const saved = (() => {
+        try {
+          const choice = localStorage.getItem('surfs-up-theme');
+          return choice === 'dark' || choice === 'light' ? choice : 'light';
+        } catch {
+          return 'light';
+        }
+      })();
+      document.documentElement.dataset.theme = saved;
+      document.documentElement.style.background = saved === 'dark' ? darkChromeColor : lightChromeColor;
+      for (const chrome of document.querySelectorAll('meta[name="theme-color"]')) {
+        chrome.setAttribute('content', saved === 'dark' ? darkChromeColor : lightChromeColor);
+      }
+    </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="alternate" hreflang="es" href={currentPath} />
@@ -84,7 +101,21 @@ const inlineCss = minify(
     <Fragment set:html={`<style>${inlineCss}</style>`} />
   </head>
   <body>
+    <button
+      class="theme-toggle"
+      type="button"
+      data-theme-toggle
+      data-activate-dark={theme.activateDark}
+      data-activate-light={theme.activateLight}
+      aria-label={theme.activateDark}
+    >
+      <span aria-hidden="true">◐</span>
+    </button>
     <slot />
+    <script>
+      import { connectThemeToggle } from '../styles/theme-controller';
+      connectThemeToggle();
+    </script>
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js');

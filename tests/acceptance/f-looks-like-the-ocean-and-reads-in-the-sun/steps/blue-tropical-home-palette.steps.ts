@@ -186,6 +186,7 @@ async function openSurface(
     colorScheme: theme === 'oscuro' ? 'dark' : 'light',
     reducedMotion: movement === 'reducido' ? 'reduce' : 'no-preference',
   });
+  if (theme === 'oscuro') await page.addInitScript(() => localStorage.setItem('surfs-up-theme', 'dark'));
   await page.goto(url, { waitUntil: 'domcontentloaded' });
   openedSurfaces.set(world, { root, cleanupRoot, preview, browser, page });
   return { buildStatus: build.status, buildOutput: build.output };
@@ -346,7 +347,7 @@ async function heroIdentity(page: Page): Promise<HeroIdentity> {
       return 0.2126 * c(r) + 0.7152 * c(g) + 0.0722 * c(b);
     };
     const rgbToHex = ([r, g, b]) => '#' + [r, g, b].map((v) => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
-    const isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+    const isDark = document.documentElement.dataset.theme === 'dark';
     const hero = document.querySelector('ol.ranked > li:first-child');
     if (!hero) return { isGradient: false, maxStopLuminance: 1, stopHexes: [], stopLuminances: [], isDark };
     const image = getComputedStyle(hero).backgroundImage;

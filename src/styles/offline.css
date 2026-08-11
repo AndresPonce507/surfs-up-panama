@@ -1,7 +1,7 @@
 /* The precached fallback has a 3 KB document ceiling. It deliberately carries
    only the tokens and roles that its five visible elements consume. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   font-family: var(--font);
   background: var(--bg);
   color: var(--ink);
@@ -42,6 +42,22 @@ a {
   align-items: center;
   min-height: var(--tap);
   color: var(--accent);
+}
+
+.theme-toggle {
+  position: fixed;
+  top: var(--sp-2);
+  left: var(--sp-2);
+  display: inline-grid;
+  width: var(--tap);
+  height: var(--tap);
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--ctrl);
+  border-radius: var(--r-full);
+  background: var(--surface);
+  color: var(--accent);
+  font: inherit;
 }
 
 :focus-visible {
