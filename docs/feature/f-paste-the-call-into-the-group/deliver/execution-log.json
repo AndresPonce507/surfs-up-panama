@@ -309,6 +309,27 @@
       "s": "EXECUTED",
       "d": "PASS: test budget checked. The two direct Base publication acceptance scenarios cover the supplied-announcement and no-announcement behaviors; no additional unit test is needed for this thin adapter seam.",
       "t": "2026-08-10T21:08:12Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: prior RED observation is preserved in distill/red-classification.md: `npm run test:at -- --tags \"@feature-f-paste-the-call-into-the-group and @slice-03\" > /tmp/paste03-red.log 2>&1; echo \"REAL_EXIT=$?\"` returned REAL_EXIT=1, with 5 scenarios (5 failed), 56 steps (45 passed, 6 skipped, 5 failed), and zero BROKEN. The five failures reached the missing-announcement or missing-clean-address assertions. This entry reports that committed historical evidence; it does not claim a new RED run.",
+      "t": "2026-08-10T21:11:48Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: post-commit revalidation on the present working tree ran `PASTE_JIT=1 npm run test:at -- --tags '@feature-f-paste-the-call-into-the-group and @jit-03-03'`: 5 scenarios (5 passed), 71 steps (71 passed), 0m 10.945s executing. `npm run typecheck` and `npm run build` both exited 0; the build's page-weight gate measured home at 4,733 B gz of 14,336 B. PASTE_JIT=1 is required because the scenarios intentionally skip without it. These current reruns validate the slice contract but are not represented as a historical run at 408331a. The authenticated WhatsApp chat-card observation remains NOT_EXECUTED under 03-03-whatsapp-preview-external-verification.md.",
+      "t": "2026-08-10T22:52:05Z"
+    },
+    {
+      "sid": "03-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: `git show --format= --name-status 408331a41dcad7b1053743573a82d5ef97789840` verifies the 2026-08-10 17:52:43-05:00 commit `feat(paste): close the home preview journey - step 03-03`, with Step-Id: 03-03, changed only src/pages/index.astro, src/components/RankedList.astro, and src/layouts/Base.astro. The external WhatsApp chat-card observation remains NOT_EXECUTED and is not represented as an owned acceptance result.",
+      "t": "2026-08-10T22:52:25Z"
     }
   ]
 }
