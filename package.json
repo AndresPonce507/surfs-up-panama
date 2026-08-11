@@ -23,6 +23,7 @@
     "typecheck": "tsc --noEmit",
     "ci:local": "node scripts/ci-local.mjs",
     "ci:local:fast": "node scripts/ci-local.mjs --fast",
+    "smoke:build-lambda-arm64": "node scripts/smoke-build-lambda-arm64.mjs",
     "merge:pr": "node scripts/merge-pr.mjs",
     "postinstall": "bash scripts/git-hooks/install.sh >/dev/null 2>&1 || true"
   },

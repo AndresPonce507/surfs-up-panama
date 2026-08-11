@@ -58,9 +58,14 @@ function copyLaunchSeedFiles(inputDir: string, outputDir: string): string[] {
 
 const pipelineLambdaBundling: nodejs.BundlingOptions = {
   format: nodejs.OutputFormat.ESM,
-  // Node 22's Lambda runtime already carries the AWS SDK v3; bundling it too
-  // would cost real deployed-bundle size for nothing (page-weight and cost
-  // culture, see BRIEF.md).
+  // This function includes Astro's native CSS dependency. Always package in
+  // CDK's Linux ARM64 Docker image: host bundling on a developer Mac silently
+  // stages a Darwin binary which Lambda cannot load.
+  forceDockerBundling: true,
+  // Node 22 Lambda supplies AWS SDK v3. Keeping it external avoids packaging
+  // a second SDK copy that pushes the Astro-backed build ZIP beyond Lambda's
+  // 50 MiB upload limit. The ARM64 smoke sets the runtime's NODE_PATH and
+  // imports the staged handler, proving this runtime contract directly.
   externalModules: ['@aws-sdk/*'],
   // Astro is invoked at runtime by the Build Lambda to render the new surface;
   // it cannot be tree-shaken into the handler bundle.
@@ -68,7 +73,17 @@ const pipelineLambdaBundling: nodejs.BundlingOptions = {
   commandHooks: {
     beforeBundling: () => [],
     beforeInstall: () => [],
-    afterBundling: copyLaunchSeedFiles,
+    afterBundling(inputDir, outputDir) {
+      return [
+        ...copyLaunchSeedFiles(inputDir, outputDir),
+        // `astro.config.mjs` selects Astro's passthrough image service. Sharp
+        // and its platform-native libvips package are optional dependencies
+        // that the generated package manager still installs, but no deployed
+        // code can load them. Excluding that unused native tree is what keeps
+        // the ARM64 ZIP below Lambda's 50 MiB hard upload ceiling.
+        `rm -rf ${outputDir}/node_modules/sharp ${outputDir}/node_modules/@img`,
+      ];
+    },
   },
 };
 

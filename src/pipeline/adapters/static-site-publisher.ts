@@ -112,7 +112,12 @@ export class AstroStaticRouteRenderer implements StaticRouteRenderer {
       }
       await symlink(join(this.packagedProjectRoot, 'node_modules'), join(project, 'node_modules'));
       await writeFile(join(project, 'data/published-surface.json'), `${JSON.stringify(surface, null, 2)}\n`);
-      await run(process.execPath, [join(project, 'node_modules/astro/bin/astro.mjs'), 'build', '--root', project, '--outDir', output]);
+      await run(
+        process.execPath,
+        [join(project, 'node_modules/astro/bin/astro.mjs'), 'build', '--root', project, '--outDir', output],
+        { SURFS_UP_VITE_CACHE_DIR: join(work, 'vite-cache') },
+        project,
+      );
       // Await inside the try: a bare returned promise would run `finally`
       // immediately and erase /tmp before the uploader had read the files.
       return await readStaticFiles(output);
@@ -169,9 +174,14 @@ function requiredEnv(name: string): string {
   return value;
 }
 
-async function run(command: string, args: readonly string[]): Promise<void> {
+async function run(
+  command: string,
+  args: readonly string[],
+  environment: Readonly<Record<string, string>> = {},
+  cwd?: string,
+): Promise<void> {
   await new Promise<void>((resolvePromise, reject) => {
-    const child = spawn(command, [...args], { stdio: 'pipe' });
+    const child = spawn(command, [...args], { cwd, stdio: 'pipe', env: { ...process.env, ...environment } });
     let stderr = '';
     child.stderr.on('data', (chunk: Uint8Array) => { stderr += Buffer.from(chunk).toString('utf8'); });
     child.on('error', reject);
