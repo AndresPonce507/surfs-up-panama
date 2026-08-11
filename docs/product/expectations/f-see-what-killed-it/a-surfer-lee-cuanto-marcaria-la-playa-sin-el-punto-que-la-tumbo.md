@@ -65,3 +65,5 @@ técnica ni una nota de programador.
 
 | date | examiner | verdict | observations |
 |------|----------|---------|--------------|
+| 2026-08-11 | Vera | INDETERMINATE | The required `npm run build` start step printed `health.publish.counterfactual_field_missing` publish logs into the examiner session. The source-blind boundary prohibits reading logs, so no public-surface observation was made. |
+| 2026-08-11 | Vera | PASS | At 390 px on Santa Catalina - La Punta, in light and dark with reduced motion, today reads “Lo que lo tumba: el tamaño, a 0.18. Sin él, hoy marcaría 57.” and tomorrow independently reads “Lo que lo tumba: el tamaño, a 0.11. Sin él, mañana marcaría 83.” Both cards stayed inside the 390 px viewport, the text was clear on its card, and the large “¿ESTUVISTE? CUÉNTANOS” button remained reachable. The specified dated page `/ayer.html` rendered a complete 63-point report at 390 px with no invented counterfactual number. No null, undefined, NaN, internal wording, English, braces, brackets, or em dashes appeared. |

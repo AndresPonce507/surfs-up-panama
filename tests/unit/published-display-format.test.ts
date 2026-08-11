@@ -19,6 +19,7 @@ import { describe, it } from 'vitest';
 import { sizeBands } from '../../src/data/size-bands';
 import { formatBestWindowEs, formatSizeEs, formatWeakestLinkEs } from '../../src/publish/display-format';
 import { FACTOR_TOKENS, factorWord } from '../../src/publish/factor-vocab';
+import type { CounterfactualReading, SurfaceDayIndex } from '../../src/publish/weakest-link';
 
 // domain-model.md section 7.2, transcribed. The test owns this table as its
 // oracle so a silent edit of the constants file cannot also edit the expectation.
@@ -218,6 +219,40 @@ describe('published weakest-link display format', () => {
           assert.ok(!text.includes(noun), `"${text}" names ${noun} even though the morning published no culprit for it.`);
         }
       }),
+    );
+  });
+
+  it('appends only the selected day’s published whole counterfactual, while every honest omission leaves the named sentence complete', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom(...FACTOR_TOKENS),
+        fc.constantFrom<SurfaceDayIndex>(0, 1),
+        fc.integer({ min: 0, max: 100 }),
+        fc.constantFrom<CounterfactualReading>(
+          { kind: 'rounded_equal' },
+          { kind: 'legacy_missing' },
+          { kind: 'clean' },
+          { kind: 'unknown' },
+        ),
+        (factor, day, publishedScore, suppressed) => {
+          const reading = { kind: 'named', factor, weakest_link_subscore: 0.18 } as const;
+          const { article, noun } = factorWord(factor);
+          const base = `Lo que lo tumba: ${article} ${noun}, a 0.18.`;
+          const pronoun = article === 'el' ? 'él' : 'ella';
+          const dayWord = day === 0 ? 'hoy' : 'mañana';
+
+          assert.equal(
+            formatWeakestLinkEs(reading, { kind: 'available', score_q: publishedScore }, day),
+            `${base} Sin ${pronoun}, ${dayWord} marcaría ${publishedScore}.`,
+            'The page must append the one whole score its own row published, with no browser-side calculation or other day’s value.',
+          );
+          assert.equal(
+            formatWeakestLinkEs(reading, suppressed, day),
+            base,
+            'A rounded collision, legacy omission, clean day, or missing row must retain the complete named sentence without an invented, repeated, or dangling clause.',
+          );
+        },
+      ),
     );
   });
 });

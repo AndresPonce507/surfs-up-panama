@@ -736,6 +736,41 @@
       "s": "EXECUTED",
       "d": "PASS: 15b851a is the genuine 03-04 implementation commit. Independent review APPROVED with no defects; this evidence-only follow-up records the committed phase. The unrelated .develop-progress.json remains unstaged external dirt.",
       "t": "2026-08-11T04:47:43Z"
+    },
+    {
+      "sid": "03-05",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: 03-04 is sealed. This visible Slice-03 step is limited to the Spanish formatter, existing weakest-link component, and their focused property test. It consumes only the published integer representation; no score arithmetic, producer, schema, generated data, route, client JavaScript, or Slice-04 seam is opened.",
+      "t": "2026-08-11T05:06:12Z"
+    },
+    {
+      "sid": "03-05",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: the DISTILL-owned real browser contract failed 2 scenarios for the right business reason: the selected today row did not render its published counterfactual 93. No collection, driver, timeout, or import failure occurred.",
+      "t": "2026-08-11T05:06:13Z"
+    },
+    {
+      "sid": "03-05",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: one formatter property failed 1/12 at its semantic assertion because the named sentence omitted the required selected day integer clause. Test Budget: 3 behaviors x 2 = 6; one property test added.",
+      "t": "2026-08-11T05:06:14Z"
+    },
+    {
+      "sid": "03-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: available readings append the published whole integer verbatim with the correct day and factor pronoun; rounded_equal, legacy_missing, clean, and unknown retain the complete base sentence. A score_q + 1 semantic mutation failed the property and was reverted. Focused units 12/12, typecheck, Slice-03 browser contract 6/6 scenarios and 67/67 steps, U1-U7, and fresh-surface build pass. Full units are 118/120 only because fresh Aug-11 Malibu has an upstream null wind observation and a pre-existing real-artifact helper omits the already-published scalar; neither is changed in this scoped step. U8 and independent review remain pending.",
+      "t": "2026-08-11T05:06:15Z"
+    },
+    {
+      "sid": "03-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: external gate qualification after the parent integration repair. With the current HEAD producer's fresh Aug-11 raw-capture surface, named rows carry counterfactual_score_q or rounded_equal. The two exact integration-owned repaired assertion files were copied temporarily, then restored byte-for-byte before staging; full units 119/119, typecheck, build, ci:local, and Slice-03 browser acceptance 6/6 scenarios and 67/67 steps passed. Fresh browser-only Vera PASS is recorded in the expectation charter. The borrowed test repair and generated surface are not part of this step's diff.",
+      "t": "2026-08-11T05:21:19Z"
     }
   ]
 }

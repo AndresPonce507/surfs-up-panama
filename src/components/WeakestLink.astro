@@ -41,7 +41,7 @@
 // browser.
 import { formatWeakestLinkEs } from '../publish/display-format';
 import { assertStrictTwoDayUpdate } from '../publish/static-surface';
-import { resolveWeakestLink, type SurfaceDayIndex } from '../publish/weakest-link';
+import { resolveCounterfactual, resolveWeakestLink, type SurfaceDayIndex } from '../publish/weakest-link';
 import surface from '../../data/published-surface.json';
 
 interface Props {
@@ -52,10 +52,20 @@ interface Props {
 const { spotId, day } = Astro.props;
 const publishedSurface = assertStrictTwoDayUpdate(surface.current);
 const reading = resolveWeakestLink(publishedSurface, spotId, day);
+const counterfactual = resolveCounterfactual(publishedSurface, spotId, day);
+
+if (reading.kind === 'named' && counterfactual.kind === 'legacy_missing') {
+  process.stdout.write(`\n${JSON.stringify({
+    event: 'health.publish.counterfactual_field_missing',
+    spot_id: spotId,
+    day: day === 0 ? 'today' : 'tomorrow',
+    published_at: publishedSurface.published_at,
+  })}\n`);
+}
 ---
 
 {reading.kind === 'named' && (
-  <p class="weakest-link" data-field="weakest-link">{formatWeakestLinkEs(reading)}</p>
+  <p class="weakest-link" data-field="weakest-link">{formatWeakestLinkEs(reading, counterfactual, day)}</p>
 )}
 
 <style>
