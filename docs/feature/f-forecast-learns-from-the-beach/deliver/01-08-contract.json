@@ -1,0 +1,23 @@
+{
+  "id": "01-08",
+  "name": "The gate watched passing, pulled toward its parent",
+  "criteria": [
+    "Twenty-two mornings from seven people differing by 0.22 m earn an applied correction, recording twenty-two mornings and seven people.",
+    "The applied difference clears twice its stored standard error.",
+    "The stored standard error is the mornings' own spread, sitting above the physical noise floor.",
+    "The stored difference never exceeds the raw difference in size and never flips its sign.",
+    "The published morning is still byte-identical, because the builder does not read corrections yet."
+  ],
+  "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/gate-passes-and-shrinks.test.ts",
+  "scenario_name": "Twenty-two mornings from seven people finally earn a correction",
+  "slice_id": "slice-01",
+  "surface_classification": "non-visual",
+  "non_visual_rationale": "The admission is a boolean and two numbers inside a stored file, with no rendered consequence anywhere in this slice because nothing reads corrections yet.",
+  "files_to_modify": [
+    "src/learning/shrink.ts",
+    "src/learning/gates.ts",
+    "src/learning/constants.ts",
+    "tests/unit/learning-gate-laws.test.ts"
+  ],
+  "source": "recover/learning-build docs/feature/f-forecast-learns-from-the-beach/deliver/roadmap.json"
+}

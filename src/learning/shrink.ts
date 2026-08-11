@@ -16,7 +16,16 @@ function ownWeight(n: number, tau: number): number {
 }
 
 /** b_hat = ownWeight * raw + (1 - ownWeight) * parent. */
-export function shrinkTowardParent(rawEstimate: number, n: number, tau: number, parentEstimate: number): number {
+export function shrinkTowardParent(
+  rawEstimate: number,
+  n: number,
+  tau: number,
+  parentEstimate: number,
+): number {
+  // A one-spot hierarchy defines its parent from the same weighted mean. Keep
+  // that mathematical identity exact instead of manufacturing rounding drift
+  // while decomposing the same value into two weighted terms.
+  if (rawEstimate === parentEstimate) return rawEstimate;
   const weight = ownWeight(n, tau);
   return weight * rawEstimate + (1 - weight) * parentEstimate;
 }
