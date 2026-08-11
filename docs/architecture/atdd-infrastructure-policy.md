@@ -21,6 +21,7 @@ treatment for its port class.
 | Infrastructure declarations | A copied `tests/.../fixtures/controlled-infrastructure-declarations/` input with no symlinks or `node_modules`; source symlinks are rejected before a non-dereferencing copy; only contained regular files may be renamed or rewritten, then restored and removed in finally-safe cleanup | Controlled universe: copied declaration files, a test-local credential-free environment, local-CI exit/report, and an unchanged working tree. The fixture is never `repoRoot`, a package, or a deployment source. |
 | Report record and receipt store | The write handler's production store adapter, against the deployed store or the handler's real local-store composition. | A duplicate and a quota decision are observed from the report journey's public receipt, never by inspecting table rows in browser steps. |
 | Published-call and spot-index reads | The production read adapters used by the report handler, with the real generated spot index and published-call artifacts. | A missing matching call is a real `no_snapshot` outcome, not a made-up response fixture. |
+| Reading-mode preference | Real per-scenario browser storage in a fresh Chromium or Safari/WebKit context | Slice-07 proves selection by click, reload, and Spanish/English route transition; no test fake stands in for the surfer’s stored choice. |
 
 ## Driven external / non-deterministic (fake)
 

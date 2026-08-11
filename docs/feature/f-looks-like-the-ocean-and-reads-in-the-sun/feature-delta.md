@@ -111,3 +111,82 @@ Notes on the plan:
 them by name, and the glass rules already exist. That is exactly the shape that makes a repaint a
 value swap. No component needs a flag, a second path or a special case to receive this work. If one
 turns out to, that is a finding worth reporting rather than working around.
+
+## Wave: DESIGN / [REF] Forward theme-choice contract
+
+| Origin | Commitment | DDD | Impact |
+|--------|------------|-----|--------|
+| User request 2026-08-11 | First visit is light on every public Spanish and English route, independent of the device preference. | n/a | Replaces only the earlier launch default so sunlight reading is deterministic. |
+| User request 2026-08-11 | A top-left, 44 px accessible control changes between light and dark with the selected action named in the route language. | n/a | Gives the surfer agency without making the page layout or palette authority route-specific. |
+| User request 2026-08-11 | The selected choice survives reloads and ES/EN route changes; browser chrome follows it. | n/a | Requires one public preference boundary shared by every rendered document and the page metadata. |
+| User request 2026-08-11 | JavaScript-off remains legibly light and initial paint never flashes the opposite mode. | n/a | Makes light CSS the no-script truth and requires a synchronous chosen-theme bootstrap before styles paint. |
+
+### Reconciliation
+
+The earlier DISCUSS out-of-scope row and application architecture decision 5 said “no manual
+light/dark toggle” and relied on `prefers-color-scheme`. That was a launch choice, not a safety or
+palette invariant. The later explicit user instruction is the controlling authority. It supersedes
+that choice for new phase 07 only; all historical phase results remain unchanged. The accepted
+aquatic palette, named-token authority, 44 px floor, reduced-motion rule, route budgets and the
+static manifest's light/default limitation still stand.
+
+### Minimal production ownership (for 07-01 only)
+
+| Path | Ownership | Boundary |
+|------|-----------|----------|
+| `src/layouts/Base.astro` | Emits the top-left semantic control and runs the synchronous light-first selection before inline CSS paints. | No route data, score, or feature-specific copy. |
+| `src/styles/tokens.css` | Remains the only palette authority; exposes selected-theme token scopes without inventing values. | Aquatic values and contrast floors remain unchanged. |
+| `src/styles/base.css` | Styles the top-left 44 px control using named tokens. | Deliberately avoids active slice-02 `components.css`. |
+| `src/styles/theme-controller.ts` | Reads/writes the chosen public preference, changes root state, and synchronizes browser theme-color. | No page-specific controller and no delayed hydration. |
+| `src/i18n/strings.ts` | Owns Spanish and English accessible action labels. | Labels name the next action, not the current mode. |
+| `src/pages/manifest.webmanifest.ts` | Keeps the generated manifest's static light/default color token-derived. | A manifest cannot express one person’s stored choice. |
+
+## Wave: DISTILL / [REF] Theme-choice scenarios
+
+| Scenario | Tags | Tier | Observable boundary |
+|----------|------|------|---------------------|
+| La surfista abre cualquier ruta sin elección previa y empieza a leer en claro | `@walking_skeleton @slice-07 @step-07-01 @real-io @ui-u1..u7` | A | Built public site, Chromium/WebKit matrix and emitted document sweep. |
+| La surfista elige oscuro y su elección la acompaña en español e inglés | `@slice-07 @step-07-01 @real-io @ui-u1..u7` | A | Toggle, reload, route transition, and browser-chrome outcome. |
+| La surfista sin JavaScript sigue leyendo una publicación clara | `@slice-07 @step-07-01 @real-io @ui-u1,u2,u4,u5,u6,u7` | A | JavaScript-off public document on a dark-preference phone. |
+| Una elección anterior que ya no se entiende vuelve a una lectura clara | `@slice-07 @step-07-01 @real-io @negative @error @ui-u1,u2,u4,u5,u6,u7` | A | Real browser preference recovery from a malformed stored value. |
+| Una publicación cuyo borde del navegador no sigue el tema elegido se rechaza antes de publicar | `@slice-07 @step-07-01 @real-io @negative @error @ui-u7` | A | Isolated generated-document regression check. |
+
+Tier B is intentionally absent: this is a configuration-shaped preference journey with a small,
+explicit state space; the production composition and real browser are the valuable proof.
+
+### Adapter and environment coverage
+
+| Boundary | Mechanism | Scenario coverage |
+|----------|-----------|-------------------|
+| Built reading surface | Real `npm run build`, local Astro preview, emitted `dist/` | All five scenarios |
+| Browser engines | Chromium at 390, 320 and desktop; Safari/WebKit at mobile and desktop | Walking skeleton |
+| Preference storage | Real browser preference through click, reload and route change | Chosen-mode scenario |
+| JavaScript-off fallback | Real browser context with JavaScript disabled | No-JavaScript scenario |
+| Generated browser chrome | Real emitted theme-color plus isolated artifact mutation | Walking skeleton and negative scenario |
+| Named-token authority | The existing `npm run test:ui` static style boundary, kept separate from the source-blind acceptance suite | U7 command in 07-01 |
+
+The environment names map directly to the published proof: `clean` is the credential-free build
+and fresh preview; `with-pre-commit` is the same build under the repository's installed checks;
+and `with-stale-config` is the malformed previous preference in the recovery scenario. The acceptance
+suite observes only the published surface. The separate U7 static check protects the named-token
+boundary without turning an end-user scenario into a source-file inspection.
+
+### RED scaffolds and placement
+
+The real public composition already exists, so no production scaffold is needed. The first scenario
+must fail on current main because a dark-preference first visit paints dark rather than the same
+light reading surface, before any test reaches a missing-module or setup branch. The executable
+contract is `tests/acceptance/f-looks-like-the-ocean-and-reads-in-the-sun/theme-choice-begins-light.feature`
+with its matching TypeScript steps; source-blind U8 examination lives at
+`docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/la-surfista-elige-claro-u-oscuro-sin-perder-la-lectura.md`.
+
+### [HOW] Domain language fact-to-step table
+
+| Fact / observation | Step surface |
+|--------------------|--------------|
+| The visitor has not chosen a reading mode. | `la surfista abre la portada sin haber elegido un tema` |
+| The publication opens across the supported reading environments. | `la publicación real se construye y se abre en teléfonos claros y oscuros, en escritorio y en Safari` |
+| The visitor chooses the darker reading mode and continues browsing. | `la surfista activa el modo oscuro, recarga y sigue una ruta en español y su gemela en inglés` |
+| The reading surface begins in the light mode. | `la página empieza clara aunque el teléfono prefiera oscuro` |
+| The accessible control announces its next action. | `el control anuncia “Activar modo claro” en español y “Switch to light mode” en inglés` |
+| The reading surface works without script. | `ambas llegan listas, claras, legibles y sin movimiento antes de que exista una elección guardada` |
