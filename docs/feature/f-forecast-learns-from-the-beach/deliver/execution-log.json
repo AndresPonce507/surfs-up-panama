@@ -1016,6 +1016,34 @@
       "s": "EXECUTED",
       "d": "{\"commit\":\"1f7d9c7\",\"message\":\"feat(learning): write monthly operator metrics - step 05-01\",\"status\":\"scoped green\"}",
       "t": "2026-08-11T02:16:07Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: 05-01 is committed; the two operator-only monthly correction outcomes, mapped files, privacy boundary, and roadmap were inspected. The evaluator receives residual values and correction keys only, never report identifiers.",
+      "t": "2026-08-11T02:18:00Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm run test:at -- --name A month where the corrections lose on held-out mornings switches every one of them off until a human looks\",\"exit\":1,\"classification\":\"expected behavioral RED\",\"failure\":\"the stored current correction still said applied true at lead_24_48 after the losing held-out month\"}",
+      "t": "2026-08-11T02:18:10Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm test -- --run tests/unit/learning-cv-laws.test.ts\",\"exit\":1,\"classification\":\"expected assertion RED\",\"failure\":\"reversing the strict majority predicate shrank to one winning key but returned corrections-killed\",\"test_budget\":\"2 behaviors x 2 = 4; 1 new property\"}",
+      "t": "2026-08-11T02:21:16Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "{\"focused_acceptance\":\"losing month: 1 scenario/20 steps PASS; winning month: 1 scenario/20 steps PASS; monthly hazard file: 1 scenario/22 steps PASS\",\"learning_units\":\"13 files, 75 tests PASS\",\"typecheck\":\"PASS\",\"roadmap_integrity\":\"PASS\",\"falsification\":\"reversing losingKeys > winningKeys made the losing-month acceptance fail with applied still true; restored the strict majority rule\",\"privacy\":\"cross-validation input carries only correction key, UTC day, and residual; no report_id is read or written\",\"next_step_qualification\":\"the shuffled-fold declaration acceptance remains red because src/learning/declarations.ts and its structural rule are explicitly owned by dependency-ready 05-03, not this mapped step\",\"global_qualification\":\"npm run build remains blocked by the unrelated stale published surface dated 2026-08-09 versus Panama 2026-08-10\",\"non_visual_rationale\":\"the evaluator writes operator-only metrics JSON and correction flags with no launch reader or rendered surface\"}",
+      "t": "2026-08-11T02:21:23Z"
     }
   ]
 }
