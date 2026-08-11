@@ -23,13 +23,16 @@ una falla de diseño, no una mejora.
 Proyecto Node 22; todo corre con npm y un navegador. Cada observación arranca desde el árbol real
 indicado abajo.
 
-1. `cd /Users/andres/panama-surf`
+1. `cd /Users/andres/psb-design`
 2. `npm ci` (solo la primera vez en esta máquina)
 3. `npm run build`
-4. `npm run preview` y anotar la dirección local que imprime (normalmente `http://localhost:4321`)
+4. Para esta observación aislada, ejecutar `python3 -m http.server 45455 --bind 127.0.0.1 --directory dist` y abrir exactamente `http://127.0.0.1:45455`. No usar `localhost`: en esta máquina puede resolver a otro árbol de trabajo.
 5. Abrir la home en una ventana de ancho de teléfono (unos 390 px), y repetir el recorrido en tema
    claro y en tema oscuro. Si hay tiempo, repetir también a 320 px de ancho, el piso más angosto
    que este diseño promete sostener.
+   Para observar esta carta, abrir después cualquier página de spot desde la lista (por ejemplo,
+   `/spots/playa-venao/`): la bandeja fija con “¿ESTUVISTE? CUÉNTANOS” vive allí. El control
+   “Ver el llamado” de la home no es la bandeja de reportar y no pertenece a esta observación.
 6. Hay que forzar dos estados, uno por vez, y comparar:
    - **Vidrio soportado (el estado por defecto):** abrir la página tal cual, sin tocar nada. Así
      abre hoy cualquier navegador moderno.
@@ -67,6 +70,7 @@ fondo de casualidad ayuda.
 ## Expected observations (oracle)
 - Con la transparencia reducida activada en el teléfono, la píldora de idioma y la barra de reportar se ven como tarjetas sólidas y legibles, sin ningún borde raro ni texto perdido, sobre el nuevo fondo azul-verde.
 - **U8 (vidrio apagado, 02-01):** Con la transparencia reducida activada en el teléfono, la barra de reportar se ve como una tarjeta sólida y legible, sin ningún borde raro ni texto perdido, sobre el nuevo fondo azul-verde.
+- Con el navegador soportando vidrio, veo la barra de reportar como cristal esmerilado flotando sobre el contenido que se desplaza debajo, y el texto sigue leyéndose perfecto en los dos temas. La tarjeta grande conserva su degradado sólido.
 - **U8 (vidrio soportado, 02-02):** Con el navegador soportando vidrio, veo la barra de reportar como cristal esmerilado flotando sobre el contenido que se desplaza debajo, y el texto sigue leyéndose perfecto en los dos temas.
 - **U8 (los dos estados juntos, 02-03):** Recorro el sitio con y sin vidrio soportado, en los dos temas: la barra de reportar siempre se lee, nunca desaparece ni pierde contraste, y nada más en el sitio cambió.
 - La tarjeta grande del primer spot se ve exactamente igual en los dos estados de vidrio: el mismo
