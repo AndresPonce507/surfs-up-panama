@@ -22,6 +22,7 @@ import type { ReportRecord } from './report-record';
 
 /** Rows written by the probe live under this prefix, never under a report_id. */
 export const SENTINEL_KEY_PREFIX = 'sentinel/';
+const IDENTITY_KEY = 'identity/anonymous';
 
 /** The three verbs the queue needs from durable storage. Every one may refuse. */
 export interface QueueStore {
@@ -60,6 +61,13 @@ export type CommitOutcome = { readonly kind: 'queued'; readonly report_id: strin
 
 export interface ReportQueue {
   readonly commit: (record: ReportRecord) => Promise<CommitOutcome>;
+  /** The verified durable bytes, used for a later network send without rebuilding the record. */
+  readonly savedRecord?: (reportId: string) => Promise<string | undefined>;
+  readonly discardSavedRecord?: (reportId: string) => Promise<void>;
+  readonly identity?: {
+    read(): Promise<{ readonly deviceId: string; readonly credential: string } | undefined>;
+    write(value: { readonly deviceId: string; readonly credential: string }): Promise<void>;
+  };
 }
 
 export type QueueOutcome = { readonly kind: 'ready'; readonly queue: ReportQueue } | Refused;
@@ -102,7 +110,30 @@ export async function openReportQueue(deps: QueueDependencies): Promise<QueueOut
   const probed = await probe(deps);
   if (probed.kind === 'refused') return probed;
   const store = probed.store;
-  return { kind: 'ready', queue: { commit: (record) => append(store, record) } };
+  return {
+    kind: 'ready',
+    queue: {
+      commit: (record) => append(store, record),
+      savedRecord: (reportId) => store.get(reportId),
+      discardSavedRecord: (reportId) => store.remove(reportId),
+      identity: {
+        read: async () => parseIdentity(await store.get(IDENTITY_KEY)),
+        write: (value) => store.put(IDENTITY_KEY, JSON.stringify(value)),
+      },
+    },
+  };
+}
+
+function parseIdentity(value: string | undefined): { readonly deviceId: string; readonly credential: string } | undefined {
+  if (value === undefined) return undefined;
+  try {
+    const parsed = JSON.parse(value) as { deviceId?: unknown; credential?: unknown };
+    return typeof parsed.deviceId === 'string' && typeof parsed.credential === 'string'
+      ? { deviceId: parsed.deviceId, credential: parsed.credential }
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**

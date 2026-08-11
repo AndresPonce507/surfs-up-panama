@@ -2,10 +2,9 @@
 // (application-architecture.md section 6 budgets it, 01-09 asserts the
 // budget). It activates the static, disabled form, and owns the tap order
 // application-architecture.md section 8 leak path L3 pins: durable commit
-// FIRST, then history.replaceState to the reportado address, then the
-// confirmation renders. No step here ever reaches src/data/forecast, fetches
-// anything, or POSTs anything -- this slice never sends, it only queues
-// (application-architecture.md section 12).
+// FIRST, then the page mints or reuses its anonymous credential, POSTs the
+// exact durable bytes, receives its matching receipt, then changes address
+// and renders arrival. It never reaches src/data/forecast or a reveal GET.
 //
 // PARADIGM EXEMPTION (this step's implementation notes, ADR-025 legacy
 // 5-phase contract): DOM orchestration wiring is single-shot by nature and is
@@ -26,6 +25,8 @@
 // files, per this step's implementation notes.
 
 import { composeReportRecord, type ReportAnswers } from './report-record';
+import { createCredentialProvider, type CredentialProvider } from './mint';
+import { finalizeSavedReport, sendSavedReport } from './submit';
 import {
   SENTINEL_KEY_PREFIX,
   openReportQueue,
@@ -78,6 +79,9 @@ export const NOTHING_QUEUED_MESSAGE =
  */
 export const CONFIRMED_HEADING = 'Reporte guardado';
 export const NOTHING_QUEUED_HEADING = 'Sin reporte guardado';
+export const RECEIVED_HEADING = 'Reporte recibido';
+export const RECEIVED_MESSAGE = 'Gracias. Recibimos tu reporte.';
+export const SEND_REFUSED_MESSAGE = 'No pudimos enviar el reporte ahora.';
 
 // ---------------------------------------------------------------------------
 // Pure decision ports. Plain data in, plain data out -- no DOM, no storage.
@@ -190,6 +194,7 @@ export function parseAnswers(raw: RawAnswers): ReportAnswers | undefined {
 
 const DATABASE_NAME = 'psb-report-queue';
 const STORE_NAME = 'entries';
+const LOCAL_CREDENTIAL_KEY = 'psb-report-credential';
 
 function openIndexedDbStore(): Promise<QueueStore> {
   return new Promise((resolve, reject) => {
@@ -294,6 +299,17 @@ function applyCommitUi(decision: CommitUiDecision, elements: IslandElements): vo
   // now, so it goes with the form (this step's second-round finding).
   elements.heading?.remove();
   renderRevealView(elements.confirmation, decision);
+}
+
+function applyReceivedUi(links: ConfirmationLinks, elements: IslandElements): void {
+  history.replaceState(null, '', links.historyUrl);
+  elements.form.remove();
+  elements.heading?.remove();
+  renderRevealView(elements.confirmation, {
+    heading: RECEIVED_HEADING,
+    message: RECEIVED_MESSAGE,
+    nav: { href: links.backHref, label: links.backLabel, emphasis: 'quiet' },
+  });
 }
 
 /**
@@ -404,6 +420,7 @@ function readRawAnswers(form: HTMLFormElement): RawAnswers {
 
 async function submitReport(
   queue: ReportQueue,
+  credential: CredentialProvider,
   spotId: string,
   answers: ReportAnswers,
   links: ConfirmationLinks,
@@ -411,7 +428,36 @@ async function submitReport(
 ): Promise<void> {
   const record = composeReportRecord(() => new Date(), Math.random, spotId, answers);
   const outcome = await queue.commit(record);
-  applyCommitUi(decideCommitUi(outcome, links), elements);
+  if (outcome.kind === 'refused') {
+    applyCommitUi(decideCommitUi(outcome, links), elements);
+    return;
+  }
+  const savedBytes = await queue.savedRecord?.(outcome.report_id);
+  if (savedBytes === undefined) {
+    showNotice(elements.notice, STORAGE_REFUSED_MESSAGE);
+    return;
+  }
+  try {
+    const submission = await finalizeSavedReport(
+      outcome.report_id,
+      await sendSavedReport(savedBytes, await credential.get()),
+      {
+        discard: (reportId) => queue.discardSavedRecord?.(reportId) ?? Promise.reject(new Error('report queue cannot discard receipt')),
+      },
+    );
+    if (submission.kind === 'refused') {
+      showNotice(elements.notice, submission.message);
+      return;
+    }
+    if (submission.receipt.report_id !== outcome.report_id) {
+      showNotice(elements.notice, SEND_REFUSED_MESSAGE);
+      return;
+    }
+    applyReceivedUi(links, elements);
+  } catch {
+    // A missing signal preserves the actual queue and its settled local confirmation.
+    applyCommitUi(decideCommitUi(outcome, links), elements);
+  }
 }
 
 async function activate(elements: IslandElements, spotId: string, locale: Locale, spotName: string): Promise<void> {
@@ -424,6 +470,7 @@ async function activate(elements: IslandElements, spotId: string, locale: Locale
     backHref: paths.spot(locale, spotId),
     backLabel: spotName,
   };
+  const credential = createCredentialProvider(fetch, undefined, browserCredentialStore(opened.queue));
 
   // A passing storage probe makes reporting available, but Mandar is not an
   // honest action until all three answers exist. Keep the static disabled
@@ -438,10 +485,53 @@ async function activate(elements: IslandElements, spotId: string, locale: Locale
     event.preventDefault();
     const answers = parseAnswers(readRawAnswers(elements.form));
     if (!answers) return;
-    void submitReport(opened.queue, spotId, answers, links, elements).catch(() => {
+    void submitReport(opened.queue, credential, spotId, answers, links, elements).catch(() => {
       showNotice(elements.notice, STORAGE_REFUSED_MESSAGE);
     });
   });
+}
+
+function browserCredentialStore(queue: ReportQueue): {
+  read(): Promise<{ readonly deviceId: string; readonly credential: string } | undefined>;
+  write(value: { readonly deviceId: string; readonly credential: string }): Promise<void>;
+} {
+  return {
+    read: async () => {
+      const durable = await queue.identity?.read();
+      if (durable !== undefined) {
+        rememberCredential(durable);
+        return durable;
+      }
+      const mirrored = recalledCredential();
+      if (mirrored !== undefined) await queue.identity?.write(mirrored);
+      return mirrored;
+    },
+    write: async (value) => {
+      await queue.identity?.write(value);
+      rememberCredential(value);
+    },
+  };
+}
+
+function recalledCredential(): { readonly deviceId: string; readonly credential: string } | undefined {
+  try {
+    const value = localStorage.getItem(LOCAL_CREDENTIAL_KEY);
+    if (value === null) return undefined;
+    const parsed = JSON.parse(value) as { deviceId?: unknown; credential?: unknown };
+    return typeof parsed.deviceId === 'string' && typeof parsed.credential === 'string'
+      ? { deviceId: parsed.deviceId, credential: parsed.credential }
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function rememberCredential(value: { readonly deviceId: string; readonly credential: string }): void {
+  try {
+    localStorage.setItem(LOCAL_CREDENTIAL_KEY, JSON.stringify(value));
+  } catch {
+    // IndexedDB remains the canonical durable queue when a browser refuses its optional mirror.
+  }
 }
 
 /** The one call the reportar document makes. Every dependency is real: no fakes at this edge. */

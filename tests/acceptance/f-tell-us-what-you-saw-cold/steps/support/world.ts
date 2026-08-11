@@ -338,6 +338,7 @@ export interface ReportFlowScenario {
   captured: CapturedResponse[];
   writeAttempts: CapturedWriteRequest[];
   reportTextBeforeResponse: string | null;
+  savedReportBeforeResponse: Record<string, unknown> | null;
   distSnapshot: UniverseSnapshot | null;
 }
 
@@ -361,6 +362,7 @@ Before({ tags: '@feature-f-tell-us-what-you-saw-cold' }, function (this: object)
     captured: [],
     writeAttempts: [],
     reportTextBeforeResponse: null,
+    savedReportBeforeResponse: null,
     distSnapshot: null,
   });
 });
