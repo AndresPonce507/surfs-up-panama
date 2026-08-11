@@ -69,6 +69,15 @@ function fieldFindings(call: SurfaceCall, where: string): string[] {
   if (!('weakest_link' in call)) {
     findings.push(`${where} ${call.spot_id}: weakest_link key missing`);
   }
+  if ('weakest_link_subscore' in call && (
+    typeof call.weakest_link !== 'string'
+    || typeof call.weakest_link_subscore !== 'number'
+    || !Number.isFinite(call.weakest_link_subscore)
+    || call.weakest_link_subscore < 0
+    || call.weakest_link_subscore > 1
+  )) {
+    findings.push(`${where} ${call.spot_id}: weakest_link_subscore must be a finite [0, 1] raw score paired with a named weakest_link`);
+  }
   if (!('confidence_reason' in call) || call.confidence_reason === undefined
     || !('dominant' in call.confidence_reason)
     || typeof call.confidence_reason.spread_terms?.height !== 'number'
