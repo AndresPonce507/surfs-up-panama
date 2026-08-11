@@ -351,6 +351,34 @@
       "s": "EXECUTED",
       "d": "PASS: approved acceptance-evidence slice committed as 3e879edfa02163b9748bf09659b6ada64ba62157 (test(learning): inventory shipped residual declarations)",
       "t": "2026-08-11T15:12:45Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified 01-11 is next after sealed 01-10, no dirty competing Learning ownership, and current gates still store raw sample error without the required physical floor",
+      "t": "2026-08-11T15:15:05Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: real 22-morning, seven-reporter zero-spread fixture failed semantically with stored se 2.9587543020571985e-18 instead of required physical floor 0.0511681719253465",
+      "t": "2026-08-11T15:15:05Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: added a fast-check law over pairs of sub-floor spreads, requiring one physical stored error and refusal at the G3 boundary",
+      "t": "2026-08-11T15:16:25Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: se_gate = max(se_sample, 0.5 * sigma_eff / sqrt(n)) is pure, gate-returned, and persisted for height and score; focused acceptance/unit evidence 20/20 passes",
+      "t": "2026-08-11T15:16:25Z"
     }
   ]
 }

@@ -12,22 +12,31 @@
 // that examination's own acceptance suite watches this file stay that way.
 
 /** The two residual forms this lane ever computes. Exactly two, never three (06 section 1, section 8). */
-export const RESIDUAL_FORMS = ['r_height', 'r_score'] as const;
+export const RESIDUAL_FORMS = ["r_height", "r_score"] as const;
 
-export type NoiseFloor = { readonly value: number; readonly derived_from: string };
+export type NoiseFloor = {
+  readonly value: number;
+  readonly derived_from: string;
+};
 
 /** Single-sample noise floor, one home per variable (06 section 8). No `wind` entry: see the module header. */
-export const SIGMA_EFF: { readonly height: NoiseFloor; readonly score: NoiseFloor } = {
+export const SIGMA_EFF: {
+  readonly height: NoiseFloor;
+  readonly score: NoiseFloor;
+} = {
   height: {
     value: 0.48,
     derived_from:
-      'height-error-decomposition: band interval (~0.13 sd) + eyeball (~0.30 sd) + day-to-day model error (~0.35 sd), in quadrature',
+      "height-error-decomposition: band interval (~0.13 sd) + eyeball (~0.30 sd) + day-to-day model error (~0.35 sd), in quadrature",
   },
   score: {
     value: 25,
-    derived_from: 'one q_obs anchor step across the Bad/OK/Good/Epic ladder',
+    derived_from: "one q_obs anchor step across the Bad/OK/Good/Epic ladder",
   },
 };
+
+/** G3, 06 section 7: agreement below this share of physical uncertainty buys no extra precision. */
+export const PHYSICAL_NOISE_FLOOR_MULTIPLIER = 0.5;
 
 /** G1, 06 section 7: fewer paired mornings than this and nothing may be evaluated further. */
 export const G1_MIN_MORNINGS = 10;
@@ -53,16 +62,24 @@ export const TOP_BAND_NOMINAL_M = 3.0;
 export const TOP_BAND_VARIANCE_M2 = 0.25;
 
 /** Lead buckets, 06 section 8, half-open [min, max). The last bucket has no upper edge. */
-export const LEAD_BUCKETS: readonly { readonly id: string; readonly minH: number; readonly maxH: number }[] = [
-  { id: 'lead_0_12', minH: 0, maxH: 12 },
-  { id: 'lead_12_24', minH: 12, maxH: 24 },
-  { id: 'lead_24_48', minH: 24, maxH: 48 },
-  { id: 'lead_48_96', minH: 48, maxH: 96 },
-  { id: 'lead_96_inf', minH: 96, maxH: Number.POSITIVE_INFINITY },
+export const LEAD_BUCKETS: readonly {
+  readonly id: string;
+  readonly minH: number;
+  readonly maxH: number;
+}[] = [
+  { id: "lead_0_12", minH: 0, maxH: 12 },
+  { id: "lead_12_24", minH: 12, maxH: 24 },
+  { id: "lead_24_48", minH: 24, maxH: 48 },
+  { id: "lead_48_96", minH: 48, maxH: 96 },
+  { id: "lead_96_inf", minH: 96, maxH: Number.POSITIVE_INFINITY },
 ];
 
 /** Which lead bucket a lead time in hours falls into; the open-ended last bucket is the safety default. */
 export function leadBucketOf(leadH: number): string {
-  const bucket = LEAD_BUCKETS.find((candidate) => leadH >= candidate.minH && leadH < candidate.maxH);
-  return bucket !== undefined ? bucket.id : LEAD_BUCKETS[LEAD_BUCKETS.length - 1]!.id;
+  const bucket = LEAD_BUCKETS.find(
+    (candidate) => leadH >= candidate.minH && leadH < candidate.maxH,
+  );
+  return bucket !== undefined
+    ? bucket.id
+    : LEAD_BUCKETS[LEAD_BUCKETS.length - 1]!.id;
 }

@@ -20,19 +20,18 @@
 // the repair, and it ships inactive here, so this launch behaviour reads
 // distinctness over every reporter, not yet only eligible ones.
 //
-// G3, first half only (06 section 7; 09 section 13.3): a difference no
-// larger than twice its own standard error is indistinguishable from noise,
-// whatever G1 and G2 already cleared, and may never be marked applied. This
-// step's se is se_sample alone -- src/learning/estimate.ts's weighted sample
-// standard error, nothing floored yet. The anti-coordination floor that
-// replaces a too-good-to-be-honest se_sample with the physical noise floor is
-// 01-11's own red test; this module must not anticipate it here.
+// G3 (06 section 7; 09 section 13.3): a difference no larger than twice its
+// stored standard error is indistinguishable from noise, whatever G1 and G2
+// already cleared, and may never be marked applied. The stored error is the
+// larger of the sample error and the physical noise floor, so coordinated
+// agreement cannot buy a precision the measurement cannot honestly support.
 //
 // The rest of the table is later steps' TDD cycles, each adding its own
 // failing test before it adds a line here -- not hinted at, not scaffolded,
 // in this module ahead of a red test that needs it.
 
-import { G1_MIN_MORNINGS } from './constants';
+import { G1_MIN_MORNINGS, SIGMA_EFF } from "./constants";
+import { gateStandardError } from "./estimate";
 
 /** G2, 06 section 7: fewer distinct reporter_key values than this and a key may never be marked applied. */
 export const G2_MIN_REPORTERS = 5;
@@ -41,20 +40,37 @@ export const G2_MIN_REPORTERS = 5;
 export const G3_SIGNIFICANCE_MULTIPLE = 2;
 
 /** What one gate call needs to know about a key: everything G1 through G3 read from (06 section 7). */
-export type GateInput = { readonly n: number; readonly reporters: number; readonly b: number; readonly se: number };
+export type GateInput = {
+  readonly n: number;
+  readonly reporters: number;
+  readonly b: number;
+  /** Sample-only error before the physical floor is applied. */
+  readonly se: number;
+  /** Single-sample physical uncertainty for the claim; height remains the legacy default. */
+  readonly sigma_eff?: number;
+};
 
 /** The gate's verdict: whether the key may be marked applied, and why (or why not). */
-export type GateVerdict = { readonly applied: boolean; readonly reason: string };
+export type GateVerdict = {
+  readonly applied: boolean;
+  readonly reason: string;
+  readonly se: number;
+};
 
 export function gateCorrection(input: GateInput): GateVerdict {
+  const se = gateStandardError(
+    input.se,
+    input.sigma_eff ?? SIGMA_EFF.height.value,
+    input.n,
+  );
   if (input.n < G1_MIN_MORNINGS) {
-    return { applied: false, reason: 'n_lt_10' };
+    return { applied: false, reason: "n_lt_10", se };
   }
   if (input.reporters < G2_MIN_REPORTERS) {
-    return { applied: false, reason: 'reporters_lt_5' };
+    return { applied: false, reason: "reporters_lt_5", se };
   }
-  if (Math.abs(input.b) <= G3_SIGNIFICANCE_MULTIPLE * input.se) {
-    return { applied: false, reason: 'not_significant' };
+  if (Math.abs(input.b) <= G3_SIGNIFICANCE_MULTIPLE * se) {
+    return { applied: false, reason: "not_significant", se };
   }
-  return { applied: true, reason: 'applied' };
+  return { applied: true, reason: "applied", se };
 }

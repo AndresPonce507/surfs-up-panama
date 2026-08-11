@@ -1,0 +1,22 @@
+{
+  "id": "01-11",
+  "name": "Agreement buys nothing: the physical noise floor",
+  "delivery_mode": "outside-in-red-green",
+  "accepted_context": "recover/learning-build:docs/feature/f-forecast-learns-from-the-beach/deliver/roadmap.json",
+  "criteria": [
+    "Twenty-two mornings agreeing exactly on eight centimetres stay refused, recording twenty-two mornings and seven people.",
+    "The standard error stored for the height is the physical floor, not the agreement of the reports.",
+    "The stored se field carries the floored error everywhere, never the raw sample error.",
+    "No gate becomes easier to pass as the spread of its input drops."
+  ],
+  "owned_paths": [
+    "src/learning/estimate.ts",
+    "src/learning/gates.ts",
+    "src/learning/constants.ts",
+    "src/learning/correction-file.ts",
+    "tests/unit/learning-gate-laws.test.ts",
+    "tests/acceptance/f-forecast-learns-from-the-beach/agreement-has-physical-floor.test.ts"
+  ],
+  "scope_note": "correction-file.ts is an unavoidable storage seam beyond the roadmap list: the contract requires the persisted se field, not only the transient gate decision, to carry se_gate.",
+  "acceptance": "runLearningFitOnce receives 22 identical -0.08 m residuals from seven reporters and must persist se = 0.5 * 0.48 / sqrt(22), refuse G3, and reject a controlled zero-error/applied mutation."
+}
