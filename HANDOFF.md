@@ -7,7 +7,7 @@ recollection, this file wins. Update it before you stop working.
 - **Repo:** https://github.com/AndresPonce507/surfs-up-panama (public, MIT)
 - **Local:** `/Users/andres/panama-surf`
 - **Branch:** `design-round-1`; Slice-03 shipped through DES in `df25ee6`.
-- **nWave:** upgraded local classic 3.15.1 at `/Users/andres/nWave-classic-3.15.1`, installed through `nwave-ai`. This matters, see §4.
+- **nWave:** upgraded Ponce checkout at `/Users/andres/nwave-ponce`, installed editable through `nwave-ai`. The package metadata still reports `3.15.1`; verify the active source path points to Ponce. This matters, see §4.
 
 ---
 
