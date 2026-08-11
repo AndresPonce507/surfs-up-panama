@@ -103,6 +103,7 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
   </ol>
   <footer>
     <p>{t.home.honestyFooter}</p>
+    <slot name="footer-extra" />
   </footer>
   <p class="home-primary">
     <a data-primary-action href={paths.spot(locale, daySpots[0]!.spot_id)}>

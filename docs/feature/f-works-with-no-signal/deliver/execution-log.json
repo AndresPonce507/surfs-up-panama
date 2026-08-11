@@ -617,6 +617,48 @@
       "s": "EXECUTED",
       "d": "PASS: atomic revision a7455b1 (feat(signal): keep refused reports on the offline queue - steps 03-04/03-05) contains the reviewed worker policy, offline-surface composition, strengthened acceptance assertions, unit proof, and chronological RED/GREEN evidence. G7 PASS for this scoped vertical: full units, typecheck, build/page-weight, U1-U8, and the three active scenarios are green; the separately recorded full-slice capture block is out of scope and remains visible. Independent re-review approved before this commit.",
       "t": "2026-08-11T04:27:30Z"
+    },
+    {
+      "sid": "05-01..05-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: scope is the Slice-05 manifest, two favicon-derived PNG icons, the one additive Base.astro manifest link, staged-dark home-footer hint markup, its required footer seam, and this canonical record. Existing OG, canonical, service-worker registration, and online listener are preserved. The coordinator-provided current Aug-11 surface was used only as temporary unstaged build/acceptance input and will not enter this revision.",
+      "t": "2026-08-11T05:15:59Z"
+    },
+    {
+      "sid": "05-01..05-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: before Slice-05 production changes, the active built-site acceptance failed for the right business reason: no manifest link meant the home named no app identity. The absence guard remained green by design. No acceptance assertion was changed or skipped.",
+      "t": "2026-08-11T05:15:59Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "RED_FALSIFIABILITY",
+      "s": "EXECUTED",
+      "d": "PASS: a temporary production-only flip of showA2hsHint made the absence scenario fail semantically at the visible ¿Quieres avisos? promise. The initial discarded unknown slot exposed a genuine footer-seam defect; the minimal named footer slot repaired it. The false flag was restored without changing the scenario.",
+      "t": "2026-08-11T05:15:59Z"
+    },
+    {
+      "sid": "05-01..05-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: focused real-I/O acceptance 3 scenarios/34 steps is green. The built manifest is standalone, Spanish, starts at /, names real 192 and 512 PNGs, and manifest plus favicon stays within 1.5 KB gz; a normal visit fetches neither install icon. The A2HS markup compiles out of the served DOM. Typecheck, build/page-weight, and test:ui passed. Full units 108/108 passed only while the coordinator-approved current-surface contract repair was temporarily copied in; that unrelated repair was restored and is not in this revision. Test budget: 2 observable installability/staging behaviors x 2 = 4 maximum; 0 new unit tests because the authored acceptance scenarios reached GREEN directly.",
+      "t": "2026-08-11T05:15:59Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "UI_CHECKS",
+      "s": "EXECUTED",
+      "d": "PASS: roadmap U1/U3/U5 bind to the active 390px Chromium acceptance; U2/U4/U6/U7 passed through test:ui. Source-blind local Chromium U8 examined the exact emitted worktree at 390x844 in light and dark with reduced motion: Spanish standalone manifest identity, neither install icon fetched on visit, no avisos copy, no horizontal overflow, zero animations, and no page or console errors. Both derived icons were visually inspected after high-resolution SVG rasterization and are clean circular site marks.",
+      "t": "2026-08-11T05:15:59Z"
+    },
+    {
+      "sid": "05-01..05-03",
+      "p": "GREEN_CORRECTION",
+      "s": "EXECUTED",
+      "d": "SUPERSEDES the preceding 108/108 count as the reproducible-current-fixture statement: that count was factual only for the broader temporary parent integration test. At 2026-08-11T05:24:11Z, with current data sha256 318288b6ac8f75ae62eb6b3a5a956752d4bff6fa9da2d514551d6d59fd67fdae and the narrow unstaged wind contract sha256 a0f5b725ad1fbf472497dd6f45faaa76050338a469eb2ba9c9d54b0183d12bbc, `npm run typecheck` PASS and `npm test` PASS 107/107. The narrow contract permits missing wind_state only when call_es truthfully says sin datos and continues to reject invalid present tokens. Both temporary inputs remain unstaged for review and are excluded from the Slice-05 revision.",
+      "t": "2026-08-11T05:26:10Z"
     }
   ]
 }

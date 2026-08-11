@@ -132,6 +132,12 @@ const homeAnnouncement = composeLinkAnnouncement({
   site: configuredSite.toString(),
   image: previewImage.toString(),
 });
+
+// Slice 05 owns this settled iPhone guidance, but it must stay out of the
+// served DOM until the alerts feature brings a live subscription path and
+// flips this flag in the same change. CSS-hidden copy would still be read and
+// would make an untrue promise today.
+const showA2hsHint = false;
 ---
 
 <RankedList locale="es" day={0} announcement={homeAnnouncement}>
@@ -141,4 +147,10 @@ const homeAnnouncement = composeLinkAnnouncement({
     href={shareHref}
     label="Mandar el llamado por WhatsApp"
   />
+  {showA2hsHint && (
+    <details slot="footer-extra">
+      <summary>¿Quieres avisos?</summary>
+      <p>En iPhone: Compartir, y luego Añadir a pantalla de inicio. Sin eso, iPhone no deja avisar.</p>
+    </details>
+  )}
 </RankedList>
