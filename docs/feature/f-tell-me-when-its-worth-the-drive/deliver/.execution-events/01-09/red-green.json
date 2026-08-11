@@ -1,0 +1,14 @@
+{
+  "step_id": "01-09",
+  "timestamp": "2026-08-11T15:01:04Z",
+  "kind": "red-green",
+  "result": "PASS",
+  "evidence": {
+    "prepare": "Verified the 01-06 dependency, accepted 01-09 contract, and no active Theme, Report, Weather, or Learning path overlap.",
+    "acceptance": "NOT_APPLICABLE: the approved Cucumber feature is absent from this integration base; no substitute fixture was created.",
+    "red_unit": "The new property shrank to a valid Panama 06:25 run and raised AssertionError because the plan did not report the required date write.",
+    "review_correction": "A complete planned-write assertion was added. Temporary wrong stamp 2099-01-01 failed semantically against the expected 2026-08-10 spot-local date. The generator now also includes Pacific/Kiritimati across the UTC-midnight seam; a temporary UTC-date stamp failed because it emitted 2026-08-10 instead of that spot's required 2026-08-11 date. The source was restored after each mutation.",
+    "green": "npx vitest run tests/unit/push-plan-notifications.test.ts: 3 passed; npm run typecheck: passed after restoration.",
+    "test_budget": "1 new public planner behavior x 2 = 2; one property added."
+  }
+}

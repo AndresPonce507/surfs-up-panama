@@ -36,6 +36,62 @@
       "s": "EXECUTED",
       "d": "PASS: 3563f28 committed the approved hourly-at-:25 closed-window property and the factual PREPARE, RED_ACCEPTANCE, RED_UNIT, and GREEN evidence. Independent review iteration 3 approved the unchanged accepted contract; no source planner change was required.",
       "t": "2026-08-11T14:58:25Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified the accepted 01-09 contract, 01-06 dependency, active-lane path disjointness, and the current pure planner. The planner lacked both a spot-local date write plan and same-day suppression.",
+      "t": "2026-08-11T15:01:04Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "RED_ACCEPTANCE",
+      "s": "NOT_APPLICABLE",
+      "d": "The approved Cucumber feature exists on build/f2-push but is absent from this integration base. The accepted public planner property was added instead; no acceptance fixture or source was invented.",
+      "t": "2026-08-11T15:01:04Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: the new fast-check public-port property failed semantically on the first shrunk valid Panama 06:25 run because the planner lacked the required planned date write. AssertionError: expected an array of writes, received false.",
+      "t": "2026-08-11T15:01:04Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: focused planner properties passed 3/3 and npm run typecheck passed. The pure plan now emits one adapter write with the spot-local date and suppresses later runs against that declared stored state. Test budget: 1 new behavior x 2 = 2; one generated public-port property added. UI N/A: a pure notification-planning decision has no rendered surface.",
+      "t": "2026-08-11T15:01:04Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: review correction added a complete planned-write assertion. A temporary 2099-01-01 stamp shrank to one valid Panama 06:25 run and raised AssertionError showing expected 2026-08-10 versus received 2099-01-01. The source date was restored unchanged.",
+      "t": "2026-08-11T15:04:10Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: after restoration focused planner properties passed 3/3 and npm run typecheck passed. The one added property now verifies send/write identity and the exact injected spot-local civil date, in addition to same-day suppression and input purity.",
+      "t": "2026-08-11T15:04:10Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: review correction added the Pacific/Kiritimati UTC-midnight seam to the existing generated property. A temporary UTC-date stamp shrank to Kiritimati at local 2026-08-11 06:25 and raised AssertionError because it emitted 2026-08-10 instead of the required 2026-08-11. The source date was restored unchanged.",
+      "t": "2026-08-11T15:06:06Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: focused planner properties passed 3/3 and npm run typecheck passed after restoring the spot-local date. The property now covers both ordinary same-day slots and the UTC-midnight spot-local-date seam without adding another behavior or test.",
+      "t": "2026-08-11T15:06:06Z"
     }
   ]
 }

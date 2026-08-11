@@ -22,8 +22,16 @@ export type PlannedSend = {
   ttl_seconds: number;
 };
 
+/** A write the scheduled adapter performs after it delivers the planned send. */
+export type NotificationWrite = {
+  spot_id: string;
+  endpoint_hash: string;
+  last_notified_date: string;
+};
+
 export type NotificationPlan = {
   sends: PlannedSend[];
+  writes: NotificationWrite[];
   deferred: number;
   events: { kind: string; deferred?: number }[];
 };
@@ -60,6 +68,22 @@ function spotLocalHour(now: string, timezone: string): number {
   return Number(hour);
 }
 
+/**
+ * The subscription date is a civil date at its spot, never a UTC or server
+ * date. Exporting this keeps the scheduled send and its later follow-up on
+ * the same date convention.
+ */
+export function spotLocalDate(now: string, timezone: string): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(now));
+  const part = (kind: 'year' | 'month' | 'day'): string => parts.find((candidate) => candidate.type === kind)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
 function isMorningAtSpot(now: string, spot: PushSpot): boolean {
   const hour = spotLocalHour(now, spot.timezone);
   return hour >= MORNING_START_HOUR && hour < MORNING_END_HOUR;
@@ -67,6 +91,10 @@ function isMorningAtSpot(now: string, spot: PushSpot): boolean {
 
 function isAtOrAboveSubscriberBar(score: number | undefined, subscription: StoredSub): boolean {
   return score !== undefined && subscription.threshold_score !== null && score >= subscription.threshold_score;
+}
+
+function hasNotBeenNotifiedForSpotDate(subscription: StoredSub, date: string): boolean {
+  return subscription.last_notified_date === null || subscription.last_notified_date < date;
 }
 
 function composeSpanishMorningSend(spot: PushSpot, subscription: StoredSub, score: number): PlannedSend {
@@ -82,14 +110,25 @@ function composeSpanishMorningSend(spot: PushSpot, subscription: StoredSub, scor
   };
 }
 
-function eligibleMorningSends(input: PlanNotificationsInput): PlannedSend[] {
+type PlannedNotification = { send: PlannedSend; write: NotificationWrite };
+
+function eligibleMorningNotifications(input: PlanNotificationsInput): PlannedNotification[] {
   return input.spots.flatMap((spot) => {
     if (!isMorningAtSpot(input.now, spot)) return [];
     const score = input.scores[spot.spot_id];
+    const date = spotLocalDate(input.now, spot.timezone);
     return input.subscriptions
       .filter((subscription) => subscription.spot_id === spot.spot_id)
       .filter((subscription) => isAtOrAboveSubscriberBar(score, subscription))
-      .map((subscription) => composeSpanishMorningSend(spot, subscription, score!));
+      .filter((subscription) => hasNotBeenNotifiedForSpotDate(subscription, date))
+      .map((subscription) => ({
+        send: composeSpanishMorningSend(spot, subscription, score!),
+        write: {
+          spot_id: spot.spot_id,
+          endpoint_hash: subscription.endpoint_hash,
+          last_notified_date: date,
+        },
+      }));
   });
 }
 
@@ -99,12 +138,13 @@ function eligibleMorningSends(input: PlanNotificationsInput): PlannedSend[] {
  * is deterministic and independent of process state.
  */
 export function planNotifications(input: PlanNotificationsInput): NotificationPlan {
-  const eligible = eligibleMorningSends(input);
+  const eligible = eligibleMorningNotifications(input);
   const cap = Math.max(0, input.run_cap);
-  const sends = eligible.slice(0, cap);
-  const deferred = eligible.length - sends.length;
+  const notifications = eligible.slice(0, cap);
+  const deferred = eligible.length - notifications.length;
   return {
-    sends,
+    sends: notifications.map((notification) => notification.send),
+    writes: notifications.map((notification) => notification.write),
     deferred,
     events: deferred === 0 ? [] : [{ kind: 'notification_run_cap_reached', deferred }],
   };
