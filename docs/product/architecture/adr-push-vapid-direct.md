@@ -1,6 +1,6 @@
 # ADR: Web push — direct VAPID HTTP from a scheduled Lambda, allowlisted endpoints
 
-**Status:** Proposed (DESIGN round 2, 2026-08-08) · **Lane:** write path · **Implements:** decision 12 (web push, opt-in per spot), decision 23 (no nagging); closes research 15 §15.5's named gap ("push subscriptions are a second anonymous write surface, not analysed") and system-architecture §19 flag 4 (fan-out cost unmodelled).
+**Status:** Accepted (2026-08-10) · **Lane:** write path · **Implements:** decision 12 (web push, opt-in per spot), decision 23 (no nagging); closes research 15 §15.5's named gap ("push subscriptions are a second anonymous write surface, not analysed") and system-architecture §19 flag 4 (fan-out cost unmodelled).
 
 ## Decision
 
