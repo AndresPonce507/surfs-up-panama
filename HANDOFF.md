@@ -4,7 +4,7 @@ This section supersedes the legacy notes below. They are retained only as histor
 
 ## Exact restart point
 
-- **GitHub main:** `94fad7755558107ad4cb692ee7e86444a5dccf6d`
+- **GitHub main:** `96bd27ccffcbe68ce94b0116f8f2e9421023705c`
 - **Release worktree:** `/Users/andres/psb-integration-batch2`
 - **Release branch:** `release/integration-20260810-batch2`
 - **Local state:** every registered worktree was checkpointed, scanned for secrets, committed, and pushed. All are clean.
