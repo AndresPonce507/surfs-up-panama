@@ -1,4 +1,4 @@
-# Cada fila se lee de un vistazo: el puntaje se ve por el largo de la barra y la confianza se lee por forma y palabra, nunca por color
+# Cada fila se lee de un vistazo: 70 y 0 se distinguen por el largo de la barra y la confianza se lee por forma y palabra, nunca por color
 
 ID: EXP-f-looks-like-the-ocean-and-reads-in-the-sun-5 · Spec rows: slice-05 · Persona: Surfista recorriendo la lista completa de playas con el pulgar, sol de mediodía pegándole a la pantalla
 
@@ -24,12 +24,12 @@ Explore the full twenty-row list as the surfer scanning the whole coast before c
 - U8 (paso 05-01): "Miro la lista de veinte playas: cada fila tiene, junto a su número, una barra corta o larga que deja ver de un vistazo cuál está mejor, sin que ningún número, orden o color de fondo haya cambiado."
 - U8 (paso 05-02): "Junto a cada puntaje veo puntos llenos o vacíos y la palabra de confianza completa, todo en el mismo tono gris, sin ningún color que distinga alta de baja, y la fila se lee igual de bien con la pantalla lavada por el sol."
 - U8 (paso 05-03): "Recorro la lista completa con un simulador de daltonismo activado: cada fila se sigue leyendo igual de bien, la barra y los puntos de confianza siguen contando la misma historia que en color normal."
-- La barra de cada fila crece y encoge con el puntaje: una fila de 84 se ve claramente más larga que una de 6, y dos filas cercanas en puntaje (por ejemplo dos filas entre 0 y 5) se ven parecidas entre sí, no idénticas a una fila de 70.
+- La barra de cada fila crece y encoge con el puntaje: la fila publicada de 70 se ve claramente más larga que la de 0, y dos filas cercanas en puntaje (por ejemplo dos filas entre 0 y 5) se ven parecidas entre sí, no idénticas a una fila de 70.
 - Los puntajes siguen cayendo en columna alineada, de arriba a abajo, exactamente como antes de esta barra: la barra se suma a la fila, no la desordena ni le quita la alineación numérica.
 - La confianza siempre trae la palabra completa ("Confianza alta", "media" o "baja") al lado de su forma; ninguna fila queda con solo la forma o solo la palabra.
 - El puntaje, el orden de las filas y la razón de cada nivel de confianza son exactamente los mismos que antes de esta barra y esta forma: lo único que cambió es cómo se presentan.
-- Explícitamente abierto, no decidido por esta carta: si la barra también usa color además del largo para marcar el puntaje es una decisión de producto todavía pendiente (Pre-requisite 4 de feature-delta.md). Esta carta no falla una barra que sea solo largo, y no falla una barra que además traiga un acento de color, siempre que el barrido con el simulador de daltonismo de abajo siga contando la misma historia.
-- Negative: si dos filas con puntajes bien distintos, como un 84 y un 6, se ven del mismo tamaño de barra o son indistinguibles a simple vista, es FALLA.
+- La decisión que entra en este slice es largo solamente: la barra no abre un segundo significado de color. Si en el futuro se propone un acento de color, requiere una decisión de producto nueva y una carta nueva; este recorrido no lo infiere ni lo acepta por accidente.
+- Negative: si dos filas con puntajes bien distintos, como el 70 y el 0 publicados, se ven del mismo tamaño de barra o son indistinguibles a simple vista, es FALLA.
 - Negative: si la única manera de distinguir confianza alta de baja es el color (sin la forma, sin la palabra), es FALLA.
 - Negative: si la barra es puramente decorativa y no proporcional, de modo que un 70 y un 40 se ven con barras iguales o casi iguales, es FALLA.
 - Negative: si los puntajes dejan de caer en columna alineada y se vuelve más difícil escanearlos que antes de esta barra, es FALLA.
