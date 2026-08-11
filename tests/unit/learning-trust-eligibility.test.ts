@@ -126,6 +126,36 @@ describe('raising the age threshold can only shrink the eligible set, never grow
     );
   });
 
+  it('drops exactly the reports younger than the threshold, and keeps every other one', () => {
+    // 01-17: the firing direction. Monotonicity above says the set can only
+    // shrink; this says WHICH reports it loses, so a predicate that shrank
+    // the set by dropping the wrong people could not pass both.
+    fc.assert(
+      fc.property(
+        fc.array(someStoredReport, { minLength: 1, maxLength: 40 }),
+        fc.integer({ min: 1, max: 200 }),
+        (reports, thresholdDays) => {
+          const eligible = selectTrustEligible(reports, {
+            ...SHIPPED_TRUST_GATE,
+            min_credential_age_days: thresholdDays,
+          });
+          const oldEnough = reports.filter((report) => {
+            const received = new Date(report.received_at!).getTime();
+            const issued = new Date(report.credential_issued_at!).getTime();
+            return (received - issued) / 86_400_000 >= thresholdDays;
+          });
+
+          assert.deepEqual(
+            eligible,
+            oldEnough,
+            `asking for ${thresholdDays} days of standing must drop exactly the credentials younger than that, and nobody else`,
+          );
+        },
+      ),
+      { numRuns: RUNS },
+    );
+  });
+
   it('fails closed: above a zero threshold, a report that cannot prove its age is not eligible', () => {
     // The repository's own hard-won lesson: an optional field that is simply
     // absent must never read as the most favourable value. At a zero

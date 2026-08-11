@@ -561,6 +561,34 @@
       "s": "EXECUTED",
       "d": "PASS: approved implementation committed as 7104d40a1ceb55eb4726100318c07d78c8d26fb5 (feat(learning): land the trust-eligibility gate, inactive at launch)",
       "t": "2026-08-11T18:13:34Z"
+    },
+    {
+      "sid": "01-17",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified declared dependency 01-16 is sealed and supplies the predicate, confirmed no competing writer owns trust.ts, and confirmed the shipped fit already routes every gated count through the post-eligibility sample list",
+      "t": "2026-08-11T18:16:04Z"
+    },
+    {
+      "sid": "01-17",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: inverting the age clause in src/learning/trust.ts so it always holds fails the acceptance semantically with 'asking for a month of standing must remove the four mornings reported on the same-morning credential'. 01-16's shipped-config identity law passed under the same mutation, which is the concrete proof that the unfired gate alone was not evidence.",
+      "t": "2026-08-11T18:16:04Z"
+    },
+    {
+      "sid": "01-17",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: added a fast-check firing law asserting the eligible set equals exactly the reports at or above the threshold age, which fails under the same mutation with 'must drop exactly the credentials younger than that, and nobody else'",
+      "t": "2026-08-11T18:16:04Z"
+    },
+    {
+      "sid": "01-17",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the gate is watched both ways in one run - 22 mornings/7 people unfired, 18 mornings/6 people fired - and the stored error equals the physical floor at the count the record itself reports (0.0565685424949238 at n=18), not at the raw 22. Focused acceptance/unit 7/7 passes with no production edit. Full vitest 392/392 across 77 files, typecheck and build pass. UI checks N/A: non-visual step whose whole observable is smaller integers in a stored record.",
+      "t": "2026-08-11T18:16:04Z"
     }
   ]
 }

@@ -1,0 +1,7 @@
+{
+  "sid": "01-17",
+  "p": "PREPARE",
+  "s": "EXECUTED",
+  "d": "PASS: verified declared dependency 01-16 is sealed and supplies the predicate, confirmed no competing writer owns trust.ts, and confirmed the shipped fit already routes every gated count through the post-eligibility sample list",
+  "t": "2026-08-11T18:16:04Z"
+}

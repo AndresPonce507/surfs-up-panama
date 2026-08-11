@@ -1,0 +1,7 @@
+{
+  "sid": "01-17",
+  "p": "GREEN",
+  "s": "EXECUTED",
+  "d": "PASS: the gate is watched both ways in one run - 22 mornings/7 people unfired, 18 mornings/6 people fired - and the stored error equals the physical floor at the count the record itself reports (0.0565685424949238 at n=18), not at the raw 22. Focused acceptance/unit 7/7 passes with no production edit. Full vitest 392/392 across 77 files, typecheck and build pass. UI checks N/A: non-visual step whose whole observable is smaller integers in a stored record.",
+  "t": "2026-08-11T18:16:04Z"
+}
