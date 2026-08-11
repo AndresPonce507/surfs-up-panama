@@ -589,6 +589,76 @@
       "s": "EXECUTED",
       "d": "PASS: 749ea89 is the genuine 03-01 implementation commit. Independent review iteration 2 APPROVED after the missing-link and lower-bound proof revision; this evidence-only follow-up records the commit event.",
       "t": "2026-08-11T03:21:00Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: 03-01 is sealed; X8 and the mapped Slice-03 counterfactual formula authorize the pure scoring helper. Scope is only engine.ts and scoring-laws.test.ts; no producer, reader, UI, generated data, or Slice-04 path opened.",
+      "t": "2026-08-11T03:29:00Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: counterfactual helper scaffold returned undefined. New L10 properties failed 3/21 for the right business reasons: named candidate absent, settled size example absent, and malformed damage receipt did not refuse; no collection/import errors.",
+      "t": "2026-08-11T03:30:15Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: scoped scoring laws 21/21; full units 117/117; typecheck; build; ci:local 10/10. Poison that omitted delta_q failed the correction-aware property semantically (unrounded candidate below corrected displayed score), then reverted.",
+      "t": "2026-08-11T03:31:45Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: reviewer D1/D2 repaired. Contradictory L10 receipt now refuses; PBT asserts both candidate fields against the correction-aware formula. Mutating actual-weakest validation and doubling delta_q each failed semantically, then reverted. Fresh scoped 21/21, full units 117/117, typecheck and build pass; final ci:local follows this entry.",
+      "t": "2026-08-11T03:35:30Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "NOT_APPLICABLE",
+      "d": "Mapped-only non-visual scoring-core step. The approved Slice-03 contract has no legal browser entry before the later producer/publish steps, so no JIT acceptance scenario was authored or enabled; the pure counterfactual driving port is exercised by RED_UNIT.",
+      "t": "2026-08-11T04:11:40Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: the new complete-factor receipt cases failed 1/21 for the right semantic reason: singleton size or dir damage data did not throw and could fabricate a counterfactual; no collection/import failures.",
+      "t": "2026-08-11T04:11:42Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: factor presence is now derived exactly from sub: dir and size plus only observed wind/tide. Valid missing-wind-and-tide receipt remains accepted. Exact-factor guard mutation failed 1/21 semantically, then reverted. Focused 21/21, full units 117/117, typecheck, build, and ci:local 10/10 pass.",
+      "t": "2026-08-11T04:12:58Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: reviewer reproduced the legitimate size=0 receipt. The strengthened same behavior property failed 1/21 because the helper rejected its Infinity L10 damage before calculating a candidate; no collection/import failures.",
+      "t": "2026-08-11T04:17:30Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: finite receipts preserve exact D-d_w arithmetic; a named infinite damage instead sums the remaining receipt, avoiding Infinity minus Infinity. One-sided wind/tide absence remains valid. Removing the infinite-damage fallback failed 1/21 with expected 90, received NaN, then reverted. Focused 21/21, full units 117/117, typecheck, build, and ci:local 10/10 pass.",
+      "t": "2026-08-11T04:18:52Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 903325a is the genuine 03-02 implementation commit. Independent review iteration 2 APPROVED after exact-factor, zero-size, and asymmetric-missing receipt proofs; this evidence-only follow-up records the committed phase.",
+      "t": "2026-08-11T04:28:56Z"
     }
   ]
 }
