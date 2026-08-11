@@ -1,0 +1,1 @@
+import{t as e}from"./island.C6zO3Fzg.js";e();
