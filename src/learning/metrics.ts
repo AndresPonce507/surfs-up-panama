@@ -3,6 +3,15 @@
 // feeds the public forecast.
 
 import type { ObservationRow, PublishedCallRow } from './inputs';
+import type { GatedKey, StoredCorrection } from './correction-file';
+
+export type ShrinkageAlarmRow = {
+  spot_id: string;
+  shrink_weight: number;
+  n: number;
+  reporters: number;
+  flagged: boolean;
+};
 
 export type MonthlyMetrics = {
   selection: { per_decile: { decile: number; calls: number; reported_days: number }[]; solicited_share: number };
@@ -14,13 +23,14 @@ export type MonthlyMetrics = {
     bins: Record<string, { reports: number; hits: number; hit_rate: number; brier: number }>;
     offending_term: 'c_spread' | null;
   };
-  shrinkage: unknown[];
+  shrinkage: ShrinkageAlarmRow[];
   cv: { verdict: 'not_evaluated' };
 };
 
 export function buildMonthlyMetrics(input: {
   observations: readonly ObservationRow[];
   calls: readonly PublishedCallRow[];
+  corrections?: readonly StoredCorrection[];
 }): MonthlyMetrics {
   const reportedDays = new Set(
     input.observations.flatMap((observation) => {
@@ -48,9 +58,38 @@ export function buildMonthlyMetrics(input: {
     mae: { baselines: { climatology: null, persistence: null } },
     sigma_human: { co_observer_pairs: 0 },
     calibration: calibrationOf(input.observations),
-    shrinkage: [],
+    shrinkage: shrinkageOf(input.corrections ?? []),
     cv: { verdict: 'not_evaluated' },
   };
+}
+
+/**
+ * One operator row per applied spot correction. The record's fullest key is
+ * the spot-level alarm representative: it prevents a sparse secondary source
+ * from obscuring whether an evidence-rich correction is still mostly pooled.
+ */
+function shrinkageOf(corrections: readonly StoredCorrection[]): ShrinkageAlarmRow[] {
+  return corrections
+    .flatMap((correction) => {
+      const key = fullestAppliedKey(correction);
+      if (key === undefined) return [];
+      return [{
+        spot_id: correction.spot_id,
+        shrink_weight: key.shrunk_from_global,
+        n: key.n,
+        reporters: key.reporters,
+        flagged: key.n >= 80 && key.shrunk_from_global >= 0.6,
+      }];
+    })
+    .sort((left, right) => left.spot_id.localeCompare(right.spot_id));
+}
+
+function fullestAppliedKey(correction: StoredCorrection): GatedKey | undefined {
+  const keys = [
+    ...Object.values(correction.bias.swell_h_m.per_source).flatMap((byLead) => Object.values(byLead)),
+    ...(correction.score_delta === undefined ? [] : [correction.score_delta]),
+  ].filter((key) => key.applied);
+  return keys.sort((left, right) => right.n - left.n || right.shrunk_from_global - left.shrunk_from_global)[0];
 }
 
 /**

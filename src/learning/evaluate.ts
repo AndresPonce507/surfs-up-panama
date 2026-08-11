@@ -30,8 +30,8 @@ export async function runMonthlyEvaluationOnce(deps: {
   const observations = await readObservationLog(deps.store);
   const predictions = await readPredictionLog(deps.store);
   const calls = await readCallHistory(deps.store);
-  const metrics = buildMonthlyMetrics({ observations, calls });
   const currentCorrections = await readCurrentCorrections(deps.store);
+  const metrics = buildMonthlyMetrics({ observations, calls, corrections: currentCorrections.map(({ record }) => record) });
   const verdict = judgeCurrentCorrections(currentCorrections, observations, predictions);
   if (verdict === 'corrections-killed') {
     await Promise.all(currentCorrections.map(({ key, record }) => deps.store.put(key, serializeCorrection(disableCorrection(record)))));

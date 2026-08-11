@@ -1121,6 +1121,34 @@
       "s": "EXECUTED",
       "d": "{\"commit\":\"10f20c6\",\"message\":\"feat(learning): route failed confidence calibration - step 05-04\",\"status\":\"scoped green; calibration is an operator-only routing paper trail and does not perform the scoring-lane removal\",\"commands\":{\"typecheck\":\"npm run typecheck PASS\",\"learning_units\":\"npx vitest run tests/unit/learning-*.test.ts: 13 files, 77 tests PASS\",\"completed_slice_05_acceptance\":\"npm run test:at -- --name <05-01 through 05-04 contracts>: 6 scenarios, 114 steps PASS\",\"build\":\"qualified stale-surface refusal, unrelated to Learning\"},\"g7\":\"The prior rolling-origin correction-kill behavior remains green; this step neither changes CV nor correction applied flags.\"}",
       "t": "2026-08-11T02:37:00Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: 05-04 and its evidence closure are committed. The active monthly shrinkage-alarm contract, stored correction shape, roadmap, operator-only boundary, and non-visual rationale were inspected. The evaluator may project an alarm from stored correction evidence but must not alter correction bytes or applied flags.",
+      "t": "2026-08-11T02:40:00Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm run test:at -- --name A spot still mostly pooled after eighty mornings is flagged as a misconfiguration\",\"exit\":1,\"classification\":\"expected behavioral RED\",\"failure\":\"the monthly metrics shrinkage array was empty instead of containing the 80-morning, 60-percent-pooled spot alarm\"}",
+      "t": "2026-08-11T02:40:20Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npx vitest run tests/unit/learning-metrics.test.ts\",\"exit\":1,\"classification\":\"expected assertion RED\",\"failure\":\"the metrics projection returned no shrinkage row for the stored correction record\",\"test_budget\":\"2 behaviors x 2 = 4; 1 new pure-port property\"}",
+      "t": "2026-08-11T02:41:40Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "{\"focused_acceptance\":\"feature-qualified Slice-05: 7 scenarios/131 steps PASS\",\"learning_units\":\"13 files, 78 tests PASS\",\"typecheck\":\"PASS\",\"falsification\":\"changing the 60-percent boundary from >= to > made the acceptance scenario fail with flagged false; restored the inclusive threshold\",\"projection\":\"one deterministic row per applied spot correction, using its fullest stored key; metrics reads correction evidence but writes no correction\",\"test_budget\":\"2 behaviors x 2 = 4; 1 new property, within budget\",\"global_qualification\":\"npm run build remains blocked by the unrelated stale published surface dated 2026-08-09 versus Panama 2026-08-10; an unqualified @slice-05 command also includes an unrelated Daily Call scenario that correctly encounters that guard\",\"non_visual_rationale\":\"the alarm is operator-only metrics JSON and cannot trigger automatic behavior or any rendered change\"}",
+      "t": "2026-08-11T02:43:00Z"
     }
   ]
 }

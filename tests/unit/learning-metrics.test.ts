@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
+import type { StoredCorrection } from '../../src/learning/correction-file';
 import { buildMonthlyMetrics } from '../../src/learning/metrics';
 
 describe('monthly metrics projection', () => {
@@ -75,6 +76,35 @@ describe('monthly metrics projection', () => {
       { numRuns: 50 },
     );
   });
+
+  // bypass: buildMonthlyMetrics is a pure driving port whose only observable
+  // surface is its returned projection; no mutable port state exists.
+  it('reports each stored spot shrinkage and raises only the eighty-morning, sixty-percent-pooling alarm', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 160 }),
+        fc.integer({ min: 1, max: 12 }),
+        fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true }),
+        (n, reporters, shrinkWeight) => {
+          const metrics = buildMonthlyMetrics({
+            observations: [],
+            calls: [],
+            corrections: [storedCorrection({ n, reporters, shrinkWeight })],
+          });
+          const rows = metrics.shrinkage;
+
+          assert.deepEqual(rows, [{
+            spot_id: 'playa-venao',
+            shrink_weight: shrinkWeight,
+            n,
+            reporters,
+            flagged: n >= 80 && shrinkWeight >= 0.6,
+          }]);
+        },
+      ),
+      { numRuns: 50 },
+    );
+  });
 });
 
 function calibrationObservation(input: { index: number; confidence: string; isGood: boolean; score: number }) {
@@ -93,4 +123,29 @@ function rateOf(outcomes: readonly boolean[]): number {
 
 function brierOf(outcomes: readonly boolean[], probability: number): number {
   return outcomes.reduce((total, isGood) => total + (probability - (isGood ? 1 : 0)) ** 2, 0) / outcomes.length;
+}
+
+function storedCorrection(input: { n: number; reporters: number; shrinkWeight: number }): StoredCorrection {
+  return {
+    spot_id: 'playa-venao',
+    schema: 'spot-correction/1',
+    computed_at: '2026-08-10T07:00:00.000Z',
+    bias: {
+      swell_h_m: {
+        per_source: {
+          ncep_gfswave016: {
+            lead_24_48: {
+              b: -0.09,
+              se: 0.05,
+              n: input.n,
+              reporters: input.reporters,
+              applied: true,
+              shrunk_from_global: input.shrinkWeight,
+            },
+          },
+        },
+      },
+    },
+    clamp: { max_abs_h_frac: 0.4, max_abs_score: 12 },
+  };
 }
