@@ -3,11 +3,13 @@ import { Template } from 'aws-cdk-lib/assertions';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { runLocalCi } from '../../scripts/ci-local.mjs';
 import {
   createGuardrailStack,
+  app,
   ingestStack,
   observabilityStack,
   siteStack,
@@ -32,6 +34,13 @@ import {
   metricNamespace,
   siteOriginExportName,
 } from '../lib/physical-names.js';
+import {
+  BUILD_SUCCESS_EVENT,
+  CYCLE_FROZEN_EVENT,
+  INGEST_SUCCESS_EVENT,
+  PROVIDER_ERROR_EVENT,
+} from '../../src/pipeline/lambda/log-events.js';
+import type { BuildStore, ForecastSource, IngestStore } from '../../src/pipeline/ports.js';
 
 type ResourceProperties = Readonly<Record<string, unknown>>;
 type SynthesizedResource = Readonly<{
@@ -226,6 +235,28 @@ function assertCostAllocationTagPresent(resources: readonly SynthesizedResource[
   }
 }
 
+function resolvedFunctionArnTarget(target: Readonly<Record<string, unknown>>): string | undefined {
+  const arn = target.Arn;
+  if (typeof arn !== 'object' || arn === null) return undefined;
+  const getAtt = (arn as Readonly<Record<string, unknown>>)['Fn::GetAtt'];
+  return Array.isArray(getAtt) ? String(getAtt[0]) : undefined;
+}
+
+/** CDK's asset S3 key is its locally staged `asset.<hash>` directory plus a
+ * `.zip` suffix. Resolve it from the synthesized template so this test
+ * inspects exactly what CDK will package, never a source-tree lookalike. */
+function stagedLambdaAssetDirectory(functionName: string): string {
+  const resource = synthesizedResources('AWS::Lambda::Function', realTemplates.ingest)
+    .find(({ properties }) => stringProperty(properties, 'FunctionName') === functionName);
+  if (!resource) throw new Error(`expected synthesized Lambda for ${functionName}`);
+  const code = resource.properties.Code as Readonly<Record<string, unknown>>;
+  const s3Key = stringProperty(code, 'S3Key');
+  if (!s3Key.endsWith('.zip')) throw new Error(`expected ${functionName} asset key to end in .zip, got ${s3Key}`);
+  const assetDirectory = resolve(cloudAssembly.directory, `asset.${s3Key.slice(0, -'.zip'.length)}`);
+  if (!existsSync(assetDirectory)) throw new Error(`expected staged asset directory ${assetDirectory}`);
+  return assetDirectory;
+}
+
 function lambdaLogicalId(functionName: string): string {
   return `${functionName.split('-').map((segment) => `${segment[0]?.toUpperCase()}${segment.slice(1)}`).join('')}Function`;
 }
@@ -341,7 +372,7 @@ describe('synthesized infrastructure guardrails', () => {
     if (!bucket) throw new Error('expected one synthesized S3 bucket');
 
     const actualRules = synthesizedLifecycleRules(bucket);
-    expect(actualRules).toHaveLength(3);
+    expect(actualRules).toHaveLength(4);
     expect(actualRules).toEqual(declaredNonPredictionLifecycleRules);
     assertPredictionLifecycleSafety(actualRules, protectedPredictionPrefix, declaredNonPredictionLifecycleRules);
   });
@@ -413,6 +444,11 @@ describe('synthesized infrastructure guardrails', () => {
 // asserted below was demonstrated failing once against a deliberate poison
 // before it counted (section 11: a gate never seen red proves nothing).
 // ---------------------------------------------------------------------------
+
+// Materialize CDK's assembly once. The asset package smoke below resolves
+// S3Key against this directory, which makes its observation exactly the
+// archive CDK would upload.
+const cloudAssembly = app.synth();
 
 const realStacks = {
   site: Template.fromStack(siteStack),
@@ -516,7 +552,7 @@ describe('real stack guardrails: the site bucket (guardrails 4 and 6, slice-01 v
     const [bucket] = buckets;
     if (!bucket) throw new Error('expected the site bucket');
     const rules = synthesizedLifecycleRules(bucket);
-    expect(rules).toHaveLength(3);
+    expect(rules).toHaveLength(4);
     expect([...rules].sort((a, b) => a.id.localeCompare(b.id)))
       .toEqual([...declaredNonPredictionLifecycleRules].sort((a, b) => a.id.localeCompare(b.id)));
     assertPredictionLifecycleSafety(rules, protectedPredictionPrefix, declaredNonPredictionLifecycleRules);
@@ -554,10 +590,33 @@ describe('real stack guardrails: ingest scheduling and the dead-man signal chain
       ScheduleExpression: 'cron(17 * * * ? *)',
       State: 'ENABLED',
     });
-    const [schedule] = synthesizedResources('AWS::Scheduler::Schedule', realTemplates.ingest);
-    if (!schedule) throw new Error('expected the hourly schedule');
+    const [schedule] = synthesizedResources('AWS::Scheduler::Schedule', realTemplates.ingest)
+      .filter(({ properties }) => stringProperty(properties, 'ScheduleExpression') === 'cron(17 * * * ? *)');
+    if (!schedule) throw new Error('expected the hourly fetch schedule');
     const target = schedule.properties.Target as Readonly<Record<string, unknown>>;
     expect((target.RetryPolicy as Readonly<Record<string, unknown>>).MaximumRetryAttempts).toBe(0);
+    const fetchLogicalId = synthesizedResources('AWS::Lambda::Function', realTemplates.ingest)
+      .find(({ properties }) => stringProperty(properties, 'FunctionName') === functionNames.fetch)?.logicalId;
+    expect(resolvedFunctionArnTarget(target)).toBe(fetchLogicalId);
+  });
+
+  // covers: the design's build run must actually fire (04-ingest-pipeline.md
+  // section 3 steps 9-11: "Build run, hourly at :22, separate Lambda"). Proven
+  // missing once (grep of infra/ found zero references to functionNames.build
+  // or a buildFn target on any Schedule) before this guardrail counted.
+  it('schedules the build function hourly at :22, enabled, with zero scheduler retries, targeting Build specifically', () => {
+    realStacks.ingest.hasResourceProperties('AWS::Scheduler::Schedule', {
+      ScheduleExpression: 'cron(22 * * * ? *)',
+      State: 'ENABLED',
+    });
+    const [schedule] = synthesizedResources('AWS::Scheduler::Schedule', realTemplates.ingest)
+      .filter(({ properties }) => stringProperty(properties, 'ScheduleExpression') === 'cron(22 * * * ? *)');
+    if (!schedule) throw new Error('expected the hourly build schedule');
+    const target = schedule.properties.Target as Readonly<Record<string, unknown>>;
+    expect((target.RetryPolicy as Readonly<Record<string, unknown>>).MaximumRetryAttempts).toBe(0);
+    const buildLogicalId = synthesizedResources('AWS::Lambda::Function', realTemplates.ingest)
+      .find(({ properties }) => stringProperty(properties, 'FunctionName') === functionNames.build)?.logicalId;
+    expect(resolvedFunctionArnTarget(target)).toBe(buildLogicalId);
   });
 
   it('turns fetch log lines into the IngestSuccess and ProviderErrors metrics the alarms watch', () => {
@@ -571,8 +630,126 @@ describe('real stack guardrails: ingest scheduling and the dead-man signal chain
     expect(transformations).toEqual(expect.arrayContaining([
       { name: 'IngestSuccess', namespace: metricNamespace },
       { name: 'ProviderErrors', namespace: metricNamespace },
+      { name: 'WindSourceErrors', namespace: metricNamespace },
+      { name: 'FrozenCycles', namespace: metricNamespace },
       { name: 'BuildSuccess', namespace: metricNamespace },
     ]));
+  });
+
+  // covers: the three event-name strings the deployed MetricFilters match on
+  // and the strings the Lambda handlers actually log
+  // (src/pipeline/lambda/log-events.ts) must be the SAME constants, not two
+  // hand-typed literals that can silently drift apart. ingest-stack.ts
+  // imports those constants directly, so this asserts the wiring, not a
+  // coincidence.
+  it('derives every dead-man filter pattern from the one shared event-name module, never a re-typed literal', () => {
+    const filters = synthesizedResources('AWS::Logs::MetricFilter', realTemplates.ingest);
+    const patterns = filters.map(({ properties }) => stringProperty(properties, 'FilterPattern'));
+    for (const eventName of [INGEST_SUCCESS_EVENT, PROVIDER_ERROR_EVENT, BUILD_SUCCESS_EVENT, CYCLE_FROZEN_EVENT]) {
+      expect(patterns.some((pattern) => pattern.includes(`"${eventName}"`)), eventName).toBe(true);
+    }
+  });
+
+  it('counts only provider.error lines explicitly attributed to wind in the dedicated WindSourceErrors metric', () => {
+    const filter = synthesizedResources('AWS::Logs::MetricFilter', realTemplates.ingest)
+      .find(({ properties }) => ((properties.MetricTransformations as readonly Readonly<Record<string, unknown>>[])[0]?.MetricName === 'WindSourceErrors'));
+    expect(filter).toBeDefined();
+    const pattern = stringProperty(filter!.properties, 'FilterPattern');
+    expect(pattern).toContain(`"${PROVIDER_ERROR_EVENT}"`);
+    expect(pattern).toContain('"wind"');
+    expect(pattern).not.toContain('tide');
+  });
+
+  // covers: the honest-placeholder comment this stack carried promised real
+  // pipeline code "belongs to the ingest feature's DELIVER lane" -- proving
+  // the placeholder is gone is proving neither function still ships as an
+  // inline ZipFile string, the literal marker `Code.fromInline` leaves in
+  // the synthesized template.
+  it('ships Fetch and Build as a real bundled code asset, never the honest inline placeholder', () => {
+    const functions = synthesizedResources('AWS::Lambda::Function', realTemplates.ingest)
+      .filter(({ properties }) => (
+        stringProperty(properties, 'FunctionName') === functionNames.fetch
+        || stringProperty(properties, 'FunctionName') === functionNames.build
+      ));
+    expect(functions).toHaveLength(2);
+    for (const { properties, logicalId } of functions) {
+      const code = properties.Code as Readonly<Record<string, unknown>>;
+      expect(code.ZipFile, logicalId).toBeUndefined();
+      expect(code.S3Bucket, logicalId).toBeDefined();
+      expect(code.S3Key, logicalId).toBeDefined();
+    }
+  });
+
+  // This is intentionally an asset-level test rather than another source
+  // import. It synthesizes SurfsUpPanamaIngest, follows each Function's
+  // staged asset key, checks the exact canonical package layout, then runs
+  // both bundled composition roots with fake driven ports but without an
+  // injected spot list. Therefore the default `launchData` paths must load
+  // from the staged `data/spots/` directory, not from process.cwd() or a
+  // source-tree fallback.
+  it('packages canonical launch spot files and lets both default handlers load them from their staged assets', async () => {
+    const fetchAsset = stagedLambdaAssetDirectory(functionNames.fetch);
+    const buildAsset = stagedLambdaAssetDirectory(functionNames.build);
+    for (const asset of [fetchAsset, buildAsset]) {
+      expect(existsSync(resolve(asset, 'data/spots/pa-pacific.yaml')), asset).toBe(true);
+      expect(existsSync(resolve(asset, 'data/spots/pa-pacific-launch-v1.json')), asset).toBe(true);
+    }
+
+    const fetchPackage = await import(pathToFileURL(resolve(fetchAsset, 'index.mjs')).href) as typeof import('../../src/pipeline/lambda/fetch-handler.js');
+    const buildPackage = await import(pathToFileURL(resolve(buildAsset, 'index.mjs')).href) as typeof import('../../src/pipeline/lambda/build-handler.js');
+    const source: ForecastSource = {
+      async fetchWavePayload(spot_id) {
+        return { ok: true, verbatim: JSON.stringify({ spot_id }) };
+      },
+      parseWaveMembers() {
+        return { ok: true, data: [{
+            source: 'ncep_gfswave016',
+            run_ts: '2026-08-10T06:00Z',
+            hours: [{
+              valid_ts: '2026-08-10T18:00Z',
+              swell: { h_m: 1.1, t_s: 14, dir_deg: 204 },
+              swell2: null,
+              land_masked: false,
+            }],
+          }] };
+      },
+      async fetchWindPayload() {
+        return { ok: true, verbatim: '{}' };
+      },
+      parseWind() { return { ok: true, data: [] }; },
+      async fetchTidePayload() {
+        return { ok: false, reason: 'dark' };
+      },
+      parseTide() { return { ok: false, reason: 'dark' }; },
+    };
+    let rawWrites = 0;
+    let predictionWrites = 0;
+    const ingestStore: IngestStore = {
+      async putRawIfAbsent() { rawWrites += 1; return 'created' as const; },
+      async putPredictionIfAbsent() { predictionWrites += 1; return 'created'; },
+    };
+    const fetchOutcome = await fetchPackage.runFetch({
+      source,
+      store: ingestStore,
+      clock: { now: () => new Date('2026-08-10T06:17:00Z') },
+    });
+    expect(fetchOutcome.completed).toBe(true);
+    expect(rawWrites).toBeGreaterThan(0);
+    expect(predictionWrites).toBeGreaterThan(0);
+
+    const buildStore: BuildStore = {
+      async getPrediction() { return null; },
+      async listPredictions() { return []; },
+      async getCorrection() { return null; },
+      async putCallIfAbsent() { return 'created'; },
+      async putBundle() {},
+      async putManifest() {},
+    };
+    const buildOutcome = await buildPackage.runBuild({
+      store: buildStore,
+      clock: { now: () => new Date('2026-08-10T11:22:00Z') },
+    });
+    expect(buildOutcome).toEqual({ published: false, reason: 'no usable wave members' });
   });
 
   it('caps Lambda async retries at zero so duplicate deliveries cannot double-bill', () => {
@@ -691,6 +868,19 @@ describe('real stack guardrails: observability and the money lines (guardrails 8
     expect((deadMan.properties.OKActions as readonly unknown[]).length).toBeGreaterThan(0);
   });
 
+  it('pages on repeated WindSourceErrors without broadening that alarm to other provider failures', () => {
+    realStacks.observability.hasResourceProperties('AWS::CloudWatch::Alarm', {
+      Namespace: metricNamespace,
+      MetricName: 'WindSourceErrors',
+      Statistic: 'Sum',
+      Period: 3600,
+      EvaluationPeriods: 1,
+      TreatMissingData: 'notBreaching',
+      ComparisonOperator: 'GreaterThanOrEqualToThreshold',
+      Threshold: 3,
+    });
+  });
+
   it('declares the five money lines as budgets: 1, 5, 15, the 18 action line, and the created-not-imported 20', () => {
     const budgets = synthesizedResources('AWS::Budgets::Budget', realTemplates.observability)
       .map(({ properties }) => {
@@ -736,7 +926,7 @@ describe('real stack guardrails: observability and the money lines (guardrails 8
   it('keeps the whole design inside the ten-alarm free tier', () => {
     const alarmCount = allRealResources('AWS::CloudWatch::Alarm').length;
     expect(alarmCount).toBeLessThanOrEqual(10);
-    expect(alarmCount).toBe(7);
+    expect(alarmCount).toBe(10);
   });
 });
 

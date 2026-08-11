@@ -1,0 +1,8 @@
+title = "Surfs Up Panama Gitleaks policy"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "The three generic-api-key matches are fake mint responses in this one offline unit fixture; no production source or runtime configuration is excluded."
+paths = [ '''tests/unit/report-submit\.test\.ts''' ]

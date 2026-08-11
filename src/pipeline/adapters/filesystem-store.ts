@@ -12,22 +12,23 @@
 
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
+import { gunzipSync, gzipSync } from 'node:zlib';
 
-import type { BuildStore, IngestStore } from '../ports';
+import type { BuildStore, IngestStore, RawArchiveRecord } from '../ports';
 
 export class FilesystemStore implements IngestStore, BuildStore {
   constructor(private readonly root: string) {}
 
-  async putRaw(key: string, body: string): Promise<void> {
-    await this.write(key, body);
+  async putRawIfAbsent(record: RawArchiveRecord): Promise<'created' | 'already-exists'> {
+    return this.writeIfAbsent(record.key, encodeText(record.key, record.verbatim));
   }
 
   async putPredictionIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
-    return this.writeIfAbsent(key, body);
+    return this.writeIfAbsent(key, encodeText(key, body));
   }
 
   async getPrediction(key: string): Promise<string | null> {
-    return this.read(key);
+    return this.readGzip(key);
   }
 
   async listPredictions(prefix: string): Promise<string[]> {
@@ -39,7 +40,7 @@ export class FilesystemStore implements IngestStore, BuildStore {
   }
 
   async putCallIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
-    return this.writeIfAbsent(key, body);
+    return this.writeIfAbsent(key, encodeText(key, body));
   }
 
   async putBundle(key: string, body: string): Promise<void> {
@@ -54,13 +55,13 @@ export class FilesystemStore implements IngestStore, BuildStore {
     return join(this.root, key);
   }
 
-  private async write(key: string, body: string): Promise<void> {
+  private async write(key: string, body: string | Uint8Array): Promise<void> {
     const target = this.targetPath(key);
     await mkdir(dirname(target), { recursive: true });
     await writeFile(target, body);
   }
 
-  private async writeIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
+  private async writeIfAbsent(key: string, body: string | Uint8Array): Promise<'created' | 'already-exists'> {
     const target = this.targetPath(key);
     await mkdir(dirname(target), { recursive: true });
     try {
@@ -81,6 +82,19 @@ export class FilesystemStore implements IngestStore, BuildStore {
     }
   }
 
+  private async readGzip(key: string): Promise<string | null> {
+    try {
+      const bytes = await readFile(this.targetPath(key));
+      // data/predictions-capture predates the storage adapter's honest gzip
+      // writes. Preserve its offline replay value without ever emitting new
+      // plaintext under a .gz suffix.
+      return key.endsWith('.gz') && isGzip(bytes) ? gunzipSync(bytes).toString('utf8') : bytes.toString('utf8');
+    } catch (error) {
+      if (isMissing(error)) return null;
+      throw error;
+    }
+  }
+
   private async list(prefix: string): Promise<string[]> {
     const target = this.targetPath(prefix);
     const files: string[] = [];
@@ -89,6 +103,15 @@ export class FilesystemStore implements IngestStore, BuildStore {
       .map((file) => relative(this.root, file).split(sep).join('/'))
       .sort();
   }
+}
+
+function encodeText(key: string, body: string): Uint8Array {
+  const bytes = Buffer.from(body, 'utf8');
+  return key.endsWith('.gz') ? gzipSync(bytes) : bytes;
+}
+
+function isGzip(bytes: Uint8Array): boolean {
+  return bytes[0] === 0x1f && bytes[1] === 0x8b;
 }
 
 async function collectFiles(directory: string, out: string[]): Promise<void> {

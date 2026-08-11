@@ -15,11 +15,13 @@ export const guardrailDeclarations = {
   'timeout-breaker': '10 seconds',
   'log-retention': '14 days',
   'raw-expiration': '30 days',
+  'probe-expiration': '1 day',
   'photo-expiration': '90 days',
   'multipart-abort': '7 days',
 } as const;
 
 export const lifecycleRules = [
+  { id: 'probe-expiration', prefix: 'probes/', expirationAfterDays: 1 },
   { id: 'raw-archive-expiration', prefix: 'raw/', expirationAfterDays: 30 },
   { id: 'photo-expiration', prefix: 'photos/', expirationAfterDays: 90 },
   { id: 'incomplete-multipart-abort', abortAfterDays: 7 },
