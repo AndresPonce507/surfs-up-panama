@@ -1,0 +1,14 @@
+{
+  "sid": "04-03",
+  "event": "CONTROLLED_FALSIFICATION",
+  "status": "PASS",
+  "scope": "isolated worktree only",
+  "mutation": "Temporarily changed the final worker replay filter to select no queued records, after rebuilding the emitted /sw.js.",
+  "command": "npm run test:at -- --tags '@feature-f-works-with-no-signal and @slice-04' --name 'An answer lost on the way back never becomes a second report'",
+  "semantic_failure": "AssertionError: WHAT: the site was asked 0 time(s); this journey needs exactly two. 0 !== 2.",
+  "restoration": "Restored the exact final replay filter and the no-delete-before-ack worker path without changing the authored acceptance scenario.",
+  "post_restore_result": "1 scenario passed; 26 steps passed; 3 hooks passed. Focused direct-worker unit: 4 tests passed.",
+  "integrity": "npm run build passed before the restored browser run; git diff --exit-code -- public/sw.js passed after restoration.",
+  "external_boundary": "The exercised site receipt is the local harness contract. No deployed Function URL or physical-device proof was performed or claimed.",
+  "t": "2026-08-11T14:26:46Z"
+}

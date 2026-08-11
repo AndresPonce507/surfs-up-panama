@@ -1,0 +1,17 @@
+{
+  "sid": "04-02",
+  "event": "INHERITED_GREEN_AND_UI_GATES",
+  "status": "PASS",
+  "scenario": "A report the site already had is answered exactly like the first time",
+  "acceptance_command": "npm run test:at -- --tags '@feature-f-works-with-no-signal and @slice-04' --name 'A report the site already had is answered exactly like the first time'",
+  "acceptance_result": "1 scenario passed; 24 steps passed; 3 hooks passed",
+  "ui_commands": [
+    "npm run test:ui",
+    "npm run test:e2e"
+  ],
+  "ui_result": "test:ui passed U2, U4, U6, and U7 on emitted documents; real Chromium e2e passed 3 tests, including the feature-owned contrast and touch audit at the declared mobile surface.",
+  "classification": "The present oracle is the accepted pre-renderer one: queued_duplicate is a successful original receipt, the queue entry disappears, one stored record remains, and no failure words appear. Word-for-word reveal equality remains the recorded f-tell slice-04 amendment, not invented here.",
+  "u8": "Source-blind examiner reran the exact authorized acceptance scenario serially after a concurrent-build-contended first attempt. Current observation passed: 1 scenario, 24 steps, and 3 hooks. No source, test, diff, or log files were read; no edits were made.",
+  "external_boundary": "No deployed Function URL or physical-device proof was performed or claimed.",
+  "t": "2026-08-11T14:26:46Z"
+}
