@@ -79,6 +79,53 @@ Feature: La playa dice qué fue lo que la tumbó
     When la mañana queda lista para leerse
     Then la publicación señala una sola ausencia heredada por día sin confundirla con los otros silencios
 
+  @slice-04 @driving_port @real-io @adapter-integration @negative @error @covers-R13 @covers-R16
+  Scenario: El desglose llega completo desde la mañana que publicó la llamada
+    Given una mañana publicada que trae el desglose hora por hora de sus dos días
+    And en esa misma mañana una playa vieja se publicó sin ese desglose
+    When la publicación revisa esa mañana y una copia con una hora malformada
+    Then acepta el desglose fresco junto a la ausencia heredada, y se niega antes de preparar una página con la hora malformada
+
+  @slice-04 @driving_port @in-memory @covers-R13 @covers-R15
+  Scenario: Un dato ausente sigue ausente en el desglose
+    Given una playa con sus constantes y una mañana de modelos y marea que se quedó sin viento
+    When esa mañana se publica
+    Then el desglose publicado repite cada hora calificada y deja el viento ausente, sin un cero en su lugar
+
+  @slice-04 @driving_port @real-io @adapter-integration @covers-R13
+  Scenario: Cada día lee solo la hora que explica su ventana
+    Given una mañana publicada donde las horas vecinas se ven mejor que la hora de la ventana
+    When el surfista abre la playa "desglose-honesto" a 390 px
+    Then cada día imprime los cuatro valores de su propia hora de ventana, sin promediar ni saltar a la hora vecina
+
+  @slice-04 @driving_port @real-io @adapter-integration @negative @covers-R14
+  Scenario: La flecha sigue el punto débil publicado, no la barra más baja
+    Given una mañana publicada donde la hora de la ventana trae un valor menor que el punto débil publicado
+    When el surfista abre la playa "desglose-honesto" a 390 px
+    Then la flecha marca el punto débil publicado y la fila más baja queda como una fila común
+    And ninguna fila sin dato se queda con la flecha
+
+  @slice-04 @driving_port @real-io @adapter-integration @ui-u1 @ui-u2 @ui-u3 @ui-u4 @ui-u5 @ui-u6 @ui-u7 @covers-R15 @covers-R17 @covers-R21 @covers-R22 @covers-R23 @covers-R24 @covers-R25 @covers-R26 @covers-R27
+  Scenario Outline: El surfista lee cuatro razones de su mejor ventana sin una mentira por datos faltantes
+    Given una mañana publicada donde una hora de ventana perdió el viento y otra perdió la marea
+    When el surfista abre la playa "sin-viento-en-la-ventana" a 390 px, con tema "<tema>" y movimiento "<movimiento>"
+    Then cada día muestra cuatro filas con su valor publicado o con su ausencia dicha en palabras
+    And el desglose cumple las siete comprobaciones visuales sobre el fondo real
+    And el nombre de playa más largo tampoco desborda sus cuatro filas
+
+    Examples:
+      | tema   | movimiento |
+      | claro  | normal     |
+      | oscuro | reducido   |
+
+  @slice-04 @driving_port @real-io @adapter-integration @negative @error @covers-R16
+  Scenario: La playa expone sus cuatro razones sin recalcular ni inventar nada
+    Given una mañana publicada donde un día no trae ventana y una playa vieja no trae desglose
+    When el surfista abre la playa "sin-ventana" a 390 px
+    Then el día sin ventana no deja ni desglose ni recuadro vacío, y el otro día conserva el suyo
+    And la playa sin desglose heredado queda sin barras y la mañana lo registra una sola vez por día
+    And el desglose publicado no deja cálculo ni código en el teléfono
+
   @slice-02 @driving_port @real-io @adapter-integration @negative @covers-R7 @covers-R8
   Scenario: La playa muestra el valor publicado sin inventar uno menor
     Given una mañana publicada donde el viento es la causa pero la marea tuvo un valor menor sin publicar
