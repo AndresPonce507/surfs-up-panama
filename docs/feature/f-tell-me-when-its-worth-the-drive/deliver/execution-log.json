@@ -113,6 +113,34 @@
       "s": "EXECUTED",
       "d": "PASS: the named accepted scenario bound non-emptily (1 scenario, 19 steps) and then failed semantically at its server-bar oracle. With threshold_score null, the current planner planned no sends across 0..100, proving the missing declared default-threshold behaviour without a loading or binding error. npm run typecheck passed. This is a contract-only repair: no GREEN or implementation COMMIT is claimed.",
       "t": "2026-08-11T15:13:56Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: the new fast-check sweep over a declared 0..100 server bar failed semantically. It shrank to server bar 0 and showed that a null-bar subscription produced no sends instead of the required monotone cut.",
+      "t": "2026-08-11T15:20:01Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: planNotifications now accepts default_threshold_score as a declared input and uses it only when threshold_score is null; no numeric Push-module default was added. Focused unit 4/4, named acceptance 1/1, typecheck, and full units 321/321 passed. The 100-run complete-scale property receives a 15-second runner timeout without reducing its generated cases or assertions. UI N/A: pure planning decision.",
+      "t": "2026-08-11T15:20:01Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: temporary mutation ignored default_threshold_score by using 0 for every null-bar subscriber. The property shrank to server bar 1 and raised AssertionError because score 0 sent when it should not. The selection function was restored unchanged.",
+      "t": "2026-08-11T15:20:01Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: after restoration focused unit 4/4, named acceptance 1/1, typecheck, and full units 321/321 remained green.",
+      "t": "2026-08-11T15:20:01Z"
     }
   ]
 }

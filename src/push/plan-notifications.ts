@@ -41,6 +41,8 @@ export type PlanNotificationsInput = {
   spots: readonly PushSpot[];
   scores: Readonly<Record<string, number>>;
   subscriptions: readonly StoredSub[];
+  /** Declared composition-root input for subscribers who left their bar unset. */
+  default_threshold_score: number;
   run_cap: number;
 };
 
@@ -89,8 +91,16 @@ function isMorningAtSpot(now: string, spot: PushSpot): boolean {
   return hour >= MORNING_START_HOUR && hour < MORNING_END_HOUR;
 }
 
-function isAtOrAboveSubscriberBar(score: number | undefined, subscription: StoredSub): boolean {
-  return score !== undefined && subscription.threshold_score !== null && score >= subscription.threshold_score;
+function subscriberThresholdScore(subscription: StoredSub, defaultThresholdScore: number): number {
+  return subscription.threshold_score ?? defaultThresholdScore;
+}
+
+function isAtOrAboveSubscriberBar(
+  score: number | undefined,
+  subscription: StoredSub,
+  defaultThresholdScore: number,
+): boolean {
+  return score !== undefined && score >= subscriberThresholdScore(subscription, defaultThresholdScore);
 }
 
 function hasNotBeenNotifiedForSpotDate(subscription: StoredSub, date: string): boolean {
@@ -119,7 +129,7 @@ function eligibleMorningNotifications(input: PlanNotificationsInput): PlannedNot
     const date = spotLocalDate(input.now, spot.timezone);
     return input.subscriptions
       .filter((subscription) => subscription.spot_id === spot.spot_id)
-      .filter((subscription) => isAtOrAboveSubscriberBar(score, subscription))
+      .filter((subscription) => isAtOrAboveSubscriberBar(score, subscription, input.default_threshold_score))
       .filter((subscription) => hasNotBeenNotifiedForSpotDate(subscription, date))
       .map((subscription) => ({
         send: composeSpanishMorningSend(spot, subscription, score!),

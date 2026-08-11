@@ -7,7 +7,8 @@
     "prepare": "Recovered the accepted build/f2-push Slice-01 contract assets. The restored roadmap keeps the accepted 01-06 dependency and records the feature plus declared-surface helper as contract ownership required to execute 01-10 on this integration base.",
     "binding": "npm run test:at -- --dry-run --name 'Un suscriptor que no eligió barra igual se rige por una barra, la del servidor' selected 1 scenario and 19 bound steps, exiting 0.",
     "red_acceptance": "The same named scenario exited 1 at its business oracle: with threshold_score null, the current planner produced no sends across the 0..100 sweep, so the oracle reported that no server bar governs the subscriber.",
-    "typecheck": "npm run typecheck passed after the contract assets were restored.",
-    "delivery_status": "Contract-only repair. No production source or unit test was changed, so GREEN and implementation COMMIT evidence are intentionally absent."
+    "red_unit": "The new generated 0..100 server-bar sweep shrank to bar 0 and failed because a null-bar subscription planned no sends. A later mutation that ignored the declared server bar shrank to bar 1 and failed because score 0 sent.",
+    "green": "Declared default_threshold_score is used only for null subscriber bars; no numeric default exists under src/push. Focused unit 4/4, named acceptance 1/1, typecheck, and full units 321/321 pass. The restored 100-run full-scale property has a 15-second runner timeout without fewer cases or weaker assertions.",
+    "delivery_status": "Implementation is GREEN; COMMIT evidence remains intentionally absent until independent review and a real commit hash."
   }
 }
