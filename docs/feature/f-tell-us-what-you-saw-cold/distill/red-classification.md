@@ -297,3 +297,17 @@ The following remain explicitly **INDETERMINATE external gates**, not substitute
 deployed Function-URL CORS and `Cache-Control: no-store`; real credential and quota device
 inputs; and the deployed generated spot-index artifact used by the exact Spanish unknown-spot
 refusal. No deploy was attempted.
+
+## Slice-03 page-ownership contract binding repair (2026-08-11)
+
+The roadmap metadata now declares all 21 actual steps and places `03-03` in Slice-03. Each
+U1 through U7 command selects the one `@slice-03 @local-real-io` page-owned scenario through its
+matching `@ui-uN` tag. The selector deliberately excludes `@requires_external`, so a missing
+`REPORT_ACCEPTANCE_ORIGIN` cannot masquerade as a local UI result.
+
+All seven selectors dry-bind one scenario. The live U1 selector completed one scenario and 28
+steps with exit 0 against the active production worktree, so this is **INHERITED_GREEN** rather
+than a fabricated replacement for the historical `MISSING_FUNCTIONALITY` observation above. That
+historical RED remains the valid pre-implementation classification. The explicit deployed gates
+remain **INDETERMINATE** and no deploy, test-owned endpoint, request interception or external
+credential was used for this binding repair.

@@ -6,7 +6,7 @@ Feature: The phone sends its own saved report
   saved label until the answer arrives, and never shows a forecast before that
   answer.
 
-  @slice-03 @driving_port @real-io @local-real-io @error @covers-R19 @covers-R22 @covers-R25 @covers-R38
+  @slice-03 @driving_port @real-io @local-real-io @ui-u1 @ui-u2 @ui-u3 @ui-u4 @ui-u5 @ui-u6 @ui-u7 @error @covers-R19 @covers-R22 @covers-R25 @covers-R38
   Scenario: Mandar starts the saved label's anonymous journey from the phone
     Given the built site is running as it would be at the beach
     And a surfer has the report screen open for Playa Venao
