@@ -1,6 +1,6 @@
 # Slice-05 delivery contract: a small, static break map
 
-Status: mapped only, 2026-08-10. This is not JIT DISTILL. It creates no
+Status: X11 resolved, implementation still mapped only, 2026-08-10. This is not JIT DISTILL. It creates no
 future acceptance label, feature file, step definition, fixture, expectation
 charter, or RED-classification entry. Slice-05 opens only after Slice-01 is
 sealed, X11 selects a legal source path, and the shared host and cache seams
@@ -8,8 +8,8 @@ are available.
 
 ## Binding outcome
 
-Each eligible spot page may show one small static asset that lets a surfer see
-the break and its declared orientation. It is a local WebP created before the
+Each eligible spot page may show one small static orientation diagram that lets
+a surfer see the declared orientation of the break. It is a local WebP created before the
 Astro build, loaded lazily, and bounded at approximately 12 KB. No visitor
 contacts a tile server, starts an interactive map, runs a map library, shares
 location, or waits for a browser-side map calculation.
@@ -20,27 +20,41 @@ geometry. The page must not infer facing from an image, a coastline outline,
 or another beach. A missing, contested, or invalid map input refuses that
 spot's generated asset rather than publishing a plausible but wrong map.
 
-The image uses a fixed aspect-ratio frame with meaningful Spanish alt text and
-visible attribution. It reserves space before the lazy image arrives. When an
+The diagram uses a fixed aspect-ratio frame with meaningful Spanish alt text
+and the visible caption template `Diagrama de orientación. Ubicación:
+{coordinate_attribution}. Orientación: {orientation_attribution}.` Its values
+come from the per-spot provenance record, including OpenStreetMap attribution
+when it supplied the coordinate. It reserves space before the lazy image
+arrives. When an
 image is not cached offline or cannot load, the same sunken frame stays in
 place and its alt text remains readable. No spinner, layout shift, raw URL or
 technical error is a permitted fallback.
 
-## Imagery decision gate
+## X11 resolution: accepted orientation-only fallback
 
-The shape is accepted but the base imagery is not. X11 belongs to Andres and
-DESIGN and must choose one of two explicit outcomes:
+Andres/DESIGN accepts the seed-only orientation diagram as the launch path.
+This is a changed product fulfillment, not a geographic basemap and not an
+unlicensed substitute for one. The visual may contain only the declared spot
+marker and `shore_normal_deg` arrow. It must not depict or imply a coastline,
+satellite image, street, boundary, bathymetry, or precision beyond the cited
+seed record.
 
-1. An approved static imagery source with documented license, permitted
-   build-time acquisition, exact visible credit, and a zero-serving-cost path.
-2. An expressly accepted seed-only orientation diagram, if licensing does not
-   allow the first outcome. This is a changed product fulfillment and must be
-   named as such, not passed off as an unlicensed base map.
+No accepted project evidence establishes a legal static imagery source for all
+launch spots with permitted build-time acquisition, exact credit, refresh
+terms, and $0 serving. Recorded webcam capture is prohibited, other commercial
+terms/coverage are unverified, and satellite imagery is unfit for this
+break-level purpose. The orientation-only path is therefore the minimal
+compliant launch decision. Full rationale and future replacement gate:
+`docs/product/architecture/adr-static-map-orientation-fallback.md`.
 
-The chosen path becomes a tracked policy and generated manifest. It pairs each
-launch `spot_id` with source evidence, attribution payload, asset identity,
-coordinate provenance and `shore_normal_deg` provenance. It is not enough to
-say that a provider is generally open or put credit only in repository text.
+Step 05-01 still creates the tracked policy and generated manifest. For every
+launch `spot_id`, it must pair the caption above with seed-file revision,
+coordinate provenance and visible attribution, `shore_normal_deg` provenance
+and visible attribution, generator version, content-addressed path, dimensions,
+and asset identity. A missing, contested, invalid, or attribution-less input
+refuses that asset. No provider credit, provider refresh, or provider cache
+rule exists because no
+third-party imagery is used.
 
 ## Planned Given-When-Then mapping
 
@@ -62,8 +76,8 @@ worker and browser behavior stays concrete and example-based.
 
 ## Delivery sequence
 
-1. X11 records an approved imagery path or an explicit diagram fallback, with
-   license evidence and visible attribution requirements.
+1. X11 is resolved to the explicit seed-only orientation diagram fallback;
+   05-01 records its reproducible manifest policy and visible caption.
 2. A build-time adapter validates launch inputs and emits the local,
    content-addressed WebP assets plus an importable manifest.
 3. The generator binds exactly each spot's cited coordinate and declared
@@ -78,9 +92,9 @@ worker and browser behavior stays concrete and example-based.
 
 ## Explicit non-goals
 
-- No unapproved imagery provider, scraped picture, tile API, access token,
+- No unapproved imagery provider, scraped picture, geographic basemap, tile API, access token,
   geolocation, browser map library, endpoint, island or route.
-- No claim that an orientation diagram is a licensed geographic basemap.
+- No claim that the orientation diagram is a geographic basemap or imagery.
 - No map on home, tomorrow, report or archive pages.
 - No change to Slice-01 through Slice-04 evidence or deferred acceptance
   artefacts.

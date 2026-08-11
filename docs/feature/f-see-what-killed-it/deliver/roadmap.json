@@ -1128,14 +1128,18 @@
     },
     {
       "id": "X11",
-      "what": "Approved static-map imagery source or expressly accepted orientation-only fallback",
-      "exact_change": "Andres/DESIGN records one legal path for each launch map: source identity, license terms, permitted build-time acquisition, exact visible Spanish attribution, refresh/cache terms and source evidence. If imagery cannot meet those terms at $0 serving cost, they may explicitly accept the seed-only orientation diagram instead; it must not be silently substituted.",
-      "why_not_here": "Decision 20 and the architecture settle only the static image form. No accepted document identifies a base image source or attribution. Choosing one is a product/legal decision outside this feature's mapping authority, and an uncredited or scraped image would violate the source contract even if it looked correct.",
-      "blocks": ["05-01", "05-02", "05-03", "05-04", "05-05", "05-06"],
-      "blocks_scenario": "every Slice-05 map behavior and JIT entry",
+      "what": "Accepted seed-only orientation diagram launch path",
+      "exact_change": "ACCEPTED 2026-08-10: launch uses a local seed-only orientation diagram, not third-party imagery. The exact visible Spanish caption template is 'Diagrama de orientación. Ubicación: {coordinate_attribution}. Orientación: {orientation_attribution}.' The diagram carries only the validated spot marker and declared shore_normal_deg arrow. 05-01 must create the per-spot manifest with seed revision, coordinate and shore-normal provenance plus their visible attribution payloads (including OpenStreetMap where applicable), generator version, content-addressed path, dimensions and asset digest; missing, contested or attribution-less input refuses that asset.",
+      "why_not_here": "The accepted record identifies no static imagery provider with complete per-spot licence, build-time acquisition, visible-credit, refresh and $0-serving evidence. Recorded webcam capture is prohibited; other commercial sources remain unverified; satellite imagery is unfit for this use. Choosing imagery by inference would violate the source contract. The accepted diagram preserves Decision 20's orientation outcome without claiming a geographic basemap.",
+      "blocks": [],
+      "blocks_scenario": "none; X11 is closed. Slice-05 delivery and JIT entry still require their declared Slice-01 seal, shared host/cache dependencies, and normal JIT gates.",
       "owner": "Andres and DESIGN",
       "serialized": true,
-      "decision_record": "docs/feature/f-see-what-killed-it/deliver/slice-05-contract.md"
+      "status": "approved",
+      "approved_at": "2026-08-10T00:00:00Z",
+      "decision_record": "docs/product/architecture/adr-static-map-orientation-fallback.md",
+      "contract_record": "docs/feature/f-see-what-killed-it/deliver/slice-05-contract.md",
+      "delivery_gate": "X11 closes only the legal source choice. It does not authorize map production or Slice-05 tests. The later manifest, host, cache-owner and JIT gates remain in force."
     },
     {
       "id": "X12",
