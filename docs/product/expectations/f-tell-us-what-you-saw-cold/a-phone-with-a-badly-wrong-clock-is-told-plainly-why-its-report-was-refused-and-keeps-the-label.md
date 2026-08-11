@@ -19,6 +19,18 @@ verdict is INDETERMINATE, never a PASS by absence.
 3. Read what the screen says, and check the label is still there.
 4. Fix the clock and confirm a fresh report goes through normally.
 
+## JIT DISTILL recipe (2026-08-10)
+Set `REPORT_ACCEPTANCE_ORIGIN` to the real Slice-03 report journey. Skew only the browser device
+clock to provoke the settled refusal against the real handler, then restore it for the fresh
+report. No fixture may stand in for the handler's received time, refusal bounds or plain-language
+reply. The report handler and its guarded deployment prerequisites are therefore hard external
+preconditions, not work this charter can fake.
+
+The tester applies the skew before opening the real report page, so the page itself stamps the
+browser-created report with the shifted time. For recovery it closes that browser context, opens a
+fresh context with the normal clock, and files a new report. The handler's received time and
+refusal remain wholly production-owned.
+
 ## Charter
 Explore the refusal as a surfer whose phone clock is wrong through no fault of their own. The
 heart of the walk is dignity in failure: the screen explains in plain Spanish why the report was

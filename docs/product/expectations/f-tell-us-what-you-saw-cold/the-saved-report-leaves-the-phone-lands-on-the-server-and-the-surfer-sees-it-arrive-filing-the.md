@@ -23,6 +23,21 @@ INDETERMINATE, never a PASS by absence.
 4. For the twice-filed check: repeat the submission of the same saved report (re-send, or reload
    and let the page-open flush re-send it). The recipe will name the concrete way to force it.
 
+## JIT DISTILL recipe (2026-08-10)
+Set `REPORT_ACCEPTANCE_ORIGIN` to an origin where the production report page is connected to the
+real report handler. A deployed guarded write stack is preferred; a locally run production handler
+wired to its real local store is valid before deployment. There is no default and no test-owned
+endpoint. The run is RED until this prerequisite exists. Before a deploy, Pre-requisites 2, 5 and
+6 in the feature delta must be recorded as resolved by their owners; DISTILL does not deploy or
+invent an answer for any of them.
+
+For the duplicate and page-open checks, the examiner first creates the report through the real
+offline browser flow, reads its durable identity from that browser's own queue, and resends that
+same record to the real public handler. For the quota check, `REPORT_ACCEPTANCE_QUOTA_CREDENTIAL`
+names a real pre-provisioned device already at its allowance. For the unknown-beach check, the
+same real public handler receives the browser-created record with only its beach name changed.
+Those two cases cannot originate in the page because the product correctly offers neither control.
+
 ## Charter
 Explore the arrival of a report as the surfer who just filed it. The heart of the walk is two
 promises: the report actually arrives (the screen tells you so), and filing the same report twice

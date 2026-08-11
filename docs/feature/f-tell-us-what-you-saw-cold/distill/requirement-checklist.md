@@ -92,4 +92,23 @@ regression guards). Per-scenario classification and falsifiability proofs:
 | R16 | `@covers-R16`: 4 independent device-only rows for report 20, presign 10, subscription 20 and no per-IP identity | Covered; RED (`MISSING_FUNCTIONALITY`): every changed allowance or identity is accepted. |
 | R17 | `@covers-R17`: baseline, unreadable declaration and all 24 controlled bites, each requiring observed, required, why, repair and same-copy green restoration | Mixed and honest: unreadable declaration is PASSING as an existing regression guard; baseline narration and every required policy diagnostic remain RED (`MISSING_FUNCTIONALITY`). |
 | R18 | `@covers-R18`: one independent corrected-source Scenario Outline row | Covered; RED (`MISSING_FUNCTIONALITY`): the falsified 07 §12 source is accepted and §6.1 is not named as required. |
-| R19 to R37, R39 to R45 | none | Expected-uncovered under the JIT rule (HANDOFF §1). Slices 03 to 05 additionally sit behind Pre-requisites 2, 5, 6 and 7 at deploy time. U-row coverage (R39 to R45) lands with the `test:ui` checks per visible slice. |
+| R19 | `@covers-R19`: "A surfer sends a saved report and sees it arrive" | RED pending the real report journey (`REPORT_ACCEPTANCE_ORIGIN`); no fake endpoint is permitted. |
+| R20 | `@covers-R20`: "Sending the same saved report again leaves one arrival" | RED pending the real report journey. |
+| R21 | `@covers-R21`: page-open arrival scenario makes the server-owned comparison available only after a real send | RED pending the real report journey; Slice-04 observes the authoritative attachment through its receipt. |
+| R22 | `@covers-R22`: arrival walking skeleton has no visible credential step | RED pending the real report journey. |
+| R23 | `@covers-R23`: "A full daily allowance defers another saved report" | RED at the real public-handler boundary; `REPORT_ACCEPTANCE_QUOTA_CREDENTIAL` must name a real pre-provisioned device. |
+| R24 | `@covers-R24`: "A named beach is refused before its report arrives" | RED at the real public-handler boundary and pending the generated spot index. |
+| R25 | `@covers-R25`: arrival walking skeleton | RED pending the real report journey; receipt persistence is verified through the production port, not table inspection. |
+| R26 | `@covers-R26`: "Opening the report screen sends a report that was already waiting" | RED pending the real report journey; reconnect and service-worker triggers remain out of scope. |
+| R27 | `@covers-R27`: "A surfer sees how the call did after sending their label" | RED pending the real report journey and real published call. |
+| R28 to R29 | `@covers-R28 @covers-R29`: "A surfer is told plainly when there is no call to compare" | RED pending a real no-call hour. |
+| R30 | `@covers-R30`: compared reveal shows the report count | RED pending the real report journey. |
+| R31 | `@covers-R31`: no-call reveal scenario | RED pending the production lookup. |
+| R32 | `@covers-R32`: "A visitor without a sent report receives no comparison" | RED pending the real report journey. |
+| R33 | `@covers-R33`: compared reveal uses report words on both sides | RED pending the real report journey. |
+| R34 | `@covers-R34`: wrong-clock walking skeleton and corrected-clock recovery | RED pending the real report journey. |
+| R35 | `@covers-R35`: "A refused report does not keep trying by itself" | RED pending the real report journey. |
+| R36 | `@covers-R36`: quota deferral is the handler prerequisite for the eventual calm wait | RED at the real public-handler boundary; the browser-owned calm-wait launch proof remains external-only and is not faked. |
+| R37 | `@covers-R37`: wrong-clock walking skeleton retains three taps and no time choice | RED pending the real report journey. |
+| R38 | `@covers-R38`: direct visitor receives no comparison; the report route family remains forecast-free before a send | RED pending the real report journey. |
+| R39 to R45 | `@ui-u1` through `@ui-u7` tags on the three walking skeletons; each expectation charter contains its U8 observation | RED pending the real report journey. |
