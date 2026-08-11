@@ -33,6 +33,45 @@ Feature: La playa dice qué fue lo que la tumbó
       | claro  | normal     |
       | oscuro | reducido   |
 
+  @slice-03 @driving_port @real-io @adapter-integration @ui-u1 @ui-u2 @ui-u3 @ui-u4 @ui-u5 @ui-u6 @ui-u7 @covers-R9 @covers-R11 @covers-R12 @covers-R21 @covers-R22 @covers-R23 @covers-R24 @covers-R25 @covers-R26 @covers-R27
+  Scenario Outline: El surfista lee cuánto marcaría la playa sin ese punto débil
+    Given una mañana publicada donde cada día trae una mejora honesta junto a su causa
+    When el surfista abre la playa "nombre-mas-largo" a 390 px, con tema "<tema>" y movimiento "<movimiento>"
+    Then la sección de hoy dice cuánto marcaría sin su causa publicada
+    And la sección de mañana dice cuánto marcaría sin su causa publicada
+    And ninguna sección toma la cifra de mejora del otro día
+    And la frase del punto débil cumple las siete comprobaciones visuales sobre el fondo real
+
+    Examples:
+      | tema   | movimiento |
+      | claro  | normal     |
+      | oscuro | reducido   |
+
+  @slice-03 @driving_port @real-io @adapter-integration @negative @error @covers-R12
+  Scenario: El surfista no recibe una cifra repetida cuando la mejora redondea igual
+    Given una mañana publicada donde la mejora redondeada no cambia el puntaje de cada día
+    When el surfista abre la playa "minimo-no-publicado" a 390 px
+    Then las dos frases de la causa quedan completas sin una mejora repetida
+
+  @slice-03 @driving_port @real-io @adapter-integration @negative @error @covers-R12
+  Scenario: El surfista no recibe una cifra inventada de una mañana antigua
+    Given una mañana publicada donde una playa conserva sus causas pero no la mejora nueva
+    When el surfista abre la playa "fila-legada" a 390 px
+    Then las dos frases de la causa quedan completas sin una mejora inventada
+
+  @slice-03 @driving_port @real-io @adapter-integration @negative @error @covers-R12
+  Scenario: Un día perfecto sigue sin una frase que explicar
+    Given una mañana publicada donde una playa salió perfecta, sin nada que la tumbara
+    When el surfista abre la playa "dia-perfecto" a 390 px
+    Then ninguna de las dos secciones nombra un culpable
+    And no queda un recuadro vacío ni una palabra suelta donde iría el culpable
+
+  @slice-03 @driving_port @real-io @adapter-integration @negative @error @covers-R12
+  Scenario: La mañana registra la ausencia heredada sin confundirla con los otros silencios
+    Given una mañana publicada con una ausencia heredada en sus dos días
+    When la mañana queda lista para leerse
+    Then la publicación señala una sola ausencia heredada por día sin confundirla con los otros silencios
+
   @slice-02 @driving_port @real-io @adapter-integration @negative @covers-R7 @covers-R8
   Scenario: La playa muestra el valor publicado sin inventar uno menor
     Given una mañana publicada donde el viento es la causa pero la marea tuvo un valor menor sin publicar

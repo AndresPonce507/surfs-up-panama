@@ -77,3 +77,21 @@ expected-uncovered by design.
 | R28 | `@covers-R28`: every callout sentence across the 20 pages must be Spanish, free of engine tokens (`dir`/`size`/`wind`/`tide`), free of data punctuation and free of em dashes. **The shared Spanish factor-name vocabulary module this row requires does not exist yet** — `src/data/report-vocab.ts` carries wind states and quality tokens only. DELIVER owes one module, shared with F-KNOW-HOW-MUCH-TO-TRUST-IT | covered for the callout, RED |
 | R29 | no scenario yet. Slice-01 adds no server surface by construction (publish-time render only); the guard belongs with the later slices' byte and route work | expected-uncovered by design |
 | R30 | no scenario yet. The isolated build runs the repository page-weight gate as part of `npm run build`, so a slice-01 regression past 14 KB gz would fail every browser scenario at setup, but the budget is not asserted as its own oracle here | expected-uncovered by design |
+
+### Slice-03 JIT acceptance evidence
+
+`@slice-03` now has one two-theme emitted-dist HTTP/Chromium scenario, `El
+surfista lee cuánto marcaría la playa sin ese punto débil`, plus three explicit
+browser suppression scenarios and a separate publisher-event scenario. The
+entry scenario is RED at the visible `93` counterfactual oracle, with the same
+behavior checked under dark theme and reduced motion. Tags `@covers-R9
+@covers-R11 @covers-R12` bind the published per-day number, its exactness
+witness, and honest suppressions;
+`@covers-R21` through `@covers-R27` bind U1 through U7 for the longer sentence.
+Its U8 observation is in
+`docs/product/expectations/f-see-what-killed-it/a-surfer-lee-cuanto-marcaria-la-playa-sin-el-punto-que-la-tumbo.md`.
+The fixture plants only published row fields and retains a separate producer
+damage witness. The test asserts the built-surface health-event envelope for
+two named legacy days, while rounded equality and a clean day must not emit an
+event. R10's lower-value producer refusal remains outside step 03-05 and is
+still owed by 03-06.
