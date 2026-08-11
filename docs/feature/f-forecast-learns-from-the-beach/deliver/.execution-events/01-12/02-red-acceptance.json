@@ -1,0 +1,7 @@
+{
+  "sid": "01-12",
+  "p": "RED_ACCEPTANCE",
+  "s": "EXECUTED",
+  "d": "PASS: every generated case's controlled applied:true mutation is rejected by the whole-fit property oracle. The initial run exposed only an invalid generated 2026-07-32 date, corrected to calendar arithmetic; no production red is claimed.",
+  "t": "2026-08-11T15:21:50Z"
+}

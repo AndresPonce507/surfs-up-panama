@@ -1,0 +1,7 @@
+{
+  "sid": "01-12",
+  "p": "RED_UNIT",
+  "s": "SKIPPED",
+  "d": "NOT_APPLICABLE: this roadmap scenario is itself the whole-fit fast-check property; inherited production passed after the fixture correction, so no unit was required to drive GREEN",
+  "t": "2026-08-11T15:21:50Z"
+}
