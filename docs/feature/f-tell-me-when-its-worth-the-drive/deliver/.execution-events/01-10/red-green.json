@@ -1,0 +1,13 @@
+{
+  "step_id": "01-10",
+  "timestamp": "2026-08-11T15:13:56Z",
+  "kind": "red-green",
+  "result": "PASS",
+  "evidence": {
+    "prepare": "Recovered the accepted build/f2-push Slice-01 contract assets. The restored roadmap keeps the accepted 01-06 dependency and records the feature plus declared-surface helper as contract ownership required to execute 01-10 on this integration base.",
+    "binding": "npm run test:at -- --dry-run --name 'Un suscriptor que no eligió barra igual se rige por una barra, la del servidor' selected 1 scenario and 19 bound steps, exiting 0.",
+    "red_acceptance": "The same named scenario exited 1 at its business oracle: with threshold_score null, the current planner produced no sends across the 0..100 sweep, so the oracle reported that no server bar governs the subscriber.",
+    "typecheck": "npm run typecheck passed after the contract assets were restored.",
+    "delivery_status": "Contract-only repair. No production source or unit test was changed, so GREEN and implementation COMMIT evidence are intentionally absent."
+  }
+}
