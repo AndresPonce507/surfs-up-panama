@@ -11,18 +11,24 @@
 // section 10, decision 18). When a spot has no structured size or window yet,
 // the page says so in words rather than showing nothing or a raw value.
 import Base from '../layouts/Base.astro';
+import CopyControl from './CopyControl.astro';
+import ShareControls from './ShareControls.astro';
 import { forecast, type DaySummary } from '../data/forecast';
 import { spotById } from '../data/region';
 import { strings, type Locale } from '../i18n/strings';
 import { paths } from '../i18n/routes';
 import { formatBestWindowEs, formatSizeEs, formatUpdatedAtEs } from '../publish/display-format';
+import type { LinkAnnouncement } from '../share/link-announcement';
 
 interface Props {
   locale: Locale;
   spotId: string;
+  announcement: LinkAnnouncement;
+  shareCall: string;
+  shareHref: string;
 }
 
-const { locale, spotId } = Astro.props;
+const { locale, spotId, announcement, shareCall, shareHref } = Astro.props;
 const t = strings[locale];
 const spot = spotById(spotId);
 if (spot === undefined) {
@@ -56,6 +62,7 @@ const tomorrow = summaryFor(1);
   locale={locale}
   title={spot.name}
   currentPath={paths.spot(locale, spotId)}
+  announcement={announcement}
 >
   <h1>{spot.name}</h1>
   <p>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</p>
@@ -90,7 +97,22 @@ const tomorrow = summaryFor(1);
       )
     }
   </section>
+  <section class="spot-share" aria-label="Compartir este llamado">
+    <h2>Compartir este llamado</h2>
+    <ShareControls href={shareHref} label="Mandar el llamado por WhatsApp" />
+    <CopyControl call={shareCall} />
+  </section>
   <p>
     <a class="cta" href={paths.report(locale, spotId)}>{t.spot.reportCta}</a>
   </p>
 </Base>
+
+<style>
+  .spot-share :global(.share-controls) {
+    margin-top: 0;
+  }
+
+  .spot-share :global(.copy-control) {
+    margin-top: var(--sp-3);
+  }
+</style>

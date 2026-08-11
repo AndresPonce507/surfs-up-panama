@@ -393,6 +393,20 @@
       "s": "EXECUTED",
       "d": "PASS: 28f352d is `feat(paste): share the selected spot's call - step 05-01` and changes only src/share/day-summary.ts and src/pages/spots/[slug]/index.astro. Full Slice-05 retained four expected 05-02 REDs for copy and per-spot Open Graph publication.",
       "t": "2026-08-11T02:39:21Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS: direct copy and selected-announcement acceptance scenarios failed with the intended semantic AssertionErrors: no spot copy action, then no Open Graph announcement. Both reached the built page without setup, import, or environment failure.",
+      "t": "2026-08-11T02:43:26Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: full Slice-05 acceptance passed 7 scenarios and 82 steps, including exact copy parity, no-JavaScript WhatsApp, selected-spot announcement, and light/dark reduced-motion U1-U7 variants. Units passed 86/86; typecheck, build, budget, and test:ui passed. The 390 px Mariatos page had 48 px copy and 47 px WhatsApp controls, no overflow or CTA overlap, clean Mariatos canonical/og:url, and stamped Mariatos og:image. Home-announcement falsification made the selected-announcement assertion reject Playa Guánico, then was restored. Test budget: 3 behaviors x 2 = 6 unit tests; 0 new tests because real-I/O acceptance covers route composition.",
+      "t": "2026-08-11T02:47:07Z"
     }
   ]
 }
