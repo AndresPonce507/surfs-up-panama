@@ -1,0 +1,12 @@
+{
+  "step_id": "01-11",
+  "timestamp": "2026-08-11T15:26:20Z",
+  "kind": "red-green",
+  "result": "PASS",
+  "evidence": {
+    "prepare": "01-08 is committed, the accepted named scenario is present, and no active Theme, Report, Weather, or Learning lane owns the planner or focused unit path.",
+    "red_acceptance": "Replacing the injected spot timezone with America/Panama caused the unchanged scenario to report one aviso after local midday. The source was restored unchanged.",
+    "red_unit": "NOT_APPLICABLE: the accepted driving-port scenario already covered the complete behavior and required no code or test addition.",
+    "green": "Named acceptance 1/1 with 18 steps, focused planner 4/4, typecheck, and full units 321/321 passed after restoration. The final source and test diff is empty."
+  }
+}

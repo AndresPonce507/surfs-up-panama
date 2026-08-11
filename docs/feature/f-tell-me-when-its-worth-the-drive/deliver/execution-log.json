@@ -148,6 +148,34 @@
       "s": "EXECUTED",
       "d": "PASS: bde53ae4b5edce674e0a3f54f94705c92bd2230b committed the declared default_threshold_score input for null subscriber bars, its complete-scale property, and truthful PREPARE through GREEN evidence. Independent review iteration 1 approved; src/push contains no product default. The approved contract repair assets from e38be824 were left unchanged.",
       "t": "2026-08-11T15:23:15Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified the accepted named scenario, 01-08 COMMIT/PASS dependency, planner timezone seam, and disjoint active Theme, Report, Weather, and Learning lanes. The declared 01-11 paths were already behaviorally complete, with no source change required.",
+      "t": "2026-08-11T15:26:20Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: a temporary regression that evaluated every spot against America/Panama made the unchanged named scenario fail semantically at its business oracle: it planned 1 aviso when the six-hours-ahead spot was already past midday. The injected spot.timezone rule was restored unchanged.",
+      "t": "2026-08-11T15:26:20Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "RED_UNIT",
+      "s": "NOT_APPLICABLE",
+      "d": "The accepted driving-port scenario was already green before and after the semantic mutation, so it required no unit test or production-code addition. The existing focused planner properties exercise the same public port.",
+      "t": "2026-08-11T15:26:20Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: restoration left no source or test diff. The named acceptance scenario passed 1/1 with 18 steps; focused planner properties 4/4, typecheck, and full units 321/321 passed. UI N/A: this remains a pure injected-clock planning decision.",
+      "t": "2026-08-11T15:26:20Z"
     }
   ]
 }
