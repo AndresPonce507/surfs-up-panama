@@ -14,7 +14,7 @@ import { OPEN_ENDED_SIZE_BAND, sizeBands, type SizeBandToken } from '../data/siz
 import { factorWord, type FactorWord } from './factor-vocab';
 import { formatPanamaTime } from './reading-state';
 import type { BestWindow } from './static-surface';
-import type { WeakestLinkReading } from './weakest-link';
+import type { CounterfactualReading, SurfaceDayIndex, WeakestLinkReading } from './weakest-link';
 
 const APPROXIMATELY = '≈';
 const RANGE_DASH = '–';
@@ -48,16 +48,29 @@ export const WEAKEST_LINK_SENTENCE_ES = {
   unknown: 'Esta mañana no trajo ese dato: no sabemos qué lo habría tumbado.',
 } as const;
 
+/** The published whole score is an explanation of this call, never a new prediction. */
+export const COUNTERFACTUAL_CLAUSE_ES = {
+  available: (word: FactorWord, day: SurfaceDayIndex, scoreQ: number): string =>
+    `Sin ${word.article === 'el' ? 'él' : 'ella'}, ${day === 0 ? 'hoy' : 'mañana'} marcaría ${scoreQ}.`,
+} as const;
+
 /**
  * Turns one published weakest-link reading into the settled Spanish
  * sentence. Total over the three honest outcomes a spot-day can carry
  * (weakest-link.ts, `WeakestLinkReading`): a page or component calls this
  * and never composes the wording inline.
  */
-export function formatWeakestLinkEs(reading: WeakestLinkReading): string {
-  return reading.kind === 'named'
-    ? WEAKEST_LINK_SENTENCE_ES.named(factorWord(reading.factor), reading.weakest_link_subscore)
-    : WEAKEST_LINK_SENTENCE_ES[reading.kind];
+export function formatWeakestLinkEs(
+  reading: WeakestLinkReading,
+  counterfactual?: CounterfactualReading,
+  day?: SurfaceDayIndex,
+): string {
+  if (reading.kind !== 'named') return WEAKEST_LINK_SENTENCE_ES[reading.kind];
+  const word = factorWord(reading.factor);
+  const sentence = WEAKEST_LINK_SENTENCE_ES.named(word, reading.weakest_link_subscore);
+  return counterfactual?.kind === 'available' && day !== undefined
+    ? `${sentence} ${COUNTERFACTUAL_CLAUSE_ES.available(word, day, counterfactual.score_q)}`
+    : sentence;
 }
 
 /**
