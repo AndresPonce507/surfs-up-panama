@@ -53,6 +53,19 @@ export type WeakestLinkReading =
   | { readonly kind: 'unknown' };
 
 /**
+ * One row's producer-decided counterfactual state. This reader never
+ * recalculates the score or reselects a factor: its only job is to preserve
+ * the published distinction between an available value, a valid rounded
+ * collision, and a legacy named omission.
+ */
+export type CounterfactualReading =
+  | { readonly kind: 'available'; readonly score_q: number }
+  | { readonly kind: 'rounded_equal' }
+  | { readonly kind: 'legacy_missing' }
+  | { readonly kind: 'clean' }
+  | { readonly kind: 'unknown' };
+
+/**
  * Resolves the published culprit for one spot on one day, straight from the
  * row the publish pipeline already wrote. Never a derived or guessed factor:
  * every branch below only repeats what that one row already says, and a spot
@@ -66,6 +79,21 @@ export function resolveWeakestLink(
 ): WeakestLinkReading {
   const row = rowsForDay(surface, day).find((call) => call.spot_id === spotId);
   return row === undefined ? { kind: 'unknown' } : readingFor(row);
+}
+
+export function resolveCounterfactual(
+  surface: PublishedSurfaceUpdate,
+  spotId: string,
+  day: SurfaceDayIndex,
+): CounterfactualReading {
+  const row = rowsForDay(surface, day).find((call) => call.spot_id === spotId);
+  if (row === undefined || row.weakest_link === undefined) return { kind: 'unknown' };
+  if (row.weakest_link === null) return { kind: 'clean' };
+  if (row.counterfactual_score_q !== undefined) {
+    return { kind: 'available', score_q: row.counterfactual_score_q };
+  }
+  if (row.counterfactual_suppression === 'rounded_equal') return { kind: 'rounded_equal' };
+  return { kind: 'legacy_missing' };
 }
 
 function rowsForDay(surface: PublishedSurfaceUpdate, day: SurfaceDayIndex): readonly SurfaceCall[] {
