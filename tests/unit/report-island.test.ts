@@ -27,11 +27,13 @@
 // hand-picked example.
 
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, resolve } from 'node:path';
 
 import fc from 'fast-check';
-import { describe, it } from 'vitest';
+import { afterAll, describe, it } from 'vitest';
 
 import { region } from '../../src/data/region';
 import { paths } from '../../src/i18n/routes';
@@ -254,19 +256,51 @@ describe('reading the spot identity back out of the reveal address', () => {
 // with a real Chromium page load, both with and without a durably queued
 // report, before this comment was written.) Re-run against the fix: GREEN.
 describe('cold load of the confirmation address (event ddc0ba7c)', () => {
-  const DIST_ROOT = resolve(import.meta.dirname, '../../dist');
-  const REPORTADO_DOCUMENT = resolve(DIST_ROOT, 'spots/playa-venao/reportado.html');
+  const projectRoot = resolve(import.meta.dirname, '../..');
+  const testRoot = mkdtempSync(join(tmpdir(), 'surfs-up-report-island-'));
+  const isolatedProject = join(testRoot, 'project');
+  const reportadoDocument = resolve(isolatedProject, 'dist/spots/playa-venao/reportado.html');
+  let buildOutput: string | undefined;
+
+  function buildReportadoDocument(): string {
+    if (buildOutput !== undefined) return buildOutput;
+
+    mkdirSync(isolatedProject);
+    for (const name of ['astro.config.mjs', 'package.json', 'package-lock.json', 'tsconfig.json']) {
+      copyFileSync(join(projectRoot, name), join(isolatedProject, name));
+    }
+    for (const name of ['data', 'docs', 'public', 'scripts', 'src']) {
+      cpSync(join(projectRoot, name), join(isolatedProject, name), { recursive: true });
+    }
+    symlinkSync(join(projectRoot, 'node_modules'), join(isolatedProject, 'node_modules'), 'dir');
+
+    const build = spawnSync('npm', ['run', 'build'], {
+      cwd: isolatedProject,
+      encoding: 'utf8',
+    });
+    assert.equal(
+      build.status,
+      0,
+      `the cold-load contract needs its own production build:\n${build.stdout}\n${build.stderr}`,
+    );
+    assert.ok(
+      existsSync(reportadoDocument),
+      `WHAT: isolated build emitted no ${reportadoDocument}. HOW: restore the reportado route in the production builder.`,
+    );
+    buildOutput = readFileSync(reportadoDocument, 'utf8');
+    return buildOutput;
+  }
+
+  afterAll(() => {
+    rmSync(testRoot, { recursive: true, force: true });
+  });
 
   it('ships a document built by `npm run build` to examine', () => {
-    assert.ok(
-      existsSync(REPORTADO_DOCUMENT),
-      `WHAT: no build output at ${REPORTADO_DOCUMENT}. HOW: run \`npm run build\` first -- this check `
-        + 'reads real built HTML, not a fixture, because the defect is about what a cold load renders.',
-    );
+    assert.match(buildReportadoDocument(), /<!doctype html>/i);
   });
 
   it('carries a script of its own, so a cold load can re-derive the confirmation from durable storage', () => {
-    const html = readFileSync(REPORTADO_DOCUMENT, 'utf8');
+    const html = buildReportadoDocument();
     const scriptCount = (html.match(/<script\b/g) ?? []).length;
     assert.ok(
       scriptCount >= 1,
