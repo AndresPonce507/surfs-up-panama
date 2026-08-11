@@ -1,0 +1,17 @@
+{
+  "sid": "03-02",
+  "phase": "INTEGRATION_SURFACE_GATE",
+  "surface_source": "/Users/andres/psb-integration-batch2/data/published-surface.json",
+  "substitution": "temporary and non-staged",
+  "fast_ci": {
+    "passed_jobs": ["typecheck", "deps", "secrets", "ui", "infra", "sast", "budget"],
+    "failed_job": "test",
+    "failure": "playa-malibu has no wind_state in the integration surface; tests/unit/published-surface-fields.test.ts rejects the missing field."
+  },
+  "restoration": {
+    "status": "PASS",
+    "original_sha256": "eb1b7ce3043e56a54b9eef8ae111c2e374994a848f853b1e2788d8337244d032",
+    "data_staged": false,
+    "data_committed": false
+  }
+}
