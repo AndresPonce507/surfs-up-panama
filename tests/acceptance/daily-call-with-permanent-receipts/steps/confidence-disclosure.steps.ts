@@ -281,6 +281,24 @@ Given(
   },
 );
 
+// The installed-surface witness: NO injected levels. The exact bug class the
+// worst shipped defect had (conf_level absent on every committed row while
+// every optional-field path stayed green) can only be caught by building from
+// the real published input untouched. Byte identity with the installed
+// data/published-surface.json is asserted, mirroring slice-04's
+// installed-input scenario, so this Given can never quietly drift into a
+// doctored fixture.
+Given('una mañana publicada con la superficie pública instalada intacta, byte por byte', function (this: PipelineWorld) {
+  const world = slice07World(this);
+  world.slice07Root = copyProjectForSurface();
+  const installed = readFileSync(join(projectRoot, 'data/published-surface.json'));
+  const copied = readFileSync(join(world.slice07Root, 'data/published-surface.json'));
+  assert.ok(
+    installed.equals(copied),
+    'test fixture error: the copied published surface must stay byte-identical to the installed input',
+  );
+});
+
 // ---------- When ----------
 
 When(

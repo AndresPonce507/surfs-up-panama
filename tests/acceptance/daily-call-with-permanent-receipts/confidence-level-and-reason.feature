@@ -6,7 +6,7 @@ Feature: Cada fila trae su nivel de confianza y la razón a un toque
   La razón se abre ahí mismo, honesta: es acuerdo entre modelos, nunca una
   playa confirmando nada, porque hoy no hay ni un reporte en el sistema.
 
-  @slice-07 @driving_port @real-io @adapter-integration @contract-shape:confidence-disclosure @covers-R33
+  @slice-07 @driving_port @real-io @adapter-integration @contract-shape:confidence-disclosure @covers-R34
   Scenario Outline: Cada fila de <dia> trae su nivel de confianza visible en palabras junto al puntaje
     Given una mañana publicada con spots de confianza alta, media y baja para hoy y mañana
     When el surfista abre "<ruta>" buscando la confianza, a 390 px, con tema "claro" y movimiento "normal"
@@ -17,7 +17,18 @@ Feature: Cada fila trae su nivel de confianza y la razón a un toque
       | Hoy | la home |
       | Mañana | Mañana |
 
-  @slice-07 @driving_port @real-io @adapter-integration @negative @error @contract-shape:confidence-disclosure @covers-R33
+  @slice-07 @driving_port @real-io @adapter-integration @contract-shape:confidence-disclosure @covers-R34
+  Scenario Outline: La mañana publicada de verdad, la instalada, ya trae la confianza de cada fila de <dia>
+    Given una mañana publicada con la superficie pública instalada intacta, byte por byte
+    When el surfista abre "<ruta>" buscando la confianza, a 390 px, con tema "claro" y movimiento "normal"
+    Then cada fila muestra la palabra de su nivel de confianza junto al puntaje, nunca solo como color
+
+    Examples:
+      | dia | ruta |
+      | Hoy | la home |
+      | Mañana | Mañana |
+
+  @slice-07 @driving_port @real-io @adapter-integration @negative @error @contract-shape:confidence-disclosure @covers-R34
   Scenario: La razón se abre con un toque y es honesta sobre el acuerdo entre modelos y la falta de reportes desde la playa
     Given una mañana publicada con spots de confianza alta, media y baja para hoy y mañana
     When el surfista abre "la home" buscando la confianza, a 390 px, con tema "claro" y movimiento "normal"
@@ -27,7 +38,7 @@ Feature: Cada fila trae su nivel de confianza y la razón a un toque
     And ninguna razón reclama ni sugiere una confirmación desde la playa
     And ninguna razón abre vacía ni con texto crudo de datos
 
-  @slice-07 @driving_port @real-io @adapter-integration @ui-u1 @ui-u2 @ui-u3 @ui-u4 @ui-u6 @covers-R33
+  @slice-07 @driving_port @real-io @adapter-integration @ui-u1 @ui-u2 @ui-u3 @ui-u4 @ui-u6 @covers-R34
   Scenario Outline: Con la confianza sumada, las filas del teléfono siguen limpias en tema <tema> y movimiento <movimiento>
     Given una mañana publicada con spots de confianza alta, media y baja para hoy y mañana, con un destino de nombre largo
     When el surfista abre "la home" buscando la confianza, a 390 px, con tema "<tema>" y movimiento "<movimiento>"
