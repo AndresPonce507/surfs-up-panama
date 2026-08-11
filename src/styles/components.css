@@ -177,9 +177,21 @@ ol.ranked li:first-child > p {
    space. No transition or animation anywhere in this block: the
    disclosure is instant, so prefers-reduced-motion has nothing to opt out
    of, and the hero row (U4) stays exempt from motion by construction. */
-ol.ranked li > details.confidence {
+ol.ranked li > .confidence {
   grid-column: 1 / -1;
   margin-top: var(--sp-1);
+}
+
+ol.ranked li > span.confidence {
+  display: inline-flex;
+  justify-self: start;
+  align-items: center;
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--r-s);
+  color: var(--ink-2);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  letter-spacing: var(--track-meta);
 }
 
 ol.ranked li > details.confidence > summary {
@@ -223,7 +235,8 @@ ol.ranked li > details.confidence > div {
    gradient stop (09-design-system.md) -- the same token the hero's own
    call paragraph already uses. */
 ol.ranked li:first-child > details.confidence > summary,
-ol.ranked li:first-child > details.confidence > div {
+ol.ranked li:first-child > details.confidence > div,
+ol.ranked li:first-child > span.confidence {
   color: var(--ink);
 }
 

@@ -27,6 +27,14 @@ interface HomeStrings {
   readonly honestyFooter: string;
 }
 
+interface RankingStrings {
+  readonly wind: Readonly<Record<WindStateToken, string>>;
+  readonly topSpot: (spotName: string) => string;
+  readonly fallbackCall?: string;
+  readonly primaryCta?: string;
+  readonly confidence: Readonly<Record<'high' | 'medium' | 'low', string>>;
+}
+
 /**
  * `value` is the canonical wire token, never a display string: it is what the
  * capture form commits to IndexedDB and what gets POSTed on replay. `label` is
@@ -55,6 +63,7 @@ interface SpotStrings {
 
 export interface UiStrings {
   readonly home: HomeStrings;
+  readonly ranking: RankingStrings;
   readonly report: ReportCaptureStrings;
   readonly spot: SpotStrings;
 }
@@ -75,6 +84,21 @@ export const strings: Record<Locale, UiStrings> = {
       updatedPrefix: 'Actualizado', // verbatim
       honestyFooter:
         'Solo hoy y mañana. Más allá nadie sabe de verdad, y no vamos a inventar.', // verbatim
+    },
+    ranking: {
+      wind: {
+        clean: 'limpio',
+        choppy: 'picado',
+        blown_out: 'destrozado',
+      },
+      topSpot: (spotName) => `VE A ${spotName}`,
+      fallbackCall: 'Condiciones publicadas para hoy.',
+      primaryCta: 'Ver el llamado',
+      confidence: {
+        high: 'Confianza alta',
+        medium: 'Confianza media',
+        low: 'Confianza baja',
+      },
     },
     report: {
       title: (spotName) => `¿Cómo estuvo ${spotName}?`, // verbatim
@@ -108,6 +132,19 @@ export const strings: Record<Locale, UiStrings> = {
       updatedPrefix: 'Updated', // verbatim
       honestyFooter:
         "Today and tomorrow only. Past that nobody really knows, so we don't pretend.", // verbatim
+    },
+    ranking: {
+      wind: {
+        clean: 'clean',
+        choppy: 'choppy',
+        blown_out: 'blown out',
+      },
+      topSpot: (spotName) => `GO TO ${spotName}`,
+      confidence: {
+        high: 'high confidence',
+        medium: 'medium confidence',
+        low: 'low confidence',
+      },
     },
     report: {
       title: (spotName) => `How was ${spotName}?`, // verbatim

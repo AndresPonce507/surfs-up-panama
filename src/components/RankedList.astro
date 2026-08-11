@@ -8,6 +8,7 @@ import Base from '../layouts/Base.astro';
 import Confidence from './Confidence.astro';
 import { forecast } from '../data/forecast';
 import { spotById } from '../data/region';
+import { sizeBands } from '../data/size-bands';
 import { strings, type Locale } from '../i18n/strings';
 import { paths } from '../i18n/routes';
 import { formatUpdatedAtEs } from '../publish/display-format';
@@ -32,30 +33,23 @@ function nameOf(spotId: string): string {
   return spot.name;
 }
 
-const spanishSizeBand: Readonly<Record<string, string>> = {
-  flat: 'Plano',
-  ankle_knee: 'Tobillo a rodilla',
-  knee_waist: 'Rodilla a cintura',
-  waist_chest: 'Cintura a pecho',
-  chest_head: 'Pecho a cabeza',
-  head_overhead: 'Cabeza a un metro más',
-  double_overhead_plus: 'Doble o más',
-};
+function sizeLabel(sizeBand: (typeof daySpots)[number]['size_band']): string | undefined {
+  return sizeBands.find((band) => band.value === sizeBand)?.label[locale];
+}
 
-const spanishWind: Readonly<Record<string, string>> = {
-  clean: 'limpio',
-  choppy: 'picado',
-  blown_out: 'destrozado',
-};
-
-function repeatableCall(summary: (typeof daySpots)[number]): string {
-  const size = summary.size_band === undefined ? undefined : spanishSizeBand[summary.size_band];
-  const wind = summary.wind_state === undefined ? undefined : spanishWind[summary.wind_state];
-  const window = summary.best_window;
-  if (size !== undefined && wind !== undefined && window !== undefined) {
-    return `${size}, viento ${wind}, mejor de ${window.start} a ${window.end}.`;
+function callFor(summary: (typeof daySpots)[number]): string {
+  const call = summary.call[locale];
+  if (call !== undefined) return call;
+  if (locale === 'en') {
+    throw new Error(
+      `RankedList: English call text is missing for spot_id "${summary.spot_id}". `
+      + 'The producer must publish call_en and src/data/forecast.ts must map it to call.en before /en/ can be emitted.',
+    );
   }
-  return summary.call[locale] ?? 'Condiciones publicadas para hoy.';
+  if (t.ranking.fallbackCall === undefined) {
+    throw new Error(`RankedList: no fallback call is settled for locale "${locale}".`);
+  }
+  return t.ranking.fallbackCall;
 }
 ---
 
@@ -83,11 +77,13 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
         <li>
           <span>{index + 1}</span>
           <a href={paths.spot(locale, summary.spot_id)}>
-            {index === 0 ? `VE A ${nameOf(summary.spot_id)}` : nameOf(summary.spot_id)}
+            {index === 0 ? t.ranking.topSpot(nameOf(summary.spot_id)) : nameOf(summary.spot_id)}
           </a>
           <strong>{summary.score_q}</strong>
-          <p>{index === 0 ? repeatableCall(summary) : summary.call[locale]}</p>
-          {summary.conf_level !== undefined && <Confidence level={summary.conf_level} />}
+          {summary.size_band !== undefined && <span>{sizeLabel(summary.size_band)}</span>}
+          {summary.wind_state !== undefined && <span>{t.ranking.wind[summary.wind_state]}</span>}
+          <p>{callFor(summary)}</p>
+          {summary.conf_level !== undefined && <Confidence level={summary.conf_level} locale={locale} />}
         </li>
       ))
     }
@@ -95,9 +91,11 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
   <footer>
     <p>{t.home.honestyFooter}</p>
   </footer>
-  <p class="home-primary">
-    <a data-primary-action href={paths.spot(locale, daySpots[0]!.spot_id)}>
-      Ver el llamado
-    </a>
-  </p>
+  {t.ranking.primaryCta !== undefined && (
+    <p class="home-primary">
+      <a data-primary-action href={paths.spot(locale, daySpots[0]!.spot_id)}>
+        {t.ranking.primaryCta}
+      </a>
+    </p>
+  )}
 </Base>

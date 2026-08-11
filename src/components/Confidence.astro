@@ -11,8 +11,9 @@
 //     import per the roadmap), which never renders a ranked row and would
 //     have no reason to depend on RankedList.astro.
 //
-// The confidence disclosure: the level word beside the score, always
-// visible; the honest reason one tap away via native <details>/<summary>.
+// The confidence surface: the level word beside the score is always visible.
+// When settled reason copy exists, it sits one tap away in native
+// <details>/<summary>; otherwise the level is an honest non-interactive label.
 // Zero JavaScript (adr-publish-time-html-rendering.md) — the browser's own
 // disclosure widget does the work, no script ships.
 //
@@ -38,18 +39,24 @@
 // No aria-label: the visible text already says the full phrase, and
 // <summary>'s native disclosure-triangle semantics already announce the
 // expand/collapse state, so adding one would double-announce both.
-import { CONFIDENCE_LEVEL_WORD_ES, confidenceReasonEs, type ConfidenceLevel } from '../scoring/confidence';
+import { confidenceReasonEs, type ConfidenceLevel } from '../scoring/confidence';
+import { strings, type Locale } from '../i18n/strings';
 
 interface Props {
   level: ConfidenceLevel;
+  locale: Locale;
 }
 
-const { level } = Astro.props;
-const word = CONFIDENCE_LEVEL_WORD_ES[level];
-const reason = confidenceReasonEs(level);
+const { level, locale } = Astro.props;
+const label = strings[locale].ranking.confidence[level];
+const reason = locale === 'es' ? confidenceReasonEs(level) : undefined;
 ---
 
-<details class="confidence" name="confidence" data-level={level}>
-  <summary>Confianza {word}</summary>
-  <div>{reason}</div>
-</details>
+{reason === undefined ? (
+  <span class="confidence" data-level={level}>{label}</span>
+) : (
+  <details class="confidence" name="confidence" data-level={level}>
+    <summary>{label}</summary>
+    <div>{reason}</div>
+  </details>
+)}
