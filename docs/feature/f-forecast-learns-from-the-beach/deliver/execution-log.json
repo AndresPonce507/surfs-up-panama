@@ -659,6 +659,13 @@
       "s": "EXECUTED",
       "d": "PASS: the reader ships as a pure total parser plus one I/O boundary. Bytes that are not a trustworthy record, and a store that cannot be reached at all, both cost the build exactly what no file costs and say why; a missing file stays 'absent' rather than being accused of a fault. The units pin refuses a foreign unit under its own event and names what it found. Focused 7/7 pass. Full vitest 400/400 across 80 files at --maxWorkers=4 (up from 393/78), typecheck exit 0, npm run build exit 0 with 105 pages under every page-weight ceiling. Post-GREEN wiring check: src/learning/load-correction.ts is in the diff, so this is not fixture theatre. Falsifiability proven by two reverted mutations (units pin disabled; parser totality removed), each failing semantically. UI checks N/A: non-visual step whose observable is a returned outcome token and an event string.",
       "t": "2026-08-11T19:42:00Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: production step committed as 70feeb6 (feat(learning): read the correction file without ever taking a build down)",
+      "t": "2026-08-11T19:44:00Z"
     }
   ]
 }
