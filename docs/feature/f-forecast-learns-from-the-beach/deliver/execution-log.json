@@ -1086,6 +1086,34 @@
       "s": "EXECUTED",
       "d": "{\"commit\":\"3c9a8c9\",\"message\":\"feat(learning): refuse shuffled cross-validation declarations - step 05-03\",\"status\":\"scoped green\"}",
       "t": "2026-08-11T02:25:00Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: 05-03 is committed; the active monthly calibration acceptance contract, captured prediction boundary, roadmap, privacy constraint, and non-visual rationale were inspected. The monthly file may route a failing term only; it must not edit scoring or surface confidence.",
+      "t": "2026-08-11T02:35:00Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npm run test:at -- --name A confidence level that does not predict correctness is named for removal\",\"exit\":1,\"classification\":\"expected behavioral RED\",\"failure\":\"the monthly calibration field was null rather than c_spread after high-confidence mornings performed worse than low-confidence mornings\"}",
+      "t": "2026-08-11T02:34:00Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "{\"command\":\"npx vitest run tests/unit/learning-metrics.test.ts\",\"exit\":1,\"classification\":\"expected assertion RED\",\"failure\":\"the calibration bins surface was absent, so the property could not read high or low captured-confidence bins\",\"test_budget\":\"2 behaviors x 2 = 4; 1 new pure-port property\"}",
+      "t": "2026-08-11T02:34:45Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "{\"focused_acceptance\":\"completed Slice-05 contracts through 05-04: 6 scenarios/114 steps PASS\",\"learning_units\":\"13 files, 77 tests PASS\",\"typecheck\":\"PASS\",\"falsification\":\"reversing the high-versus-low hit-rate predicate made the calibration acceptance fail with null instead of c_spread; restored the strict less-than rule\",\"privacy\":\"calibration consumes only captured score, confidence label, and quality event; no reporter identity is written to the metrics projection\",\"test_budget\":\"2 behaviors x 2 = 4; 1 new property, within budget\",\"global_qualification\":\"npm run build remains blocked by the unrelated stale published surface dated 2026-08-09 versus Panama 2026-08-10\",\"non_visual_rationale\":\"the new bins and routing decision live only in operator metrics JSON; the scoring term and rendered confidence remain unchanged\"}",
+      "t": "2026-08-11T02:36:00Z"
     }
   ]
 }

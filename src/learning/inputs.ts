@@ -56,7 +56,7 @@ export type ObservationRow = {
   size_band?: SizeBandToken;
   wind?: WindStateToken;
   quality?: QualityToken;
-  predicted?: { score_q: number } | null;
+  predicted?: { score_q: number; conf_level?: string } | null;
   trigger?: 'organic' | 'push_solicited';
   /** Fit-only derived state. It never reaches a stored observation or correction. */
   selection_weight?: number;
