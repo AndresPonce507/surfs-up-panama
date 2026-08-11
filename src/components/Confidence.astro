@@ -47,9 +47,14 @@ interface Props {
 const { level } = Astro.props;
 const word = CONFIDENCE_LEVEL_WORD_ES[level];
 const reason = confidenceReasonEs(level);
+const dots: Readonly<Record<ConfidenceLevel, string>> = {
+  high: '●●●',
+  medium: '●●○',
+  low: '●○○',
+};
 ---
 
 <details class="confidence" name="confidence" data-level={level}>
-  <summary>Confianza {word}</summary>
+  <summary><span class="conf"><span class="dots" aria-hidden="true">{dots[level]}</span> Confianza {word}</span></summary>
   <div>{reason}</div>
 </details>

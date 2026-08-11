@@ -138,7 +138,7 @@ async function openAndAudit(world: RankingWorld): Promise<void> {
           return (Math.max(luminance(first), luminance(second)) + 0.05) / (Math.min(luminance(first), luminance(second)) + 0.05);
         };
         const rgb = (value) => {
-          const match = value.match(/rgba?\(([^)]+)\)/i)?.[1];
+          const match = value.match(/rgba?\\(([^)]+)\\)/i)?.[1];
           if (match === undefined) return undefined;
           const channels = match.split(',').slice(0, 3).map(Number);
           if (channels.length !== 3 || channels.some((channel) => !Number.isFinite(channel))) return undefined;
