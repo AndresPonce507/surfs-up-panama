@@ -88,3 +88,23 @@ The terminal sweep is honestly green. It has no style change to drive: the inher
 reached every emitted document. The prior 03-02 interactive-target RED was remediated by
 `320b1be`; the full unrestricted Slice-03 run now passes 10 scenarios and 136 steps. The former
 03-02 evidence above remains historical evidence, rather than being rewritten.
+
+## Slice-04 / 04-01 commands observed
+
+```sh
+npm run typecheck
+npm run test:at -- --dry-run --tags '@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @step-04-01'
+npm run test:at -- --tags '@feature-f-looks-like-the-ocean-and-reads-in-the-sun and @slice-04 and @step-04-01'
+```
+
+## Slice-04 / 04-01 classification
+
+| Scenario group | Observable exercised | Classification | Evidence |
+|---|---|---|---|
+| Design contrast record compared with the clear and dark home | Real `npm run build`, emitted home at 390 px, Chromium computed styles, then `09-design-system.md` §3 | `MISSING_FUNCTIONALITY` | The built page paints the approved blue-tropical body, hero title, hero copy, backgrounds and load-bearing gradient stop. The design record lacks the required clear- and dark-theme blue-tropical rows, including `#E8F7FA` on `#0D5866` at 7.34:1 AAA. The run reaches that record mismatch, not an import, build, preview or browser fault. |
+| Deliberately stale record | Isolated in-memory valid record, deliberately dirtied before comparison | `GUARD_GREEN` | The negative scenario restores a known neutral value and removes a required tropical value; the oracle names both. It writes no production file and remains valid after the production record is corrected. |
+
+The 04-01 steps typecheck, all three scenarios bind, and the real target run is RED for the
+intended document drift. It does not modify the blocked Slice-02/02-02 work or any completed
+Slice-03 evidence. The later browser-wide gate and mutated-build proof remain unarmed 04-02 and
+04-03 work, respectively.

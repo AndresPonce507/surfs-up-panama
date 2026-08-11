@@ -1,7 +1,7 @@
-# Slice-02 and Slice-03 requirement checklist
+# Slice-02, Slice-03 and Slice-04 requirement checklist
 
 Feature: `f-looks-like-the-ocean-and-reads-in-the-sun`
-Slices entered: `slice-02` and `slice-03 / 03-01, 03-02`, 2026-08-10
+Slices entered: `slice-02`, `slice-03 / 03-01, 03-02`, and `slice-04 / 04-01`, 2026-08-10
 
 ## Reconciliation
 
@@ -83,12 +83,34 @@ manufacturing markup or treating the absent control as current user functionalit
 | U7 design-system compliance | Each emitted document proves the emitted stylesheet both declares and uses the product’s type, colour, spacing, radius, elevation, motion and touch tokens. |
 | U8 charter | The source-blind charter above requires the exhaustive public walk, names its observed population, and defines zero inspection as failure. |
 
+## Slice-04 / 04-01 contrast-record coverage
+
+| Requirement | Scenario / driving surface | Evidence shape |
+|---|---|---|
+| §3 contrast table describes the shipped blue-tropical home page, in both themes | `La tabla de contraste cuenta exactamente cómo se lee la portada publicada...` / `npm run build` then the emitted home document at 390 px | Chromium reads the production-built home in each theme. The contract compares its rendered body, hero-title, hero-copy, background and gradient-stop values with the ratios and floors the design record must state. |
+| Old neutral values are removed rather than preserved beside the new record | same scenario / design-system contrast record | The acceptance oracle rejects the known neutral values and names every missing blue-tropical pair, so a half-rewritten table cannot pass. |
+| The record remains part of the production protection path | same scenario / local CI entry plus Cucumber discovery | The scenario proves the normal acceptance job discovers contracts and the same local review retains the build-and-page-weight boundary. It adds no side CI job. |
+| The drift oracle is falsifiable | `Una tabla que todavía muestra una pareja...` / isolated in-memory copy of the existing record | The negative copy retains the old table without writing production files; the oracle must name an obsolete grey value and a required tropical pair. |
+
+## Slice-04 / 04-01 UI mandate coverage
+
+| Mandate | Executable evidence |
+|---|---|
+| U1 contrast | Built home at 390 px in clear and dark themes is measured before the table is accepted; every required row includes its literal ratio and AA/AAA floor. |
+| U2 small viewport | The real 390 px home rejects horizontal overflow. |
+| U3 touch target | Every interactive home control is measured at 44 px minimum. This documentation step adds no new control. |
+| U4 motion | The real home opens with reduced motion and rejects active transitions or animation. |
+| U5 states | The built home must arrive with ranked content rather than an invented blank or busy state; this step adds no asynchronous state. |
+| U6 type rhythm | Computed home body typography must retain the declared system family, 17 px body scale and 1.5 leading. |
+| U7 named tokens | The emitted home mechanism and its sources prove named colour, spacing, radius, elevation and motion tokens; the local CI acceptance and build path discovers this contract. |
+| U8 charter | `docs/product/expectations/f-looks-like-the-ocean-and-reads-in-the-sun/the-contrast-table-in-the-design-system-says-what-the-code-actually-does-and-ci-refuses-a-build-t.md` supplies the source-blind observation and explicit stale-record failure. |
+
 ## Deferred inventory, not authored
 
 | Slice | Build map | Charter | Acceptance suite | Status |
 |---|---|---|---|---|
 | slice-03 | Existing roadmap rows 03-01..03-03 | 03-01, 03-02 and 03-03 present | 03-01 green; 03-02 depends on its recorded product fix; 03-03 terminal sweep armed | 03-03 is a contract-only terminal sweep; it changes no product source. |
-| slice-04 | Existing roadmap rows 04-01..04-03 | Missing | Missing | JIT DISTILL has not opened it. |
+| slice-04 | Existing roadmap row 04-01 mapped to `@slice-04 @step-04-01`; 04-02..04-03 remain unarmed | 04-01 present | `contrast-gate-drift.feature` and matching steps present, deliberately RED until §3 is rewritten | 04-01 is contract-only and owns no product source; it preserves the blocked 02-02 and completed Slice-03 evidence. |
 | slice-05 | Existing roadmap rows 05-01..05-03 | Present | Missing | JIT DISTILL has not opened it. |
 
 No future-slice feature file, charter, or step definition was created in this turn. The new
