@@ -540,6 +540,13 @@
       "s": "EXECUTED",
       "d": "PASS: the narrow fixture precondition leaves the same-day dedup law unchanged and gives the equality scenario its intended first-send state. Acceptance 1/1, focused planner units 8/8, typecheck, and qualified full units 103/103 passed. Build remains qualified by preserved stale generated surface. Test budget: 1 behavior x 2 = 2; 0 new units because the full-scale law already exists.",
       "t": "2026-08-11T05:27:58Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: fe05abb committed the parent-authorized no-prior-send acceptance precondition and factual evidence. Independent review approved; no production planner rule changed.",
+      "t": "2026-08-11T05:29:02Z"
     }
   ]
 }
