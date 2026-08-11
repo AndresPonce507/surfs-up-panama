@@ -38,6 +38,21 @@ names a real pre-provisioned device already at its allowance. For the unknown-be
 same real public handler receives the browser-created record with only its beach name changed.
 Those two cases cannot originate in the page because the product correctly offers neither control.
 
+## JIT repair: the page owns the journey (2026-08-11)
+
+The browser proof has two deliberately separate parts. Locally, the built production page runs in
+real Chromium with its real IndexedDB queue while the test only observes the page's own outgoing
+mint and report requests. It never sends a request for the surfer, intercepts a response, or
+provides a substitute endpoint. Its useful RED is therefore plain: after Mandar, the page did not
+send the saved label.
+
+The receipt, replay, quota, exact beach-list refusal, response `no-store` header and real
+Function-URL CORS proof require `REPORT_ACCEPTANCE_ORIGIN` connected to the actual handler/store,
+plus real credential/device inputs where named. Until that surface exists, record INDETERMINATE.
+Older direct handler calls remain narrow handler-boundary checks only; they cannot be cited as
+proof that a surfer's page sent or rendered anything. The deployed walk must observe the page's
+own credential, byte-identical saved-label replay, Spanish refusal or quiet arrival/reveal.
+
 ## Charter
 Explore the arrival of a report as the surfer who just filed it. The heart of the walk is two
 promises: the report actually arrives (the screen tells you so), and filing the same report twice

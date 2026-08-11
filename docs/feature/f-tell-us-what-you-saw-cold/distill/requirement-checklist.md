@@ -92,13 +92,13 @@ regression guards). Per-scenario classification and falsifiability proofs:
 | R16 | `@covers-R16`: 4 independent device-only rows for report 20, presign 10, subscription 20 and no per-IP identity | Covered; RED (`MISSING_FUNCTIONALITY`): every changed allowance or identity is accepted. |
 | R17 | `@covers-R17`: baseline, unreadable declaration and all 24 controlled bites, each requiring observed, required, why, repair and same-copy green restoration | Mixed and honest: unreadable declaration is PASSING as an existing regression guard; baseline narration and every required policy diagnostic remain RED (`MISSING_FUNCTIONALITY`). |
 | R18 | `@covers-R18`: one independent corrected-source Scenario Outline row | Covered; RED (`MISSING_FUNCTIONALITY`): the falsified 07 §12 source is accepted and §6.1 is not named as required. |
-| R19 | `@covers-R19`: "A surfer sends a saved report and sees it arrive" | RED pending the real report journey (`REPORT_ACCEPTANCE_ORIGIN`); no fake endpoint is permitted. |
+| R19 | `@covers-R19`: "A surfer sends a saved report and sees it arrive" plus the `@local-real-io` page-ownership walk | Split honestly: local RED proves the production page currently does not send its saved label; the real arrival remains pending `REPORT_ACCEPTANCE_ORIGIN`, with no fake endpoint permitted. |
 | R20 | `@covers-R20`: "Sending the same saved report again leaves one arrival" | RED pending the real report journey. |
 | R21 | `@covers-R21`: page-open arrival scenario makes the server-owned comparison available only after a real send | RED pending the real report journey; Slice-04 observes the authoritative attachment through its receipt. |
-| R22 | `@covers-R22`: arrival walking skeleton has no visible credential step | RED pending the real report journey. |
+| R22 | `@covers-R22`: arrival walking skeleton plus "Mandar starts the saved label's anonymous journey from the phone" | Local RED requires the page to mint invisibly and carry the resulting credential itself; the real receipt remains pending the real report journey. |
 | R23 | `@covers-R23`: "A full daily allowance defers another saved report" | RED at the real public-handler boundary; `REPORT_ACCEPTANCE_QUOTA_CREDENTIAL` must name a real pre-provisioned device. |
 | R24 | `@covers-R24`: "A named beach is refused before its report arrives" | RED at the real public-handler boundary and pending the generated spot index. |
-| R25 | `@covers-R25`: arrival walking skeleton | RED pending the real report journey; receipt persistence is verified through the production port, not table inspection. |
+| R25 | `@covers-R25`: arrival walking skeleton plus the local page-ownership walk | Local RED confirms a durable label exists before an attempted send; receipt persistence remains a production-port check, never table inspection. |
 | R26 | `@covers-R26`: "Opening the report screen sends a report that was already waiting" | RED pending the real report journey; reconnect and service-worker triggers remain out of scope. |
 | R27 | `@covers-R27`: "A surfer sees how the call did after sending their label" | RED pending the real report journey and real published call. |
 | R28 to R29 | `@covers-R28 @covers-R29`: "A surfer is told plainly when there is no call to compare" | RED pending a real no-call hour. |

@@ -147,9 +147,12 @@ export function ensureServedSite(): Promise<{ server: http.Server; baseUrl: stri
     const server = http.createServer((request, response) => {
       const pathname = new URL(request.url ?? '/', 'http://127.0.0.1').pathname;
       if (request.method !== 'GET' && request.method !== 'HEAD') {
-        // No write path exists in slice-01; the site is static files only.
-        response.writeHead(405, { 'content-type': 'text/plain; charset=utf-8' });
-        response.end('method not allowed');
+        // This local proof owns only the production static surface.  It must
+        // not impersonate a write handler with a synthetic 405/receipt: the
+        // browser observer sees the page's request, then the connection ends.
+        // Real receipt and refusal evidence belongs to the external handler
+        // gate (or a separately documented production local composition).
+        request.socket.destroy();
         return;
       }
       const document = resolveDocument(pathname);
@@ -194,6 +197,19 @@ export type CapturedResponse = Readonly<{
   body: Promise<string | null>;
 }>;
 
+/**
+ * A browser-observed write attempt.  This is deliberately observation-only:
+ * the acceptance surface never fulfils, alters, or manufactures a request.
+ * Slice-03 must prove that the production page, rather than a step helper,
+ * begins the anonymous credential and saved-label journey.
+ */
+export type CapturedWriteRequest = Readonly<{
+  url: string;
+  method: string;
+  headers: Readonly<Record<string, string>>;
+  body: string | null;
+}>;
+
 export interface ReportFlowScenario {
   flags: { storageRefused: boolean; javaScriptEnabled: boolean };
   offline: boolean;
@@ -203,6 +219,7 @@ export interface ReportFlowScenario {
   failures: { label: string; error: unknown }[];
   pageErrors: string[];
   captured: CapturedResponse[];
+  writeAttempts: CapturedWriteRequest[];
   distSnapshot: UniverseSnapshot | null;
 }
 
@@ -224,6 +241,7 @@ Before({ tags: '@feature-f-tell-us-what-you-saw-cold' }, function (this: object)
     failures: [],
     pageErrors: [],
     captured: [],
+    writeAttempts: [],
     distSnapshot: null,
   });
 });
@@ -289,6 +307,17 @@ export async function phonePage(state: ReportFlowScenario): Promise<Page> {
       url,
       contentType: response.headers()['content-type'] ?? '',
       body: response.text().catch(() => null),
+    });
+  });
+  context.on('request', (request) => {
+    if (request.method() !== 'POST') return;
+    const pathname = new URL(request.url()).pathname;
+    if (pathname !== '/api/mint' && pathname !== '/api/report') return;
+    state.writeAttempts.push({
+      url: request.url(),
+      method: request.method(),
+      headers: request.headers(),
+      body: request.postData(),
     });
   });
   const page = await context.newPage();
