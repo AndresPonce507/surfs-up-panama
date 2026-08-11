@@ -533,13 +533,25 @@ fails when any of the five fields goes missing. Without that guard this silently
 
 **Pre-requisite 7 is closed.** The percentile form of `C_spread` activates only after **30**
 distinct, completed spot-local forecast days with usable multi-source spread in that spot's
-insert-only PublishedCall history. The current day cannot be part of its own reference. Below the
-threshold, on a malformed history, or when the history source cannot be read, the build keeps the
-absolute form and cannot print a comparison against normal. `30` is a reversible availability
-policy prior, not evidence that the term is calibrated.
+insert-only PublishedCall history. The current day cannot be part of its own reference. Only a
+valid but sub-threshold history keeps the absolute form and cannot print a comparison against
+normal. A malformed, unreadable, disappearing, duplicate-grain, or unavailable region-scoped
+history is not thin history: the production composition refuses before it writes a PublishedCall,
+bundle, or manifest and emits `health.startup.refused` for `published_call_history`. `30` is a
+reversible availability policy prior, not evidence that the term is calibrated.
 
 The existing learning-lane calibration kill switch is separate and wins: if it fails,
 `confidence_factors.spread` becomes false and no spread form participates. Re-enable requires a
 later recorded evaluation, never an automatic retry. Authority is
 `docs/product/architecture/adr-spread-climatology-activation.md`; the machine-readable policy is
 `data/spots/pa-pacific-launch-v1.json` under `spread_climatology`.
+
+**05-01 ownership and evidence.** One serialized producer/adapter lane owns
+`src/pipeline/ports.ts`, `src/pipeline/adapters/filesystem-store.ts`,
+`src/pipeline/run-build-cli.ts`, and `src/pipeline/build.ts`. It must wire the explicit
+BuildStore history-read port and the call writer to the same durable root, then `probe` before
+`runBuildOnce`; no sibling lane may edit those paths. Required evidence is the type/port contract,
+real filesystem fault integration, CLI durable-root and no-write-on-refusal integration, and the
+Slice-05 real-I/O acceptance scenarios for unavailable and malformed history. The relevant scope
+is the selected region's whole `log/calls/v1/` archive, not only qualifying rows. The durable
+history path must never be an ephemeral build work directory.

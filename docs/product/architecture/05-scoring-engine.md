@@ -390,9 +390,12 @@ function confidence(
   policy (accepted 2026-08-10):** the launch policy's `spread_climatology.minimum_history_days`
   is `30`. A qualifying history row is one distinct, completed spot-local forecast day with
   usable multi-source spread, from the insert-only PublishedCall log; the current day never
-  supplies its own reference. Fewer than 30 rows, malformed history, or an unavailable history
-  read keeps the absolute form and forbids the normal-comparison copy. This is an unfit,
-  reversible policy prior, not a claim that 30 days calibrates model skill. ADR:
+  supplies its own reference. Fewer than 30 **valid, readable** rows keeps the absolute form and
+  forbids the normal-comparison copy. A malformed, unreadable, disappearing, duplicate-grain, or
+  unavailable region-scoped history is not thin history: production composition refuses before
+  any PublishedCall, bundle, or manifest write and emits `health.startup.refused` for
+  `published_call_history`. This is an unfit, reversible policy prior, not a claim that 30 days
+  calibrates model skill. ADR:
   `adr-spread-climatology-activation.md`.
 - **Removal clause (§3.6 binding consequence 3)**: `c_spread` participates only while the
   §10.2 Brier calibration check passes (high-confidence days measurably more often right).

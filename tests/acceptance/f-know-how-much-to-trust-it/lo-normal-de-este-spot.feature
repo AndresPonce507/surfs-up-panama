@@ -11,12 +11,11 @@ Feature: La razón deja de comparar los modelos contra nada y los compara contra
 
   # -------------------------------------------------------------------------
   # COMPUERTA DE DATOS REAL, registrada y no planeada por encima: el registro
-  # empezó a acumular el 2026-08-08 y el umbral de activación es un número que
-  # nadie ha fijado (Pre-requisito 7, abierto). Estos escenarios acumulan su
-  # propio historial por los puertos y no fijan el umbral: sesenta mañanas
-  # están por encima de cualquier umbral sensato y dos por debajo. Si el
-  # umbral decidido queda fuera de ese rango, se ajusta la constante del
-  # fixture, jamás el oráculo.
+  # empezó a acumular el 2026-08-08 y el umbral de activación aceptado es 30
+  # días locales completos distintos por spot (Pre-requisito 7, cerrado).
+  # Estos escenarios acumulan su propio historial por los puertos: sesenta
+  # mañanas están por encima de 30 y dos por debajo. Si la política cambia por
+  # un ADR posterior, se ajusta la constante del fixture, jamás el oráculo.
   # -------------------------------------------------------------------------
 
   @slice-05 @driving_port @in-memory @covers-R29
@@ -50,6 +49,19 @@ Feature: La razón deja de comparar los modelos contra nada y los compara contra
     When la mañana de hoy se arma y se publica leyendo el historial del spot
     Then cada razón nombra la marea que falta
     And ninguna razón compara el día contra lo normal del spot
+
+  @slice-05 @driving_port @real-io @adapter-integration @error @covers-R29
+  Scenario Outline: Un archivo histórico que no se puede confiar no publica una mañana a medias
+    Given un historial durable de PublishedCall de la región pedida que está <falla>
+    When la mañana de hoy se intenta armar por el comando de producción
+    Then el comando se rehúsa antes de publicar con exactamente un evento "health.startup.refused"
+    And el evento tiene el componente "published_call_history", scope.region_id de la región pedida, scope.prefix "log/calls/v1/" y razón "<razón>"
+    And no se escribe ningún PublishedCall, bundle ni manifest
+
+    Examples:
+      | falla       | razón        |
+      | inaccesible | unavailable  |
+      | malformado  | malformed    |
 
   # -------------------------------------------------------------------------
   # La mitad de la lectura: sobre el sitio realmente construido, en Chromium a

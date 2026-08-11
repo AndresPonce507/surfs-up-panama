@@ -355,16 +355,19 @@ DELIVER exactly as written or renegotiated with DISTILL, never silently moved):
    against a captured real grib_filter response committed at
    `tests/acceptance/f-know-how-much-to-trust-it/fixtures/noaa-gfswave-grib2/` (capture is a
    DELIVER task, step 04-05).
-4. **slice-05**: the climatology activation threshold is policy data (Pre-requisite 7 decides the
-   number); the acceptance history is accumulated by publishing real mornings through the ports
-   (60 above / 2 below any sane threshold; if the settled number falls outside that range the
-   fixture constant moves, never the oracle).
+4. **slice-05**: the climatology activation threshold is policy data, accepted at **30**
+   (Pre-requisite 7, closed); the acceptance history is accumulated by publishing real mornings
+   through the ports (60 above / 2 below 30; a later ADR changes the fixture constant, never the
+   oracle). Valid thin history takes the absolute form. An unavailable or malformed durable
+   PublishedCall scope is a production refusal, not an empty-history fallback: it emits
+   `health.startup.refused` and writes no call, bundle, or manifest.
 
 Blockers restated, so GREEN is never faked around them: slice-02 cannot reach GREEN until the
 domain lane lands the seed field, Pre-requisite 5 settles the mapping policy and the tide ADR
-flips to Accepted (04 §11 DELIVER BLOCKER). slice-05 cannot reach GREEN until Pre-requisite 7
-settles the threshold, and its production surface stays pending until real history accumulates
-(log started 2026-08-08; zero real reports exist). Steps 02-05, 02-06, 05-05 and 05-06 cannot
+flips to Accepted (04 §11 DELIVER BLOCKER). Slice-05's threshold is settled at 30; its remaining
+GREEN blocker is the explicit durable history-read port, production probe/refusal boundary, and
+the required fault evidence. Its live percentile surface stays pending until real history
+accumulates (log started 2026-08-08; zero real reports exist). Steps 02-05, 02-06, 05-05 and 05-06 cannot
 even be attempted before 01-11's four cross-lane mounts land (BROKEN, not RED, if scheduled
 early). And feature-wide: no oracle in any of these slices is satisfiable by moving
 `cap_missing_tide`, `cap_missing_wind` or the 0.4/0.7 boundaries; the constants guard plus the

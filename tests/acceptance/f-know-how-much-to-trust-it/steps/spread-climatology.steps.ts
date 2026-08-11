@@ -2,13 +2,18 @@
 // spot's own accumulated spread history. JIT DISTILL 2026-08-10.
 //
 // DATA GATE, restated: the PublishedCall log began accumulating 2026-08-08
-// and the activation threshold is unset (Pre-requisite 7, open). These steps
-// accumulate the history HONESTLY, by publishing real mornings through the
-// same driving ports production uses, so the history under test is the log
-// the pipeline itself wrote, never a planted table. Sixty mornings sit above
-// any sane threshold; two sit below. If the settled threshold falls outside
-// that range, HISTORY_MORNINGS is a one-line fixture bump; the oracles never
-// move.
+// and the accepted activation threshold is 30 distinct completed spot-local
+// days (Pre-requisite 7, closed). These steps accumulate the history HONESTLY,
+// by publishing real mornings through the same driving ports production uses,
+// so the history under test is the log the pipeline itself wrote, never a
+// planted table. Sixty mornings sit above 30; two sit below. A later ADR that
+// changes policy moves HISTORY_MORNINGS, never the oracles.
+//
+// Contract boundary: valid-but-thin history selects the absolute form. An
+// unavailable or malformed durable PublishedCall scope is never reclassified
+// as thin: production composition must emit health.startup.refused before any
+// call, bundle, or manifest write. The real-IO scenarios in the feature drive
+// this through runProductionBuild, rather than a cast or an in-memory fallback.
 //
 // The engine's SpreadInput union already carries the climatology arm
 // (confidence.ts, { kind: 'climatology'; pct }); what is missing, and what

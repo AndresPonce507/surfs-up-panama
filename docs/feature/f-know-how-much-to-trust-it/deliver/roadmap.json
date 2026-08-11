@@ -663,10 +663,12 @@
       "steps": [
         {
           "id": "05-01",
-          "name": "Percentile form activates from the spot's own history",
+          "name": "Durable history probe activates the percentile form",
           "criteria": [
             "At the policy threshold, this spot's published confidence uses its own historical spread percentile; below it, the published confidence keeps the absolute form.",
-            "A worse-than-usual day says so, comparing against the spot's own normal, still within 160 characters and every honesty clause."
+            "A worse-than-usual day says so, comparing against the spot's own normal, still within 160 characters and every honesty clause.",
+            "The BuildStore history-read port is explicit and production composition wires its reader and writer to the same durable PublishedCall root, then probes the requested region before it runs the build.",
+            "A malformed or unavailable region-scoped PublishedCall corpus emits health.startup.refused and writes no call, bundle, or manifest; only valid but sub-threshold history selects the absolute form."
           ],
           "test_file": "tests/acceptance/f-know-how-much-to-trust-it/lo-normal-de-este-spot.feature",
           "scenario_name": "Un día partido peor que lo normal de ese spot se dice con sus palabras",
@@ -677,12 +679,27 @@
           "non_visual_rationale": "The form switch and its sentence, asserted over the published bundle; the rendered wording is judged at 05-05 and 05-06.",
           "ui_checks": {},
           "deps": ["01-01"],
-          "dispatch_dependencies": ["serialized producer-lane lease for src/pipeline/build.ts"],
-          "files_to_modify": [
-            "src/pipeline/build.ts",
-            "src/publish/confidence-reason.ts"
+          "dispatch_dependencies": [
+            "one serialized producer/adapter lane owns src/pipeline/ports.ts, src/pipeline/adapters/filesystem-store.ts, src/pipeline/run-build-cli.ts and src/pipeline/build.ts; no sibling lane edits any of those paths",
+            "the durability-root and probe contract must land before the percentile selection diff; do not use an ephemeral --work-dir as history",
+            "serialized producer-lane lease for src/pipeline/build.ts"
           ],
-          "implementation_notes": "DATA-GATED, THRESHOLD SET: Pre-requisite 7 closed 2026-08-10. The launch policy sets `spread_climatology.minimum_history_days = 30`, counted as this spot's own distinct, completed spot-local forecast days with usable multi-source spread in the insert-only PublishedCall history. The current day never supplies its own reference. Below N, malformed history, or an unavailable history read keeps the absolute form and forbids normal-comparison wording. This is a reversible availability policy prior, not observational calibration evidence; the existing learning-lane calibration failure disables `confidence_factors.spread` completely and may be reversed only by a later recorded evaluation. Live activation is still weeks out because the log began accumulating 2026-08-08. The acceptance history is accumulated HONESTLY: scenarios publish 60 real mornings through production's driving ports, never a planted table; 60 is above N and 2 below. THE THRESHOLD IS POLICY DATA, not code (05 §6.1), beside `confidence_factors` in the launch policy. ENGINE ALREADY CARRIES THE ARM: SpreadInput's climatology variant exists in confidence.ts; this step adds only the build's spot-owned percentile selection and input. Any required per-row spread value is additive, insert-only and forward-only, NEVER a backfill. A serialized producer-lane lease for src/pipeline/build.ts is a hard dispatch dependency; do not dispatch this step while that lease is held elsewhere. Qualitative tails only: pct <= 20 maps to 1.0, mid to 0.7, >= 80 to 0.35, as data."
+          "files_to_modify": [
+            "src/pipeline/ports.ts",
+            "src/pipeline/adapters/filesystem-store.ts",
+            "src/pipeline/run-build-cli.ts",
+            "src/pipeline/build.ts",
+            "src/publish/confidence-reason.ts",
+            "tests/unit/published-call-history-port-contract.test.ts",
+            "scripts/check-published-call-history-probe.mjs",
+            "tests/unit/published-call-history-probe-structure.test.ts",
+            "scripts/git-hooks/pre-commit",
+            "tests/unit/filesystem-store.test.ts",
+            "tests/unit/run-build-cli.test.ts",
+            "tests/acceptance/f-know-how-much-to-trust-it/lo-normal-de-este-spot.feature",
+            "tests/acceptance/f-know-how-much-to-trust-it/steps/spread-climatology.steps.ts"
+          ],
+          "implementation_notes": "DATA-GATED, THRESHOLD SET: Pre-requisite 7 closed 2026-08-10. The launch policy sets `spread_climatology.minimum_history_days = 30`, counted as this spot's own distinct, completed spot-local forecast days with usable multi-source spread in the insert-only PublishedCall history. The current day never supplies its own reference. VALID BUT BELOW N keeps the absolute form and forbids normal-comparison wording. MALFORMED OR UNAVAILABLE HISTORY IS NOT THIN HISTORY: BuildStore must declare a region-scoped listPublishedCallKeys, exact getPublishedCall, and probePublishedCallHistory capability; the durable adapter must never replace an I/O, decode, key/grain, disappearance, or duplicate-day fault with []. Production composition wires the history reader and putCallIfAbsent writer to the same durable root, awaits the probe before runBuildOnce, and on any fault emits exactly one health.startup.refused event with component published_call_history, region/prefix scope, and reason unavailable|malformed, then performs zero call/bundle/manifest writes. The CLI and real-I/O acceptance assertion must prove EXACTLY ONE event with type, component, scope.region_id, scope.prefix `log/calls/v1/`, and reason, not merely a matching substring. Scope is the requested region's complete log/calls/v1/ archive. This is a reversible availability policy prior, not observational calibration evidence; the existing learning-lane calibration failure disables confidence_factors.spread completely and may be reversed only by a later recorded evaluation. Live activation is still weeks out because the log began accumulating 2026-08-08. The acceptance history is accumulated HONESTLY: scenarios publish 60 real mornings through production's driving ports, never a planted table; 60 is above N and 2 below. THE THRESHOLD IS POLICY DATA, not code (05 §6.1), beside confidence_factors in the launch policy. ENGINE ALREADY CARRIES THE ARM: SpreadInput's climatology variant exists in confidence.ts; this step adds only the build's spot-owned percentile selection and input. Any required per-row spread value is additive, insert-only and forward-only, NEVER a backfill. EXACT EVIDENCE: a compile/type contract for every BuildStore implementation; real filesystem adapter tests for region isolation, unavailable source, malformed receipt, disappearing listed key, duplicate day and valid one-source nonqualification; CLI integration for persistent history across invocations and wire-probe-use ordering; and two acceptance scenarios driven through runProductionBuild for unavailable and malformed history. STRUCTURAL ENFORCEMENT IS AN IMPLEMENTATION DELIVERABLE, NOT A CONVENTION: scripts/check-published-call-history-probe.mjs parses src/pipeline/run-build-cli.ts and rejects any production runBuildOnce call lacking a dominating awaited probePublishedCallHistory call; scripts/git-hooks/pre-commit invokes it; tests/unit/published-call-history-probe-structure.test.ts proves a valid composition passes and a fixture omitting the awaited probe fails. One serialized producer/adapter lane owns every listed pipeline path; do not dispatch a sibling to edit any of them. Qualitative tails only: pct <= 20 maps to 1.0, mid to 0.7, >= 80 to 0.35, as data."
         },
         {
           "id": "05-02",
