@@ -48,7 +48,9 @@ function minify(css: string): string {
     .trim();
 }
 
-const inlineCss = minify(compactStyles ? offline : `${tokens}\n${base}\n${components}`);
+const inlineCss = minify(
+  compactStyles ? `${tokens}\n${offline}` : `${tokens}\n${base}\n${components}`,
+);
 ---
 
 <!doctype html>
