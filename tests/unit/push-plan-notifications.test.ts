@@ -47,14 +47,15 @@ describe('planNotifications -- afternoon follow-up (R41)', () => {
 
     fc.assert(
       fc.property(
-        fc.integer({ min: 14, max: 16 }),
+        fc.integer({ min: 13, max: 17 }),
+        fc.constantFrom('America/Panama', 'Etc/GMT-1'),
         fc.constantFrom<StoredSub['last_notified_date']>(null, '2026-08-09', '2026-08-10', '2026-08-11'),
         fc.constantFrom<StoredSub['followup_date']>(null, '2026-08-09', '2026-08-10', '2026-08-11'),
         fc.integer({ min: 0, max: 100 }),
-        (hour, notifiedDate, followupDate, laterScore) => {
-        const plan = planNotifications({
-          now: `2026-08-10T${String(hour).padStart(2, '0')}:25:00-05:00`,
-          spots: [{ spot_id: 'playa-venao', slug: 'playa-venao', name: 'Playa Venao', timezone: 'America/Panama' }],
+        (hour, timezone, notifiedDate, followupDate, laterScore) => {
+          const plan = planNotifications({
+          now: `2026-08-10T${String(hour).padStart(2, '0')}:25:00${timezone === 'America/Panama' ? '-05:00' : '+01:00'}`,
+          spots: [{ spot_id: 'playa-venao', slug: 'playa-venao', name: 'Playa Venao', timezone }],
           scores: { 'playa-venao': laterScore },
           subscriptions: [{
             spot_id: 'playa-venao', endpoint_hash: 'telefono-03', lang: 'es', threshold_score: 70,
@@ -64,7 +65,7 @@ describe('planNotifications -- afternoon follow-up (R41)', () => {
         });
 
         const followups = plan.sends.filter((send) => send.kind === 'followup');
-          const eligible = notifiedDate === '2026-08-10' &&
+          const eligible = hour >= 14 && hour < 17 && notifiedDate === '2026-08-10' &&
             (followupDate === null || followupDate < '2026-08-10');
           assert.equal(
             followups.length,

@@ -1,0 +1,19 @@
+{
+  "sid": "03-04",
+  "phase": "RED_GREEN",
+  "controlled_mutation": {
+    "change": "Widen the afternoon window start from 14:00 to 13:00, then hardcode America/Panama instead of the supplied spot timezone.",
+    "command": "npm run test -- --run tests/unit/push-plan-notifications.test.ts",
+    "status": "FAIL_AS_EXPECTED",
+    "evidence": "The 13:25 outline example planned an afternoon question; the expanded property separately shrank the widened window to [13, America/Panama, 2026-08-10, null, 0], and the timezone mutation shrank to [14, Etc/GMT-1, 2026-08-10, null, 0]."
+  },
+  "restored_green": {
+    "outside_afternoon_acceptance": "PASS: 2 outline scenarios, 24 steps",
+    "slice03_non_external": "PASS: 6 scenarios, 74 steps",
+    "focused_unit": "PASS: 1 test",
+    "typecheck": "PASS",
+    "unit_except_known_generated_surface": "PASS: 20 files, 92 tests"
+  },
+  "property_extension": "The public planning port receives America/Panama and Etc/GMT-1 seed timezones and evaluates its generated local hour in that supplied timezone.",
+  "known_external_qualification": "The current integration surface still fails the full unit job only because playa-malibu lacks wind_state. Generated data was not changed."
+}
