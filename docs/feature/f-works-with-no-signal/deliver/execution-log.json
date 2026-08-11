@@ -659,6 +659,13 @@
       "s": "EXECUTED",
       "d": "SUPERSEDES the preceding 108/108 count as the reproducible-current-fixture statement: that count was factual only for the broader temporary parent integration test. At 2026-08-11T05:24:11Z, with current data sha256 318288b6ac8f75ae62eb6b3a5a956752d4bff6fa9da2d514551d6d59fd67fdae and the narrow unstaged wind contract sha256 a0f5b725ad1fbf472497dd6f45faaa76050338a469eb2ba9c9d54b0183d12bbc, `npm run typecheck` PASS and `npm test` PASS 107/107. The narrow contract permits missing wind_state only when call_es truthfully says sin datos and continues to reject invalid present tokens. Both temporary inputs remain unstaged for review and are excluded from the Slice-05 revision.",
       "t": "2026-08-11T05:26:10Z"
+    },
+    {
+      "sid": "05-01..05-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: approved Slice-05 revision b840d24 (feat(signal): install as an app - steps 05-01..05-03) contains only the manifest, two favicon-derived PNG icons, additive Base manifest link, staged footer seam and hint markup, and preceding evidence. G7 PASS: independent review approved the reproducible current-fixture run: Slice-05 acceptance 3 scenarios/34 steps, 107/107 units with the narrow temporary wind contract, typecheck, build/page-weight, test:ui, and source-blind Chromium U8 all green. The temporary data and test support were restored before staging and are excluded.",
+      "t": "2026-08-11T05:26:10Z"
     }
   ]
 }
