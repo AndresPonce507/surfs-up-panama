@@ -47,6 +47,11 @@ function minify(css: string): string {
     .replace(/\/\*[\s\S]*?\*\//g, '')
     .replace(/\s+/g, ' ')
     .replace(/ ?([{}:;,]) ?/g, '$1')
+    .replace(/\s*([>+])\s*/g, '$1')
+    .replace(/@(media|supports)\s+\(/g, '@$1(')
+    .replace(/#([\da-f])\1([\da-f])\2([\da-f])\3\b/gi, '#$1$2$3')
+    .replace(/(^|[^\w-])0\.(\d)/g, '$1.$2')
+    .replace(/(^|[^\d])0%/g, (_, prefix: string) => `${prefix}0`)
     .replace(/;}/g, '}')
     .trim();
 }
@@ -64,20 +69,10 @@ const inlineCss = minify(
     <title>{title}</title>
     <meta name="theme-color" content={lightChromeColor} media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content={lightChromeColor} media="(prefers-color-scheme: dark)" />
-    <script is:inline define:vars={{ lightChromeColor, darkChromeColor }}>
-      const saved = (() => {
-        try {
-          const choice = localStorage.getItem('surfs-up-theme');
-          return choice === 'dark' || choice === 'light' ? choice : 'light';
-        } catch {
-          return 'light';
-        }
-      })();
-      document.documentElement.dataset.theme = saved;
-      document.documentElement.style.background = saved === 'dark' ? darkChromeColor : lightChromeColor;
-      for (const chrome of document.querySelectorAll('meta[name="theme-color"]')) {
-        chrome.setAttribute('content', saved === 'dark' ? darkChromeColor : lightChromeColor);
-      }
+    <script is:inline define:vars={{ l: lightChromeColor, d: darkChromeColor }}>
+      const r = document.documentElement, t = (() => { try { const t = localStorage.getItem('surfs-up-theme'); return t === 'dark' || t === 'light' ? t : 'light'; } catch { return 'light'; } })(), c = t === 'dark' ? d : l;
+      r.dataset.theme = t; r.style.background = c;
+      for (const e of document.querySelectorAll('meta[name=theme-color]')) e.content = c;
     </script>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/manifest.webmanifest" />
