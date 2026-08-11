@@ -33,3 +33,4 @@ volvé. No debe cambiar ningún número, palabra, destino ni acción por el arre
 
 | date | examiner | verdict | observations |
 |------|----------|---------|--------------|
+| 2026-08-11 | Vera | PASS | A 390 px en Chromium, la superficie clara renderizó #F2F8FA (rgb(242, 248, 250)) y la oscura #061A21 (rgb(6, 26, 33)), sin marco genérico blanco/negro visible en la página. El viaje ranking → VE A Playa Cambutal → /spots/playa-cambutal/ → volver a / conservó exactamente palabras, puntajes, enlaces, acciones y ancho de 390 px en ambos temas. INDETERMINATE solo para el lanzamiento desde icono instalado y el color de la barra exterior de Chromium: esta superficie de preview no expuso ni icono/arranque instalado ni la barra externa. |
