@@ -554,6 +554,13 @@
       "s": "EXECUTED",
       "d": "PASS: two clauses only, age-at-receipt and a history clause whose spots requirement qualifies it, wired once over the whole log in fit.ts before it is grouped by spot so every gated count is already post-eligibility. Focused acceptance/unit 6/6 passes; full vitest 390/390 across 76 files, typecheck and build pass. Live probe over the real port: age 0 stores n=22/reporters=7, age 30 stores n=18/reporters=6 with se moved to the floor at n=18, so the gate is live and not inert. UI checks N/A: non-visual step with no rendered consequence by design.",
       "t": "2026-08-11T18:13:12Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: approved implementation committed as 7104d40a1ceb55eb4726100318c07d78c8d26fb5 (feat(learning): land the trust-eligibility gate, inactive at launch)",
+      "t": "2026-08-11T18:13:34Z"
     }
   ]
 }
