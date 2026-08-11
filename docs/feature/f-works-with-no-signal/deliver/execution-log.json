@@ -477,6 +477,13 @@
       "s": "EXECUTED",
       "d": "PASS: the existing activation lifecycle now includes the queue replay without adding another activation registration. A single-flight worker guard shares activation and concurrent page-trigger work: one byte-identical POST occurs and the queue entry is deleted only after a 200 response. Target real-Chromium acceptance 1 scenario/13 steps; direct worker proof 2/2; full units 104/104; typecheck; build/page-weight; fast CI 8/8 passed with 0 skipped. Test budget: 2 distinct observable outcomes x 2 = 4 maximum, 1 new unit test.",
       "t": "2026-08-11T02:37:00Z"
+    },
+    {
+      "sid": "03-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: revision commit faa2bb9 (feat(signal): flush reports on helper activation - step 03-02) contains the active activation-time replay implementation, its direct-worker race proof, and the preceding RED/GREEN evidence. G7 PASS: all mapped pre-commit gates were green before the resulting revision was created.",
+      "t": "2026-08-11T02:39:00Z"
     }
   ]
 }
