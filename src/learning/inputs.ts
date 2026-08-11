@@ -153,7 +153,7 @@ export async function readReporterOverrides(store: LearningInputStore): Promise<
   if (body === null) return {};
   try {
     const parsed: unknown = JSON.parse(body);
-    if (!isRecord(parsed)) return {};
+    if (!isRecord(parsed) || Array.isArray(parsed)) return {};
     return Object.fromEntries(
       Object.entries(parsed).flatMap(([reporter, weight]) =>
         reporter !== '' && typeof weight === 'number' && Number.isFinite(weight) && weight >= 0 && weight <= 1

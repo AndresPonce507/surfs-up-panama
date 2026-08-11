@@ -163,7 +163,7 @@ describe('incident reporter overrides', () => {
   });
 
   it('treats an absent, malformed, or non-flat incident file as the all-one default', async () => {
-    for (const body of [null, '{not-json', JSON.stringify({ d_excise: -1 }), JSON.stringify(['d_excise'])]) {
+    for (const body of [null, '{not-json', JSON.stringify({ d_excise: -1 }), JSON.stringify(['d_excise']), JSON.stringify([0])]) {
       assert.deepEqual(await readReporterOverrides(overrideStore(body)), {});
     }
   });
