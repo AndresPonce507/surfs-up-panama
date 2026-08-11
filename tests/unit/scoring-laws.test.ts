@@ -13,6 +13,7 @@ import {
   applyCorrection,
   blend,
   combine,
+  counterfactualScore,
   hEff,
   rankSpots,
   sDir,
@@ -21,6 +22,7 @@ import {
   sWind,
   type DeclaredMember,
   type EffectiveSpotParams,
+  type Factor,
   type MemberRow,
   type ScoreResult,
   type SpotSeed,
@@ -133,6 +135,33 @@ function member(source: string, h_m: number, t_s: number, dir_deg: number): Memb
 }
 
 const seed: SpotSeed = venaoSeed;
+
+type CounterfactualState = {
+  readonly damages: readonly { readonly factor: Factor; readonly damage: number }[];
+  readonly correction: { readonly delta_q: number; readonly gate: string };
+  readonly candidate: unknown;
+};
+
+function captureCounterfactualState(
+  result: Pick<ReturnType<typeof combine>, 'damages' | 'correction'>,
+  candidate: unknown,
+): CounterfactualState {
+  return {
+    damages: structuredClone(result.damages),
+    correction: structuredClone(result.correction),
+    candidate,
+  };
+}
+
+function assertCounterfactualStateDelta(
+  before: CounterfactualState,
+  after: CounterfactualState,
+  expectedCandidate: unknown,
+): void {
+  assert.deepEqual(after.damages, before.damages, 'counterfactual calculation changed the scored damages');
+  assert.deepEqual(after.correction, before.correction, 'counterfactual calculation changed the applied correction');
+  assert.deepEqual(after.candidate, expectedCandidate, 'counterfactual driving port returned the wrong candidate');
+}
 
 describe('scoring engine laws', () => {
   // covers: R12
@@ -297,6 +326,123 @@ describe('scoring engine laws', () => {
     );
     const tie = combine({ dir: 1, size: 0.5, wind: 0.5, tide: 1 }, params, 0);
     assert.equal(tie.weakest_link, 'size', 'Equal largest damages must use the fixed dir, size, wind, tide tiebreak order.');
+  });
+
+  // Slice-03, step 03-02. The counterfactual is an alternate reading of the
+  // existing L10 damage receipt, not a second score model or a page formula.
+  it('removes only the named damage, keeps the correction, and is bit-exact at zero correction', () => {
+    fc.assert(
+      fc.property(
+        decimal(0.01, 0.99),
+        decimal(0.01, 0.99),
+        decimal(0.01, 0.99),
+        decimal(0.01, 0.99),
+        decimal(-1, 1),
+        (dir, size, windScore, tideScore, deltaQ) => {
+          const result = combine({ dir, size, wind: windScore, tide: tideScore }, params, deltaQ);
+          const before = captureCounterfactualState(result, undefined);
+          const candidate = counterfactualScore(result);
+          const after = captureCounterfactualState(result, candidate);
+          const totalDamage = result.damages.reduce((sum, item) => sum + item.damage, 0);
+          const namedDamage = result.damages.find((item) => item.factor === result.weakest_link)?.damage;
+          const expectedQWithout = Math.min(Math.max(Math.exp(-(totalDamage - (namedDamage ?? Number.NaN))) + deltaQ, 0), 1);
+          const expectedCandidate = {
+            q_without: expectedQWithout,
+            score_q: Math.round(100 * expectedQWithout),
+          };
+
+          assert.ok(candidate !== undefined, 'A named weakest link must have one model counterfactual candidate.');
+          assertCounterfactualStateDelta(before, after, expectedCandidate);
+          assert.ok(
+            candidate.q_without >= result.q_final - 1e-12,
+            'Removing a non-negative named damage while retaining the correction must never lower the unrounded model score.',
+          );
+
+          const uncorrected = combine({ dir, size, wind: windScore, tide: tideScore }, params, 0);
+          const uncorrectedCandidate = counterfactualScore(uncorrected);
+          assert.ok(uncorrectedCandidate !== undefined, 'A non-perfect L10 result must retain its named counterfactual candidate.');
+          const uncorrectedTotalDamage = uncorrected.damages.reduce((sum, item) => sum + item.damage, 0);
+          const uncorrectedNamedDamage = uncorrected.damages.find((item) => item.factor === uncorrected.weakest_link)?.damage;
+          assert.equal(
+            uncorrectedCandidate.score_q,
+            Math.round(100 * Math.exp(-(uncorrectedTotalDamage - (uncorrectedNamedDamage ?? Number.NaN)))),
+            'With zero correction the integer must be the exact L10 damage identity, not a second approximation.',
+          );
+        },
+      ),
+    );
+  });
+
+  it('keeps the settled size example at 93', () => {
+    const settledReceipt = {
+      sub: { dir: 1, size: 0.687, wind: 0.844, tide: 0.971 } satisfies SubScores,
+      weakest_link: 'size',
+      damages: [
+        { factor: 'size', damage: 0.1499 },
+        { factor: 'wind', damage: 0.0681 },
+        { factor: 'tide', damage: 0.0059 },
+        { factor: 'dir', damage: 0 },
+      ],
+      correction: { delta_q: 0, gate: 'no_file' },
+    } satisfies Pick<ReturnType<typeof combine>, 'sub' | 'damages' | 'weakest_link' | 'correction'>;
+    const candidate = counterfactualScore(settledReceipt);
+
+    assert.equal(candidate?.score_q, 93, 'The accepted Venao size example must say 93 without its named weakness.');
+  });
+
+  it('returns no candidate for a perfect day and refuses malformed producer damage receipts', () => {
+    fc.assert(
+      fc.property(fc.constantFrom<Factor>('dir', 'size', 'wind', 'tide'), (factor) => {
+        const perfect = counterfactualScore(combine({ dir: 1, size: 1, wind: 1, tide: 1 }, params, 0));
+        assert.equal(perfect, undefined, 'A perfect day has no named weakness and therefore no counterfactual candidate.');
+
+        const fullSub = { dir: 0.8, size: 0.7, wind: 0.6, tide: 0.5 } satisfies SubScores;
+        const malformed = [
+          { sub: fullSub, weakest_link: factor, damages: [{ factor, damage: -0.1 }], correction: { delta_q: 0, gate: 'no_file' as const } },
+          { sub: fullSub, weakest_link: factor, damages: [], correction: { delta_q: 0, gate: 'no_file' as const } },
+          { sub: fullSub, weakest_link: factor, damages: [{ factor, damage: Number.NaN }], correction: { delta_q: 0, gate: 'no_file' as const } },
+          { sub: fullSub, weakest_link: factor, damages: [{ factor, damage: 0.1 }], correction: { delta_q: Number.NaN, gate: 'no_file' as const } },
+          { sub: fullSub, weakest_link: 'size' as const, damages: [{ factor: 'dir' as const, damage: 0.2 }, { factor: 'size' as const, damage: 0.1 }], correction: { delta_q: 0, gate: 'no_file' as const } },
+          { sub: fullSub, weakest_link: 'dir' as const, damages: [{ factor: 'dir' as const, damage: 0 }, { factor: 'size' as const, damage: 0 }], correction: { delta_q: 0, gate: 'no_file' as const } },
+          { sub: fullSub, weakest_link: null, damages: [{ factor: 'dir' as const, damage: 0.1 }, { factor: 'size' as const, damage: 0 }], correction: { delta_q: 0, gate: 'no_file' as const } },
+          { sub: fullSub, weakest_link: 'size' as const, damages: [{ factor: 'size' as const, damage: 0.2 }], correction: { delta_q: 0, gate: 'no_file' as const } },
+          { sub: fullSub, weakest_link: 'dir' as const, damages: [{ factor: 'dir' as const, damage: 0.2 }], correction: { delta_q: 0, gate: 'no_file' as const } },
+        ];
+        for (const receipt of malformed) {
+          assert.throws(
+            () => counterfactualScore(receipt),
+            'A malformed producer damage receipt must fail before it can fabricate a counterfactual candidate.',
+          );
+        }
+
+        const validPartialReceipts = [
+          combine({ dir: 0.8, size: 0.7, wind: null, tide: null }, params, 0),
+          combine({ dir: 0.8, size: 0.7, wind: null, tide: 0.6 }, params, 0),
+          combine({ dir: 0.8, size: 0.7, wind: 0.6, tide: null }, params, 0),
+        ];
+        for (const receipt of validPartialReceipts) {
+          assert.notEqual(
+            counterfactualScore(receipt),
+            undefined,
+            'A complete receipt with legitimate absent observations must retain its named counterfactual candidate.',
+          );
+        }
+
+        const zeroSize = combine({ dir: 1, size: 0, wind: 0.8, tide: 0.9 }, params, 0);
+        const zeroSizeCandidate = counterfactualScore(zeroSize);
+        const zeroSizeRemainingDamage = zeroSize.damages
+          .filter((item) => item.factor !== zeroSize.weakest_link)
+          .reduce((sum, item) => sum + item.damage, 0);
+        assert.deepEqual(
+          zeroSizeCandidate,
+          {
+            q_without: Math.exp(-zeroSizeRemainingDamage),
+            score_q: Math.round(100 * Math.exp(-zeroSizeRemainingDamage)),
+          },
+          'Removing a legitimate infinite zero-size damage must use the finite remaining L10 receipt, never Infinity minus Infinity.',
+        );
+      }),
+    );
   });
 
   // covers: R22
