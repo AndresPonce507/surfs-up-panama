@@ -386,6 +386,41 @@
       "s": "EXECUTED",
       "d": "PASS: scoped implementation and its pre-commit evidence committed as e5610bdccd176b75fb660e33ef1804f5650d298d with Step-ID: 06-01 after independent review approval. The commit contains only the four authorized production paths plus this execution evidence and the factual U8 charter row; it makes no installed-launch or external-toolbar claim beyond INDETERMINATE.",
       "t": "2026-08-11T12:20:57Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: reopened after fresh source-blind U8 found the built Home CTA fixed but visually too opaque in normal mode, then its reduced-transparency light fallback indistinguishable from the page. Scope is the existing Home primary tray, existing CSS tokens, its real-browser acceptance contract, and its charter; no new markup, token, or hero glass surface is authorized.",
+      "t": "2026-08-11T14:12:13Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "FAIL_FOR_RIGHT_REASON: before widening the existing supported tray frame, four normal Home 390/320 light/dark variants failed naming the visible water frame as 16/16/13/12px rather than the required 24/24/16/16px. After that Green, the U8-derived reduced-transparency regression failed four 390/320 light/dark variants with the measured tray background equal to the page, naming the vanished opaque frame. Both are semantic assertion failures from a contained real Astro build and Chromium, not collection or environment errors.",
+      "t": "2026-08-11T14:12:13Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: this static CSS rendering repair is directly driven by the real-browser acceptance contract. It adds no domain/application branching for a unit or property test; the parameterized browser scenarios observe the emitted Home surface at both widths, themes, supported glass, and forced reduced transparency.",
+      "t": "2026-08-11T14:12:13Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: Home keeps its solid --go CTA. Supported mode uses the existing --hero-grad and --glass in the existing fixed tray, with a visible 24px horizontal and 16px vertical frame. Reduced transparency uses existing opaque --surface, distinct from the page, with no filter or pseudo-layer. Focused @step-02-02 passed 14/14 scenarios and 256/256 steps; full @slice-02 passed 50/50 and 938/938. Mutating the reduced Home tray back to --bg failed all four new light/dark-width cases and was restored. npm run build/page-weight, test:ui, and unique-port test:e2e (3/3) passed.",
+      "t": "2026-08-11T14:12:13Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "EXAMINE",
+      "s": "EXECUTED",
+      "d": "PASS: fresh source-blind Vera at 390px and 320px, in light and dark, observed a fixed blue-green supported glass/water frame around the solid action, a distinct opaque reduced-transparency tray, no horizontal overflow, a solid hero, and calm reduced motion. The factual PASS row is appended to the Slice-02 charter.",
+      "t": "2026-08-11T14:12:13Z"
     }
   ]
 }

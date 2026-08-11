@@ -57,6 +57,39 @@ Feature: La bandeja de reportar se lee sobre agua tropical y conserva una tarjet
       | claro  |
       | oscuro |
 
+  @slice-02 @step-02-02 @driving_port @real-io @ui-u1 @ui-u2 @ui-u3 @ui-u4 @ui-u5 @ui-u6 @ui-u7
+  Scenario Outline: La bandeja principal fija de la portada muestra vidrio sobre agua y conserva su respaldo en <modo> a <ancho> px
+    Given una construcción real de la portada con modo de vidrio "<modo>"
+    When el surfista abre la portada para comprobar su bandeja a <ancho> px, con tema "<tema>"
+    Then la bandeja principal permanece fija, visible y en modo <esperado> sobre el contenido que se desplaza
+    And la tarjeta grande del primer spot permanece sólida, nunca de vidrio
+
+    Examples:
+      | modo         | esperado | tema   | ancho |
+      | normal       | vidrio   | claro  | 390   |
+      | normal       | vidrio   | oscuro | 390   |
+      | normal       | vidrio   | claro  | 320   |
+      | normal       | vidrio   | oscuro | 320   |
+      | sin-soporte  | solido   | claro  | 390   |
+      | sin-soporte  | solido   | oscuro | 390   |
+      | sin-soporte  | solido   | claro  | 320   |
+      | sin-soporte  | solido   | oscuro | 320   |
+
+  @slice-02 @step-02-02 @driving_port @real-io @ui-u1 @ui-u2 @ui-u3 @ui-u4 @ui-u5 @ui-u6 @ui-u7
+  Scenario Outline: La transparencia reducida deja una bandeja principal opaca y visible en <tema> a <ancho> px
+    Given una construcción real de la portada con transparencia reducida
+    When el surfista abre la portada para comprobar su bandeja a <ancho> px, con tema "<tema>"
+    Then la bandeja principal permanece fija, visible y en modo solido sobre el contenido que se desplaza
+    And la bandeja opaca de transparencia reducida forma un marco distinguible detrás de la acción sólida
+    And la tarjeta grande del primer spot permanece sólida, nunca de vidrio
+
+    Examples:
+      | tema   | ancho |
+      | claro  | 390   |
+      | oscuro | 390   |
+      | claro  | 320   |
+      | oscuro | 320   |
+
   @slice-02 @step-02-03 @driving_port @real-io @ui-u1 @ui-u2 @ui-u3 @ui-u4 @ui-u5 @ui-u6 @ui-u7
   Scenario: La construcción real conserva una ruta de reportar lista, sin fabricar el control de idioma
     Given una construcción real, sin ninguna modificación
