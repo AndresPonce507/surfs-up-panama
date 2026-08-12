@@ -152,6 +152,81 @@ describe('planNotifications', () => {
     );
   });
 
+  it('sends at most the declared run cap, pooled across spots, and announces the remainder out loud', () => {
+    // The cap is whatever the caller declares. No configuration number is
+    // asserted here: 10,000 is the composition root's proposal in
+    // adr-push-vapid-direct.md, not this module's rule, so the law is stated
+    // over every whole cap from zero upward.
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 8 }),
+        fc.integer({ min: 0, max: 8 }),
+        fc.integer({ min: 0, max: 20 }),
+        (subscribersAtFirstSpot, subscribersAtSecondSpot, declaredRunCap) => {
+          const firstSpot = playaVenao;
+          const secondSpot = { ...playaVenao, spot_id: 'santa-catalina', slug: 'santa-catalina', name: 'Santa Catalina' };
+          const subscriptionsFor = (spot: typeof playaVenao, count: number): StoredSub[] =>
+            Array.from({ length: count }, (_, index) => subscriptionWithBar(55, {
+              spot_id: spot.spot_id,
+              endpoint_hash: `${spot.spot_id}-suscriptor-${index + 1}`,
+            }));
+          const eligible = subscribersAtFirstSpot + subscribersAtSecondSpot;
+
+          const plan = planNotifications({
+            now: '2026-08-10T07:25:00-05:00',
+            spots: [firstSpot, secondSpot],
+            scores: { [firstSpot.spot_id]: 95, [secondSpot.spot_id]: 95 },
+            subscriptions: [
+              ...subscriptionsFor(firstSpot, subscribersAtFirstSpot),
+              ...subscriptionsFor(secondSpot, subscribersAtSecondSpot),
+            ],
+            default_threshold_score: fixtureServerThresholdScore,
+            run_cap: declaredRunCap,
+          });
+
+          assert.ok(plan && typeof plan === 'object', 'a capped run still returns a plan');
+          assert.equal(
+            plan.sends.length,
+            Math.min(declaredRunCap, eligible),
+            'one run sends at most its declared cap, counting every spot together',
+          );
+          assert.equal(
+            plan.deferred,
+            Math.max(0, eligible - declaredRunCap),
+            'what did not fit is carried as the deferred remainder',
+          );
+
+          // A write that escapes the cap would stamp last_notified_date on a
+          // subscriber who never received anything, costing them both the
+          // aviso and the follow-up that solicits their report.
+          assert.equal(plan.writes.length, plan.sends.length, 'the cap holds the dated writes to the sends it allowed');
+          assert.deepEqual(
+            plan.writes,
+            plan.sends.map((send) => ({
+              spot_id: send.spot_id,
+              endpoint_hash: send.endpoint_hash,
+              last_notified_date: '2026-08-10',
+            })),
+            'each allowed write belongs to an allowed send',
+          );
+
+          const announcements = plan.events.filter((event) => /cap|tope|skip|omit/i.test(event.kind));
+          assert.equal(
+            announcements.length,
+            plan.deferred > 0 ? 1 : 0,
+            'a remainder is announced, and a run that deferred nobody announces nothing',
+          );
+          assert.equal(
+            announcements[0]?.deferred,
+            plan.deferred > 0 ? plan.deferred : undefined,
+            'the announcement carries how many were left for later, never a silent truncation',
+          );
+        },
+      ),
+      { numRuns: 200 },
+    );
+  });
+
   it('reports at most one dated write and send for a subscriber across arbitrary runs in one spot-local day', () => {
     fc.assert(
       fc.property(
