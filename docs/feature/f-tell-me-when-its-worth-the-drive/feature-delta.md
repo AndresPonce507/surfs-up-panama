@@ -275,3 +275,30 @@ change.
 | Pre-requisite 9 | `adr-push-vapid-direct.md` Status is still **Proposed**. Noted; flipping it is Andres's or the DESIGN owner's, not this lane's. |
 | Pre-requisite 10 | Real-device smoke (iOS installed-PWA + Android) remains an open **launch-checklist item**. Not faked; no slice gate claims it. |
 | Pre-requisites 2, 3, 5, 6 | Still open. Steps 01-23 through 01-26 carry deploy-blocked obligations recorded as blocked, never faked; no stand-in endpoint was stood up. |
+
+## Wave: DELIVER / [REF] Pre-requisite 7 — push-host allowlist verified (2026-08-12)
+
+The allowlist shipped in sealed step 01-02 (`src/push/push-hosts.ts`, authored 2026-08-10 with
+in-file citations). Re-verified against current vendor documentation on 2026-08-12 by a read-only
+research pass at slice-01 close. Verdict: **all four entries CONFIRMED, no missing host, no list
+change needed.**
+
+| Entry | Verdict | Anchor source (accessed 2026-08-12) |
+|---|---|---|
+| `fcm.googleapis.com` (exact) | CONFIRMED. June-2024 FCM shutdown killed the legacy server API, not browser Web Push; both `/fcm/send/` and `/wp/` endpoint forms live on this bare host. Chrome, Edge-Android, Opera, Brave (when its Google-push setting is on; off = cannot subscribe at all) ride it. | developer.chrome.com/blog/web-push-interop-wins; groups.google.com/g/firebase-talk/c/3C2Vq9pIWr4; pushpad.xyz/blog/fcm-returns-404-for-stale-push-subscriptions |
+| `.push.apple.com` (suffix) | CONFIRMED. WebKit's own words: "allow URLs from `*.push.apple.com`". Observed production host `web.push.apple.com` sits on a label boundary under it. | webkit.org/blog/13878/web-push-for-web-apps-on-ios-and-ipados/; github.com/web-push-libs/webpush-java/issues/207 |
+| `.push.services.mozilla.com` (suffix) | CONFIRMED. Official autopush-rs HTTP docs show `updates.push.services.mozilla.com` in the send example while reserving the right to change any portion of the URL, which is exactly why the suffix shape is right. | mozilla-services.github.io/autopush-rs/http.html; pushpad.xyz/blog/what-are-the-browser-push-services |
+| `.notify.windows.com` (suffix) | CONFIRMED. Microsoft Learn (page updated 2026-07): validate the domain `notify.windows.com`, never the variable subdomain. Observed `wns2-*.notify.windows.com` hosts confirm. | learn.microsoft.com/en-us/windows/apps/develop/notifications/push-notifications/wns-overview; learn.microsoft.com/en-us/deployedge/microsoft-edge-browser-policies/forcebuiltinpushmessagingclient |
+
+Known-gaps claims in the file both hold, with two nuances flagged (not fixed — comment wording
+only, no behavior): (a) the legacy `android.googleapis.com/gcm/send` question has answered itself:
+GCM's server was removed 2019-05-29 and FCM prunes long-disconnected subscriptions, so a surviving
+legacy endpoint cannot receive a push; keep it excluded. (b) `updates-push.services.mozaws.net`
+does appear in Mozilla's own autopush-rs registration examples, so its provenance is Mozilla's
+after all; still rightly excluded as a legacy/dev example that would widen the list to a broad
+AWS-hosted space. One current upstream wrinkle, no action: recent Edge-Android builds are observed
+handing out the Chromium sentinel `permanently-removed.invalid` endpoint; the allowlist rejects it
+loudly by design, which is correct since pushes to it are undeliverable. Residual watch item:
+Samsung Internet rides FCM per 2016-era interop docs with no current vendor page naming its host;
+if its subscribers get rejected in production the loud reject names the host, which is the
+designed self-report.
