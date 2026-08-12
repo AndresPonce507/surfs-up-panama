@@ -729,6 +729,13 @@
       "s": "EXECUTED",
       "d": "GATE REGRESSION, found by running the authoritative local gate after the inert-height commit and fixed in the same step. npm run ci:local:fast returned 9 passed / 2 failed. The real one: the leak job found both report pages reaching pipeline/ports.ts through scoring/engine.ts -> learning/correction-file.ts, because c6237ed gave the engine a type-only import of the correction file and the gate reads import specifiers as source text, failing closed on purpose. Proven new to this step: the gate's own findForbiddenReportImports over a copy of src/ carrying 02-01's engine.ts returns 0 findings, over this tip 2. Fixed by moving the two record types into src/learning/correction-record.ts, a leaf with no imports, re-exported from correction-file.ts so nothing is restated and nothing can drift. Regression net in the same commit: the gate ran only inside ci:local, so tests/unit/report-leak-gate.test.ts now runs it against the REAL src tree, watched red on the pre-fix tree with the offending chain printed and green after. The second failure was environmental (stale .astro chunk under CDK asset fingerprinting) and passes on a clean run. Gate now 11 passed / 0 failed / 0 skipped; vitest 410/410 across 82 files; tsc exit 0.",
       "t": "2026-08-12T00:27:54Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "Two commits: 47803f9 makes the height lane inert and 5 files change (engine, both test files, contract, phase log); cc2a480 fixes the report-leak gate regression the first one exposed and adds the net that catches its class in the unit loop. Neither touches src/pipeline/build.ts; git show --stat over both names only this step's owned paths. A third party merged build/f2-deltas-slice04-05 into this branch at 19:27:38, between the two commits, bringing 76 lines of build.ts with it -- not this step's doing, and the call site still reads applyCorrection(spot, null). Everything re-verified on the post-merge tip: tsc exit 0, vitest 443/443 across 84 files, npm run ci:local:fast 11 passed / 0 failed / 0 skipped. HEAD carries no unclamped height path: memberHeightBiasOf, per_source, leadBucketOf and swell_h_m all appear zero times in the committed engine.ts, and all three memberHBias sites are the inert constant. Branch is not on origin; nothing pushed, nothing merged by this step.",
+      "t": "2026-08-12T00:32:09Z"
     }
   ]
 }
