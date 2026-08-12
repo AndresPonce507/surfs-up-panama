@@ -1,0 +1,12 @@
+{
+  "step_id": "01-17",
+  "timestamp": "2026-08-12T13:10:00Z",
+  "kind": "red-green",
+  "result": "PASS",
+  "evidence": {
+    "prepare": "The five el-aviso-en-el-telefono.feature scenarios were already present, unskipped, and reconciled onto this branch as the authoritative DISTILL oracle. src/push/notification-seat.ts did not exist here.",
+    "red_acceptance": "PASS, fail-for-right-reason gate met. 5 scenarios collected, 5 failed, every one at its own behaviour oracle rather than at collection: callDeclared captured the absence 'todavia no existe src/push/notification-seat.ts, que es de donde tiene que salir handlePush()' and the Then steps still asserted what they always meant to assert. 106 steps, 98 passed, 5 failed, 3 skipped. No collection error, no skip marker.",
+    "green": "Everything the seat needs comes from the payload. No fetch, no caches, no IndexedDB, no localStorage, on either handler.",
+    "gates": "5/5 el-aviso-en-el-telefono scenarios, 106/106 steps. 8/8 focused unit tests. typecheck clean. Full vitest 396 passed with the same 5 pre-existing failures the branch carried before this work. Full feature acceptance: baseline 26 passed / 29 failed, now 31 passed / 24 failed. Exactly these five scenarios flipped green and nothing regressed."
+  }
+}

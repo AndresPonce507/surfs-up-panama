@@ -1,0 +1,13 @@
+{
+  "step_id": "01-16",
+  "timestamp": "2026-08-12T13:10:00Z",
+  "kind": "red-green",
+  "result": "PASS",
+  "evidence": {
+    "prepare": "The five el-aviso-en-el-telefono.feature scenarios were already present, unskipped, and reconciled onto this branch as the authoritative DISTILL oracle. src/push/notification-seat.ts did not exist here.",
+    "red_acceptance": "PASS, fail-for-right-reason gate met. 5 scenarios collected, 5 failed, every one at its own behaviour oracle rather than at collection: callDeclared captured the absence 'todavia no existe src/push/notification-seat.ts, que es de donde tiene que salir handlePush()' and the Then steps still asserted what they always meant to assert. 106 steps, 98 passed, 5 failed, 3 skipped. No collection error, no skip marker.",
+    "red_unit": "The fixture was corrected to the real payload FIRST, and the unit property went red before any production edit: AssertionError 'the tag is the spot carried in the payload', expected 'playa-venao', received 'aviso'. The assertion itself is unchanged; only the fixture shape moved, from a shape nothing produces to the shape both authorities produce.",
+    "green": "REAL GAP FOUND AND FIXED. The cherry-picked seat read the notification tag from payload.spot_id. Nothing on the wire carries that key: the acceptance payload is { v, title, body, url, tag } and the production PlannedSend composed by plan-notifications.ts carries `tag` set to spot.spot_id. spot_id is a plan-side field, alongside endpoint_hash and ttl_seconds, that routes a send and never reaches the notification. Every aviso was therefore shown under the unreadable-payload fallback tag 'aviso', so two avisos of DIFFERENT spots would have replaced each other and the no-nagging rule this row states was inverted. The sibling lane's unit fixture masked it: VENAO_PAYLOAD declared spot_id and no tag, a shape nothing produces, so all eight of its unit tests passed against a seat reading the wrong key. Only the real reconciled oracle caught it.",
+    "gates": "5/5 el-aviso-en-el-telefono scenarios, 106/106 steps. 8/8 focused unit tests. typecheck clean. Full vitest 396 passed with the same 5 pre-existing failures the branch carried before this work. Full feature acceptance: baseline 26 passed / 29 failed, now 31 passed / 24 failed. Exactly these five scenarios flipped green and nothing regressed."
+  }
+}

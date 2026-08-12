@@ -1,0 +1,16 @@
+{
+  "step_id": "01-13",
+  "timestamp": "2026-08-12T13:10:00Z",
+  "kind": "reconciliation",
+  "result": "SUPERSEDED",
+  "supersedes_commit": "323445d",
+  "superseded_by_commit": "3f56685",
+  "evidence": {
+    "why": "Two sibling lanes implemented planSendReactions independently on top of 6eeb4fc, which carried no such function. build/f2-push-fresh landed 323445d and bb58e00; build/f2-push-notify-infra landed 7f4531e. This was an add/add collision, so one had to be chosen rather than both taken.",
+    "oracle_does_not_discriminate": "steps/push-server.steps.ts came from the merge base and is byte-identical on both lanes. It reads only `deletions`, and both implementations pass all five R20/R21 scenarios. 01-13's and 01-14's roadmap criteria also fail to discriminate. So the choice was decided by running each lane's unit properties against the other lane's implementation.",
+    "decisive_red": "notify-infra's properties FAIL against fresh's implementation on two real behaviours, both semantic AssertionErrors. (1) 'a gone answer for a destination this run never sent to is evidence about nothing' - fresh ignores its own declared `sends` input (its comment states 'the rule does not read this') and prunes on any gone-status response, so a mismatched or replayed 410 deletes a LIVE subscription. (2) 'every pruned destination leaves a loud witness naming it' - fresh returns events: [] unconditionally. The reverse does not hold: fresh's pruning properties pass against notify-infra's implementation, which is a strict superset of observable behaviour.",
+    "pruneevent_overrule": "The named push_subscription_pruned witness is a DELIVER overrule, taken under this step's own invitation ('NAMED BY NO DOCUMENT ... if DELIVER prefers a different name or a different module, say so in the step evidence'). 07-write-path.md section 8.4 attaches LOUD to the run-cap skip only: 'per-run send cap 10,000 with a LOUD skip event past it; 404/410/403 responses prune the item on first send'. No document requires a witness on prune. Kept because it makes `events` mean something on the same module whose planNotifications already announces notification_run_cap_reached, and because a subscription deleted with no witness is a subscriber lost with nobody to notice.",
+    "gone_set_unchanged": "404, 410, 403 exactly, per section 8.4 and adr-push-vapid-direct.md decision 4. The oracle writes the set from the specification and never imports the production constant, so an implementation that widened it cannot make its own oracle agree with it.",
+    "no_test_lost": "notify-infra never carried step 01-12's run-cap property (f1b43bb, the fresh lane's own commit). Taking its test file wholesale would have silently deleted a passing test. The merged file carries fresh's run-cap property PLUS notify-infra's two planSendReactions properties. Verified present, verified falsifiable: dropping the loud cap event fails the run-cap property and its scenario alone."
+  }
+}

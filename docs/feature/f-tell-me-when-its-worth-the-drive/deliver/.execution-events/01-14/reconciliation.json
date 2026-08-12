@@ -1,0 +1,14 @@
+{
+  "step_id": "01-14",
+  "timestamp": "2026-08-12T13:10:00Z",
+  "kind": "reconciliation",
+  "result": "SUPERSEDED",
+  "supersedes_commit": "bb58e00",
+  "superseded_by_commit": "3f56685",
+  "evidence": {
+    "why": "Same add/add collision as 01-13. See 01-13/reconciliation.json for the full comparison and the decisive RED that chose build/f2-push-notify-infra's implementation.",
+    "law_preserved": "The partition is unchanged and is still stated as a partition rather than a list: the whole 100-599 status space splits into a gone set that prunes and everything else that does not. The replacement property samples the gone set densely via fc.constantFrom(403, 404, 410) oneof'd with fc.integer({min:100,max:599}), and it still asserts the reaction was PRODUCED, so a zero-deletion answer stays distinguishable from a run that never decided.",
+    "falsification_reprosecuted": "The roadmap's own prescribed break was re-run against the replacement implementation, not inherited from the previous record. isGone widened to every non-2xx status: ONLY 'Un fallo pasajero del servicio de avisos no borra a nadie' failed. 01-13's three gone-status examples and 01-12's run cap stayed green, 4 of 5 scenarios passing. Reverted with a file restore; `diff` against the saved original reported identical and `git status` was clean.",
+    "gates": "Focused properties 7/7. R20/R21 acceptance 5/5. typecheck clean. Full vitest 396 passed with the same 5 pre-existing failures the branch carried before this work, byte-identical failure list."
+  }
+}
