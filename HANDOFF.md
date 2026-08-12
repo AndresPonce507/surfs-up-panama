@@ -1,6 +1,83 @@
-# CURRENT HANDOFF: 2026-08-11 11:45 Panama
+# CURRENT HANDOFF: 2026-08-12 Panama
 
 This section supersedes the legacy notes below. They are retained only as historical context.
+
+## Live incident (verified live 2026-08-12 via CLI, not from memory)
+
+- **Every hourly Fetch invocation has crashed with AccessDenied since the Ingest stack deployed
+  2026-08-11.** Root cause: `ingest.ts`'s frozen-cycle check calls `listPredictions` then
+  `getPrediction`, but the stack granted only `PutObject` on raw/predictions/probes — never read
+  or list. Fix is `fix/ingest-fetch-list-permission` (`5813a81`, regression test proven
+  falsifiable; also carried as `a74c9b1` on `release/deliver-20260812`), landing today at the
+  head of the train.
+- **Consequence: `predictions/` on the site bucket is EMPTY since deploy** (KeyCount 0 via
+  s3api). The archive cannot be backfilled; every hour before the fix deploys is a permanent gap.
+- **Both dead-man alarms are in ALARM**: `surfs-up-panama-dead-mans-switch` and
+  `surfs-up-panama-build-dead-mans-switch`. Expected given the above; they must clear after the
+  fix deploys and a real Fetch/Build cycle runs.
+
+## Andres's four rulings today (2026-08-12)
+
+1. **Push threshold — STAGED.** Hidden server default of 70 now; no surfer-facing number
+   anywhere in push slice-01. The surfer-facing picker ships in push slice-04. Recorded in the
+   push workspace (`5ab6c96` on `build/f2-push-slice01-close`).
+2. **A2HS avisos copy — softened until push is live.** The home-page add-to-home-screen hint
+   must not promise avisos that cannot arrive yet. Branch `fix/a2hs-avisos-copy` is cut; the
+   copy change itself is still pending on it.
+3. **Learning evaluation — metrics-only, kill via metrics.** The monthly evaluation publishes
+   its kill verdict into `learned/metrics/v1/` and the correction-apply lane consumes it at
+   apply time; the evaluation job holds no `learned/corrections/` write access. Amended into
+   `adr-correction-gates-and-clamps.md` decision 3.
+4. **ADR review-and-flip policy.** Every Proposed ADR gets reviewed against what is actually
+   built: conforming ADRs flip to Accepted with a dated amendment; diverging ones stay Proposed
+   with a dated review note naming the divergence. Applied today: correction-gates-and-clamps
+   and pooling-hierarchy-activation → Accepted (amended); per-reporter-offset-estimator,
+   anonymous-credential-trust-tiers, and scorecard-incremental stay Proposed with notes.
+
+## Scope change
+
+- **F-READ-IT-IN-YOUR-LANGUAGE (i18n) is DROPPED from scope** by Andres 2026-08-12. Workspace
+  parked on `build/f2-i18n`; the `/en/` routes from Design 07 remain live and are not removed.
+
+## Landing train (merge order) and lane map
+
+Order: **paste-fix + IAM-fix → deltas 04-05 → learning → report 04-05 → record 01-02 →
+push 01-12..19 → new lane branches.**
+
+| Lane | Branch | State |
+|---|---|---|
+| paste-fix | `release/deliver-20260812` (`a0742a4`) | share-host acceptance repair, ready |
+| IAM-fix | `fix/ingest-fetch-list-permission` (`5813a81`) | ready, heads the train with paste-fix |
+| deltas (F-SEE-WHAT-KILLED-IT) | `build/f2-deltas-slice04-05` | slices 04-05 execution records sealed |
+| learning | `build/f2-learning-01-14-18` | offset backfit `d7e2236` landed on the lane today |
+| report (F-TELL-US) | `build/f2-report-fresh` | acceptance host + call-log reader in progress |
+| record (F-SHOW-OUR-TRACK-RECORD) | `build/f2-record-fresh` | scorecard slices 01-02 built; slice-03 blocked |
+| push | `build/f2-push-merged`, `build/f2-push-slice01-close` | 01-13..01-19 merge evidence recorded |
+| docs truth | `docs/truth-reconciliation-20260812` | this lane; merges LAST |
+
+## Report production activation is UNBLOCKED
+
+The Write stack is deployed (`SurfsUpPanamaWrite`, CREATE_COMPLETE) and both Function URLs are
+live, verified via CloudFormation outputs today:
+
+- Mint: `https://fywirn4raf3hgqdtx3364ortfi0gyerv.lambda-url.us-east-1.on.aws/`
+- Report: `https://jeimgjzdfxzkcxjpnrzsdrxmhe0mzxkb.lambda-url.us-east-1.on.aws/`
+
+Remaining activation work, unchanged from the 2026-08-11 handoff: rebuild with
+`PUBLIC_REPORT_MINT_URL` / `PUBLIC_REPORT_SUBMIT_URL`, publish the static files, then a real
+browser submit/replay smoke. Do not claim the report path is live before that.
+
+## Trackers reconciled today
+
+The epic feature-plan table, the daily-call slice plan (06-08 shipped), and the paste
+`.develop-progress.json` (16/16) were reconciled against main on this lane. ADR statuses per
+ruling 4 above.
+
+---
+
+# LEGACY HANDOFF: 2026-08-11 11:45 Panama
+
+Retained as historical context; superseded by the 2026-08-12 section above.
 
 ## Exact restart point
 
