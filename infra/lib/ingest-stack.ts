@@ -218,7 +218,11 @@ export class IngestStack extends Stack {
     buildFn.grantInvoke(schedulerRole);
     new scheduler.CfnSchedule(this, 'HourlySchedule', {
       name: 'surfs-up-panama-hourly',
-      description: 'Hourly ingest at :17',
+      // Description carries a revision marker on purpose: rewriting this
+      // resource is how CloudFormation repairs out-of-band state drift (a
+      // console-disabled schedule stays disabled until CFN touches the
+      // resource again, because ENABLED here matches CFN's stale view).
+      description: 'Hourly ingest at :17 (r2, re-enabled 2026-08-12 after incident containment)',
       scheduleExpression: 'cron(17 * * * ? *)',
       scheduleExpressionTimezone: 'UTC',
       state: 'ENABLED',
@@ -232,7 +236,7 @@ export class IngestStack extends Stack {
     });
     new scheduler.CfnSchedule(this, 'BuildSchedule', {
       name: 'surfs-up-panama-build-hourly',
-      description: 'Hourly build at :22, five minutes after fetch',
+      description: 'Hourly build at :22, five minutes after fetch (r2, re-enabled 2026-08-12)',
       scheduleExpression: 'cron(22 * * * ? *)',
       scheduleExpressionTimezone: 'UTC',
       state: 'ENABLED',
