@@ -145,6 +145,17 @@ export const SELECTION_WEIGHT_CAP = 3;
 export const PROPENSITY_WINDOW_DAYS = 90;
 
 /**
+ * adr-per-reporter-offset-estimator ("over the trailing 90-day sample
+ * window") and 06 section 5.2 ("Per nightly run, over the trailing 90-day
+ * window of samples"; section 8's table, "Fit window | trailing 90 d"): how
+ * far back the nightly fit reads the observation log. Same value as
+ * PROPENSITY_WINDOW_DAYS today, but a separate declared row -- that constant
+ * bounds the call-log propensity denominator (06 section 6.3), this one
+ * bounds what the backfit itself ever reads. Same number, different law.
+ */
+export const FIT_WINDOW_DAYS = 90;
+
+/**
  * tau_u, 06 section 5.2: the per-reporter offset is shrunk toward ZERO by
  * `n_r / (n_r + tau_u)`. Derived there from sigma_eff ~= 0.48 m against a
  * between-reporter spread sigma_u ~= 0.25 m: 0.48^2 / 0.25^2 ~= 3.7, rounded

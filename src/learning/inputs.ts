@@ -107,19 +107,51 @@ function parseJsonLines(body: string): Record<string, unknown>[] {
 }
 
 /**
- * Every session reported in the log, read in key order. An absent day is an
- * absent key, never a zero-filled one, so a log nobody wrote reads as no rows
- * rather than as rows that say nothing happened.
+ * Every session reported in the log within the trailing fit window
+ * (06-learning-layer.md section 5.2, section 8's "Fit window | trailing
+ * 90 d"; adr-per-reporter-offset-estimator), read in key order. An absent day
+ * is an absent key, never a zero-filled one, so a log nobody wrote reads as
+ * no rows rather than as rows that say nothing happened.
+ *
+ * Observation keys are partitioned by day (`dt=<date>/reports.jsonl`), so the
+ * window is enforced at the KEY level: a whole day outside the window is
+ * never fetched, not merely dropped after the GET, keeping both the LIST and
+ * the GET bounded as the log grows past ninety days of history.
+ *
+ * `oldest` is the caller's boundary, not this module's: fit.ts holds the
+ * clock and computes it the same way it already computes
+ * `publishedCallsWithin`'s own `oldest` for the call log, per the rule at the
+ * top of src/pipeline/ports.ts that nothing in this lane reads the ambient
+ * clock.
  */
-export async function readObservationLog(store: LearningInputStore): Promise<ObservationRow[]> {
+export async function readObservationLog(
+  store: LearningInputStore,
+  oldest: Date,
+): Promise<ObservationRow[]> {
   const keys = await store.list(OBSERVATION_LOG_PREFIX);
   const reported: ObservationRow[] = [];
   for (const key of keys) {
+    if (!keyIsWithinFitWindow(key, oldest)) continue;
     const body = await store.get(key);
     if (body === null) continue;
     reported.push(...(parseJsonLines(body) as ObservationRow[]));
   }
   return reported;
+}
+
+/**
+ * True unless the key's `dt=<date>` day is strictly older than `oldest`,
+ * mirroring fit.ts's `publishedCallsWithin` boundary exactly: the day itself
+ * (midnight UTC) compared against the caller's `oldest` instant, day < oldest
+ * excluded, day >= oldest kept. A key whose day this reader cannot parse is
+ * kept rather than dropped: the same permissive-read stance this module takes
+ * on rows applies to a key shape this bound was not told to expect -- silence
+ * about a day it does not recognise must never look like an honest exclusion.
+ */
+function keyIsWithinFitWindow(key: string, oldest: Date): boolean {
+  const match = /dt=(\d{4}-\d{2}-\d{2})/.exec(key);
+  if (match === null) return true;
+  return new Date(`${match[1]}T00:00:00Z`).getTime() >= oldest.getTime();
 }
 
 /**
