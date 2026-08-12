@@ -18,11 +18,13 @@ import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
 import { OPEN_ENDED_SIZE_BAND, sizeBands, type SizeBandToken } from '../../src/data/size-bands';
-import type { StoredCorrection } from '../../src/learning/correction-file';
+import { CORRECTIONS_PREFIX, type StoredCorrection } from '../../src/learning/correction-file';
 import { TOP_BAND_NOMINAL_M } from '../../src/learning/constants';
+import { runMonthlyEvaluationOnce } from '../../src/learning/evaluate';
 import type { ObservationRow, PredictionRow } from '../../src/learning/inputs';
 import { buildMonthlyMetrics } from '../../src/learning/metrics';
 import { hEff } from '../../src/scoring/engine';
+import { FixedClock, InMemoryStore } from '../acceptance/daily-call-with-permanent-receipts/steps/support/fakes';
 
 const sizeBandToken = fc.constantFrom(...sizeBands.map((band) => band.value));
 const qualityToken = fc.constantFrom('bad', 'ok', 'good', 'epic');
@@ -318,6 +320,75 @@ describe('buildMonthlyMetrics: shrinkage, one row per gated spot read off the co
       metrics.shrinkage,
       [],
       'a correction file with no applied key has nothing gated to report, and must never appear as a phantom row',
+    );
+  });
+});
+
+describe('runMonthlyEvaluationOnce: the real store is read, not bypassed', () => {
+  // Every property above drives buildMonthlyMetrics directly, which never
+  // touches src/learning/evaluate.ts's own readCurrentCorrections --
+  // the store list() call, the get() call, and parseStoredCorrection's three
+  // refusal branches all go unexercised by a fixture with zero correction
+  // files (this step's AT included). These two examples close that gap by
+  // driving the real port against the same InMemoryStore fake
+  // tests/unit/learning-fit-outcome.test.ts already uses for the nightly fit.
+
+  function correctionRecord(spotId: string, keys: readonly { lead: string; n: number; reporters: number; shrunkFromGlobal: number }[]): StoredCorrection {
+    const perLead: Record<string, { b: number; se: number; n: number; reporters: number; applied: boolean; shrunk_from_global: number }> = {};
+    for (const key of keys) {
+      perLead[key.lead] = {
+        b: -0.18,
+        se: 0.09,
+        n: key.n,
+        reporters: key.reporters,
+        applied: true,
+        shrunk_from_global: key.shrunkFromGlobal,
+      };
+    }
+    return {
+      spot_id: spotId,
+      schema: 'spot-correction/1',
+      computed_at: '2026-08-09T07:00:00.000Z',
+      bias: { swell_h_m: { per_source: { ncep_gfswave016: perLead } } },
+      clamp: { max_abs_h_frac: 0.4, max_abs_score: 12 },
+    };
+  }
+
+  it('reads a stored correction with two applied keys off the real store, and the metrics file it writes carries the fullest one', async () => {
+    const store = new InMemoryStore();
+    const correction = correctionRecord('playa-venao', [
+      { lead: 'lead_12_24', n: 20, reporters: 6, shrunkFromGlobal: 0.5 },
+      { lead: 'lead_24_48', n: 50, reporters: 9, shrunkFromGlobal: 0.3 },
+    ]);
+    await store.put(`${CORRECTIONS_PREFIX}current/playa-venao.json`, JSON.stringify(correction));
+
+    const outcome = await runMonthlyEvaluationOnce({ store, clock: new FixedClock('2026-08-09T07:00:00Z') });
+    assert.equal(outcome.completed, true);
+
+    const body = await store.get(outcome.metrics_key);
+    assert.ok(body, 'the run must write the metrics file it names in its own outcome');
+    const metrics = JSON.parse(body!) as { shrinkage: { spot_id: string; shrink_weight: number; n: number; reporters: number }[] };
+
+    assert.deepEqual(
+      metrics.shrinkage,
+      [{ spot_id: 'playa-venao', shrink_weight: 0.3, n: 50, reporters: 9, flagged: false }],
+      'the shrinkage row must be the fullest applied key (n=50) read straight off the real stored correction, never the emptier one (n=20)',
+    );
+  });
+
+  it('reads an unparseable correction byte as absent rather than crashing the run', async () => {
+    const store = new InMemoryStore();
+    await store.put(`${CORRECTIONS_PREFIX}current/santa-catalina.json`, 'not valid json at all');
+
+    const outcome = await runMonthlyEvaluationOnce({ store, clock: new FixedClock('2026-08-09T07:00:00Z') });
+    assert.equal(outcome.completed, true, 'a corrupt correction byte must not abort the run');
+
+    const body = await store.get(outcome.metrics_key);
+    const metrics = JSON.parse(body!) as { shrinkage: unknown[] };
+    assert.deepEqual(
+      metrics.shrinkage,
+      [],
+      'a byte nobody can parse names nobody: it must be read as absent, not as a phantom shrinkage row',
     );
   });
 });

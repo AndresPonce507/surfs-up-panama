@@ -166,6 +166,17 @@ function pairwiseCountOf(observations: readonly ObservationRow[]): number {
  * spot before it ever calls `formHeightResidualRows`. This loop does the
  * same, spot by spot, so a key here is always (spot, source, lead_bucket),
  * matching 06 section 2's consumer table join key of `(month, spot_id)`.
+ *
+ * The three parts join on a double colon, not a plain space: `spot_id` and
+ * `source` both come off permissively-parsed log rows (src/learning/inputs.ts
+ * rejects nothing), so either could legally contain a space, and a
+ * space-joined key can collide two different (spot, source) pairs into one
+ * bucket. A double colon is not a realistic slug character in either field
+ * (source names and spot ids are hyphenated identifiers throughout this
+ * codebase's fixtures and seeds), which is a weaker guarantee than a
+ * genuinely unrepresentable separator but is honestly what this map key
+ * needs: a display-safe string with a low collision chance, not a security
+ * boundary.
  */
 function maeOf(
   observations: readonly ObservationRow[],
@@ -178,7 +189,7 @@ function maeOf(
   for (const spotId of spotsReportedIn(observations)) {
     const spotObservations = observations.filter((observation) => observation.spot_id === spotId);
     for (const row of formHeightResidualRows(spotObservations, predictions)) {
-      const key = `${spotId} ${row.source} ${row.leadBucket}`;
+      const key = spotId + "::" + row.source + "::" + row.leadBucket;
       const entry =
         byKey.get(key) ?? { spot_id: spotId, source: row.source, lead_bucket: row.leadBucket, absErrors: [] };
       entry.absErrors.push(Math.abs(row.sample.value));
