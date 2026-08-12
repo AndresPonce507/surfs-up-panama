@@ -82,6 +82,7 @@ import {
   type StaticMapPolicy,
 } from '../../../../src/publish/static-map-policy';
 import { planStaticMaps, writeStaticMaps } from '../../../../scripts/generate-static-maps';
+import trackedMapManifestJson from '../../../../data/maps/pa-pacific-map-manifest.json' with { type: 'json' };
 import { renderStaticMapDiagram } from '../../../../src/publish/static-map-diagram';
 import { loadLaunchSpotOrientations } from '../../../../src/pipeline/adapters/spot-coordinates';
 
@@ -851,6 +852,8 @@ type Slice01World = PipelineWorld & {
   killedItCounterfactualRefusal?: PublishRefusal;
   killedItHourlyVerdicts?: { readonly fresh: PublishRefusal; readonly malformed: PublishRefusal };
   killedItBreakdownVisual?: RawVisualAudit;
+  killedItMapReading?: MapReading;
+  killedItMapVisual?: RawVisualAudit;
   /** The theme and motion the scenario opened with, so a second page can match them. */
   killedItTheme?: string;
   killedItMovement?: string;
@@ -1170,6 +1173,8 @@ When(
     world.killedItReading = await openSpot(world, spotId, width, theme, movement);
     world.killedItVisual = await auditVisualQuality(requiredPage(world));
     world.killedItBreakdownVisual = await auditBreakdownQuality(requiredPage(world));
+    world.killedItMapReading = await readStaticMap(requiredPage(world));
+    world.killedItMapVisual = await auditMapQuality(requiredPage(world));
   },
 );
 
@@ -2612,6 +2617,11 @@ type MapDecisionsUnderTest = {
 const URL_SCHEME = /https?:\/\//iu;
 const RAW_DEGREE = /\d\s*(?:°|deg\b|grados\b)/iu;
 
+/** The committed manifest, as the page reads it. */
+function trackedMapManifest(): StaticMapManifest {
+  return trackedMapManifestJson as unknown as StaticMapManifest;
+}
+
 /** The tracked artefacts, read from the worktree. Never written by a test. */
 function loadStaticMapPolicy(): StaticMapPolicy {
   return parseStaticMapPolicy(
@@ -2965,6 +2975,216 @@ Then(
     );
   },
 );
+
+// ------------------------------------------- slice-05: the rendered figure --
+
+type MapReading = {
+  readonly figures: number;
+  readonly alt: string | null;
+  readonly caption: string | null;
+  readonly src: string | null;
+  readonly loading: string | null;
+  readonly declaredWidth: string | null;
+  readonly declaredHeight: string | null;
+  readonly frameAspectRatio: string;
+  readonly frameBackground: string;
+  readonly frameHasSize: boolean;
+  readonly spinners: number;
+  readonly figureOverflows: boolean;
+};
+
+async function readStaticMap(page: Page): Promise<MapReading> {
+  return page.evaluate(() => {
+    const figures = document.querySelectorAll('[data-field="static-map"]');
+    const figure = figures[0] ?? null;
+    const image = figure?.querySelector('img') ?? null;
+    const frame = figure?.querySelector('.img-frame') ?? null;
+    const frameStyle = frame === null ? null : getComputedStyle(frame);
+    const frameRect = frame?.getBoundingClientRect();
+    return {
+      figures: figures.length,
+      alt: image?.getAttribute('alt') ?? null,
+      caption: (figure?.querySelector('figcaption') as HTMLElement | null)?.innerText.trim() ?? null,
+      src: image?.getAttribute('src') ?? null,
+      loading: image?.getAttribute('loading') ?? null,
+      declaredWidth: image?.getAttribute('width') ?? null,
+      declaredHeight: image?.getAttribute('height') ?? null,
+      frameAspectRatio: frameStyle?.aspectRatio ?? '',
+      frameBackground: frameStyle?.backgroundColor ?? '',
+      frameHasSize: (frameRect?.width ?? 0) > 0 && (frameRect?.height ?? 0) > 0,
+      spinners: figure?.querySelectorAll('[role="progressbar"], .spinner, .skeleton').length ?? 0,
+      figureOverflows: figure === null
+        ? false
+        : (figure as HTMLElement).scrollWidth > document.documentElement.clientWidth,
+    };
+  });
+}
+
+async function auditMapQuality(page: Page): Promise<RawVisualAudit> {
+  return page.evaluate(() => {
+    const figures = [...document.querySelectorAll('[data-field="static-map"]')];
+    const cells = figures.flatMap((figure) => [...figure.querySelectorAll('figcaption, .img-frame')]);
+    const pieces = cells.map((el) => {
+      let backdrop = 'rgba(0, 0, 0, 0)';
+      let node: Element | null = el;
+      while (node !== null) {
+        const candidate = getComputedStyle(node).backgroundColor;
+        if (candidate !== 'rgba(0, 0, 0, 0)' && candidate !== 'transparent') {
+          backdrop = candidate;
+          break;
+        }
+        node = node.parentElement;
+      }
+      const style = getComputedStyle(el);
+      return {
+        day: el.tagName.toLowerCase(),
+        color: style.color,
+        backdrop,
+        fontSize: style.fontSize,
+        lineHeight: style.lineHeight,
+      };
+    });
+    const taps = figures.flatMap((el) => [...el.querySelectorAll('a,button,summary,[role="button"],input,select')].map((control) => {
+      const rect = control.getBoundingClientRect();
+      return { where: `mapa ${control.tagName.toLowerCase()}`, width: rect.width, height: rect.height };
+    }));
+    const cta = document.querySelector('a.cta')?.getBoundingClientRect();
+    const moving = matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? figures
+        .flatMap((el) => [el, ...el.querySelectorAll('*')])
+        .filter((el) => getComputedStyle(el).transitionDuration.split(',').some((duration) => Number.parseFloat(duration) > 0)
+          || getComputedStyle(el).animationName !== 'none')
+        .map(() => 'el mapa')
+      : [];
+    const loadingCount = figures.filter((el) => el.querySelector('[role="progressbar"], .spinner, .skeleton') !== null).length;
+    const inlineHex = figures
+      .flatMap((el) => [el, ...el.querySelectorAll('*')])
+      .filter((el) => /#[0-9a-f]{3,8}/i.test(el.getAttribute('style') ?? '')).length;
+    return {
+      pieces,
+      taps,
+      ctaWidth: cta?.width ?? 0,
+      ctaHeight: cta?.height ?? 0,
+      moving,
+      loadingCount,
+      inlineHex,
+      reducedMotion: matchMedia('(prefers-reduced-motion: reduce)').matches,
+    };
+  });
+}
+
+Then(
+  'el mapa de su playa aparece una sola vez, con su crédito visible y su texto alternativo en español',
+  function (this: PipelineWorld) {
+    const world = world01(this);
+    const map = world.killedItMapReading;
+    assert.ok(map, 'test fixture error: the map was never read');
+    const { spotId } = plannedFor(world.killedItOpened ?? '');
+    const row = trackedMapManifest().spots[spotId];
+    assert.ok(row, `test fixture error: ${spotId} has no approved map to read`);
+    const findings: string[] = [];
+
+    if (map.figures !== 1) findings.push(`la playa muestra ${map.figures} mapas`);
+    if (map.src !== row.path) findings.push(`el mapa sirve ${map.src} y su ficha acredita ${row.path}`);
+    if (map.caption !== row.caption) findings.push(`el crédito visible dice "${map.caption}" y no lo que acredita su ficha`);
+    if (map.alt === null || map.alt.trim().length < 20) {
+      findings.push(`el texto alternativo del mapa no explica nada: "${map.alt}"`);
+    }
+    for (const [label, text] of [['el crédito', map.caption], ['el texto alternativo', map.alt]] as const) {
+      if (text === null) continue;
+      if (EM_DASH.test(text)) findings.push(`${label} usa un guión largo`);
+      if (URL_SCHEME.test(text)) findings.push(`${label} muestra una dirección cruda`);
+      if (RAW_DEGREE.test(text)) findings.push(`${label} muestra grados crudos`);
+      if (CODE_LEAK.test(text)) findings.push(`${label} filtra una palabra del código: "${text}"`);
+    }
+
+    assertBehavior(
+      findings,
+      'montar una sola figura por playa, servir exactamente el archivo que su ficha acredita, mostrar ese crédito a la vista y describir el diagrama en español para quien no puede verlo.',
+    );
+  },
+);
+
+Then(
+  'el mapa reserva su espacio y llega tarde, sin girar una rueda ni pedir nada al abrir',
+  function (this: PipelineWorld) {
+    const world = world01(this);
+    const map = world.killedItMapReading;
+    assert.ok(map, 'test fixture error: the map was never read');
+    const findings: string[] = [];
+
+    if (map.loading !== 'lazy') findings.push(`la imagen del mapa carga con loading="${map.loading}"`);
+    if (map.declaredWidth === null || map.declaredHeight === null) {
+      findings.push('la imagen del mapa no declara su tamaño, así que la página salta cuando llega');
+    }
+    // A reserved frame is the whole degrade surface: the alt text renders inside
+    // it when the image never arrives, and nothing moves when it does.
+    if (map.frameAspectRatio === 'auto' || map.frameAspectRatio === '') {
+      findings.push('el recuadro del mapa no reserva su proporción antes de que llegue la imagen');
+    }
+    if (!map.frameHasSize) findings.push('el recuadro del mapa ocupa cero espacio antes de cargar');
+    if (map.frameBackground === 'rgba(0, 0, 0, 0)' || map.frameBackground === '') {
+      findings.push('el recuadro del mapa es invisible, así que un fallo de carga no deja nada donde estaba');
+    }
+    if (map.spinners > 0) findings.push('el mapa muestra una rueda de carga');
+    if (map.figureOverflows) findings.push('el mapa desborda el ancho de la pantalla');
+    if (map.src !== null && !map.src.startsWith('/maps/')) {
+      findings.push(`el mapa pide su imagen a ${map.src}, fuera del propio sitio`);
+    }
+
+    assertBehavior(
+      findings,
+      'reservar el espacio del mapa con su propia proporción y su fondo hundido, cargarlo tarde desde el propio sitio, y dejar que el texto alternativo ocupe ese mismo recuadro cuando la imagen no llega: sin rueda, sin salto y sin pedido a nadie más.',
+    );
+  },
+);
+
+Then('el mapa cumple las siete comprobaciones visuales sobre el fondo real', function (this: PipelineWorld) {
+  const world = world01(this);
+  const reading = requiredReading(world);
+  const audit = world.killedItMapVisual;
+  assert.ok(audit, 'test fixture error: the map visual audit was never taken');
+  const findings: string[] = [];
+
+  if (audit.pieces.length < 2) {
+    findings.push(`U1/U5: se esperaban el recuadro y el crédito del mapa y hay ${audit.pieces.length} piezas; no hay nada que medir contra el fondo real`);
+  }
+  for (const piece of audit.pieces) {
+    const foreground = parseRgb(piece.color);
+    const background = parseRgb(piece.backdrop);
+    if (foreground === null || background === null) {
+      findings.push(`U1: no se pudo medir el contraste de ${piece.day}`);
+      continue;
+    }
+    const ratio = contrastRatio(foreground, background);
+    if (ratio < 4.5) findings.push(`U1: ${piece.day} queda en ${ratio.toFixed(2)}:1 sobre su fondo real`);
+    const fontSize = Number.parseFloat(piece.fontSize);
+    const lineHeight = Number.parseFloat(piece.lineHeight);
+    if (!Number.isFinite(fontSize) || fontSize < 14) findings.push(`U6: ${piece.day} se compone a ${piece.fontSize}`);
+    if (Number.isFinite(lineHeight) && Number.isFinite(fontSize) && lineHeight < fontSize * 1.2) {
+      findings.push(`U6: ${piece.day} tiene un interlineado apretado (${piece.lineHeight} sobre ${piece.fontSize})`);
+    }
+  }
+  if (reading.scrollWidth > reading.clientWidth) {
+    findings.push(`U2: la página desborda a 390 px con el mapa montado (${reading.scrollWidth} > ${reading.clientWidth})`);
+  }
+  for (const tap of audit.taps) {
+    if (tap.width < 44 || tap.height < 44) findings.push(`U3: ${tap.where} mide ${Math.round(tap.width)} por ${Math.round(tap.height)} px`);
+  }
+  if (audit.ctaWidth < 44 || audit.ctaHeight < 44) {
+    findings.push(`U3: el llamado a reportar quedó desplazado u ocluido (${Math.round(audit.ctaWidth)} por ${Math.round(audit.ctaHeight)} px)`);
+  }
+  if (audit.moving.length > 0) findings.push('U4: con movimiento reducido el mapa sigue animándose');
+  if (audit.loadingCount !== 0) findings.push('U5: el mapa muestra carga artificial en vez de su recuadro reservado');
+  if (audit.inlineHex !== 0) findings.push('U7: el mapa trae color en crudo en su atributo de estilo, en vez de un token');
+  const gate = requiredHarness().uiGate;
+  if (gate.status !== 0) findings.push(`U2/U4/U6/U7: el gate visual de la superficie falló: ${gate.output.trim()}`);
+
+  assertBehavior(
+    findings,
+    'construir el mapa con los tokens y la escala tipográfica ya declarados, medido sobre el fondo real de la página en los dos temas, no sobre blanco.',
+  );
+});
 
 // ---------------------------------------------------------------- cleanup --
 

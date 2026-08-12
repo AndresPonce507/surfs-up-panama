@@ -51,6 +51,12 @@ interface ReportCaptureStrings {
 
 interface SpotStrings {
   readonly reportCta: string;
+  /**
+   * The map's alternative text. It is not decoration: when the image does not
+   * load, this sentence IS the map, so it has to say what the diagram shows
+   * rather than name the file. No degrees, no tokens, no English.
+   */
+  readonly mapAlt: (spotName: string) => string;
 }
 
 interface ThemeStrings {
@@ -104,6 +110,8 @@ export const strings: Record<Locale, UiStrings> = {
     },
     spot: {
       reportCta: '¿ESTUVISTE? CUÉNTANOS', // verbatim (section 14 wireframe)
+      mapAlt: (spotName) =>
+        `Diagrama de orientación de ${spotName}. El punto marca el break y la flecha señala hacia dónde mira, con el norte arriba.`,
     },
     theme: {
       activateDark: 'Activar modo oscuro',
@@ -141,6 +149,8 @@ export const strings: Record<Locale, UiStrings> = {
     },
     spot: {
       reportCta: '[report CTA copy pending]', // no exact English copy exists yet
+      mapAlt: (spotName) =>
+        `Orientation diagram for ${spotName}. The dot marks the break and the arrow shows which way it faces, north up.`,
     },
     theme: {
       activateDark: 'Switch to dark mode',

@@ -25,6 +25,7 @@ import { formatBestWindowEs, formatSizeEs, formatUpdatedAtEs } from '../publish/
 import type { LinkAnnouncement } from '../share/link-announcement';
 import Breakdown from './Breakdown.astro';
 import WeakestLink from './WeakestLink.astro';
+import StaticMap from './StaticMap.astro';
 import TrackRecordBox from './TrackRecordBox.astro';
 
 interface Props {
@@ -113,6 +114,7 @@ const tomorrow = summaryFor(1);
       )
     }
   </section>
+  <StaticMap locale={locale} spotId={spotId} spotName={spot.name} />
   <TrackRecordBox spotId={spotId} />
   {
     shareCall !== undefined && shareHref !== undefined ? (

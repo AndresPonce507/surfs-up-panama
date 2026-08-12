@@ -235,3 +235,16 @@ Feature: La playa dice qué fue lo que la tumbó
     Given la semilla que dice hacia dónde mira cada playa
     When la construcción dibuja los mapas, luego gira una sola playa, y luego le borra la orientación a otra
     Then cada flecha sale de la orientación declarada de su propia playa, girar una mueve solo su mapa, y la playa sin orientación usable se queda sin mapa
+
+  @slice-05 @driving_port @real-io @adapter-integration @ui-u1 @ui-u2 @ui-u3 @ui-u4 @ui-u5 @ui-u6 @ui-u7 @covers-R18 @covers-R21 @covers-R22 @covers-R23 @covers-R24 @covers-R25 @covers-R26 @covers-R27
+  Scenario Outline: El surfista ve el break y hacia dónde mira sin abrir otro mapa
+    Given una mañana publicada donde cada playa trae el punto débil que salió del cálculo
+    When el surfista abre la playa "nombre-mas-largo" a 390 px, con tema "<tema>" y movimiento "<movimiento>"
+    Then el mapa de su playa aparece una sola vez, con su crédito visible y su texto alternativo en español
+    And el mapa reserva su espacio y llega tarde, sin girar una rueda ni pedir nada al abrir
+    And el mapa cumple las siete comprobaciones visuales sobre el fondo real
+
+    Examples:
+      | tema   | movimiento |
+      | claro  | normal     |
+      | oscuro | reducido   |
