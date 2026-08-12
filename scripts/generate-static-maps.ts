@@ -29,6 +29,7 @@ import sharp from 'sharp';
 import {
   decideStaticMapAssets,
   parseStaticMapPolicy,
+  planStaticMapAssets,
   staticMapAssetPath,
   type StaticMapManifest,
   type StaticMapManifestRow,
@@ -36,6 +37,7 @@ import {
   type StaticMapRefusalReason,
 } from '../src/publish/static-map-policy';
 import { renderStaticMapDiagram } from '../src/publish/static-map-diagram';
+import { loadLaunchSpotOrientations } from '../src/pipeline/adapters/spot-coordinates';
 
 const DEFAULT_POLICY_PATH = 'data/maps/pa-pacific-map-policy.json';
 const DEFAULT_MANIFEST_PATH = 'data/maps/pa-pacific-map-manifest.json';
@@ -92,7 +94,13 @@ export async function planStaticMaps(options: GenerateOptions = {}): Promise<{
   const seedRevision = digestOf(readFileSync(join(root, policy.seed_file))).slice(0, 12);
   const frame = { width: policy.asset.width, height: policy.asset.height };
 
-  const decisions = decideStaticMapAssets(policy, launchSpotIds);
+  // The seed is the only source of a facing. It is read here, at the asset
+  // boundary, and joined to the credit decision before a single byte is drawn.
+  const seedBySpotId = new Map(
+    loadLaunchSpotOrientations(join(root, policy.seed_file), join(root, options.launchPath ?? DEFAULT_LAUNCH_PATH))
+      .map((row) => [row.spot_id, { spot_id: row.spot_id, shore_normal_deg: row.shore_normal_deg }] as const),
+  );
+  const decisions = planStaticMapAssets(decideStaticMapAssets(policy, launchSpotIds), seedBySpotId);
   const assets: GeneratedAsset[] = [];
   const spots: Record<string, StaticMapManifestRow> = {};
   const refused: Record<string, StaticMapRefusalReason> = {};
@@ -103,7 +111,10 @@ export async function planStaticMaps(options: GenerateOptions = {}): Promise<{
       continue;
     }
     const record = policy.spots[decision.spot_id]!;
-    const svg = renderStaticMapDiagram(frame, { spot_id: decision.spot_id });
+    const svg = renderStaticMapDiagram(frame, {
+      spot_id: decision.spot_id,
+      shore_normal_deg: decision.shore_normal_deg,
+    });
     const bytes = await sharp(Buffer.from(svg)).webp({ quality: 88, effort: 6 }).toBuffer();
     if (bytes.length > policy.asset.max_bytes) {
       refuse(

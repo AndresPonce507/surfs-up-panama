@@ -229,3 +229,9 @@ Feature: La playa dice qué fue lo que la tumbó
     Given la política de mapas que este proyecto sí puede mostrar
     When la construcción dibuja los mapas, los vuelve a dibujar sin cambiar nada, y luego lo intenta con una política rota
     Then cada playa aprobada queda con su propio archivo liviano y su fila en el listado, el segundo dibujo repite las mismas identidades, y la política rota se niega antes de escribir un archivo
+
+  @slice-05 @driving_port @real-io @adapter-integration @negative @error @covers-R18 @covers-R20
+  Scenario: La flecha del mapa sigue la orientación que conoce esa playa
+    Given la semilla que dice hacia dónde mira cada playa
+    When la construcción dibuja los mapas, luego gira una sola playa, y luego le borra la orientación a otra
+    Then cada flecha sale de la orientación declarada de su propia playa, girar una mueve solo su mapa, y la playa sin orientación usable se queda sin mapa

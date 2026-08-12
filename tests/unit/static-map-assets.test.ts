@@ -144,7 +144,7 @@ describe('the diagram source, over any frame', () => {
         fc.integer({ min: 90, max: 480 }),
         fc.string({ minLength: 1, maxLength: 30 }),
         (width, height, spot_id) => {
-          const svg = renderStaticMapDiagram({ width, height }, { spot_id });
+          const svg = renderStaticMapDiagram({ width, height }, { spot_id, shore_normal_deg: 135 });
 
           assert.ok(svg.startsWith('<svg') && svg.endsWith('</svg>'), 'the diagram is not a standalone SVG');
           assert.ok(svg.includes(`width="${width}"`) && svg.includes(`height="${height}"`), 'the frame was not honoured');
@@ -171,11 +171,134 @@ describe('the diagram source, over any frame', () => {
     fc.assert(
       fc.property(fc.string({ minLength: 1, maxLength: 30 }), (spot_id) => {
         assert.equal(
-          renderStaticMapDiagram(frame, { spot_id }),
-          renderStaticMapDiagram(frame, { spot_id }),
+          renderStaticMapDiagram(frame, { spot_id, shore_normal_deg: 135 }),
+          renderStaticMapDiagram(frame, { spot_id, shore_normal_deg: 135 }),
           'the same spot drew two different diagrams',
         );
       }),
     );
+  });
+});
+
+/** The bearing an arrow actually points, read back off the drawn line. */
+function drawnBearing(svg: string, frame: { width: number; height: number }): number {
+  const shaft = /<line\b[^>]*x2="([-\d.]+)"[^>]*y2="([-\d.]+)"/u.exec(svg);
+  assert.ok(shaft, 'the diagram drew no orientation arrow');
+  const dx = Number(shaft[1]) - frame.width / 2;
+  const dy = frame.height / 2 - Number(shaft[2]);
+  return (Math.round(((Math.atan2(dx, dy) * 180) / Math.PI + 360) % 360 * 100) / 100);
+}
+
+describe('the orientation arrow', () => {
+  it('points at the facing its own seed row declares', () => {
+    fc.assert(
+      fc.property(fc.integer({ min: 0, max: 359 }), (shore_normal_deg) => {
+        const svg = renderStaticMapDiagram(frame, { spot_id: 'playa-x', shore_normal_deg });
+
+        assert.ok(
+          Math.abs(drawnBearing(svg, frame) - shore_normal_deg) < 0.5,
+          `a facing of ${shore_normal_deg} drew an arrow at ${drawnBearing(svg, frame)}`,
+        );
+      }),
+    );
+  });
+
+  it('turns the arrow and nothing else: the frame contract never moves', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 359 }),
+        fc.integer({ min: 0, max: 359 }),
+        (left, right) => {
+          const a = renderStaticMapDiagram(frame, { spot_id: 'playa-x', shore_normal_deg: left });
+          const b = renderStaticMapDiagram(frame, { spot_id: 'playa-x', shore_normal_deg: right });
+
+          assert.equal(a === b, left === right, `${left} and ${right} drew the same or different diagrams wrongly`);
+          for (const svg of [a, b]) {
+            assert.ok(svg.includes(`width="${frame.width}"`), 'a rotation changed the image width');
+            assert.ok(svg.includes(`height="${frame.height}"`), 'a rotation changed the image height');
+          }
+        },
+      ),
+    );
+  });
+
+  it('draws no arrow at all when the seed declares no usable facing', () => {
+    const svg = renderStaticMapDiagram(frame, { spot_id: 'playa-x', shore_normal_deg: null });
+
+    assert.ok(!/<line\b|<polygon\b/u.test(svg), 'a spot with no declared facing still received an arrow');
+  });
+});
+
+describe('the seed join, over any launch spot', () => {
+  it('turns exactly one spot when exactly one seed row turns', async () => {
+    const root = isolatedProject();
+    const before = (await planStaticMaps({ projectRoot: root })).manifest;
+    const turned = Object.keys(before.spots)[3]!;
+    const seedPath = join(root, 'data/spots/pa-pacific.yaml');
+    const seed = readFileSync(seedPath, 'utf8');
+    const rowStart = seed.indexOf(`  - spot_id: ${turned}\n`);
+    assert.ok(rowStart > 0, `${turned} is not in the seed copy`);
+    const rowEnd = seed.indexOf('\n  - spot_id: ', rowStart + 1);
+    const row = seed.slice(rowStart, rowEnd);
+    writeFileSync(
+      seedPath,
+      seed.slice(0, rowStart) + row.replace(/shore_normal_deg: \d+/u, 'shore_normal_deg: 42') + seed.slice(rowEnd),
+    );
+
+    const after = (await planStaticMaps({ projectRoot: root })).manifest;
+
+    assert.notEqual(after.spots[turned]!.digest, before.spots[turned]!.digest, `${turned} did not turn`);
+    for (const [spot_id, row] of Object.entries(before.spots)) {
+      if (spot_id === turned) continue;
+      assert.equal(after.spots[spot_id]!.digest, row.digest, `turning ${turned} also turned ${spot_id}`);
+    }
+    assert.equal(after.frame.width, before.frame.width, 'turning a spot changed the image dimensions contract');
+    assert.equal(after.frame.height, before.frame.height, 'turning a spot changed the image dimensions contract');
+  });
+
+  it('refuses a spot whose seed states no usable facing, and draws nothing for it', async () => {
+    const root = isolatedProject();
+    const seedPath = join(root, 'data/spots/pa-pacific.yaml');
+    const before = (await planStaticMaps({ projectRoot: root })).manifest;
+    const blanked = Object.keys(before.spots)[0]!;
+    const seed = readFileSync(seedPath, 'utf8');
+    const rowStart = seed.indexOf(`  - spot_id: ${blanked}\n`);
+    const rowEnd = seed.indexOf('\n  - spot_id: ', rowStart + 1);
+    const row = seed.slice(rowStart, rowEnd);
+    writeFileSync(
+      seedPath,
+      seed.slice(0, rowStart) + row.replace(/shore_normal_deg: \d+/u, 'shore_normal_deg: null') + seed.slice(rowEnd),
+    );
+
+    const after = await writeStaticMaps({ projectRoot: root });
+
+    assert.equal(after.spots[blanked], undefined, `${blanked} kept its map with no declared facing`);
+    assert.equal(after.refused[blanked], 'orientation_absent_from_seed', `${blanked} was refused for the wrong reason`);
+    assert.ok(
+      !readdirSync(join(root, 'public/maps')).some((file) => file.startsWith(`${blanked}-`)),
+      `a map file for ${blanked} survived its refusal`,
+    );
+  });
+
+  it('refuses a spot whose seed states a facing outside a compass turn', async () => {
+    const root = isolatedProject();
+    const seedPath = join(root, 'data/spots/pa-pacific.yaml');
+    const before = (await planStaticMaps({ projectRoot: root })).manifest;
+    const impossible = Object.keys(before.spots)[2]!;
+    const seed = readFileSync(seedPath, 'utf8');
+    const rowStart = seed.indexOf(`  - spot_id: ${impossible}\n`);
+    const rowEnd = seed.indexOf('\n  - spot_id: ', rowStart + 1);
+    const row = seed.slice(rowStart, rowEnd);
+    writeFileSync(
+      seedPath,
+      seed.slice(0, rowStart) + row.replace(/shore_normal_deg: \d+/u, 'shore_normal_deg: 400') + seed.slice(rowEnd),
+    );
+
+    const after = (await planStaticMaps({ projectRoot: root })).manifest;
+
+    // 400 is not a bearing. Drawing it modulo 360 would silently publish an
+    // arrow at 40 degrees and call it the seed's own answer.
+    assert.equal(after.spots[impossible], undefined, `${impossible} was drawn from a facing of 400`);
+    assert.equal(after.refused[impossible], 'orientation_absent_from_seed');
   });
 });

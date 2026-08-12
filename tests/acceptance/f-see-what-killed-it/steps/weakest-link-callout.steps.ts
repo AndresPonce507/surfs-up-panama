@@ -81,7 +81,9 @@ import {
   type StaticMapManifest,
   type StaticMapPolicy,
 } from '../../../../src/publish/static-map-policy';
-import { writeStaticMaps } from '../../../../scripts/generate-static-maps';
+import { planStaticMaps, writeStaticMaps } from '../../../../scripts/generate-static-maps';
+import { renderStaticMapDiagram } from '../../../../src/publish/static-map-diagram';
+import { loadLaunchSpotOrientations } from '../../../../src/pipeline/adapters/spot-coordinates';
 
 const projectRoot = process.cwd();
 
@@ -2812,6 +2814,154 @@ Then(
     assertBehavior(
       findings,
       'dibujar cada mapa aprobado antes de la construcción del sitio, como un archivo local liviano cuyo nombre son sus propios bytes, con una fila que lo acredita; repetir exactamente lo mismo cuando nada cambió; y negarse antes de escribir cuando la política no se puede leer.',
+    );
+  },
+);
+
+type TurnedMaps = {
+  readonly before: StaticMapManifest;
+  readonly turned: StaticMapManifest;
+  readonly turnedSpotId: string;
+  readonly blanked: StaticMapManifest;
+  readonly blankedSpotId: string;
+  readonly blankedDir: string;
+  readonly declaredFacings: ReadonlyMap<string, number | null>;
+  readonly drawnBearings: ReadonlyMap<string, number>;
+};
+
+/** Rewrites exactly one seed row's declared facing, inside a copy. */
+function rewriteSeedFacing(root: string, spot_id: string, facing: string): void {
+  const seedPath = join(root, 'data/spots/pa-pacific.yaml');
+  const seed = readFileSync(seedPath, 'utf8');
+  const rowStart = seed.indexOf(`  - spot_id: ${spot_id}\n`);
+  assert.ok(rowStart > 0, `test fixture error: ${spot_id} is not in the seed copy`);
+  const rowEnd = seed.indexOf('\n  - spot_id: ', rowStart + 1);
+  const row = seed.slice(rowStart, rowEnd);
+  writeFileSync(
+    seedPath,
+    seed.slice(0, rowStart) + row.replace(/shore_normal_deg: \d+/u, `shore_normal_deg: ${facing}`) + seed.slice(rowEnd),
+  );
+}
+
+/**
+ * The bearing an arrow actually points, read back off the drawn line. Computed
+ * here with this file's own trigonometry, never by calling the drawing code:
+ * asking the production module to confirm its own answer would agree with any
+ * mutation of it.
+ */
+function drawnBearingOf(svg: string, width: number, height: number): number {
+  const shaft = /<line\b[^>]*x2="([-\d.]+)"[^>]*y2="([-\d.]+)"/u.exec(svg);
+  assert.ok(shaft, 'the diagram drew no orientation arrow');
+  const dx = Number(shaft[1]) - width / 2;
+  const dy = height / 2 - Number(shaft[2]);
+  return ((Math.atan2(dx, dy) * 180) / Math.PI + 360) % 360;
+}
+
+type Slice05SeedWorld = Slice01World & { killedItTurnedMaps?: TurnedMaps };
+
+Given('la semilla que dice hacia dónde mira cada playa', function () {
+  const facings = loadLaunchSpotOrientations();
+  assert.ok(facings.length > 0, 'test fixture error: the seed lists no launch spot');
+});
+
+When(
+  'la construcción dibuja los mapas, luego gira una sola playa, y luego le borra la orientación a otra',
+  { timeout: 180_000 },
+  async function (this: PipelineWorld) {
+    const declaredFacings = new Map(
+      loadLaunchSpotOrientations().map((row) => [row.spot_id, row.shore_normal_deg] as const),
+    );
+
+    const baseRoot = isolatedMapProject();
+    const before = (await planStaticMaps({ projectRoot: baseRoot })).manifest;
+    const drawnBearings = new Map(
+      Object.keys(before.spots).map((spot_id) => [
+        spot_id,
+        drawnBearingOf(
+          renderStaticMapDiagram(before.frame, {
+            spot_id,
+            shore_normal_deg: declaredFacings.get(spot_id) ?? null,
+          }),
+          before.frame.width,
+          before.frame.height,
+        ),
+      ] as const),
+    );
+
+    const turnedSpotId = Object.keys(before.spots)[3]!;
+    rewriteSeedFacing(baseRoot, turnedSpotId, '42');
+    const turned = (await planStaticMaps({ projectRoot: baseRoot })).manifest;
+
+    const blankedRoot = isolatedMapProject();
+    const blankedSpotId = Object.keys(before.spots)[0]!;
+    rewriteSeedFacing(blankedRoot, blankedSpotId, 'null');
+    const blanked = await writeStaticMaps({ projectRoot: blankedRoot });
+
+    (world01(this) as Slice05SeedWorld).killedItTurnedMaps = {
+      before,
+      turned,
+      turnedSpotId,
+      blanked,
+      blankedSpotId,
+      blankedDir: join(blankedRoot, 'public/maps'),
+      declaredFacings,
+      drawnBearings,
+    };
+    rmSync(baseRoot, { recursive: true, force: true });
+  },
+);
+
+Then(
+  'cada flecha sale de la orientación declarada de su propia playa, girar una mueve solo su mapa, y la playa sin orientación usable se queda sin mapa',
+  function (this: PipelineWorld) {
+    const maps = (world01(this) as Slice05SeedWorld).killedItTurnedMaps;
+    assert.ok(maps, 'test fixture error: no map was ever turned');
+    const findings: string[] = [];
+
+    for (const [spot_id, bearing] of maps.drawnBearings) {
+      const declared = maps.declaredFacings.get(spot_id);
+      if (declared === null || declared === undefined) {
+        findings.push(`${spot_id} recibió una flecha sin orientación declarada`);
+        continue;
+      }
+      if (Math.abs(bearing - declared) > 0.5) {
+        findings.push(`la flecha de ${spot_id} apunta a ${Math.round(bearing)} y su semilla dice ${declared}`);
+      }
+    }
+
+    // Six distinct facings across eighteen spots: a generic regional arrow would
+    // collapse them to one, and reading the row above would shift them all.
+    if (new Set(maps.drawnBearings.values()).size < 2) {
+      findings.push('todas las playas comparten una sola flecha regional');
+    }
+
+    const turnedRow = maps.turned.spots[maps.turnedSpotId];
+    if (turnedRow === undefined || turnedRow.digest === maps.before.spots[maps.turnedSpotId]!.digest) {
+      findings.push(`girar ${maps.turnedSpotId} no movió su propio mapa`);
+    }
+    for (const [spot_id, row] of Object.entries(maps.before.spots)) {
+      if (spot_id === maps.turnedSpotId) continue;
+      if (maps.turned.spots[spot_id]?.digest !== row.digest) {
+        findings.push(`girar ${maps.turnedSpotId} también movió ${spot_id}`);
+      }
+    }
+    if (maps.turned.frame.width !== maps.before.frame.width || maps.turned.frame.height !== maps.before.frame.height) {
+      findings.push('girar una playa cambió el tamaño de las imágenes');
+    }
+
+    if (maps.blanked.spots[maps.blankedSpotId] !== undefined) {
+      findings.push(`${maps.blankedSpotId} conservó su mapa sin una orientación que la semilla declare`);
+    }
+    if (maps.blanked.refused[maps.blankedSpotId] !== 'orientation_absent_from_seed') {
+      findings.push(`${maps.blankedSpotId} no quedó registrado como una orientación que la semilla no declara`);
+    }
+    if (readdirSync(maps.blankedDir).some((file) => file.startsWith(`${maps.blankedSpotId}-`))) {
+      findings.push(`quedó un archivo de mapa de ${maps.blankedSpotId} después de negarlo`);
+    }
+
+    assertBehavior(
+      findings,
+      'tomar la orientación de la propia fila de cada playa en la semilla y hornearla en su flecha, de modo que girar una playa mueva solo su imagen y una playa sin orientación declarada no reciba ninguna.',
     );
   },
 );

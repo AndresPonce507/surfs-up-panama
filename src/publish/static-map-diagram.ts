@@ -30,9 +30,19 @@ export type DiagramFrame = {
   readonly height: number;
 };
 
-/** One spot's drawable record, already taken from the human-owned seed. */
+/**
+ * One spot's drawable record, already taken from the human-owned seed.
+ *
+ * `shore_normal_deg` is the ONE direction this diagram is allowed to draw: the
+ * compass bearing that row declares the break faces, out to sea. It is never a
+ * regional default and never inferred from a picture. A `null` means the seed
+ * states no usable facing, and the diagram draws no arrow at all rather than a
+ * plausible one -- the generator refuses that spot outright, and this is the
+ * second lock on the same rule.
+ */
 export type DiagramInput = {
   readonly spot_id: string;
+  readonly shore_normal_deg: number | null;
 };
 
 const SEA_TOP = '#06304a';
@@ -40,6 +50,7 @@ const SEA_BOTTOM = '#0a4a70';
 const RING = '#7fd3f7';
 const MARKER_HALO = '#ffffff';
 const MARKER_CORE = '#ff8a3d';
+const ARROW = '#ffd08a';
 
 /**
  * The marker sits at the centre of the frame, always. The diagram makes no
@@ -71,11 +82,52 @@ function round(value: number): number {
 }
 
 /**
+ * A compass bearing, in the frame's own coordinates. 0 is up and the turn is
+ * clockwise, which is what "faces 135" means to anyone reading the seed; the
+ * screen's y axis grows downward, which is the only reason the cosine is
+ * negated. Nothing else in this module knows about angles.
+ */
+function bearingOffset(bearingDeg: number, distance: number): { readonly dx: number; readonly dy: number } {
+  const radians = (bearingDeg * Math.PI) / 180;
+  return { dx: distance * Math.sin(radians), dy: -distance * Math.cos(radians) };
+}
+
+/**
+ * The arrow: a shaft from the marker outward along the declared facing, and a
+ * head at its tip. Drawn from the bearing alone, so two spots that declare the
+ * same facing produce the same arrow and two that differ cannot share one.
+ */
+function orientationArrow(frame: DiagramFrame, bearingDeg: number): string {
+  const { x, y } = centreOf(frame);
+  const reach = Math.min(frame.width, frame.height) * 0.42;
+  const tip = bearingOffset(bearingDeg, reach);
+  const shaftEnd = bearingOffset(bearingDeg, reach - 12);
+  const left = bearingOffset(bearingDeg + 148, 14);
+  const right = bearingOffset(bearingDeg - 148, 14);
+  const point = (offset: { dx: number; dy: number }, from: { dx: number; dy: number } = { dx: 0, dy: 0 }) =>
+    `${round(x + from.dx + offset.dx)},${round(y + from.dy + offset.dy)}`;
+  return [
+    `<line x1="${x}" y1="${y}" x2="${round(x + shaftEnd.dx)}" y2="${round(y + shaftEnd.dy)}" stroke="${ARROW}" stroke-width="3.5" stroke-linecap="round"/>`,
+    `<polygon points="${point(tip)} ${point(left, tip)} ${point(right, tip)}" fill="${ARROW}"/>`,
+  ].join('');
+}
+
+/**
+ * A single "N" at the top of the frame. Without it the arrow is a direction on a
+ * blank field and means nothing; with it, it is a compass bearing a surfer can
+ * read. It is one letter, the same in Spanish, and it is the only glyph the
+ * asset carries.
+ */
+function northTick(frame: DiagramFrame): string {
+  return `<text x="${frame.width / 2}" y="18" fill="${RING}" font-family="Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="middle" opacity="0.85">N</text>`;
+}
+
+/**
  * The SVG source for one spot's diagram. Deterministic: the same input produces
  * the same string, byte for byte, so the generator can content-address the
  * raster without a timestamp or a random id anywhere in the pipeline.
  */
-export function renderStaticMapDiagram(frame: DiagramFrame, _input: DiagramInput): string {
+export function renderStaticMapDiagram(frame: DiagramFrame, input: DiagramInput): string {
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${frame.width}" height="${frame.height}" viewBox="0 0 ${frame.width} ${frame.height}">`,
     `<defs><linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">`,
@@ -83,7 +135,9 @@ export function renderStaticMapDiagram(frame: DiagramFrame, _input: DiagramInput
     `</linearGradient></defs>`,
     `<rect width="${frame.width}" height="${frame.height}" fill="url(#sea)"/>`,
     locatorRings(frame),
+    input.shore_normal_deg === null ? '' : orientationArrow(frame, input.shore_normal_deg),
     spotMarker(frame),
+    northTick(frame),
     `</svg>`,
   ].join('');
 }

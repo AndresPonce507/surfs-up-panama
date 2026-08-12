@@ -58,14 +58,17 @@ export type StaticMapPolicy = {
 };
 
 /**
- * Why a spot gets no map. Three named reasons, never a boolean: a caller has to
- * say which absence it means before its code compiles, so "no source states the
- * facing" can never be logged as "we forgot to enumerate it".
+ * Why a spot gets no map. Named reasons, never a boolean: a caller has to say
+ * which absence it means before its code compiles, so "no source states the
+ * facing" can never be logged as "we forgot to enumerate it". The first three
+ * are answered by the policy alone; the last two only the seed can answer.
  */
 export type StaticMapRefusalReason =
   | 'absent_from_policy'
   | 'coordinate_attribution_missing'
-  | 'orientation_attribution_missing';
+  | 'orientation_attribution_missing'
+  | 'seed_row_absent'
+  | 'orientation_absent_from_seed';
 
 /** The decision for exactly one launch spot. */
 export type StaticMapDecision =
@@ -83,7 +86,13 @@ export type StaticMapDecision =
     readonly reason: StaticMapRefusalReason;
   };
 
-function refuse(spot_id: string, reason: StaticMapRefusalReason): StaticMapDecision {
+type StaticMapRefusal = {
+  readonly kind: 'refused';
+  readonly spot_id: string;
+  readonly reason: StaticMapRefusalReason;
+};
+
+function refuse(spot_id: string, reason: StaticMapRefusalReason): StaticMapRefusal {
   return { kind: 'refused', spot_id, reason };
 }
 
@@ -129,6 +138,62 @@ function decideOne(policy: StaticMapPolicy, spot_id: string): StaticMapDecision 
       record.orientation_attribution,
     ),
   };
+}
+
+// ------------------------------------------------- the seed join --
+
+/** What the human-owned seed says about one break. Read by the generator, never guessed. */
+export type StaticMapSeedRow = {
+  readonly spot_id: string;
+  readonly shore_normal_deg: number | null;
+};
+
+/**
+ * One spot's final answer: draw it with exactly this facing, or do not draw it.
+ * The credit and the geometry arrive together, so an asset can never be produced
+ * from a seed row that has no orientation or credited from a policy record that
+ * has no seed row.
+ */
+export type StaticMapAssetPlan =
+  | {
+    readonly kind: 'approved';
+    readonly spot_id: string;
+    readonly coordinate_attribution: string;
+    readonly orientation_attribution: string;
+    readonly caption: string;
+    readonly shore_normal_deg: number;
+  }
+  | {
+    readonly kind: 'refused';
+    readonly spot_id: string;
+    readonly reason: StaticMapRefusalReason;
+  };
+
+/**
+ * Joins the policy's credit decision to the seed's declared facing. Pure, and
+ * total: every decision comes back, approved with a real bearing or refused with
+ * a named reason. The two refusals it can add are the ones only the seed can
+ * answer -- there is no row, or the row states no usable facing -- and neither
+ * has a fallback, because the fallback would be an invented arrow.
+ */
+export function planStaticMapAssets(
+  decisions: readonly StaticMapDecision[],
+  seedBySpotId: ReadonlyMap<string, StaticMapSeedRow>,
+): readonly StaticMapAssetPlan[] {
+  return decisions.map((decision) => {
+    if (decision.kind === 'refused') return decision;
+    const seed = seedBySpotId.get(decision.spot_id);
+    if (seed === undefined) return refuse(decision.spot_id, 'seed_row_absent');
+    if (seed.shore_normal_deg === null) return refuse(decision.spot_id, 'orientation_absent_from_seed');
+    return {
+      kind: 'approved',
+      spot_id: decision.spot_id,
+      coordinate_attribution: decision.coordinate_attribution,
+      orientation_attribution: decision.orientation_attribution,
+      caption: decision.caption,
+      shore_normal_deg: seed.shore_normal_deg,
+    };
+  });
 }
 
 // ------------------------------------------------------ the asset manifest --
