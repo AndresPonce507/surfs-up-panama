@@ -229,4 +229,36 @@ describe('page-weight gate laws', () => {
     );
     assert.equal(island.exitCode, 0, `a deferred island on a report route is the declared design\n${island.output}`);
   });
+
+  // The law the static break map rests on. The map is a real image on a real
+  // reading route, and it is only affordable because a lazy image is not a
+  // first-visit byte. If this law ever inverts, the map has to come off the page
+  // before the ceiling does.
+  it('keeps a lazy image out of first-visit bytes, at any size, and counts the same image when it is eager', async () => {
+    await fc.assert(
+      fc.asyncProperty(fc.integer({ min: 2_000, max: 40_000 }), async (imageBytes) => {
+        const image = incompressibleText(imageBytes, imageBytes);
+        const lazy = await measure(
+          [{ path: 'index.html', body: '<img src="/maps/x.webp" width="320" height="180" loading="lazy" alt="d">' }],
+          { '/maps/x.webp': image },
+        );
+        const eager = await measure(
+          [{ path: 'index.html', body: '<img src="/maps/x.webp" width="320" height="180" alt="d">' }],
+          { '/maps/x.webp': image },
+        );
+        const bare = await measure([{ path: 'index.html' }]);
+
+        assert.equal(
+          lazy.measured[0]!.firstVisitBytes,
+          bare.measured[0]!.firstVisitBytes + (lazy.measured[0]!.documentBytes - bare.measured[0]!.documentBytes),
+          `a lazy image added first-visit bytes beyond its own markup\n${lazy.output}`,
+        );
+        assert.ok(
+          eager.measured[0]!.firstVisitBytes > lazy.measured[0]!.firstVisitBytes,
+          `the same image loaded eagerly must cost first-visit bytes\n${eager.output}\n---\n${lazy.output}`,
+        );
+      }),
+      { numRuns: 8 },
+    );
+  });
 });

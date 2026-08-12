@@ -3186,6 +3186,147 @@ Then('el mapa cumple las siete comprobaciones visuales sobre el fondo real', fun
   );
 });
 
+// ------------------------------------- slice-05: the map's place on the site --
+//
+// X12 IS NOT GRANTED, so nothing below asserts cache-first behaviour and nothing
+// edits public/sw.js. The offline half of this step's contract is deferred with
+// its owner (F-WORKS-WITH-NO-SIGNAL). What the roadmap requires independently of
+// the cache owner IS asserted: the map adds no document weight and no route
+// JavaScript, it exists on exactly one route, and its reserved frame degrades on
+// its own.
+
+/** Routes the map is forbidden from reaching, and the emitted file behind each. */
+const MAP_FREE_ROUTES: readonly (readonly [string, string])[] = [
+  ['la lista de hoy', 'index.html'],
+  ['mañana', 'manana.html'],
+  ['el reporte', 'spots/playa-venao/reportar.html'],
+  ['el ayer', 'spots/playa-venao/ayer.html'],
+];
+
+Then(
+  'el mapa vive solo en la ficha de la playa, y la lista, mañana, el reporte y el ayer siguen sin mapa',
+  function (this: PipelineWorld) {
+    const world = world01(this);
+    const { spotId } = plannedFor(world.killedItOpened ?? '');
+    const dist = join(requiredHarness().root, 'dist');
+    const spotDocument = readFileSync(join(dist, 'spots', `${spotId}.html`), 'utf8');
+    const findings: string[] = [];
+
+    const mounted = spotDocument.match(/data-field="static-map"/gu)?.length ?? 0;
+    if (mounted !== 1) findings.push(`la ficha de ${spotId} monta ${mounted} mapas`);
+    // The host keeps everything it had. A map that displaced a day summary or
+    // the report action would be a regression dressed as a feature.
+    for (const [label, marker] of [
+      ['el resumen de hoy', 'data-day="today"'],
+      ['el resumen de mañana', 'data-day="tomorrow"'],
+      ['el botón de reportar', 'class="cta"'],
+    ] as const) {
+      if (!spotDocument.includes(marker)) findings.push(`la ficha perdió ${label}`);
+    }
+
+    for (const [label, file] of MAP_FREE_ROUTES) {
+      const emitted = readFileSync(join(dist, file), 'utf8');
+      if (/data-field="static-map"|\/maps\//u.test(emitted)) findings.push(`${label} recibió un mapa`);
+    }
+
+    assertBehavior(
+      findings,
+      'montar el mapa una sola vez, en la ficha en español de la playa, sin desplazar sus dos días ni su botón de reportar, y sin que ninguna otra pantalla lo herede.',
+    );
+  },
+);
+
+Then(
+  'el mapa no le suma peso al documento ni código al teléfono, y la página sigue bajo su techo',
+  function (this: PipelineWorld) {
+    const world = world01(this);
+    const { spotId } = plannedFor(world.killedItOpened ?? '');
+    const harness = requiredHarness();
+    const dist = join(harness.root, 'dist');
+    const emitted = readFileSync(join(dist, 'spots', `${spotId}.html`), 'utf8');
+    const findings: string[] = [];
+
+    const image = /<img\b[^>]*src="\/maps\/[^"]+"[^>]*>/u.exec(emitted)?.[0] ?? '';
+    if (image === '') findings.push('la ficha no emitió la imagen del mapa');
+    if (!/\bloading="lazy"/u.test(image)) findings.push('la imagen del mapa no queda fuera de la primera visita');
+
+    const scripts = [...emitted.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script>/giu)]
+      .flatMap((match) => {
+        const inline = match[2] ?? '';
+        const source = /\bsrc=["']([^"']+)["']/iu.exec(match[1] ?? '')?.[1];
+        if (source === undefined) return [inline];
+        const asset = resolveEmittedFile(dist, source);
+        return asset === null ? [`unresolved emitted script: ${source}`] : [inline, readFileSync(asset, 'utf8')];
+      });
+    for (const script of scripts) {
+      if (script.startsWith('unresolved emitted script:')) {
+        findings.push(script);
+        continue;
+      }
+      if (/maps\/|shore_normal|leaflet|mapbox|maplibre|tile|IntersectionObserver/iu.test(script)) {
+        findings.push('el documento publicado manda código de mapa al teléfono');
+        break;
+      }
+    }
+
+    // The gate the whole site already lives under, re-run over this build.
+    const budget = spawnSync('node', ['scripts/check-page-weight.mjs'], {
+      cwd: harness.root,
+      env: credentialFreeEnvironment(),
+      encoding: 'utf8',
+      maxBuffer: 4 * 1024 * 1024,
+    });
+    const budgetOutput = `${budget.stdout}${budget.stderr}`;
+    if (budget.status !== 0) findings.push(`la página se pasó de su techo: ${budgetOutput.trim()}`);
+    const spotRoute = /^route \/spots\/\{slug\}.*?document ([\d,]+) B gz/mu.exec(budgetOutput)
+      ?? /^route .*?spots.*?document ([\d,]+) B gz/mu.exec(budgetOutput);
+    if (spotRoute === null) findings.push('el gate de peso no midió la ficha de la playa');
+
+    assertBehavior(
+      findings,
+      'servir el mapa como una imagen local que llega tarde, fuera de los bytes de la primera visita, sin una sola línea de código de mapa en el documento, y sin acercar la ficha a su techo.',
+    );
+  },
+);
+
+Then(
+  'la construcción se niega cuando el listado acredita una imagen que ya no está',
+  { timeout: 180_000 },
+  function () {
+    // A FULL production build over a copy whose bytes were swapped under a
+    // credit that stayed. The oracle is the real `npm run build`, not the
+    // generator in isolation: the contract is that no page is emitted at all.
+    const root = copyProjectForSurface();
+    const findings: string[] = [];
+    try {
+      const row = Object.values(trackedMapManifest().spots)[0]!;
+      writeFileSync(join(root, 'public/maps', row.path.slice(row.path.lastIndexOf('/') + 1)), 'otra imagen');
+
+      const build = spawnSync('npm', ['run', 'build'], {
+        cwd: root,
+        env: credentialFreeEnvironment(),
+        encoding: 'utf8',
+        maxBuffer: 10 * 1024 * 1024,
+      });
+      const output = `${build.stdout}${build.stderr}`;
+      if (build.status === 0) findings.push('la construcción aceptó un listado que acredita otra imagen');
+      if (!/static map build refused/u.test(output)) {
+        findings.push(`la construcción falló sin decir por qué: ${output.trim().slice(-300)}`);
+      }
+      if (existsSync(join(root, 'dist', 'spots', `${row.spot_id}.html`))) {
+        findings.push('la construcción alcanzó a emitir la ficha de la playa antes de negarse');
+      }
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+
+    assertBehavior(
+      findings,
+      'comprobar, antes de emitir una sola página, que cada imagen en el sitio es exactamente la que su fila acredita, y negarse cuando no lo es.',
+    );
+  },
+);
+
 // ---------------------------------------------------------------- cleanup --
 
 After({ tags: '@feature-f-see-what-killed-it', timeout: 30_000 }, async function (this: PipelineWorld) {

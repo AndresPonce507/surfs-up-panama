@@ -248,3 +248,11 @@ Feature: La playa dice qué fue lo que la tumbó
       | tema   | movimiento |
       | claro  | normal     |
       | oscuro | reducido   |
+
+  @slice-05 @driving_port @real-io @adapter-integration @negative @error @covers-R19 @covers-R20 @covers-R30
+  Scenario: El mapa de la playa carga tarde sin pesar ni romper la página
+    Given una mañana publicada donde cada playa trae el punto débil que salió del cálculo
+    When el surfista abre la playa "dos-dias-distintos" a 390 px
+    Then el mapa vive solo en la ficha de la playa, y la lista, mañana, el reporte y el ayer siguen sin mapa
+    And el mapa no le suma peso al documento ni código al teléfono, y la página sigue bajo su techo
+    And la construcción se niega cuando el listado acredita una imagen que ya no está
