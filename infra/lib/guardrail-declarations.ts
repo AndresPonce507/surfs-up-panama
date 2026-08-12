@@ -116,6 +116,10 @@ export const costAllocationTag = {
 //     7's per-IP rows are deliberately gone: Panama runs carrier-grade NAT,
 //     so one mobile address is a whole beach town, while an attacker
 //     rotates cloud addresses for cents.
+//   * sizing source -- which document these ceilings are allowed to come
+//     from. 07-write-path.md section 12's write-path arithmetic is
+//     falsified and cannot set a budget guard; system-architecture.md
+//     section 6.1 is the corrected sizing of record.
 //
 // The origin literal records the site origin the deployment binds. It is a
 // parameter, not a claim: the deployed stack imports the live origin from the
@@ -148,4 +152,5 @@ export const writePathGuardrailDeclarations = {
   'presign-device-limit': '10',
   'subscription-device-limit': '20',
   'quota-identity': 'device-only',
+  'sizing-source': 'system-architecture.md section 6.1',
 } as const;

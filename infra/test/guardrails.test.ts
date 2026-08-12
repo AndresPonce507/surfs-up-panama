@@ -984,8 +984,9 @@ describe('write-path declaration guardrails (F-TELL-US-WHAT-YOU-SAW-COLD slice-0
     const slots = protectionSlots(settledDeclarations);
     expect(Object.keys(slots).sort()).toEqual([...universe].sort());
     // 02-02's four addresses (posture + origin) and four concurrency ceilings,
-    // plus 02-03's store capacity, breaker alarms and device-only quotas.
-    expect(universe.length).toBe(23);
+    // 02-03's store capacity, breaker alarms and device-only quotas, and
+    // 02-04's corrected sizing source.
+    expect(universe.length).toBe(24);
     for (const key of universe) expect(slots[key]?.status, key).toBe('satisfied');
   });
 

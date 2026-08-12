@@ -345,6 +345,14 @@ const WRITE_BREAKER_ALARMS = [
 // Control 0.10, and the deliberate removal of guardrail 7's per-IP rows:
 // Panama runs carrier-grade NAT, so one mobile IP is a whole town at the
 // beach while an attacker rotates cloud IPs for cents. Quotas are device-only.
+// Which document these ceilings may be sized from. 07-write-path.md section
+// 12's write-path arithmetic is falsified, so a guard that leans on it is
+// guarding nothing; system-architecture.md section 6.1 is the corrected
+// sizing of record and the only source the green result may cite.
+const CORRECTED_SIZING_SOURCE = [
+  ['sizing-source', 'corrected sizing source', 'system-architecture.md section 6.1', 'the write-path arithmetic is falsified and cannot set a budget guard'],
+];
+
 const DEVICE_QUOTA_LIMITS = [
   ['report-device-limit', 'report device daily limit', '20', 'anonymous reports need the settled daily device ceiling'],
   ['presign-device-limit', 'presign device daily limit', '10', 'photo grants need the settled daily device ceiling'],
@@ -425,6 +433,7 @@ export function assessWritePathDeclarations(declarations) {
     ...WRITE_STORE_CAPACITY.map((capacity) => assessFixedValue(declarations, capacity)),
     ...WRITE_BREAKER_ALARMS.map((alarm) => assessFixedValue(declarations, alarm)),
     ...DEVICE_QUOTA_LIMITS.map((limit) => assessFixedValue(declarations, limit)),
+    ...CORRECTED_SIZING_SOURCE.map((source) => assessFixedValue(declarations, source)),
   ];
 }
 
@@ -472,6 +481,7 @@ export async function evaluateWritePathGuardrails({ root, output }) {
   emit(output, lines, `write store capacity: ${declarations['table-billing-mode']} at ${declarations['table-read-capacity']} RCU and ${declarations['table-write-capacity']} WCU, so it throttles for free instead of billing`);
   emit(output, lines, `four write breaker alarms declared: ${WRITE_ADDRESS_NAMES.join(', ')}`);
   emit(output, lines, `device-only daily quotas: ${declarations['report-device-limit']} reports, ${declarations['presign-device-limit']} presigns, ${declarations['subscription-device-limit']} subscription writes per device per day; no per-IP rows, because carrier-grade NAT makes one mobile address a whole beach town`);
+  emit(output, lines, `write-path sizing source: ${declarations['sizing-source']}, the corrected sizing of record`);
   emit(output, lines, `write-path preflight: passed; ${slots.length} declared write-path protections inspected without AWS credentials`);
   return { exitCode: 0, lines };
 }
