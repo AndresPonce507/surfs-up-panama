@@ -1,0 +1,7 @@
+{
+  "sid": "01-14",
+  "p": "RED_ACCEPTANCE",
+  "s": "EXECUTED",
+  "d": "PASS: a controlled mutation of src/learning/residuals.ts that enters a forecast-less morning as a zero-valued score sample fails the acceptance property semantically with 'mornings with no captured forecast must not be counted behind the score move'. Inherited production itself is already green; the initial oracle ordering was corrected so each assertion owns its own falsifying mutation, and no production red is claimed.",
+  "t": "2026-08-11T18:00:53Z"
+}

@@ -1,0 +1,7 @@
+{
+  "sid": "01-17",
+  "p": "RED_ACCEPTANCE",
+  "s": "EXECUTED",
+  "d": "PASS: inverting the age clause in src/learning/trust.ts so it always holds fails the acceptance semantically with 'asking for a month of standing must remove the four mornings reported on the same-morning credential'. 01-16's shipped-config identity law passed under the same mutation, which is the concrete proof that the unfired gate alone was not evidence.",
+  "t": "2026-08-11T18:16:04Z"
+}

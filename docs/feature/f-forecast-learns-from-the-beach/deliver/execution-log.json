@@ -456,6 +456,286 @@
       "s": "EXECUTED",
       "d": "PASS: approved acceptance-evidence slice committed as 26ab7bc9ac016ee5ec4911b8a1367f764f1eacc7 (test(learning): prove stored differences stay in corridor)",
       "t": "2026-08-11T15:28:45Z"
+    },
+    {
+      "sid": "01-14",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: recovered the accepted 01-14 step from recover/learning-build's roadmap, verified 01-13 is sealed and no competing Learning worktree owns residuals.ts, and confirmed the shipped score former already omits a forecast-less morning",
+      "t": "2026-08-11T18:00:53Z"
+    },
+    {
+      "sid": "01-14",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: a controlled mutation of src/learning/residuals.ts that enters a forecast-less morning as a zero-valued score sample fails the acceptance property semantically with 'mornings with no captured forecast must not be counted behind the score move'. Inherited production itself is already green; the initial oracle ordering was corrected so each assertion owns its own falsifying mutation, and no production red is claimed.",
+      "t": "2026-08-11T18:00:53Z"
+    },
+    {
+      "sid": "01-14",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: added a fast-check law over formScoreResidualSamples requiring deep equality of the surviving sample list, which fails under the same zero-sample mutation with 'must contribute no score sample at all, not a zero-valued one'",
+      "t": "2026-08-11T18:00:53Z"
+    },
+    {
+      "sid": "01-14",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: 20 generated run-pairs each keep score_delta byte-identical while the height count rises one for one; focused acceptance/unit 7/7 passes with no production edit. Full vitest 382/382 across 73 files, typecheck and build pass. UI checks N/A: non-visual step, no rendered surface.",
+      "t": "2026-08-11T18:00:53Z"
+    },
+    {
+      "sid": "01-14",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: approved acceptance-evidence slice committed as 0f0310ba3e3e2cac2d6a958ecf8f456e8deebb07 (test(learning): prove a forecast-less morning skips the score)",
+      "t": "2026-08-11T18:02:59Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified 01-14 is sealed, no competing Learning writer owns fit.ts or correction-file.ts, and the shipped emitter already forms no wind residual and stamps only the injected clock",
+      "t": "2026-08-11T18:07:24Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: a controlled wind_bias emitted from the reported wind word fails the prefix byte-identity oracle, and a hardcoded computed_at literal fails the clock-provenance oracle. Inherited production itself is already green; no production red is claimed.",
+      "t": "2026-08-11T18:07:24Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: added a fast-check law over buildCorrectionRecords requiring identical serialised records under any wind rotation and on re-emission, which fails under the same wind_bias mutation with 'rotating the wind word must leave every emitted byte identical'",
+      "t": "2026-08-11T18:07:24Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: 20 generated wind rotations leave the whole corrections prefix byte-identical, no stored body matches /wind/i, and computed_at tracks the injected clock across two different clocks; focused acceptance/unit 7/7 passes with no production edit. Full vitest 384/384 across 74 files, typecheck and build pass. UI checks N/A: non-visual step, the observable is stored bytes.",
+      "t": "2026-08-11T18:07:24Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: approved acceptance-evidence slice committed as 8a8f7f3c5e65b83a43169391a3edfadb3489c2c3 (test(learning): prove the wind word moves no stored byte)",
+      "t": "2026-08-11T18:07:44Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified 01-15 is sealed, confirmed no trust module, no trust config and no eligibility seam exist in the shipped tree, and inventoried src/learning/ before adding a new file there",
+      "t": "2026-08-11T18:13:12Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PARTIAL: the seam failed for the right reason - typecheck TS2353 'trustGate does not exist in type LearningFitDeps' on the new acceptance file. The scenario's own assertion is a no-op claim (gated and ungated answers are identical at the shipped config) and was inherited green; no false acceptance-red is claimed. 06 section 7's clause check:unfired-is-not-evidence is discharged by 01-17, not here.",
+      "t": "2026-08-11T18:13:12Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: four fast-check laws over selectTrustEligible failed semantically against a throwing skeleton - shipped-config identity, the one-spot trap that a standalone min_prior_spots would red, age-threshold monotonicity, and fail-closed on an unprovable age above zero",
+      "t": "2026-08-11T18:13:12Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: two clauses only, age-at-receipt and a history clause whose spots requirement qualifies it, wired once over the whole log in fit.ts before it is grouped by spot so every gated count is already post-eligibility. Focused acceptance/unit 6/6 passes; full vitest 390/390 across 76 files, typecheck and build pass. Live probe over the real port: age 0 stores n=22/reporters=7, age 30 stores n=18/reporters=6 with se moved to the floor at n=18, so the gate is live and not inert. UI checks N/A: non-visual step with no rendered consequence by design.",
+      "t": "2026-08-11T18:13:12Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: approved implementation committed as 7104d40a1ceb55eb4726100318c07d78c8d26fb5 (feat(learning): land the trust-eligibility gate, inactive at launch)",
+      "t": "2026-08-11T18:13:34Z"
+    },
+    {
+      "sid": "01-17",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified declared dependency 01-16 is sealed and supplies the predicate, confirmed no competing writer owns trust.ts, and confirmed the shipped fit already routes every gated count through the post-eligibility sample list",
+      "t": "2026-08-11T18:16:04Z"
+    },
+    {
+      "sid": "01-17",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: inverting the age clause in src/learning/trust.ts so it always holds fails the acceptance semantically with 'asking for a month of standing must remove the four mornings reported on the same-morning credential'. 01-16's shipped-config identity law passed under the same mutation, which is the concrete proof that the unfired gate alone was not evidence.",
+      "t": "2026-08-11T18:16:04Z"
+    },
+    {
+      "sid": "01-17",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: added a fast-check firing law asserting the eligible set equals exactly the reports at or above the threshold age, which fails under the same mutation with 'must drop exactly the credentials younger than that, and nobody else'",
+      "t": "2026-08-11T18:16:04Z"
+    },
+    {
+      "sid": "01-17",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the gate is watched both ways in one run - 22 mornings/7 people unfired, 18 mornings/6 people fired - and the stored error equals the physical floor at the count the record itself reports (0.0565685424949238 at n=18), not at the raw 22. Focused acceptance/unit 7/7 passes with no production edit. Full vitest 392/392 across 77 files, typecheck and build pass. UI checks N/A: non-visual step whose whole observable is smaller integers in a stored record.",
+      "t": "2026-08-11T18:16:04Z"
+    },
+    {
+      "sid": "01-17",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: approved acceptance-evidence slice committed as 84e5523afd516534316230fccc445e9f189a0851 (test(learning): watch the trust gate actually drop a credential)",
+      "t": "2026-08-11T18:16:25Z"
+    },
+    {
+      "sid": "01-18",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified declared dependency 01-15 is sealed, and re-examined the roadmap's recorded blocker. It is a property of the cucumber syntheticMornings builder on recover/learning-build, which does not exist on this branch; measured through the port, a fixed forecast against a raised band moves r_height by exactly mid(head_overhead) - mid(chest_head) = 0.65 m, so all three laws are plannable here.",
+      "t": "2026-08-11T18:19:45Z"
+    },
+    {
+      "sid": "01-18",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: mutating src/learning/residuals.ts to subtract a fixed reference midpoint instead of mid(band_i) - the naive alternative the roadmap names - fails the acceptance semantically with 'the drop must be exactly the rise in reported midpoint 0.6499999999999999; it was 2.7755575615628914e-17'. Inherited production itself is already green; no production red is claimed.",
+      "t": "2026-08-11T18:19:45Z"
+    },
+    {
+      "sid": "01-18",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: tests/unit/learning-residual-laws.test.ts already carries the residual-form law quantified over every band and swell height, which entails both the forecast and band directions, and 01-15's emitter law already carries the shuffle determinism. The existing law failed under the same fixed-reference mutation, so no new unit was needed to drive GREEN and a mirror would be duplication.",
+      "t": "2026-08-11T18:19:45Z"
+    },
+    {
+      "sid": "01-18",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: 20 generated cases prove all THREE laws, including the one the accepted roadmap recorded as blocked - the stored difference rises by exactly the forecast lift, falls by exactly the 0.65 m band-midpoint rise with the forecast held fixed, and is byte-identical under a reporter shuffle. No assertion weakened, no shared fixture or feature file edited, no band-sensitive residual implemented. Focused acceptance 1/1 passes with no production edit. Full vitest 393/393 across 78 files, typecheck and build pass. UI checks N/A: non-visual step whose observable is a fast-check counterexample.",
+      "t": "2026-08-11T18:19:45Z"
+    },
+    {
+      "sid": "01-18",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: approved acceptance-evidence slice committed as 4e08d87ce8a2bea7552215900d93c95660e283cd (test(learning): prove every difference is forecast minus what was seen)",
+      "t": "2026-08-11T18:20:09Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified declared dependency 01-18 is sealed (4e08d87, evidence d5e6041) and the full suite green at 78 files / 393 tests before any edit. Recorded that this step's roadmap-named .feature file and PENDING_SLICES entry do not exist on this branch: both live on recover/learning-build, so there was no skip marker to delete and the step is proven by a Vitest acceptance test 1:1, the shape every committed step of this feature already uses. Inventoried src/learning/ (10 siblings) and emitted the Extension Justification block for the new reader before writing it.",
+      "t": "2026-08-11T19:42:00Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: with only the tests present both files failed to COLLECT (Cannot find module '../../src/learning/load-correction'), which is not a semantic red. The seam was then scaffolded signature-only with throwing bodies, the way src/scoring/engine.ts was scaffolded by DISTILL, and the failure became semantic: 5 of 6 acceptance examples failed on 'not implemented - driven by outside-in TDD (roadmap 02-01)' with 0 collection errors. The sixth, the whole-source declarations examination, passed against the scaffold and is an already-satisfied guard, not a driven behaviour.",
+      "t": "2026-08-11T19:42:00Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: the parser totality law (fast-check, 300 runs weighted toward near-miss records) failed against the scaffold on the same 'not implemented' throw. It is a genuinely new law: no shipped test quantifies over arbitrary bytes reaching a correction parser, because before this step nothing in the tree read a correction file back.",
+      "t": "2026-08-11T19:42:00Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the reader ships as a pure total parser plus one I/O boundary. Bytes that are not a trustworthy record, and a store that cannot be reached at all, both cost the build exactly what no file costs and say why; a missing file stays 'absent' rather than being accused of a fault. The units pin refuses a foreign unit under its own event and names what it found. Focused 7/7 pass. Full vitest 400/400 across 80 files at --maxWorkers=4 (up from 393/78), typecheck exit 0, npm run build exit 0 with 105 pages under every page-weight ceiling. Post-GREEN wiring check: src/learning/load-correction.ts is in the diff, so this is not fixture theatre. Falsifiability proven by two reverted mutations (units pin disabled; parser totality removed), each failing semantically. UI checks N/A: non-visual step whose observable is a returned outcome token and an event string.",
+      "t": "2026-08-11T19:42:00Z"
+    },
+    {
+      "sid": "02-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: production step committed as 70feeb6 (feat(learning): read the correction file without ever taking a build down)",
+      "t": "2026-08-11T19:44:00Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified declared dependency 02-01 is genuinely sealed rather than merely committed. Ran the full suite on the tree as inherited: 80 files / 400 tests green, tsc --noEmit exit 0, matching 02-01's own recorded figures. Then re-ran one of 02-01's two claimed falsifiability mutations first-hand (units pin disabled in load-correction.ts): the foreign-unit example failed semantically on 'a file the reader cannot make sense of must yield no correction at all', exactly as its contract records. Reverted; git diff --stat over src was empty. 02-01 stands. Also read the AUTHORED cucumber scenarios for slice-02 off recover/learning-build (git show f07943d) rather than trusting the inherited Vitest file to be faithful to them, and confirmed both forged scenarios there assert that the waves AND score stay at day zero, which is the whole-record verdict this step encodes.",
+      "t": "2026-08-11T23:55:00Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: the acceptance file was inherited uncommitted from a stalled prior agent. Judged well-formed and faithful to the authored .feature, with one bug: a three-argument memberHBias call against the two-argument port 05 section 5 declares, which tsc rejected with TS2554 and which vitest would never have caught because esbuild does not typecheck. The unused third argument was removed rather than widening the shipped signature, and one anti-vacuity guard was added. With the shipped inert stub in place, 3 of 4 examples then failed on real AssertionErrors naming the gate that was not reported (expected n_lt_10, not_significant and applied; it said no_file each time); 0 collection errors; typecheck clean, so the red was behavioural rather than a compile artefact. The fourth example, the no-file launch identity, passed against the stub and is the preserved fence.",
+      "t": "2026-08-11T23:55:00Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: four fast-check laws written over generated records, with each key's stored applied boolean drawn INDEPENDENTLY of the evidence beside it, which is exactly the shape a forged or stale file has. Two failed against the stub with shrunk counterexamples ('a stored difference of 4.419417382415922 display points must move the score by -0.01 ... it moved 0'; 'ecmwf_wam at lead_24_48 must be corrected by the metres stored at its OWN key (-0.12828539611796372)'). The other two are one-directional safety laws that an inert stub satisfies by moving nothing; recorded as such rather than claimed as drivers, since they acquire their force only once the body moves numbers.",
+      "t": "2026-08-11T23:55:00Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the ladder is re-run from the record's own stated evidence by calling gateCorrection rather than restating it, so apply and fit cannot drift apart, and the record's stored verdict is never read at all. The gate token is CARRIED out of gates.ts (GateVerdict.reason narrowed from string to a GateReason union) so engine.ts never constructs the literal that declarations.ts forbids outside the gate module; the whole-source examination reports zero violations. Score move is MINUS b/100 saturated at the record's own clamp.max_abs_score; height is per (source, lead bucket) with its own re-check; the 0.40-of-member-height clamp is deferred with its reason recorded, because the port carries no member height and the only call site that knows it is build.ts, owned by a concurrent lane. Full vitest 409/409 across 82 files at --maxWorkers=4 (up from 400/80), tsc --noEmit exit 0, npm run build exit 0 with 105 pages under every page-weight ceiling. Post-GREEN wiring check: src/scoring/engine.ts and src/learning/gates.ts are both in the diff, so this is not fixture theatre; src/pipeline/build.ts is NOT in the diff. Falsifiability proven by three reverted mutations (trust the stored flag; flip the score sign; drop the record's own clamp), each failing semantically. UI checks N/A: non-visual step, and build.ts still hands applyCorrection a literal null, so no published byte can move on this step at all.",
+      "t": "2026-08-11T23:55:00Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: production step committed as c6237ed (feat(learning): let a correction file move a number only on its own evidence), 10 files, 846 insertions. git show --stat confirms src/pipeline/build.ts is NOT among them. INCIDENT during this step: a second process was writing into this worktree - it replaced this step's unit-law file at 18:46 with its own incompatible version, and later reverted both src/scoring/engine.ts and src/learning/gates.ts to HEAD mid-verification. Both were restored from this session's own record and re-verified green before the commit. The foreign unit-law file is preserved outside the repo for the lane owner.",
+      "t": "2026-08-11T23:58:41Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "SECOND PASS, inert height lane. The first pass of this step shipped the height correction UNCLAMPED (c6237ed); an explicit decision rejected that, because G5's forty-percent bound can only be taken at src/pipeline/build.ts, which this lane may not touch, and shipping the metres ahead of their bound would let a corrupt file order an absurd wave height the moment 02-03 wires a record in. New acceptance assertion written against the SHIPPED unclamped body rather than a stub: a record whose height key clears every rung on its own evidence and orders 0.60 m must be corrected by exactly zero. It failed semantically -- 'the apply body must subtract exactly zero, not 0.5999999999999998' -- with tsc clean and zero collection errors, so the red was behavioural. A second doctored-outcome rejection was added to the oracle so it provably refuses an unclamped body.",
+      "t": "2026-08-12T00:17:18Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "The generated law that used to demand the per-key metres now demands exactly zero at every key, and carries a counter that fails the law outright if the generated space contained no key an unclamped body would have moved. That counter immediately exposed a defect in the inherited generators: fc.double samples uniformly over REPRESENTABLE doubles, which crowd around zero, so a stored height difference essentially never reached the region where its own ladder clears -- the counter read ZERO over 300 runs, meaning the law would have passed against an unclamped body for want of a case. Generators replaced with scaled integers at the two decimals the emitter writes, and a height key's stated error moved onto the metre scale. The counter then read 18 per 300 runs and the law failed on a shrunk counterexample: 'must be corrected by exactly zero metres ... (0.13 m on n=14, reporters=5, se=0)'. Laws (a) through (c) share those generators and are strictly stronger for the change.",
+      "t": "2026-08-12T00:17:33Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "The per-key height lookup is deleted, not disabled: memberHeightBiasOf is gone, the leadBucketOf import it orphaned is gone, and all three return sites carry one named constant NO_MEMBER_HEIGHT_CORRECTION whose comment states why the metres wait for the clamp that bounds them. There is no flag to flip and no dead lookup left in the tree. The score lane is unchanged in behaviour and was extracted into storedScoreMoveOf for readability. Full vitest 409/409 across 82 files, tsc --noEmit exit 0, npm run build exit 0 with 109 pages under every ceiling. Post-GREEN wiring check: src/scoring/engine.ts is in the diff, so this is not fixture theatre, and src/pipeline/build.ts is NOT in the diff. Falsifiability proven by three reverted mutations -- the inert constant made to return 0.01 m (6 failures across three files, including shipped scoring-laws R19, the independent fence), the score sign flipped (3), the record's own clamp dropped (2). After the reverts git status names only the three paths this commit changes. UI checks N/A: non-visual step, and build.ts still hands applyCorrection a literal null, so no published byte can move on this step at all.",
+      "t": "2026-08-12T00:17:46Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "GATE REGRESSION, found by running the authoritative local gate after the inert-height commit and fixed in the same step. npm run ci:local:fast returned 9 passed / 2 failed. The real one: the leak job found both report pages reaching pipeline/ports.ts through scoring/engine.ts -> learning/correction-file.ts, because c6237ed gave the engine a type-only import of the correction file and the gate reads import specifiers as source text, failing closed on purpose. Proven new to this step: the gate's own findForbiddenReportImports over a copy of src/ carrying 02-01's engine.ts returns 0 findings, over this tip 2. Fixed by moving the two record types into src/learning/correction-record.ts, a leaf with no imports, re-exported from correction-file.ts so nothing is restated and nothing can drift. Regression net in the same commit: the gate ran only inside ci:local, so tests/unit/report-leak-gate.test.ts now runs it against the REAL src tree, watched red on the pre-fix tree with the offending chain printed and green after. The second failure was environmental (stale .astro chunk under CDK asset fingerprinting) and passes on a clean run. Gate now 11 passed / 0 failed / 0 skipped; vitest 410/410 across 82 files; tsc exit 0.",
+      "t": "2026-08-12T00:27:54Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "Two commits: 47803f9 makes the height lane inert and 5 files change (engine, both test files, contract, phase log); cc2a480 fixes the report-leak gate regression the first one exposed and adds the net that catches its class in the unit loop. Neither touches src/pipeline/build.ts; git show --stat over both names only this step's owned paths. A third party merged build/f2-deltas-slice04-05 into this branch at 19:27:38, between the two commits, bringing 76 lines of build.ts with it -- not this step's doing, and the call site still reads applyCorrection(spot, null). Everything re-verified on the post-merge tip: tsc exit 0, vitest 443/443 across 84 files, npm run ci:local:fast 11 passed / 0 failed / 0 skipped. HEAD carries no unclamped height path: memberHeightBiasOf, per_source, leadBucketOf and swell_h_m all appear zero times in the committed engine.ts, and all three memberHBias sites are the inert constant. Branch is not on origin; nothing pushed, nothing merged by this step.",
+      "t": "2026-08-12T00:32:09Z"
     }
   ]
 }

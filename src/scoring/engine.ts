@@ -9,6 +9,29 @@
 //
 // Purity contract (05 section 3): every function here is total and pure. No
 // I/O, no clock, no config lookup, no ambient reads. Inputs in, value out.
+//
+// The learning imports below are pure too, and deliberate. applyCorrection
+// must enforce the SAME ladder the nightly fit enforced, so it calls that
+// ladder rather than restating it -- a second copy of the gate arithmetic
+// living here is precisely how apply and fit would silently drift apart.
+// src/learning/residuals.ts already imports hEff from this module for the
+// same reason in the other direction, and the graph stays acyclic: gates and
+// constants reach no further than each other and estimate.
+
+import { SIGMA_EFF, leadBucketOf } from '../learning/constants';
+import type { GatedKey, StoredCorrection } from '../learning/correction-record';
+import { gateCorrection, type GateInput } from '../learning/gates';
+
+/** domain-model.md section 11: a stored score move is stated in display points, and Q is that scale over 100. */
+const DISPLAY_POINTS_PER_Q_UNIT = 100;
+
+/**
+ * The metres subtracted from every member's height when there is no file to
+ * read, or when the file there was refused: none, at every model and every
+ * lead bucket. The day-zero forecast is what a surfer reads, which is never a
+ * lie.
+ */
+const NO_MEMBER_HEIGHT_CORRECTION = (): number => 0;
 
 // ---------- input types (05 section 3) ----------
 
@@ -101,26 +124,20 @@ export type SpotSeed = {
   };
 };
 
-/** schema spot-correction/1; null = no file (the launch state). */
-export type CorrectionRecord = {
-  spot_id: string;
-  schema: 'spot-correction/1';
-  score_delta?: {
-    b: number;
-    units: 'display_points';
-    se: number;
-    n: number;
-    reporters: number;
-    applied: boolean;
-  };
-  bias?: unknown;
-  clamp?: { max_abs_h_frac: number };
-};
-
 export type CorrectionOutcome = {
   params: EffectiveSpotParams;
-  /** Metres to SUBTRACT from a member's h_m; identically 0 unless gated in. */
-  memberHBias: (source: string, lead_h: number) => number;
+  /**
+   * Metres to SUBTRACT from a member's h_m; identically 0 unless gated in.
+   *
+   * `member_h_m` is the member's OWN raw forecast height, and it is REQUIRED
+   * rather than optional because G5 (06 section 7) bounds the move at a
+   * fraction of exactly that number. An optional height has no honest default:
+   * a call site that forgot to pass it would silently return the whole stored
+   * move unbounded, or silently return zero, and either way every test would
+   * stay green while the published height was wrong. Requiring it makes a
+   * forgetful call site a compile error instead.
+   */
+  memberHBias: (source: string, lead_h: number, member_h_m: number) => number;
   /** Score-level delta in Q units; 0 unless gated in. */
   delta_q: number;
   gate: CorrectionGate;
@@ -366,15 +383,137 @@ export function rankSpots(
   });
 }
 
+/**
+ * Read a stored correction, 05 section 5 and 06 sections 4 and 7.
+ *
+ * THE STORED VERDICT HAS NO POWER. A correction file is data: one process
+ * wrote it, another reads it a day later, and the only thing standing between
+ * whoever can write that file and a number a surfer reads is this function.
+ * So every gate the fit enforced is re-run here from the record's OWN stated
+ * evidence -- its morning count, its distinct reporters, its stored standard
+ * error -- and the record's `applied` booleans are never consulted at all. A
+ * forged file and an honest one are the same shape; only the evidence differs.
+ *
+ * The ladder itself is not re-implemented here. gateCorrection is imported so
+ * that apply and fit inherit the same arithmetic, including both anti-Sybil
+ * amendments, and cannot drift apart. Re-flooring an already-floored standard
+ * error is the identity, so reading a record twice never hardens it.
+ *
+ * ONE FILE, ONE VERDICT. The score key is the record's verdict: it is the key
+ * a forged file moves a published score with, and build.ts archives exactly
+ * one gate per call. A file the score ladder refuses moves nothing at all,
+ * height included -- which is what "the waves and score a surfer reads are
+ * exactly what day zero published" means. A record stating no score move at
+ * all states no evidence this body can weigh, and is refused on the first
+ * rung like any other file with too few mornings behind it.
+ *
+ * SIGN, 06 section 4: the score moves by MINUS the stored points over 100,
+ * because residual and bias are forecast minus observed. 05 section 5's
+ * delta_q line omits that minus and is stale against 06.
+ *
+ * G5 AND G6 (06 section 7) both bind here: the score move saturates at the
+ * limit the record itself carries, and each member's height move saturates at
+ * the fraction of that member's OWN height the record allows. Neither limit is
+ * read from a shipped constant, so a file cannot be handed a bound it did not
+ * carry. memberHBias takes the member's height as a required argument for
+ * exactly this reason -- the metres and the number that bounds them arrive
+ * together or the call does not compile.
+ *
+ * The `applied` token is never written in this file. It is carried out of
+ * gateCorrection's verdict, because src/learning/declarations.ts's
+ * whole-source examination privileges the gate module's basename and no
+ * other, and constructing that token here would make this file a marking site.
+ */
 export function applyCorrection(
   seed: SpotSeed,
-  _correction: CorrectionRecord | null,
+  correction: StoredCorrection | null,
 ): CorrectionOutcome {
+  const params = paramsFrom(seed);
+  if (correction === null) {
+    return { params, memberHBias: NO_MEMBER_HEIGHT_CORRECTION, delta_q: 0, gate: 'no_file' };
+  }
+
+  const verdict = gateCorrection(statedScoreEvidenceOf(correction.score_delta));
+  if (!verdict.applied) {
+    return { params, memberHBias: NO_MEMBER_HEIGHT_CORRECTION, delta_q: 0, gate: verdict.reason };
+  }
+
   return {
-    params: paramsFrom(seed),
-    memberHBias: () => 0,
-    delta_q: 0,
-    gate: 'no_file',
+    params,
+    memberHBias: (source, lead_h, member_h_m) =>
+      storedMemberHeightMoveOf(correction, source, lead_h, member_h_m),
+    delta_q: storedScoreMoveOf(correction),
+    gate: verdict.reason,
+  };
+}
+
+/** The published score move: MINUS the stored points over 100, bounded by the record's own limit. */
+function storedScoreMoveOf(correction: StoredCorrection): number {
+  const limit = correction.clamp.max_abs_score;
+  const bounded = clamp(correction.score_delta?.b ?? 0, -limit, limit);
+  return -bounded / DISPLAY_POINTS_PER_Q_UNIT;
+}
+
+/**
+ * The metres one member gives back at one model and one lead bucket, 06
+ * sections 4 and 7.
+ *
+ * TWO LADDERS, NOT ONE. The file-level score verdict has already opened this
+ * lane, and that verdict is about the file. This is the per-KEY gate on top of
+ * it: a stored height difference is its own claim, weighed on its own mornings,
+ * its own distinct reporters and its own standard error, against the HEIGHT
+ * noise floor rather than the score's. A spot whose score key earned its move
+ * has bought nothing for a lead bucket only two people ever reported.
+ *
+ * G5 THEN BOUNDS WHAT SURVIVES. The move saturates at a fraction of the
+ * member's own height, so however corrupt the file, the worst it can do to a
+ * published wave is bounded by the wave the forecast already predicted. The
+ * fraction is read off the RECORD, never off the shipped constant, so a file
+ * cannot be given a limit it did not carry. The bound is taken in absolute
+ * value because a record stating a negative fraction would otherwise invert
+ * the clamp and turn a bound into a floor.
+ *
+ * SIGN, 06 section 4: residual and bias are forecast minus observed, so the
+ * caller subtracts what this returns. A model that ran small stores a negative
+ * difference and the member goes UP.
+ */
+function storedMemberHeightMoveOf(
+  correction: StoredCorrection,
+  source: string,
+  lead_h: number,
+  member_h_m: number,
+): number {
+  const stated = correction.bias.swell_h_m.per_source[source]?.[leadBucketOf(lead_h)];
+  if (stated === undefined) return 0;
+  if (!gateCorrection(statedHeightEvidenceOf(stated)).applied) return 0;
+  const limit = Math.abs(correction.clamp.max_abs_h_frac * member_h_m);
+  return clamp(stated.b, -limit, limit);
+}
+
+/** What the ladder reads off one stored height key: its own evidence, at the height floor. */
+function statedHeightEvidenceOf(stated: GatedKey): GateInput {
+  return {
+    n: stated.n,
+    reporters: stated.reporters,
+    b: stated.b,
+    se: stated.se,
+    sigma_eff: SIGMA_EFF.height.value,
+  };
+}
+
+/**
+ * What the ladder reads off the record's stated score key. A record that
+ * states no score move carries no evidence this body can weigh, and a claim
+ * with no evidence behind it is refused on the first rung rather than waved
+ * through.
+ */
+function statedScoreEvidenceOf(stated: GatedKey | undefined): GateInput {
+  return {
+    n: stated?.n ?? 0,
+    reporters: stated?.reporters ?? 0,
+    b: stated?.b ?? 0,
+    se: stated?.se ?? 0,
+    sigma_eff: SIGMA_EFF.score.value,
   };
 }
 

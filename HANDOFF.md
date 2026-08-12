@@ -883,3 +883,64 @@ map production, Slice-05 JIT DISTILL/tests, or the worker cache change. Those
 remain gated separately. Sources of truth:
 `docs/product/architecture/adr-static-map-orientation-fallback.md` and
 `docs/feature/f-see-what-killed-it/deliver/slice-05-contract.md`.
+
+### Per-reporter offset escalation resolved, 2026-08-12
+
+**04-05 is delivered. The escalation is closed in favour of the estimator, and the five
+acceptance oracles it turned red have been repaired.** Decided by Andres, 2026-08-12.
+
+The step backfits 06 §5.2's per-reporter offset and subtracts each reporter's measured
+habit at 06 §5.1's `mid - u_hat` seam, which 01-13 shipped as a constant zero. It turns
+five acceptance tests from four earlier slices red. That is not a bug in the step: the
+ADR rejects gating the offset on a report threshold, and the shrink is toward zero with
+no re-centring, so every reporter carries an offset and the offsets do not sum to zero
+over a key. Every stored difference and every stored error moves the moment the stage
+lands.
+
+Re-centring was considered and rejected on its merits, in the escalation and again at
+delivery: if the offsets sum to zero over a key the key's mean is exactly unchanged, so
+the habit is never subtracted from anything and the step's whole point is gone.
+Re-centring and "subtract the habit" cannot both be true.
+
+**Cross-slice edits were explicitly authorised and are bounded to this resolution.**
+Acceptance tests owned by 01-08, 01-13, 03-03 and 04-03 were edited. Every repair commit
+says so in its body and each carries its own falsifiability probes. This is not a
+standing licence to edit another slice's tests.
+
+Four things found in delivery that the escalation did not know, all recorded in
+`docs/feature/f-forecast-learns-from-the-beach/deliver/04-05-contract.json`:
+
+- **A sixth test was wrong the same way**: 04-05's own acceptance oracle read the shrink
+  weight straight off 06 §5.2's table and assumed a re-centring the estimator does not
+  do. There is no seventh; 04-06's incident file stays green because it excises upstream
+  in `fit.ts`.
+- **Pooling now feeds back into raw estimates.** 06 §5.2 measures a habit against
+  `b_hat`, the key's SHRUNK estimate, so a change in pooling anywhere in a run reaches
+  everywhere the ladder connects. This is structural, not an artefact of unbalanced
+  fixtures.
+- **03-04 had started passing for a false reason.** Its floor assertion said "or tau was
+  clamped to its floor rather than estimated" while tau at eight proven spots IS now the
+  floor (`shrunk_from_global` 0.142857, was 0.250371). Rewritten, not re-based. The tau
+  move is 09 §17.4's "if spots truly differ, pooling self-cancels" being obeyed. **No
+  other test in the suite pins tau's value** — worth knowing before the next pooling change.
+- **Two defects in the preserved patch were fixed rather than inherited**, both in `n_r`:
+  undated samples collapsing into one report, and one person's two beaches on one morning
+  counting as one report.
+
+**Flagged, not acted on: this step multiplied the fit's compute.**
+`differencesAtEachKey` runs the whole pooling ladder — `estimatesFrom`, two `heightParents`
+passes and `provenSpotsAtEachKey` — once per backfit pass, because 06 §5.2's pseudocode puts
+`shrink(b_raw, n_key, tau_key, parent)` inside the loop. The ladder now runs about 7 times per
+fit where it ran twice. 06 §12 budgets backfitting at "milliseconds" for 20 spots and about a
+minute at 5,000, with the dominant cost being the `predictions/` re-derivation scan rather than
+the fit itself, so nothing here is near the tripwire and the suite runs in 8 seconds. But the
+ADR chose backfitting over MCMC partly because it "runs in plain code inside the Lambda budget",
+and that budget was written before the ladder went inside the loop. Worth re-checking against
+06 §12 before the spot count grows.
+
+Gate at delivery: `npm run typecheck` exit 0; 512 tests, 507 passed. The 5 failures are
+the pre-existing build-blocked ones in `staleness-stamp`, `staleness-stamp-format`,
+`staleness-flip` and `report-island` — all invoke `npm run build`, which the civil-day
+check in `src/publish/publish-static-surface.ts` refuses because
+`data/published-surface.json` was published for 2026-08-11. Not this lane's. Every
+learning acceptance and unit test is green.

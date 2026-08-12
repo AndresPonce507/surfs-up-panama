@@ -1,0 +1,22 @@
+{
+  "id": "01-14",
+  "name": "A morning without a forecast skips the score",
+  "delivery_mode": "current-equivalence/acceptance-evidence",
+  "accepted_context": "recover/learning-build:docs/feature/f-forecast-learns-from-the-beach/deliver/roadmap.json",
+  "surface_classification": "non-visual",
+  "non_visual_rationale": "A skip rule observed as two integers and a number inside the stored record; neither residual is shown on any surface in this slice. U1-U8 and a Vera walk are therefore N/A: there is no rendered surface to examine, and fabricating pixel checks would be evidence of nothing.",
+  "criteria": [
+    "Mornings reported with no captured forecast change neither the score delta nor the count of mornings behind it.",
+    "Those same mornings still count toward the height difference, one for one.",
+    "Skipping is exact: the score delta is unchanged, not merely close."
+  ],
+  "owned_paths": [
+    "src/learning/residuals.ts",
+    "tests/unit/learning-residual-laws.test.ts",
+    "tests/acceptance/f-forecast-learns-from-the-beach/forecast-less-morning-skips-score.test.ts"
+  ],
+  "production_change": false,
+  "scope_note": "The accepted roadmap names the .feature scenario 'A morning nobody had a forecast for contributes nothing to the score delta'. That file lives only on recover/learning-build; every committed step of this feature on main translates its scenario to the repository's Vitest acceptance harness instead, and this step follows that precedent rather than importing another lane's cucumber support tree.",
+  "acceptance": "Twenty generated pairs of runs drive runLearningFitOnce over the same store shape twice: once on 10-25 paired mornings carrying a predicted block, once on those same mornings plus 1-8 mornings whose predicted block is null, offset 60 days so the two sets never collide. The oracle asserts the stored score_delta is byte-identical across the pair and that the height count rose by exactly the number of forecast-less mornings, and rejects three controlled mutations: a grown score count, a score mean moved by 1e-12, and a height count that failed to absorb the extras.",
+  "falsifiability_proof": "src/learning/residuals.ts was temporarily mutated to push a zero-valued score sample for a forecast-less morning instead of omitting it. Both the acceptance property and the unit law failed semantically ('must not be counted behind the score move', 'must contribute no score sample at all, not a zero-valued one'). The mutation was reverted and `git diff --stat src/` confirmed empty before the gate was re-run."
+}

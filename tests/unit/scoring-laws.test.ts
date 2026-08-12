@@ -293,7 +293,7 @@ describe('scoring engine laws', () => {
         const noFile = applyCorrection(seed, null);
         assert.equal(noFile.gate, 'no_file', 'An absent correction file must report the no_file gate so the public record explains why learning did not change it.');
         assert.equal(noFile.delta_q, 0, 'An absent correction file must contribute exactly zero score delta, never an implicit prior.');
-        assert.equal(noFile.memberHBias('any-source', 24), 0, 'An absent correction file must contribute exactly zero member height bias, never an implicit prior.');
+        assert.equal(noFile.memberHBias('any-source', 24, 1.4), 0, 'An absent correction file must contribute exactly zero member height bias, never an implicit prior.');
       }),
       { numRuns: 100 },
     );

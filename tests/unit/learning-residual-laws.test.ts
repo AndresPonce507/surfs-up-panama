@@ -16,7 +16,7 @@ import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
 import { weightedMean, weightedSampleStandardError, type WeightedSample } from '../../src/learning/estimate';
-import { formHeightResidualRows } from '../../src/learning/residuals';
+import { formHeightResidualRows, formScoreResidualSamples } from '../../src/learning/residuals';
 import { shrinkTowardParent } from '../../src/learning/shrink';
 import { hEff } from '../../src/scoring/engine';
 import { sizeBands, type SizeBandToken } from '../../src/data/size-bands';
@@ -73,6 +73,51 @@ describe('the residual form is r_height = H_eff_pred - mid(band), u_hat = 0 this
           `r_height must equal hEff(swell_h_m, swell_t_s) - mid(band); got ${rows[0]!.sample.value}, expected ${expected}`,
         );
       }),
+      { numRuns: RUNS },
+    );
+  });
+});
+
+// 01-14. r_score is skipped when the report carries no `predicted` block
+// (06 section 5.1). Skipping is OMISSION, never a zero sample: a zero would
+// be a real sample with a real value and would move the mean. The law that
+// says so is deep equality of the surviving sample list, which also pins the
+// surviving samples to the same multiset in the same order, so downstream
+// accumulation cannot drift either.
+function oneReportedMorning(dayOffset: number, scoreShown: number | null): ObservationRow {
+  const observedAt = new Date('2026-07-01T18:41:00Z');
+  observedAt.setUTCDate(observedAt.getUTCDate() + dayOffset);
+  return {
+    spot_id: 'playa-venao',
+    device_id: `d_skip_${dayOffset % 7}`,
+    observed_at: observedAt.toISOString(),
+    size_band: 'chest_head',
+    quality: 'good',
+    predicted: scoreShown === null ? null : { score_q: scoreShown },
+  };
+}
+
+const someShownScore = fc.integer({ min: 0, max: 100 });
+
+describe('a morning with no captured forecast is omitted from the score fit, never entered as a zero', () => {
+  it('leaves the surviving score samples identical, however many forecast-less mornings are appended', () => {
+    fc.assert(
+      fc.property(
+        fc.array(someShownScore, { minLength: 1, maxLength: 25 }),
+        fc.integer({ min: 1, max: 10 }),
+        (shownScores, extraCount) => {
+          const withForecast = shownScores.map((score, index) => oneReportedMorning(index, score));
+          const withoutForecast = Array.from({ length: extraCount }, (_unused, index) =>
+            oneReportedMorning(60 + index, null),
+          );
+
+          assert.deepEqual(
+            formScoreResidualSamples([...withForecast, ...withoutForecast]),
+            formScoreResidualSamples(withForecast),
+            'a morning with no captured forecast must contribute no score sample at all, not a zero-valued one',
+          );
+        },
+      ),
       { numRuns: RUNS },
     );
   });

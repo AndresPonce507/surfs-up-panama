@@ -1,0 +1,7 @@
+{
+  "sid": "01-17",
+  "p": "COMMIT",
+  "s": "EXECUTED",
+  "d": "PASS: approved acceptance-evidence slice committed as 84e5523afd516534316230fccc445e9f189a0851 (test(learning): watch the trust gate actually drop a credential)",
+  "t": "2026-08-11T18:16:25Z"
+}

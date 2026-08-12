@@ -64,6 +64,27 @@ export function gateStandardError(
   );
 }
 
+/**
+ * 06 section 5.2's `u_hat[r] = (n_r / (n_r + tau_u)) * u_raw[r]`: a measured
+ * habit, shrunk toward ZERO rather than toward any population average
+ * (research 09 section 13.2). Toward zero is the load-bearing word. Shrinking
+ * a reporter toward what other reporters do would import everybody else's
+ * habits into theirs; zero is the only prior that says "we have not measured a
+ * habit here", which is exactly the state a reporter starts in.
+ *
+ * At n_r = 0 it is exactly 0 and their report enters at face value. No finite
+ * number of reports ever reaches the measured value: a habit fully trusted is
+ * a habit fitted to noise.
+ */
+export function shrinkTowardZero(
+  measured: number,
+  reportCount: number,
+  tau: number,
+): number {
+  if (reportCount <= 0) return 0;
+  return (reportCount / (reportCount + tau)) * measured;
+}
+
 function totalWeightOf(samples: readonly WeightedSample[]): number {
   return samples.reduce((sum, sample) => sum + sample.weight, 0);
 }

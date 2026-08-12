@@ -1,0 +1,24 @@
+{
+  "id": "01-17",
+  "name": "A month of standing drops this morning's credential",
+  "delivery_mode": "current-equivalence/acceptance-evidence",
+  "accepted_context": "recover/learning-build:docs/feature/f-forecast-learns-from-the-beach/deliver/roadmap.json",
+  "dependencies": ["01-16"],
+  "surface_classification": "non-visual",
+  "non_visual_rationale": "The gate firing is visible only as smaller integers inside a stored JSON record; there is no surface, and by design no user-visible consequence, because ineligible reports still appear on every display-instantly surface this slice does not touch. U1-U8 and a Vera walk are therefore N/A.",
+  "criteria": [
+    "With thirty days of standing required, the mornings reported on the same-morning credential are gone from the count.",
+    "Only six people count toward the five that publication requires.",
+    "Ineligible samples leave the fit and every gated count, including the count inside the stored error's floor.",
+    "The gate is watched firing and not firing; the shipped no-op alone would prove nothing."
+  ],
+  "owned_paths": [
+    "src/learning/trust.ts",
+    "tests/unit/learning-trust-eligibility.test.ts",
+    "tests/acceptance/f-forecast-learns-from-the-beach/month-of-standing-drops-a-credential.test.ts"
+  ],
+  "production_change": false,
+  "scope_note": "The roadmap lists src/learning/estimate.ts among this step's files_to_modify, on the reading that the n inside se_gate's floor needs its own edit. No edit was required: 01-16 applies eligibility once to the whole log before it is grouped by spot, so the floor already receives the post-eligibility count. The acceptance pins that structurally by reading n back off the STORED record and asserting the floor at that count, and by asserting the floor is NOT the one for the raw 22-morning count.",
+  "acceptance": "The nightly fit runs twice over the accepted 22-morning, 7-reporter fixture: once at the shipped settings (gate not firing) and once asking for 30 days of standing (gate firing). The oracle asserts 22/7 unfired and 18/6 fired, that six still clears G2's five so the drop shows in the counts rather than in a refusal, and that the stored error equals the physical floor at the count the record itself reports and not at 22. It rejects three controlled mutations: an unmoved morning count, an unmoved reporter count, and an error still floored at the raw count.",
+  "red_evidence": "src/learning/trust.ts's age clause was inverted to always hold. Three tests failed semantically: the acceptance ('must remove the four mornings reported on the same-morning credential'), the firing unit law ('must drop exactly the credentials younger than that, and nobody else') and the fail-closed law. 01-16's shipped-config identity law PASSED under the same mutation, which is the concrete demonstration of 06 section 7's clause check:unfired-is-not-evidence: the no-op step alone could not have caught this. The mutation was reverted and `git diff --stat src/` confirmed empty before the gate was re-run."
+}

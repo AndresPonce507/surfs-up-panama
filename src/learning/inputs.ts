@@ -35,6 +35,10 @@ export interface LearningInputStore {
 export const OBSERVATION_LOG_PREFIX = 'log/observations/v1/';
 /** predictions/v1/dt=<run-date>/src=<source>/cyc=<cycle>Z/all.jsonl.gz, one row per line. */
 export const PREDICTION_LOG_PREFIX = 'predictions/v1/';
+/** log/calls/v1/dt=<date>/build=<HH>Z/<region_id>.jsonl.gz: what the site published, one row per spot-hour. */
+export const CALL_LOG_PREFIX = 'log/calls/v1/';
+/** 06 section 6.4: the incident file, git-versioned and human-edited by pull request. Absent by default. */
+export const REPORTER_OVERRIDES_KEY = 'learned/overrides/v1/reporter-weights.json';
 
 /**
  * One row of the nightly observation export, domain-model.md section 7.3,
@@ -52,6 +56,22 @@ export type ObservationRow = {
   wind?: WindStateToken;
   quality?: QualityToken;
   predicted?: { score_q: number } | null;
+  /** C5's late resolution, domain-model.md section 8: reporter_key = person_id ?? device_id. */
+  person_id?: string;
+  /**
+   * 07 section 1: `organic` by default, `push_solicited` when the flow was
+   * opened from a solicitation push. Read only by 06 section 6.3's selection
+   * weight, which is the field's one declared consumer.
+   */
+  trigger?: string;
+  /**
+   * The two trust-gate carriers, 07 section 6, server-set and frozen at
+   * receipt. They exist on every record from day one precisely so G2's
+   * eligibility can be flipped on retroactively (06 section 7); they are read
+   * only by src/learning/trust.ts and form no residual.
+   */
+  received_at?: string;
+  credential_issued_at?: string;
 };
 
 /** One prediction receipt row, the same shape src/pipeline/ingest.ts writes (04-ingest-pipeline.md). */
@@ -117,6 +137,62 @@ export async function readPredictionLog(store: LearningInputStore): Promise<Pred
     rows.push(...(parseJsonLines(body) as PredictionRow[]));
   }
   return rows;
+}
+
+/**
+ * One published call, 06 section 6.3's propensity denominator and NEVER a
+ * residual: the learning lane reads this log to find out how often a kind of
+ * morning gets reported at all, not to find out whether the forecast was right.
+ */
+export type PublishedCallRow = {
+  spot_id: string;
+  valid_ts: string;
+  score_q: number;
+};
+
+/**
+ * Every published call in the log, read in key order and the same permissive
+ * way as the other two: a row this module cannot make sense of contributes no
+ * denominator rather than failing the nightly run.
+ */
+export async function readCallLog(store: LearningInputStore): Promise<PublishedCallRow[]> {
+  const keys = await store.list(CALL_LOG_PREFIX);
+  const rows: PublishedCallRow[] = [];
+  for (const key of keys) {
+    const body = await store.get(key);
+    if (body === null) continue;
+    rows.push(...(parseJsonLines(body) as PublishedCallRow[]));
+  }
+  return rows;
+}
+
+/**
+ * 06 section 6.4's override weights: a flat map of reporter_key to weight.
+ *
+ * ABSENT MEANS EVERY WEIGHT IS ONE, and so does unreadable, and so does any
+ * entry that is not a number. A file nobody can parse names nobody: the one
+ * thing this reader must never do is turn a corrupt byte into somebody being
+ * dropped from the fit. Erring the other way is safe -- the campaign is still
+ * there, the incident is still open, and a human notices.
+ */
+export async function readReporterOverrides(
+  store: LearningInputStore,
+): Promise<Map<string, number>> {
+  const weights = new Map<string, number>();
+  const body = await store.get(REPORTER_OVERRIDES_KEY);
+  if (body === null) return weights;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return weights;
+  }
+  if (!isRecord(parsed)) return weights;
+  for (const [reporterKey, weight] of Object.entries(parsed)) {
+    if (typeof weight !== 'number' || !Number.isFinite(weight) || weight < 0) continue;
+    weights.set(reporterKey, weight);
+  }
+  return weights;
 }
 
 /** The spots the log actually names, each once, in the order they first appear. */

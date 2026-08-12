@@ -49,6 +49,120 @@ export const G1_MIN_MORNINGS = 10;
  */
 export const TAU_SPOT_PRIOR = 6;
 
+/**
+ * The permanent floor under every tau this lane ever uses, 06 section 8
+ * ("tau (spot level): estimated; prior 6, floor 2") and
+ * adr-pooling-hierarchy-activation decision 5. It is what keeps the two
+ * cold-start laws true for every tau the ladder can ever reach rather than
+ * only for today's hand-set prior: at one morning a spot can never move more
+ * than 1/(1 + 2) of the way from its parents toward its own claim. Its
+ * production reader arrives at 03-04, where tau stops being a constant; it is
+ * declared here, with the laws that rest on it, so those laws are never
+ * restated against a prior that 03-04 replaces.
+ */
+export const TAU_FLOOR = 2;
+
+/**
+ * The pooling ladder's levels above the spot have no separately derived tau
+ * anywhere in 06 section 8; only the spot level does. Until one is estimated,
+ * the spot prior stands at every level, for the same reason one prior stands
+ * for both bias.swell_h_m and score_delta above: there is no second derivation
+ * to read. Inert at the launch shape, where one region on one coast makes a
+ * basin identical to its only region and the shrink between them the identity.
+ */
+export const TAU_PARENT_LEVEL_PRIOR = TAU_SPOT_PRIOR;
+
+/**
+ * How many spots must pass the correction gates before tau stops being a
+ * hand-set prior and is estimated from the data instead (06 section 5.3's
+ * stated switchover, adr-pooling-hierarchy-activation decision 5). Research 09
+ * section 17.4 says never hand-set tau; with one region and a handful of gated
+ * spots sigma_between is unidentifiable, so the rule's spirit is kept with a
+ * floor and this switchover rather than its letter.
+ */
+export const TAU_ESTIMATION_MIN_GATED_SPOTS = 8;
+
+/**
+ * How many spots of one break type must pass the correction gates before that
+ * family stops being carried by its region and starts pooling among itself
+ * (06 section 5.3, adr-pooling-hierarchy-activation decision 3). Data-driven
+ * per group: no code change and no configuration flip is involved in a family
+ * coming into existence, only one more spot earning its way through the gates.
+ */
+export const SIMILARITY_GROUP_MIN_GATED_SPOTS = 3;
+
+/**
+ * A region's maximum weight in its basin's mean, 06 section 8 (`n_eff cap per
+ * region (parent levels)`, research 09 section 17.5 item 2), so one hyperactive
+ * region can never silently become the prior every other region inherits.
+ */
+export const PARENT_MAX_EFFECTIVE_SAMPLES_PER_REGION = 200;
+
+/**
+ * tau_w, 06 section 6.2 step 3: the concordance weight is
+ * `clip(tau_w / (tau_w + D_r), floor, ceiling)`, where D_r is a reporter's mean
+ * squared disagreement with the co-observed spot-day medians of the OTHER
+ * reporters, in units of sigma_eff^2. At D_r = tau_w a reporter keeps half a
+ * voice.
+ */
+export const CONCORDANCE_TAU = 4;
+
+/**
+ * 06 section 6.2 step 3, verbatim: `clip(..., 0.2, 1.0)`. The floor is
+ * decision 24's spirit made arithmetic -- down-weight, never ban -- and a floor
+ * of zero would be a shadow ban. The ceiling is what makes agreeing with
+ * everyone worth a full voice and never more: concordance may only ever take
+ * weight away, so no coordinated bloc can buy itself extra influence by
+ * agreeing with itself.
+ */
+export const CONCORDANCE_WEIGHT_FLOOR = 0.2;
+export const CONCORDANCE_WEIGHT_CEILING = 1.0;
+
+/**
+ * How hard D_r is shrunk toward the population mean when co-observations are
+ * few (06 section 6.2 step 3 asks for the shrink and names no strength).
+ * Read as a number of prior observations: the population mean counts as ONE
+ * morning of evidence about a reporter. At a single co-observed morning a
+ * reporter is half their own record and half the population's; by the eight
+ * mornings the design treats as real evidence they are eight ninths their own,
+ * which is the "barely bites" the shrink is for. Deliberately NOT tau_w reused:
+ * tau_w is declared for the weight formula alone, and borrowing it would put a
+ * quarter of the population's disagreement onto a reporter with eight mornings
+ * of their own record.
+ */
+export const CONCORDANCE_PRIOR_OBSERVATIONS = 1;
+
+/**
+ * 06 section 6.3, research 09 section 13.5a fix 2: the inverse-propensity
+ * selection weight is `min(3, P_bar / P_hat(decile))`. The cap exists because
+ * P_hat can be arbitrarily small -- zero, for a kind of morning nobody has
+ * ever reported -- and an uncapped inverse would let one such day, or one
+ * such report, dominate the whole fit.
+ */
+export const SELECTION_WEIGHT_CAP = 3;
+
+/** 06 section 6.3: the propensities are measured over the trailing ninety days, pooled across spots. */
+export const PROPENSITY_WINDOW_DAYS = 90;
+
+/**
+ * tau_u, 06 section 5.2: the per-reporter offset is shrunk toward ZERO by
+ * `n_r / (n_r + tau_u)`. Derived there from sigma_eff ~= 0.48 m against a
+ * between-reporter spread sigma_u ~= 0.25 m: 0.48^2 / 0.25^2 ~= 3.7, rounded
+ * to 4. It puts half weight on a habit at four reports and real trust at about
+ * eight spanning two or more spots, which is where se(u_raw) drops under half
+ * a band width.
+ */
+export const REPORTER_OFFSET_TAU = 4;
+
+/**
+ * 06 section 5.2: "Backfitting for a two-way additive model converges in 2-3
+ * passes; 3 is fixed." Fixed rather than run to convergence on purpose -- a
+ * nightly job with a stopping rule can take a different number of passes on
+ * two runs over nearly the same data and store two different numbers for a
+ * reason no reader could reconstruct.
+ */
+export const BACKFIT_PASSES = 3;
+
 /** G5/G6, 06 section 7: the limits a correction's reader must enforce at apply/read time. This lane only states them. */
 export const CLAMP_MAX_ABS_HEIGHT_FRACTION = 0.4;
 export const CLAMP_MAX_ABS_SCORE_POINTS = 12;

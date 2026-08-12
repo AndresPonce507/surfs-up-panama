@@ -17,6 +17,8 @@ import { loadLaunchSpotCoordinates } from './adapters/spot-coordinates';
 import { serializeSpotIndex } from './static-publication';
 import { confidence } from '../scoring/confidence';
 import { loadLaunchSpotSeeds } from '../data/launch-spots';
+import { loadStoredCorrections } from '../learning/load-correction';
+import type { StoredCorrection } from '../learning/correction-record';
 import { sizeBands, type SizeBandToken } from '../data/size-bands';
 import type {
   BundleDay,
@@ -132,7 +134,15 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
   const hour = now.toISOString().slice(11, 13);
   const dates = [date, followingCivilDate(date)] as const;
   const rows = await predictionRows(deps, dates);
-  const calls = spots.flatMap((spot) => callsForSpot(spot, rows, dates, hour));
+  // Read before scoring, once per build, at each spot's own key. A correction
+  // is an OPTIONAL build input: a spot with no file, an unreadable file or an
+  // unreachable store all arrive here as null and publish the day-zero
+  // forecast, which is never a lie.
+  const corrections = await loadStoredCorrections({
+    store: deps.store,
+    spotIds: spots.map((spot) => spot.spot_id),
+  });
+  const calls = spots.flatMap((spot) => callsForSpot(spot, rows, dates, hour, corrections.get(spot.spot_id) ?? null));
   if (calls.length === 0) return { published: false, reason: 'no usable wave members' };
   const spotIndex = serializeSpotIndex(spots, coordinatesFor(deps));
 
@@ -217,9 +227,12 @@ async function predictionRows(deps: BuildDeps, dates: readonly string[]): Promis
   return rows;
 }
 
-function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: PredictionRow[], dates: readonly string[], hour: string): CallRow[] {
+function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: PredictionRow[], dates: readonly string[], hour: string, stored: StoredCorrection | null): CallRow[] {
   const validHours = [...new Set(rows.filter((row) => row.spot_id === spot.spot_id).map((row) => row.valid_ts))].sort();
-  const correction = applyCorrection(spot, null);
+  // The stored record's own verdict has no power here: applyCorrection re-runs
+  // the whole gate ladder from the record's stated evidence at read time, so a
+  // forged or a stale file moves nothing (06-learning-layer.md section 7).
+  const correction = applyCorrection(spot, stored);
   const drafts: DraftCallRow[] = validHours.flatMap((validTs) => {
     if (!dates.some((date) => validTs.startsWith(date))) return [];
     const bySource = new Map(rows.filter((row) => row.spot_id === spot.spot_id && row.valid_ts === validTs).map((row) => [row.source, row]));
@@ -230,7 +243,12 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
         source,
         lead_h: row.lead_h,
         swell: {
-          h_m: row.swell_h_m - correction.memberHBias(source, row.lead_h),
+          // G5 (06 section 7) bounds a stored height move at a fraction of the
+          // member's OWN forecast height, so the raw height goes in with the
+          // model and the lead time and the bound is taken where it is known.
+          // Raw, deliberately: bounding against an already-corrected height
+          // would be circular.
+          h_m: row.swell_h_m - correction.memberHBias(source, row.lead_h, row.swell_h_m),
           t_s: row.swell_t_s,
           dir_deg: row.swell_dir_deg,
         },

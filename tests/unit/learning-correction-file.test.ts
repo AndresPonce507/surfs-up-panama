@@ -16,6 +16,7 @@ import assert from 'node:assert/strict';
 import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
+import { WIND_STATE_TOKENS } from '../../src/data/report-vocab';
 import { buildCorrectionRecords, type SpotInputs } from '../../src/learning/correction-file';
 import { G1_MIN_MORNINGS } from '../../src/learning/constants';
 import type { ObservationRow, PredictionRow } from '../../src/learning/inputs';
@@ -137,6 +138,63 @@ describe('buildCorrectionRecords: the point -- below the morning threshold, no c
             key.applied,
             false,
             `${count} mornings is below the ${G1_MIN_MORNINGS}-morning floor, so applied must be false whatever the measured difference (${biggerThanForecastM} m) looks like`,
+          );
+        },
+      ),
+      { numRuns: 50 },
+    );
+  });
+});
+
+// 01-15. The emitter is pure, so the same residual samples and the same
+// injected clock must produce the same bytes -- and the wind word, which
+// forms no residual at all (06 section 8, wind is claim-exempt), must not
+// reach any of them. Both halves are stated over the emitter directly,
+// because the acceptance oracle above it compares whole stored prefixes and
+// would not say WHICH of the two rules broke.
+function withWindRotatedBy(spot: SpotInputs, rotation: number): SpotInputs {
+  return {
+    ...spot,
+    observations: spot.observations.map((observation, index) => ({
+      ...observation,
+      wind: WIND_STATE_TOKENS[(index + rotation) % WIND_STATE_TOKENS.length]!,
+    })),
+  };
+}
+
+describe('buildCorrectionRecords: the wind word forms no residual, so it moves no emitted byte (06 section 8)', () => {
+  it('emits identical records under any wind rotation, and re-emits identical records on the same clock', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 10, max: 30 }),
+        fc.integer({ min: 5, max: 9 }),
+        fc.double({ min: -1.5, max: 1.5, noNaN: true, noDefaultInfinity: true }),
+        fc.integer({ min: 1, max: WIND_STATE_TOKENS.length - 1 }),
+        (count, reportersRaw, biggerThanForecastM, rotation) => {
+          const reporters = Math.min(reportersRaw, count);
+          const spot = pairedMornings(SPOT_ID, count, reporters, biggerThanForecastM);
+
+          const baseline = buildCorrectionRecords([withWindRotatedBy(spot, 0)], clock);
+          const rotated = buildCorrectionRecords([withWindRotatedBy(spot, rotation)], clock);
+          const reEmitted = buildCorrectionRecords([withWindRotatedBy(spot, 0)], clock);
+
+          const serialise = (records: Map<string, unknown>): string =>
+            JSON.stringify([...records.entries()]);
+
+          assert.equal(
+            serialise(rotated),
+            serialise(baseline),
+            'rotating the wind word must leave every emitted byte identical, because wind forms no residual',
+          );
+          assert.equal(
+            serialise(reEmitted),
+            serialise(baseline),
+            'the emitter is pure, so the same samples on the same injected clock must re-emit the same bytes',
+          );
+          assert.doesNotMatch(
+            serialise(baseline),
+            /wind/i,
+            'no wind residual, wind bias or wind standard error may appear anywhere in an emitted record',
           );
         },
       ),

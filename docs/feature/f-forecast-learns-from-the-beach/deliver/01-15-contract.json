@@ -1,0 +1,23 @@
+{
+  "id": "01-15",
+  "name": "Wind changes no number the fit writes",
+  "delivery_mode": "current-equivalence/acceptance-evidence",
+  "accepted_context": "recover/learning-build:docs/feature/f-forecast-learns-from-the-beach/deliver/roadmap.json",
+  "surface_classification": "non-visual",
+  "non_visual_rationale": "Byte-identity of a stored prefix, established by diffing JSON text between two runs; no rendered surface is involved at any point in the comparison. U1-U8 and a Vera walk are therefore N/A, and inventing pixel checks for a byte comparison would be evidence of nothing.",
+  "criteria": [
+    "Rotating the wind word on every morning leaves everything stored under the corrections prefix byte-identical.",
+    "No wind residual, no wind bias and no wind standard error exists anywhere in the fit.",
+    "Stored timestamps come from the injected clock, so re-running the same inputs writes the same bytes."
+  ],
+  "owned_paths": [
+    "src/learning/fit.ts",
+    "src/learning/correction-file.ts",
+    "tests/unit/learning-correction-file.test.ts",
+    "tests/acceptance/f-forecast-learns-from-the-beach/wind-moves-no-number.test.ts"
+  ],
+  "production_change": false,
+  "scope_note": "The acceptance oracle snapshots the corrections prefix as the fit actually writes it today: one current/<spot_id>.json key. 06 section 7's aggregate contract also declares a history/dt= copy per run, which src/learning/fit.ts does not yet write. That gap is flagged, not built here: writing it would be production behaviour no scenario in this step demands.",
+  "acceptance": "Twenty generated cases run the nightly fit three times over 10-30 paired mornings whose wind words are rotated by 1-2 positions, then a fourth time on a later injected clock. The oracle asserts the whole corrections prefix is byte-identical across the rotation and across a re-run, that no stored body matches /wind/i, and that computed_at equals the injected clock in both runs. It rejects a controlled single-byte computed_at mutation and a controlled wind_bias field.",
+  "falsifiability_proof": "Two separate mutations of src/learning/correction-file.ts. (1) Emitting a wind_bias derived from the reported wind word failed both the acceptance byte-identity oracle and the unit emitter law ('rotating the wind word must leave every emitted byte identical'). (2) Replacing clock.now().toISOString() with a hardcoded literal failed the clock-provenance oracle ('must stamp the injected clock, never the ambient one'). Both were reverted and `git diff --stat src/` confirmed empty before the gate was re-run."
+}
