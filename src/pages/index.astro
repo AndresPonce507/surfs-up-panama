@@ -133,11 +133,13 @@ const homeAnnouncement = composeLinkAnnouncement({
   image: previewImage.toString(),
 });
 
-// Slice 05 owns this settled iPhone guidance, but it must stay out of the
-// served DOM until the alerts feature brings a live subscription path and
-// flips this flag in the same change. CSS-hidden copy would still be read and
-// would make an untrue promise today.
-const showA2hsHint = false;
+// The A2HS hint, softened by ratified decision (2026-08-12): it renders now,
+// promising only what is true today — the site one tap away, opening without
+// signal. The settled avisos wording (application-architecture.md section 10)
+// returns in the same change that brings the push subscribe path live; that
+// restore is owned by the push lane's launch checklist
+// (docs/feature/f-tell-me-when-its-worth-the-drive/launch-checklist.md).
+// Until then, no aviso word may render anywhere on the public surface.
 ---
 
 <RankedList locale="es" day={0} announcement={homeAnnouncement}>
@@ -147,10 +149,8 @@ const showA2hsHint = false;
     href={shareHref}
     label="Mandar el llamado por WhatsApp"
   />
-  {showA2hsHint && (
-    <details slot="footer-extra">
-      <summary>¿Quieres avisos?</summary>
-      <p>En iPhone: Compartir, y luego Añadir a pantalla de inicio. Sin eso, iPhone no deja avisar.</p>
-    </details>
-  )}
+  <details slot="footer-extra">
+    <summary>¿Lo quieres como app?</summary>
+    <p>En iPhone: Compartir, y luego Añadir a pantalla de inicio. Queda a un toque y abre aunque no haya señal.</p>
+  </details>
 </RankedList>

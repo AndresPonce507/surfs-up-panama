@@ -1,10 +1,11 @@
 // Slice-05: it opens like an app. The observables are the app identity the
 // built home page names for itself (how a phone learns a site can live on the
 // home screen), the icon files a phone would fetch at install time, and what
-// a normal visit does and does not cost. The A2HS hint is deliberately NOT
-// asserted present: its settled words promise avisos, no live way to ask for
-// avisos exists yet, and the absence scenario guards exactly that staging
-// (see the feature file's preamble for the ownership call).
+// a normal visit does and does not cost. The A2HS hint IS asserted present,
+// softened by ratified decision (2026-08-12): it promises only what exists
+// today (one tap away, opens without signal), and the guard scenario fails
+// any aviso word on the surface until the push subscribe path is live
+// (see the feature file's preamble and the feature delta's wave decision).
 
 import { Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
@@ -30,8 +31,10 @@ import {
 /** Manifest plus favicon ceiling: application-architecture.md section 5 line item 5. */
 const IDENTITY_CEILING_BYTES = Math.round(1.5 * 1024);
 
-/** The settled hint's opening words — the promise that must NOT render yet. */
-const AVISOS_PROMISE = '¿Quieres avisos?';
+/** No aviso word may render before the subscribe path is live (ratified 2026-08-12). */
+const AVISO_STEM = 'aviso';
+/** The softened hint: present today, promising only the tap and the offline opening. */
+const HINT_SUMMARY = '¿Lo quieres como app?';
 const A2HS_INSTRUCTION = 'Añadir a pantalla de inicio';
 
 type AppIdentity = Readonly<{
@@ -193,19 +196,49 @@ Then(
   },
 );
 
+Then(
+  'the install hint promises only what exists today',
+  { timeout: 60_000 },
+  async function (this: object) {
+    const state = scenarioState(this);
+    const now = normalise(await visibleText(state));
+    assert.ok(
+      now.includes(HINT_SUMMARY),
+      `WHAT: the home page does not show the install hint ${JSON.stringify(HINT_SUMMARY)}. `
+        + 'WHY: the hint itself was never the false promise — on iPhone the installed context is '
+        + 'the only door alerts can ever come through, and the 2026-08-12 ratified decision '
+        + 'softened its words instead of removing it. '
+        + `HOW: render the hint as a plain details disclosure in the home footer (feature delta, wave decision 2026-08-12).${failureContext(state)}`,
+    );
+    const home = resolve(DIST_ROOT, 'index.html');
+    const html = existsSync(home) ? readFileSync(home, 'utf8') : '';
+    assert.ok(
+      html.includes(A2HS_INSTRUCTION),
+      `WHAT: the built home page does not carry the one Apple step ${JSON.stringify(A2HS_INSTRUCTION)}. `
+        + `WHY: without that step an iPhone cannot install the site, which is the hint's whole job.${failureContext(state)}`,
+    );
+  },
+);
+
 Then('the page makes no promise of avisos yet', { timeout: 60_000 }, async function (this: object) {
   const state = scenarioState(this);
-  const now = normalise(await visibleText(state));
-  for (const promise of [AVISOS_PROMISE, A2HS_INSTRUCTION]) {
+  const seen = normalise(await visibleText(state)).toLowerCase();
+  const home = resolve(DIST_ROOT, 'index.html');
+  const served = existsSync(home) ? readFileSync(home, 'utf8').toLowerCase() : '';
+  for (const [where, text] of [
+    ['on the page', seen],
+    ['inside the built home document', served],
+  ] as const) {
     assert.ok(
-      !now.includes(promise),
-      `WHAT: the page shows ${JSON.stringify(promise)} while no live way to ask for avisos exists. `
-        + 'WHY: the settled hint opens by promising avisos, and no slice ships a sentence that is '
-        + 'untrue at the moment it ships — the same staging rule the offline copy followed. The '
-        + 'alerts feature flips this hint visible in the same change that brings its subscribe '
-        + 'path live, and amends this scenario then. Do not "fix" this by rendering the hint '
-        + 'early. '
-        + `HOW: keep the hint staged dark until the subscribe path is real (slice-05 roadmap step).${failureContext(state)}`,
+      !text.includes(AVISO_STEM),
+      `WHAT: an aviso word renders ${where} while no live way to ask for avisos exists. `
+        + 'WHY: a promise of avisos with no way to ask for them is a sentence that is untrue at '
+        + 'the moment it ships. The 2026-08-12 ratified decision softened the hint to promise '
+        + 'only what exists — one tap away, opens without signal. The settled avisos wording '
+        + 'returns in the same change that brings the push subscribe path live '
+        + '(docs/feature/f-tell-me-when-its-worth-the-drive/launch-checklist.md), and this '
+        + 'scenario is amended in that same change. '
+        + `HOW: keep every aviso word off the public surface until that path is live.${failureContext(state)}`,
     );
   }
 });

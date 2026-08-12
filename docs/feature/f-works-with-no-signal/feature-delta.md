@@ -217,3 +217,29 @@ whichever lands first fixes the names); and the A2HS flip above.
 they are edits owed, not tests that broke): step 03-05 deletes slice-01's sentence-two absence
 line when the promise becomes true; step 04-02 strengthens the duplicate-answer oracle to
 word-for-word rendering equality when f-tell slice-04 ships the reveal renderer.
+
+## Wave: DELIVER / [DECISION] A2HS hint softened and rendered (2026-08-12, ratified by Andres)
+
+The live surface was promising avisos ("¿Quieres avisos? ... Sin eso, iPhone no deja avisar.")
+while no push subscribe path is deployed. Andres ruled: soften the copy NOW; the hint itself
+stays. This supersedes the staged-dark half of the slice-05 ownership call — the no-untrue-
+sentence rule is now satisfied by softening the words instead of hiding the hint.
+
+- **Old copy (settled §10, unchanged in `application-architecture.md`):** "¿Quieres avisos? En
+  iPhone: Compartir, y luego Añadir a pantalla de inicio. Sin eso, iPhone no deja avisar."
+- **New interim copy (`src/pages/index.astro`, home footer, pure details, 0 JS):** "¿Lo quieres
+  como app?" / "En iPhone: Compartir, y luego Añadir a pantalla de inicio. Queda a un toque y
+  abre aunque no haya señal." Both sentences are true today: the site installs and opens
+  offline (slices 01 and 05, shipped).
+- **Guard amended, not deleted:** the scenario "No promise of avisos before avisos exist" now
+  asserts BOTH that the hint renders and that no `aviso` word appears on the page or inside the
+  built home document (hidden text still reads to screen readers).
+- **Restore condition:** restore the settled §10 avisos wording the day the push subscribe path
+  is live, in that same change, together with the guard-scenario amendment. Owner: the push
+  lane's launch checklist — recorded at
+  `docs/feature/f-tell-me-when-its-worth-the-drive/launch-checklist.md` (Andres named the
+  slice-04 launch checklist; the on-main roadmap anchor for the settled words is step 02-02 —
+  whichever slice actually ships the live subscribe path owns the restore).
+- **DoD row 8:** its "hint renders verbatim §10" half stays deferred to that restore moment;
+  today's rendering is the ratified interim copy. §10 itself was NOT reworded: it remains the
+  settled copy this decision restores.
