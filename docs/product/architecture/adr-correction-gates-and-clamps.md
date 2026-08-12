@@ -1,12 +1,12 @@
 # ADR: Correction gates and clamps — exact numbers, system-level blocked CV
 
-**Status:** Proposed (DESIGN round 2, 2026-08-08) · **Context:** C3 Verification & Learning · **Implements:** research 09 §13.3-13.4; decisions 19, 24; HANDOFF §6 item 12
+**Status:** Accepted (2026-08-12, amended; was Proposed, DESIGN round 2, 2026-08-08) · **Context:** C3 Verification & Learning · **Implements:** research 09 §13.3-13.4; decisions 19, 24; HANDOFF §6 item 12
 
 ## Decision
 
 1. A correction (height per (spot, source, lead_bucket); score per spot) carries `applied: true` only when ALL hold: `n >= 10`, `distinct(reporter_key) >= 5`, `|b_shrunk| > 2*se`, shrinkage on. Below the gates the payload carries the `n / 30` counter and `claim_ok: false`; the product never shows a sub-gate number.
 2. Clamps are enforced at APPLY time by the builder, not at write time: `|b_height| <= 0.40 * forecast_H` (09 §13.4 gate 5), `|b_score| <= 12` points (v1 prior; adds `clamp.max_abs_score` to schema spot-correction/1, additive). A corrupt correction file can therefore never print an absurd public number, and deleting the file reverts the spot to pure seed.
-3. Blocked cross-validation (09 §13.4 gate 4) runs monthly at SYSTEM level: rolling-origin held-out time blocks; if corrected MAE loses to raw at the majority of gated keys, `applied: false` everywhere until a human reviews. Random k-fold is banned (consecutive hours of one swell are near-duplicates; random splits leak).
+3. Blocked cross-validation (09 §13.4 gate 4) runs monthly at SYSTEM level: rolling-origin held-out time blocks; if corrected MAE loses to raw at the majority of gated keys, `applied: false` everywhere until a human reviews. Random k-fold is banned (consecutive hours of one swell are near-duplicates; random splits leak). **Amendment (Andres, 2026-08-12):** the monthly evaluation is metrics-only — it publishes its kill verdict into `learned/metrics/v1/` and the correction-apply lane consumes that verdict at apply time; the evaluation job holds no `learned/corrections/` write access.
 4. The scorecard display gate (`claim_ok`, settled in domain-model §9) and the correction apply gate are the SAME three conditions evaluated at two points; neither may drift from the other. One rule, two enforcement sites.
 5. Two claim ladders, never conflated: per-spot scorecard claims gate on 1-3 above; the product-level accuracy claim ("better than the raw model") gates separately on ~400 same-day multi-spot comparison pairs with positive pairwise lift (09 §10.2, §10.4). Both fail at launch by construction.
 

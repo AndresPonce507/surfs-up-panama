@@ -32,3 +32,5 @@ The repo is public, so any client-side identity is a value the attacker chooses 
 - An attacker can still beat the gate by aging credentials for weeks while behaving normally — the bar moves from seconds to weeks, which is the largest single improvement available at $0 (research 15 §11.2). Stated, not hidden.
 - A revoked credential still verifies at ingest (stateless check); revocation takes effect at aggregation/recompute. Deliberate trade for the handler budget.
 - Key lives in SSM SecureString per `adr-secrets-public-repo.md`; the `v1` prefix versions the scheme for rotation.
+
+**Review 2026-08-12:** stays Proposed. The shipped write path (`src/report/` on main) conforms to decisions 1-5 — countersigned credential, idempotent mint on `CRED#<device_id>`, stateless verification, mint ledger with `src_hash`, trust gating computed at aggregation time — except decision 6: proof of work is not built anywhere on any branch. The dormant tier is absent, not merely unfired, so the ADR does not flip until the tier exists or the decision is amended.

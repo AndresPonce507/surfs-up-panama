@@ -24,3 +24,5 @@
 
 - Builder reads stay O(daily items per key) ≤ 90; updater writes stay O(sources × lead buckets) per report (~20 `ADD`s).
 - The cursor serializes the updater — fine at launch volume; if throughput ever demands parallelism, switch to per-(report, key) idempotency markers (flagged, Domain Model §15.3).
+
+**Review 2026-08-12:** stays Proposed. The incremental mechanism this ADR decides — `SCORE#` daily aggregate items, atomic `ADD`, the `JobCursor`, monthly rollups — is not built anywhere on any branch. What is built (the record lane on `build/f2-record-fresh`, record slices 01-02, not yet on main) is a full-recompute projection from the immutable reports (`src/scorecard/`, "rebuild projection from immutable reports"), which is exactly the steady state this ADR rejected and kept only as the recovery path. Decision owed from Andres when record slice-03 unblocks: amend this ADR to bless full recompute at launch scale, or build the incremental path.
