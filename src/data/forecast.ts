@@ -17,6 +17,7 @@ import type { SizeBandToken } from './size-bands';
 import {
   assertStrictTwoDayUpdate,
   type BestWindow,
+  type ConfidenceReason,
   type ConfLevel,
   type SizeRangeM,
   type SurfaceCall,
@@ -43,6 +44,19 @@ export interface DaySummary {
    * value behind it stays in the PublishedCall log (domain-model section 13).
    */
   readonly conf_level?: ConfLevel;
+  /**
+   * The per-variable spread terms behind that level, carried through so the
+   * row can name WHICH thing the models split on instead of saying "they agree
+   * in part" (research 09 sections 8.4 and 14.4). The Spanish is composed at
+   * render time from `src/scoring/confidence.ts`, never stored, so rewording
+   * never needs a republish.
+   *
+   * Optional for the same reason the five structured fields above are: a
+   * surface committed before this field existed carries no such key. A missing
+   * key is a real fact and renders as `{ kind: 'unknown' }`, which reproduces
+   * the older, level-only sentence rather than inventing an agreement.
+   */
+  readonly confidence_reason?: ConfidenceReason;
 }
 
 export interface ForecastPlaceholder {
@@ -67,6 +81,7 @@ function summaries(calls: readonly SurfaceCall[]): readonly DaySummary[] {
   ...(call.wind_state === undefined ? {} : { wind_state: call.wind_state }),
   ...(call.best_window === undefined ? {} : { best_window: call.best_window }),
   ...(call.conf_level === undefined ? {} : { conf_level: call.conf_level }),
+  ...(call.confidence_reason === undefined ? {} : { confidence_reason: call.confidence_reason }),
   }));
 }
 

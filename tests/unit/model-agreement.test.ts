@@ -1,0 +1,151 @@
+// F-KNOW-HOW-MUCH-TO-TRUST-IT, slice-01.
+//
+// `modelAgreement` — the pure per-variable reading of the published spread
+// terms, and the Spanish sentence composed from it. Research 09 section 8.4
+// bullet 3 and section 14.4: name the specific disagreement, never a generic
+// "conditions may vary".
+
+import assert from 'node:assert/strict';
+
+import fc from 'fast-check';
+import { describe, it } from 'vitest';
+
+import {
+  DISAGREEMENT_THRESHOLD,
+  SPREAD_VARIABLES,
+  confidenceReasonEs,
+  modelAgreement,
+  type ConfidenceLevel,
+  type ModelAgreement,
+  type SpreadTerms,
+  type SpreadVariable,
+} from '../../src/scoring/confidence';
+import { FACTOR_VOCAB } from '../../src/publish/factor-vocab';
+
+const term = () => fc.double({ min: 0, max: 40, noNaN: true, noDefaultInfinity: true });
+const terms = (): fc.Arbitrary<SpreadTerms> =>
+  fc.record({ height: term(), period: term(), direction: term() });
+const level = (): fc.Arbitrary<ConfidenceLevel> => fc.constantFrom('low', 'medium', 'high');
+
+describe('modelAgreement — the threshold is pinned by the research, not by taste', () => {
+  it("reproduces section 7.5's own worked Playa Venao reading: agree on size and direction, split on period", () => {
+    // The exact three penalty terms research 09 section 7.5 computes from the
+    // measured Venao members, and the exact sentence it writes from them:
+    // "Models agree on size and direction but split badly on period".
+    const venao: SpreadTerms = { height: 0.239, period: 0.832, direction: 0.09 };
+
+    const reading = modelAgreement(venao, 'low');
+
+    assert.equal(reading.kind, 'compared');
+    assert.deepEqual(reading.kind === 'compared' ? [...reading.agree].sort() : [], ['direction', 'height']);
+    assert.deepEqual(reading.kind === 'compared' ? [...reading.disagree] : [], ['period']);
+  });
+
+  it('keeps the threshold inside the window that worked reading forces', () => {
+    // 0.239 must read as agreement and 0.832 must read as disagreement, so
+    // any threshold outside this half-open interval contradicts the document
+    // that justifies the feature.
+    assert.ok(DISAGREEMENT_THRESHOLD > 0.239, `threshold ${DISAGREEMENT_THRESHOLD} would call Venao's height a disagreement`);
+    assert.ok(DISAGREEMENT_THRESHOLD <= 0.832, `threshold ${DISAGREEMENT_THRESHOLD} would call Venao's period an agreement`);
+  });
+});
+
+describe('modelAgreement — laws', () => {
+  it('partitions the three variables: every variable lands in exactly one side', () => {
+    fc.assert(fc.property(terms(), level(), (spread, confLevel) => {
+      const reading = modelAgreement(spread, confLevel);
+      if (reading.kind !== 'compared') return;
+      const seen = [...reading.agree, ...reading.disagree].sort();
+      assert.deepEqual(seen, [...SPREAD_VARIABLES].sort());
+      for (const variable of reading.agree) assert.ok(!reading.disagree.includes(variable));
+    }));
+  });
+
+  it('is monotone: raising one variable never moves it back into agreement', () => {
+    fc.assert(fc.property(
+      terms(),
+      level(),
+      fc.constantFrom<SpreadVariable>(...SPREAD_VARIABLES),
+      fc.double({ min: 0, max: 40, noNaN: true, noDefaultInfinity: true }),
+      (spread, confLevel, variable, bump) => {
+        const before = modelAgreement(spread, confLevel);
+        const after = modelAgreement({ ...spread, [variable]: spread[variable] + bump }, confLevel);
+        if (before.kind !== 'compared' || after.kind !== 'compared') return;
+        if (before.disagree.includes(variable)) assert.ok(after.disagree.includes(variable));
+      },
+    ));
+  });
+
+  it('never reports agreement when the terms are all zero and the level is low: that is one model, not consensus', () => {
+    // A single usable member caps c_spread at 0.4 (research 09 section 7.5's
+    // f(M)), so c_total <= 0.4, so the level is low. Zero terms with a level
+    // ABOVE low can only come from two or more members that genuinely agreed.
+    fc.assert(fc.property(level(), (confLevel) => {
+      const reading = modelAgreement({ height: 0, period: 0, direction: 0 }, confLevel);
+      if (confLevel === 'low') {
+        assert.equal(reading.kind, 'not_comparable');
+        return;
+      }
+      assert.equal(reading.kind, 'compared');
+      assert.deepEqual(reading.kind === 'compared' ? [...reading.disagree] : ['unreachable'], []);
+    }));
+  });
+});
+
+describe('confidenceReasonEs — what a surfer actually reads', () => {
+  /** One reading of every shape the surface can produce. Built inside the
+   * tests, never at describe time, so a throwing scaffold fails each test
+   * behaviourally instead of breaking collection. */
+  const everyReading = (): ModelAgreement[] => [
+    modelAgreement({ height: 0, period: 0, direction: 0 }, 'low'),
+    modelAgreement({ height: 0, period: 0, direction: 0 }, 'medium'),
+    modelAgreement({ height: 0.239, period: 0.832, direction: 0.09 }, 'medium'),
+    modelAgreement({ height: 9, period: 9, direction: 9 }, 'low'),
+    modelAgreement({ height: 9, period: 0.01, direction: 0.01 }, 'medium'),
+  ];
+
+  it('names a concrete variable, or says outright that there is nothing to compare', () => {
+    fc.assert(fc.property(terms(), level(), (spread, confLevel) => {
+      const sentence = confidenceReasonEs(confLevel, modelAgreement(spread, confLevel));
+      const namesAVariable = /tamaño|período|dirección/u.test(sentence);
+      const saysNothingToCompare = /no hay con qué comparar/u.test(sentence);
+      assert.ok(namesAVariable || saysNothingToCompare, `frase vaga: "${sentence}"`);
+    }));
+  });
+
+  it('keeps every honesty invariant the published surface depends on', () => {
+    fc.assert(fc.property(terms(), level(), (spread, confLevel) => {
+      const sentence = confidenceReasonEs(confLevel, modelAgreement(spread, confLevel));
+      // Slice-07's three standing assertions, which must not regress.
+      assert.match(sentence, /modelo/iu, 'toda razón nombra a los modelos');
+      assert.match(sentence, /nadie.*playa|playa.*nadie/isu, 'toda razón dice que nadie reportó desde la playa');
+      // Research 09 section 3.6: a qualitative flag, never a calibrated figure.
+      assert.doesNotMatch(sentence, /\d|%/u, 'la confianza nunca se muestra como cifra');
+      // Project copy rule: no em dashes anywhere in a UI string.
+      assert.doesNotMatch(sentence, /—/u, 'sin rayas largas');
+      // Project copy rule: zero technical text on the Spanish surface.
+      assert.doesNotMatch(sentence, /\b(?:ncep|gfs|dwd|ecmwf|meteofrance|gwam|wam|json|null|undefined)\b/iu);
+    }));
+  });
+
+  it('never claims agreement on a reading that is not comparable', () => {
+    const sentence = confidenceReasonEs('low', modelAgreement({ height: 0, period: 0, direction: 0 }, 'low'));
+    assert.doesNotMatch(sentence, /modelos coinciden/iu, 'una sola opinión no puede leerse como acuerdo');
+    assert.match(sentence, /no hay con qué comparar/u);
+  });
+
+  it('says every distinct reading differently, so the sentence carries information', () => {
+    const sentences = everyReading().map((reading) => confidenceReasonEs('medium', reading));
+    assert.equal(new Set(sentences).size, sentences.length, `dos lecturas distintas produjeron la misma frase: ${sentences.join(' | ')}`);
+  });
+
+  it('says the two shared factor words exactly as the one shared vocabulary module says them', () => {
+    // `src/publish/factor-vocab.ts` exists precisely so this feature and
+    // f-see-what-killed-it cannot drift on the same words. The scoring core
+    // must not import the publish layer, so the words are declared locally
+    // and asserted equal here, mirroring tests/unit/weakest-link-vocab.test.ts.
+    const sentence = confidenceReasonEs('medium', modelAgreement({ height: 9, period: 0.01, direction: 9 }, 'medium'));
+    assert.match(sentence, new RegExp(FACTOR_VOCAB.size.noun, 'u'), 'el tamaño se dice como lo dice el vocabulario compartido');
+    assert.match(sentence, new RegExp(FACTOR_VOCAB.dir.noun, 'u'), 'la dirección se dice como la dice el vocabulario compartido');
+  });
+});
