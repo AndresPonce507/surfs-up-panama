@@ -72,13 +72,16 @@ export async function runPublishOnce(deps: PublishDeps): Promise<PublishOutcome>
     const merged = mergePublishedSurface(previous, assertStrictTwoDayUpdate(bundle.publish_surface));
     assertCurrentCivilDay(merged, deps.clock.now());
 
-    await deps.store.put(PUBLISHED_SURFACE_STATE_KEY, JSON.stringify(merged));
-
     const distDir = await deps.renderer(JSON.stringify(merged));
     const { canonical, directoryAliases } = await publishBuild(
       { target: PUBLICATION_TARGET, distDir, origin: PUBLICATION_TARGET.origin },
       deps.commandRunner,
     );
+
+    // The archive of record is written only once every put has actually
+    // landed: a cycle that refuses on the origin receipt or dies mid-batch
+    // must leave it byte-identical, not just leave the public pages stale.
+    await deps.store.put(PUBLISHED_SURFACE_STATE_KEY, JSON.stringify(merged));
 
     return {
       published: true,
