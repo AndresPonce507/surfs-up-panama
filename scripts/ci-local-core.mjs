@@ -285,6 +285,37 @@ async function evaluateBillGuardrails({ root, output }) {
   return evaluateBill({ root, output });
 }
 
+// F-TELL-US-WHAT-YOU-SAW-COLD slice-02: the write-address cost boundaries.
+// Same containment rule as the bill phase above -- it runs only inside the
+// full infra job, never through `declarationInput`-mode calls, so the keystone
+// feature's frozen fixtures never reach keys they cannot declare.
+async function evaluateWritePathDeclarations({ root, output }) {
+  const definition = infrastructureDefinition(root);
+  if (!definition.available) {
+    return unavailableInfrastructureDefinition({ root, output, path: definition.infraRoot });
+  }
+
+  let evaluateWritePath;
+  try {
+    ({ evaluateWritePathGuardrails: evaluateWritePath } = await import('../infra/guardrail-evaluator.mjs'));
+  } catch {
+    return unavailableInfrastructureDefinition({
+      root,
+      output,
+      path: resolve(definition.infraRoot, 'guardrail-evaluator.mjs'),
+    });
+  }
+  if (typeof evaluateWritePath !== 'function') {
+    return unavailableInfrastructureDefinition({
+      root,
+      output,
+      path: resolve(definition.infraRoot, 'guardrail-evaluator.mjs'),
+    });
+  }
+
+  return evaluateWritePath({ root, output });
+}
+
 async function runInfrastructureJob({ repoRoot, output, commandRunner, environment }) {
   const definition = infrastructureDefinition(repoRoot);
   if (!definition.available) {
@@ -308,6 +339,9 @@ async function runInfrastructureJob({ repoRoot, output, commandRunner, environme
 
     const billGuardrailResult = await evaluateBillGuardrails({ root: repoRoot, output });
     if (billGuardrailResult.exitCode !== 0) return { status: billGuardrailResult.exitCode, failure: 'bill guardrail declaration evaluation' };
+
+    const writePathResult = await evaluateWritePathDeclarations({ root: repoRoot, output });
+    if (writePathResult.exitCode !== 0) return { status: writePathResult.exitCode, failure: 'write-path declaration evaluation' };
 
     const vitest = resolve(repoRoot, 'node_modules/vitest/vitest.mjs');
     const guardrailTest = resolve(repoRoot, 'infra/test/guardrails.test.ts');

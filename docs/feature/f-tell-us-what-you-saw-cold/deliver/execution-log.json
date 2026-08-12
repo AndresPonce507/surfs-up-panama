@@ -526,6 +526,34 @@
       "s": "EXECUTED",
       "d": "PASS: corrective implementation commit 8b054162bc4e2e897c063cac3575203ad2057e7b. Independent review resolved both credential recovery and queued-open drain defects; local Chromium 2 scenarios/58 steps, scoped report units, typecheck, infra, build, report-leak, page-budget, and synth gates were green. No deploy performed; deployed Function-URL CORS/no-store, quota/device, and deployed spot-index gates remain INDETERMINATE.",
       "t": "2026-08-11T15:48:00Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "AUDIT",
+      "s": "EXECUTED",
+      "d": "PASS: phase-02 status established by execution, not by file inventory. Baseline on a fresh worktree off origin/main 6eeb4fc after npm ci: typecheck exit 0; npm run test 380/380; npm run test:infra 76/76; npm run build exit 0; node scripts/check-report-leak.mjs --dist dist exit 0 over 40 report routes. Slice-02 tag run (output redirected, $? captured, then read): exit 1, 26 scenarios, 1 passed / 25 failed. Root cause: writePathGuardrailDeclarations does not exist anywhere in the repo, and neither evaluateInfrastructureDeclarations nor evaluateBillGuardrails reads any write-path key, so every controlled one-value drift was accepted and the green run omitted every write-path protection line. 02-01 is real (acceptance contract authored and bound: feature + steps + distill/red-classification.md, commits 873b9ff and a415e02); 02-02, 02-03 and 02-04 are unbuilt. 02-02 is therefore the true next unbuilt step, not 04-01.",
+      "t": "2026-08-11T22:45:00Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS: acceptance layer gave the semantic RED on the untouched tree. The 12 examples this step owns -- Scenario Outline 'Each write address rejects a changed public posture or origin' (8) and 'Each write worker rejects a changed concurrency ceiling' (4) -- each failed with AssertionError 'WHAT: <label> regression was accepted', a behaviour oracle failure, not a collection or import error; the controlled temporary copy built and ran the real local-CI infra job in every case. Unit layer: the PBT in infra/test/guardrails.test.ts was written first and failed at collection (TypeError: Cannot convert undefined or null to object -- writePathGuardrailDeclarations absent, assessWritePathDeclarations absent). Recorded honestly: that is an import-level RED, not a semantic one, so unit falsifiability is proven post-GREEN by poison-and-revert (see GREEN entry), per project CLAUDE.md 'prove every negative test falsifiable'.",
+      "t": "2026-08-11T22:55:00Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: slice-02 tag run went from 1 passed / 25 failed to 13 passed / 13 failed with zero test-file edits -- all 12 assigned examples green plus the pre-existing 'gate that cannot inspect declarations' scenario still green. The 13 remaining failures are 02-03's (table capacity 3, breaker alarms 4, device quota 4) and 02-04's (sizing source 1) plus the whole-slice green scenario, which now advances past every write-address assertion and stops at 'PROVISIONED', 02-03's first item. Implementation: writePathGuardrailDeclarations (12 keys) in infra/lib/guardrail-declarations.ts; pure policy port assessWritePathDeclarations plus I/O shell evaluateWritePathGuardrails in infra/guardrail-evaluator.mjs; 4 property/example tests in infra/test/guardrails.test.ts. Origin policy is STRUCTURAL, not a literal match -- all four write addresses must declare the same exact absolute https origin, never '*' and never a path -- because the deployed stack imports the live origin from the site stack's SurfsUpPanamaSiteOrigin export (Fn.importValue), so no literal host could be honest. FALSIFIABILITY, four poison-and-revert cycles, each reverted and diffed byte-identical: (1) assessFixedValue forced to always return satisfied -> 2 unit tests failed with semantic AssertionError 'report-url-auth: expected satisfied to be refused'; (2) the origin guard's `origin === '*'` clause neutered -> suite stayed GREEN, exposing it as DEAD CODE (new URL('*') already throws); the clause was deleted rather than kept as decorative defence; (3) the https: check removed -> AssertionError 'report-url-origin accepted \"http://insecure.example\"'; (4) the parsed.origin === origin check removed -> AssertionError 'report-url-origin accepted \"https://site.example/reportar\"'. Gates: typecheck exit 0; npm run test 384/384; npm run test:infra 80/80; node scripts/ci-local.mjs --job=infra exit 0 emitting the three new write-path lines; npm run build exit 0 under every page-weight ceiling. Wiring check: git status shows all three files_to_modify changed plus the widened scripts/ci-local-core.mjs; git diff --stat src/ is empty, so no Fixture Theater and no reach into another lane's src/pipeline/build.ts. Test budget: 4 behaviours, 4 tests, budget 8. UI N/A -- surface_classification non-visual, terminal-only guardrail output, ui_checks empty.",
+      "t": "2026-08-11T23:20:00Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS with two flags. SCOPE WIDENING: scripts/ci-local-core.mjs is listed in 02-04's files_to_modify, not 02-02's, but the acceptance contract drives runLocalCi({argv:['--job=infra']}) as its driving port, so a write-path phase that is never invoked from runInfrastructureJob cannot reach GREEN. The alternative -- hiding write-path checks inside evaluateBillGuardrails -- would misattribute them to F-BILL and break that feature's phase containment. Added only the one guarded invocation, placed after the bill phase and before vitest/synth, which is exactly the ordering 02-04 criterion 1 requires. FIXTURE CONSEQUENCE for the next lane: the acceptance steps append CONTROLLED_BLOCK only when guardrail-declarations.ts lacks 'export const writePathGuardrailDeclarations = {'. That export now exists with 02-02's 12 keys, so the block is no longer appended and 02-03's and 02-04's 13 scenarios shifted failure mode from 'regression was accepted' (semantic) to 'controlled mutation for <key> is ambiguous or unavailable' (fixture-level). Both are RED and neither is a new break -- 02-03 and 02-04 close them by adding their own keys to the same declaration block. Serialized with F-BILL: no deploy, no CloudFront write, no budget-deny action taken.",
+      "t": "2026-08-11T23:25:00Z"
     }
   ]
 }
