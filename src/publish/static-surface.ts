@@ -216,6 +216,34 @@ export function previousCivilDate(surfDate: string): string {
   return atNoonUtc.toISOString().slice(0, 10);
 }
 
+/** Panama's civil calendar date (`YYYY-MM-DD`) at the given instant. */
+export function panamaCivilDate(instant: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Panama',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(instant);
+}
+
+/**
+ * The midnight rule: a static surface may only serve as today's call on
+ * Panama's own current civil day. Extracted from
+ * `publish-static-surface.ts`'s CLI so the exact same check, driven by an
+ * injected instant rather than the wall clock, runs inside the bounded
+ * Publisher too (`src/pipeline/publish-site.ts`) -- one implementation, not
+ * two (contract:declared-inputs-not-ambient-reads).
+ */
+export function assertCurrentCivilDay(surface: StaticSurface, instant: Date): void {
+  const publishedDay = surface.current.days[0].date;
+  const panamaToday = panamaCivilDate(instant);
+  if (publishedDay !== panamaToday) {
+    throw new Error(
+      `WHAT static surface is for ${publishedDay}, not Panama's ${panamaToday}; WHY a stale build cannot pretend to be this morning's call;`,
+    );
+  }
+}
+
 /**
  * The static reading surface has only two honest horizons. Keep this check
  * independent of the publishing CLI so Astro cannot render a malformed JSON
