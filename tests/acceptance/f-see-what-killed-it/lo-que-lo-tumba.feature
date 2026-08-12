@@ -223,3 +223,9 @@ Feature: La playa dice qué fue lo que la tumbó
     Given la política de mapas que este proyecto sí puede mostrar
     When la construcción decide playa por playa, junto a una copia sin el crédito de una playa
     Then cada playa aprobada trae su crédito visible en español, la playa sin fuente de orientación queda fuera, y la copia sin crédito se niega antes de dibujar
+
+  @slice-05 @driving_port @real-io @adapter-integration @negative @error @covers-R18 @covers-R20 @covers-R30
+  Scenario: El mapa que abre el surfista ya viene listo, sin pedir un mosaico
+    Given la política de mapas que este proyecto sí puede mostrar
+    When la construcción dibuja los mapas, los vuelve a dibujar sin cambiar nada, y luego lo intenta con una política rota
+    Then cada playa aprobada queda con su propio archivo liviano y su fila en el listado, el segundo dibujo repite las mismas identidades, y la política rota se niega antes de escribir un archivo

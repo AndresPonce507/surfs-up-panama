@@ -131,6 +131,55 @@ function decideOne(policy: StaticMapPolicy, spot_id: string): StaticMapDecision 
   };
 }
 
+// ------------------------------------------------------ the asset manifest --
+
+/**
+ * One approved spot's generated asset, as the manifest records it and as the
+ * page reads it. Every field the contract requires travels together in one row:
+ * an asset can never be credited by one record while being served from another.
+ */
+export type StaticMapManifestRow = {
+  readonly spot_id: string;
+  /** Site-absolute path of the emitted file, content-addressed. */
+  readonly path: string;
+  /** Full digest of the exact bytes on disk. A byte change is a path change. */
+  readonly digest: string;
+  readonly bytes: number;
+  readonly width: number;
+  readonly height: number;
+  readonly caption: string;
+  readonly coordinate_attribution: string;
+  readonly orientation_attribution: string;
+  readonly coordinate_provenance: string;
+  readonly orientation_provenance: string;
+  /** Digest of the human-owned seed file this row was drawn from. */
+  readonly seed_revision: string;
+  readonly generator_version: string;
+};
+
+/** The generated manifest. Committed, and re-verified on every build. */
+export type StaticMapManifest = {
+  readonly schema: 'static-map-manifest/1';
+  readonly region_id: string;
+  readonly generator_version: string;
+  readonly seed_revision: string;
+  readonly frame: { readonly width: number; readonly height: number };
+  /** Approved spots only, in launch order. */
+  readonly spots: Readonly<Record<string, StaticMapManifestRow>>;
+  /** Refused spots and why, so an absent map is a recorded decision rather than a gap. */
+  readonly refused: Readonly<Record<string, StaticMapRefusalReason>>;
+};
+
+/**
+ * The stable, content-addressed site path for one asset. Content-addressed on
+ * purpose: a revised diagram cannot be served under a path a cached page or a
+ * stale manifest already knows, so "credited one image, showed another" has no
+ * shape it could take.
+ */
+export function staticMapAssetPath(spot_id: string, digest: string, extension: string): string {
+  return `/maps/${spot_id}-${digest.slice(0, 12)}${extension}`;
+}
+
 /**
  * Validating constructor. A malformed policy refuses the build here rather than
  * reaching the generator, because the generator's next act is writing bytes a

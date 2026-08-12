@@ -56,8 +56,10 @@ import { spawnSync } from 'node:child_process';
 import {
   copyFileSync,
   cpSync,
+  existsSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -76,8 +78,10 @@ import {
   decideStaticMapAssets,
   parseStaticMapPolicy,
   type StaticMapDecision,
+  type StaticMapManifest,
   type StaticMapPolicy,
 } from '../../../../src/publish/static-map-policy';
+import { writeStaticMaps } from '../../../../scripts/generate-static-maps';
 
 const projectRoot = process.cwd();
 
@@ -2710,6 +2714,104 @@ Then(
     assertBehavior(
       findings,
       'aprobar solo las playas cuya ubicación y orientación tienen fuente citable, componer su crédito visible en español desde esa fuente, y negar el mapa de la playa a la que le falta, sin tocar a las demás.',
+    );
+  },
+);
+
+type DrawnMaps = {
+  readonly first: StaticMapManifest;
+  readonly second: StaticMapManifest;
+  readonly assetDir: string;
+  readonly brokenRefusal: string;
+  readonly brokenWrote: readonly string[];
+};
+
+/** A copy carrying only what the generator reads, so no scenario touches the worktree. */
+function isolatedMapProject(): string {
+  const root = mkdtempSync(join(tmpdir(), 'surfs-up-killed-it-maps-'));
+  cpSync(join(projectRoot, 'data/maps'), join(root, 'data/maps'), { recursive: true });
+  cpSync(join(projectRoot, 'data/spots'), join(root, 'data/spots'), { recursive: true });
+  return root;
+}
+
+type Slice05MapWorld = Slice01World & { killedItDrawnMaps?: DrawnMaps };
+
+When(
+  'la construcción dibuja los mapas, los vuelve a dibujar sin cambiar nada, y luego lo intenta con una política rota',
+  { timeout: 120_000 },
+  async function (this: PipelineWorld) {
+    const root = isolatedMapProject();
+    const first = await writeStaticMaps({ projectRoot: root });
+    const second = await writeStaticMaps({ projectRoot: root });
+
+    const brokenRoot = isolatedMapProject();
+    writeFileSync(join(brokenRoot, 'data/maps/pa-pacific-map-policy.json'), '{"schema":"static-map-policy/1"}\n');
+    let brokenRefusal = '';
+    try {
+      await writeStaticMaps({ projectRoot: brokenRoot });
+    } catch (error) {
+      brokenRefusal = error instanceof Error ? error.message : String(error);
+    }
+    const brokenAssetDir = join(brokenRoot, 'public');
+
+    (world01(this) as Slice05MapWorld).killedItDrawnMaps = {
+      first,
+      second,
+      assetDir: join(root, 'public/maps'),
+      brokenRefusal,
+      brokenWrote: existsSync(brokenAssetDir) ? readdirSync(brokenAssetDir) : [],
+    };
+    rmSync(brokenRoot, { recursive: true, force: true });
+  },
+);
+
+Then(
+  'cada playa aprobada queda con su propio archivo liviano y su fila en el listado, el segundo dibujo repite las mismas identidades, y la política rota se niega antes de escribir un archivo',
+  function (this: PipelineWorld) {
+    const drawn = (world01(this) as Slice05MapWorld).killedItDrawnMaps;
+    assert.ok(drawn, 'test fixture error: no map was ever drawn');
+    const findings: string[] = [];
+    const approved = Object.values(drawn.first.spots);
+
+    if (approved.length === 0) findings.push('la construcción no dibujó ni un mapa');
+    const emitted = readdirSync(drawn.assetDir);
+    if (emitted.length !== approved.length) {
+      findings.push(`quedaron ${emitted.length} archivos para ${approved.length} playas aprobadas`);
+    }
+
+    for (const row of approved) {
+      const file = join(drawn.assetDir, row.path.slice(row.path.lastIndexOf('/') + 1));
+      if (!existsSync(file)) {
+        findings.push(`${row.spot_id} tiene fila en el listado pero no tiene archivo`);
+        continue;
+      }
+      const bytes = readFileSync(file);
+      if (bytes.length > 12 * 1024) findings.push(`el mapa de ${row.spot_id} pesa ${bytes.length} bytes`);
+      if (bytes.subarray(8, 12).toString('ascii') !== 'WEBP') {
+        findings.push(`el archivo de ${row.spot_id} no es la imagen que su fila dice`);
+      }
+      if (!row.path.startsWith('/maps/')) findings.push(`${row.spot_id} se sirve desde fuera del sitio: ${row.path}`);
+      if (!row.path.includes(row.digest.slice(0, 12))) {
+        findings.push(`la dirección de ${row.spot_id} no lleva la identidad de sus propios bytes`);
+      }
+      if (row.seed_revision.length === 0 || row.generator_version.length === 0) {
+        findings.push(`${row.spot_id} perdió el rastro de la semilla o de quién lo dibujó`);
+      }
+    }
+
+    if (JSON.stringify(drawn.second) !== JSON.stringify(drawn.first)) {
+      findings.push('volver a dibujar sin cambiar nada produjo otro listado');
+    }
+    if (!/static map policy refused/.test(drawn.brokenRefusal)) {
+      findings.push('una política rota no detuvo la construcción');
+    }
+    if (drawn.brokenWrote.length > 0) {
+      findings.push(`la política rota alcanzó a escribir ${drawn.brokenWrote.join(', ')}`);
+    }
+
+    assertBehavior(
+      findings,
+      'dibujar cada mapa aprobado antes de la construcción del sitio, como un archivo local liviano cuyo nombre son sus propios bytes, con una fila que lo acredita; repetir exactamente lo mismo cuando nada cambió; y negarse antes de escribir cuando la política no se puede leer.',
     );
   },
 );

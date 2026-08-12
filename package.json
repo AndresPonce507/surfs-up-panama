@@ -9,8 +9,10 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "npm run publish:surface -- --verify && astro build",
+    "build": "npm run maps:verify && npm run publish:surface -- --verify && astro build",
     "budget": "node scripts/check-page-weight.mjs",
+    "maps:generate": "tsx scripts/generate-static-maps.ts",
+    "maps:verify": "tsx scripts/generate-static-maps.ts --verify",
     "publish:surface": "tsx src/publish/publish-static-surface.ts",
     "pipeline:capture": "tsx src/pipeline/capture-cli.ts",
     "pipeline:build": "tsx src/pipeline/run-build-cli.ts",
@@ -36,8 +38,8 @@
     "postinstall": "bash scripts/git-hooks/install.sh >/dev/null 2>&1 || true"
   },
   "devDependencies": {
-    "@aws-sdk/client-s3": "^3.1107.0",
     "@aws-sdk/client-dynamodb": "^3.1107.0",
+    "@aws-sdk/client-s3": "^3.1107.0",
     "@aws-sdk/lib-dynamodb": "^3.1107.0",
     "@cucumber/cucumber": "^13.2.1",
     "@playwright/test": "^1.62.1",
@@ -47,6 +49,7 @@
     "aws-cdk-lib": "^2.263.0",
     "constructs": "^10.8.1",
     "fast-check": "^4.9.0",
+    "sharp": "^0.35.3",
     "tsx": "^4.23.11",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
