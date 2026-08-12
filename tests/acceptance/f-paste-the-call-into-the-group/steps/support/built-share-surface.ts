@@ -15,6 +15,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
 
+import { resolvePublicSiteOrigin } from '../../../../../scripts/release/publication-target.mjs';
+
 export const projectRoot = process.cwd();
 
 type ShareCall = {
@@ -112,22 +114,50 @@ export function assertIntactCopy(root: string): void {
 }
 
 /**
- * The single owner of the absolute host is `site` in astro.config.mjs. The
- * test derives every expected hostname from the configuration and never
- * hardcodes one (feature-delta Done row 3, HANDOFF section 10).
+ * The absolute host a copy's build will bake into every share URL.
+ *
+ * astro.config.mjs is still the one place that declares `site`, but it no
+ * longer holds the value: it assigns `site: publicSiteOrigin`, resolved by
+ * `resolvePublicSiteOrigin()` from PUBLIC_SITE_ORIGIN with the preview origin
+ * as the default. So the test asks that same resolver instead of reading the
+ * configuration's source text, and still never hardcodes a hostname
+ * (feature-delta Done row 3, HANDOFF section 10). Parsing the file was a
+ * coupling to how the config spells the value, and it broke the moment the
+ * release lane made the origin selectable.
  */
 export function configuredSite(root: string): string {
-  const source = readFileSync(join(root, 'astro.config.mjs'), 'utf8');
-  const site = source.match(/\bsite:\s*'([^']+)'/)?.[1];
-  assert.ok(site !== undefined && site !== '', 'astro.config.mjs declares no site: the absolute-host owner is missing');
+  const site = repointedOrigins.get(root) ?? resolvePublicSiteOrigin(process.env);
+  assert.ok(
+    typeof site === 'string' && site !== '',
+    'test fixture error: no public site origin resolved for the build',
+  );
   return site.replace(/\/$/, '');
 }
 
+/**
+ * Point one isolated copy at a different absolute host, the way production
+ * repoints one: PUBLIC_SITE_ORIGIN on the build that produces the artifact.
+ * The copy's own sources stay byte-identical to the worktree's, so the
+ * scenario proves no component carries a hostname of its own.
+ *
+ * The override reaches the build through `buildSurface` below. A scenario that
+ * repoints a root and then builds it through preview-surface.ts would need the
+ * same environment there; none does today.
+ */
 export function pointCopyAtSite(root: string, site: string): void {
-  const path = join(root, 'astro.config.mjs');
-  const source = readFileSync(path, 'utf8');
-  assert.match(source, /\bsite:\s*'[^']*'/, 'test fixture error: astro.config.mjs has no site line to repoint');
-  writeFileSync(path, source.replace(/\bsite:\s*'[^']*'/, `site: '${site}'`));
+  const origin = resolvePublicSiteOrigin({ PUBLIC_SITE_ORIGIN: site });
+  repointedOrigins.set(root, origin);
+}
+
+const repointedOrigins = new Map<string, string>();
+
+/**
+ * The environment a copy's build runs under: credential-free, plus the
+ * repointed origin when its scenario asked for one.
+ */
+function buildEnvironmentFor(root: string, extra: NodeJS.ProcessEnv = {}): NodeJS.ProcessEnv {
+  const repointed = repointedOrigins.get(root);
+  return credentialFreeEnvironment(repointed === undefined ? extra : { PUBLIC_SITE_ORIGIN: repointed, ...extra });
 }
 
 function readInstalledCopySurface(root: string): SurfaceUpdate {
@@ -249,7 +279,7 @@ export type UiGateResult = { readonly status: number | null; readonly output: st
 function buildSurface(root: string): UiGateResult {
   const build = spawnSync('npm', ['run', 'build'], {
     cwd: root,
-    env: credentialFreeEnvironment(),
+    env: buildEnvironmentFor(root),
     encoding: 'utf8',
     maxBuffer: 10 * 1024 * 1024,
   });
@@ -258,7 +288,7 @@ function buildSurface(root: string): UiGateResult {
   }
   const gate = spawnSync('node', ['scripts/check-ui-quality.mjs'], {
     cwd: root,
-    env: credentialFreeEnvironment({ UI_DIST: 'dist' }),
+    env: buildEnvironmentFor(root, { UI_DIST: 'dist' }),
     encoding: 'utf8',
     maxBuffer: 2 * 1024 * 1024,
   });
@@ -400,7 +430,9 @@ export async function disposeHome(home: OpenHome | undefined): Promise<void> {
 }
 
 export function disposeRoot(root: string | undefined): void {
-  if (root !== undefined) rmSync(root, { recursive: true, force: true });
+  if (root === undefined) return;
+  repointedOrigins.delete(root);
+  rmSync(root, { recursive: true, force: true });
 }
 
 export type ShareActionObservation = {
