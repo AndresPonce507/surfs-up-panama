@@ -50,6 +50,19 @@ export const G1_MIN_MORNINGS = 10;
 export const TAU_SPOT_PRIOR = 6;
 
 /**
+ * The permanent floor under every tau this lane ever uses, 06 section 8
+ * ("tau (spot level): estimated; prior 6, floor 2") and
+ * adr-pooling-hierarchy-activation decision 5. It is what keeps the two
+ * cold-start laws true for every tau the ladder can ever reach rather than
+ * only for today's hand-set prior: at one morning a spot can never move more
+ * than 1/(1 + 2) of the way from its parents toward its own claim. Its
+ * production reader arrives at 03-04, where tau stops being a constant; it is
+ * declared here, with the laws that rest on it, so those laws are never
+ * restated against a prior that 03-04 replaces.
+ */
+export const TAU_FLOOR = 2;
+
+/**
  * The pooling ladder's levels above the spot have no separately derived tau
  * anywhere in 06 section 8; only the spot level does. Until one is estimated,
  * the spot prior stands at every level, for the same reason one prior stands

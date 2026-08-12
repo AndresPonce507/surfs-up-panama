@@ -23,7 +23,11 @@ import {
   type SpotEvidence,
   type SpotSeed,
 } from "../../src/learning/hierarchy";
-import { PARENT_MAX_EFFECTIVE_SAMPLES_PER_REGION } from "../../src/learning/constants";
+import {
+  PARENT_MAX_EFFECTIVE_SAMPLES_PER_REGION,
+  TAU_FLOOR,
+} from "../../src/learning/constants";
+import { shrinkTowardParent } from "../../src/learning/shrink";
 
 const PROPERTY_RUNS = 50;
 
@@ -215,6 +219,64 @@ describe("hierarchy: one person can never become their region's prior (09 sectio
 
   it("counts every morning when no reporter cap is configured, which is the shipped launch state", () => {
     assert.equal(SHIPPED_POOLING_CAPS.max_effective_samples_per_reporter, Number.POSITIVE_INFINITY);
+  });
+});
+
+// ---------- cold start (research 09 section 5.4) ----------
+
+/**
+ * Both laws below are quantified over every tau at or above the permanent
+ * floor, deliberately. A law written at today's hand-set prior would have to
+ * be rewritten the moment 03-04 estimates tau from data; a law written at the
+ * floor is a rail the switchover has to stay inside.
+ */
+const tauAtOrAboveTheFloor = fc.double({
+  min: TAU_FLOOR,
+  max: 40,
+  noNaN: true,
+  noDefaultInfinity: true,
+});
+const anyEstimate = fc.double({ min: -3, max: 3, noNaN: true, noDefaultInfinity: true });
+
+describe("hierarchy: cold start is the n = 0 limit of the same equation, never a special case", () => {
+  it("hands a spot with no mornings of its own exactly what its parents say", () => {
+    fc.assert(
+      fc.property(anyEstimate, anyEstimate, tauAtOrAboveTheFloor, (raw, parent, tau) => {
+        assert.equal(
+          shrinkTowardParent(raw, 0, tau, parent),
+          parent,
+          "a spot with zero mornings must inherit its parents' estimate exactly, with no trace of a raw value it never earned",
+        );
+      }),
+      { numRuns: PROPERTY_RUNS },
+    );
+  });
+
+  it("never lets a spot travel further than n/(n + floor) of the way from its parents toward its own claim", () => {
+    fc.assert(
+      fc.property(
+        anyEstimate,
+        anyEstimate,
+        fc.integer({ min: 0, max: 60 }),
+        tauAtOrAboveTheFloor,
+        (raw, parent, n, tau) => {
+          const stored = shrinkTowardParent(raw, n, tau, parent);
+          const claim = Math.abs(raw - parent);
+          const travelled = Math.abs(stored - parent);
+          const furthestAllowed = (n / (n + TAU_FLOOR)) * claim;
+
+          assert.ok(
+            travelled <= furthestAllowed + 1e-12,
+            `at ${n} mornings the stored difference travelled ${travelled} from its parents, past the ${furthestAllowed} a tau at its floor allows`,
+          );
+          assert.ok(
+            stored >= Math.min(raw, parent) - 1e-12 && stored <= Math.max(raw, parent) + 1e-12,
+            `the stored difference ${stored} left the corridor between its own claim ${raw} and its parents ${parent}`,
+          );
+        },
+      ),
+      { numRuns: PROPERTY_RUNS },
+    );
   });
 });
 
