@@ -764,6 +764,13 @@
       "s": "EXECUTED",
       "d": "Implemented src/learning/evaluate.ts (runMonthlyEvaluationOnce driving port, metrics-only per D-2026-08-12-1) and src/learning/metrics.ts (buildMonthlyMetrics: selection, pairwise, mae, sigma_human, calibration, shrinkage, cv sections, each computed honestly from store rows except the three explicitly-deferred literals: cv.verdict='not_evaluated', calibration.offending_term=null, shrinkage[].flagged=false). AT green on first implementation; self-review before commit caught and fixed two defects: mae.per_key was keyed only on (source, leadBucket), silently averaging two spots' errors -- fixed by looping spotsReportedIn per fit.ts's own precedent, verified with a throwaway two-spot script (two distinct rows post-fix); and three stray NUL bytes from a write-tool transcription artifact in template-literal separators, corrected via perl. Full suite (npx vitest run): 106 files, 97 passed/4 failed/5 skipped; 530 tests, 518 passed/5 failed/7 skipped -- the 5 failures are the pre-existing HANDOFF-documented staleness-stamp/staleness-flip/report-island family, unchanged in count/identity (evidence: /tmp/vitest-0501-final2.log). npm run typecheck: exit 0 (/tmp/typecheck-0501-v3.log). Non-visual step: UI N/A rationale recorded in 05-01-contract.json; no U1-U7, no Vera.",
       "t": "2026-08-12T18:08:58Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "Committed 3a328e0 on build/f2-learning-slice05: feat(learning): the monthly port reports its outcome and writes the metrics file. Staged only owned paths (src/learning/evaluate.ts, src/learning/metrics.ts, tests/unit/learning-metrics.test.ts, the AT activation edit, 05-01-contract.json via git add -f, execution-log.json). gate-baseline.log left untracked (not owned). Trailer Step-ID: 05-01 present. 6 files changed, 925 insertions, 1 deletion.",
+      "t": "2026-08-12T18:10:17Z"
     }
   ]
 }
