@@ -771,6 +771,20 @@
       "s": "EXECUTED",
       "d": "Committed 3a328e0 on build/f2-learning-slice05: feat(learning): the monthly port reports its outcome and writes the metrics file. Staged only owned paths (src/learning/evaluate.ts, src/learning/metrics.ts, tests/unit/learning-metrics.test.ts, the AT activation edit, 05-01-contract.json via git add -f, execution-log.json). gate-baseline.log left untracked (not owned). Trailer Step-ID: 05-01 present. 6 files changed, 925 insertions, 1 deletion.",
       "t": "2026-08-12T18:10:17Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "Advisor review pass found evaluate.ts's readCurrentCorrections path was untested (all 8 original unit tests drove buildMonthlyMetrics directly) and a plain-space delimiter collision risk in mae.per_key's map key. Fixed both: added tests/unit/learning-metrics.test.ts tests driving the real runMonthlyEvaluationOnce against a real InMemoryStore (two applied keys of different n, exercising fullestAppliedKeyOf's tie-break; one unparseable-byte refusal path), verified discriminating by stubbing readCurrentCorrections to return [] and watching the new test fail for the right reason, then reverting (diff clean). Switched mae.per_key's key join from a plain space to a double colon. Full suite: 106 files, 97 passed/4 failed/5 skipped; 532 tests, 520 passed/5 failed/7 skipped -- same pre-existing 5-failure family, unchanged. typecheck exit 0. No stray NUL bytes remain in any touched file (verified byte-scan).",
+      "t": "2026-08-12T18:22:20Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "Committed 3eb4ee1 on build/f2-learning-slice05: fix(learning): close the corrections-read coverage gap in the monthly metrics builder. Staged only owned paths (05-01-contract.json via git add -f, src/learning/metrics.ts, tests/unit/learning-metrics.test.ts). Trailer Step-ID: 05-01 present. 3 files changed, 92 insertions, 10 deletions.",
+      "t": "2026-08-12T18:22:32Z"
     }
   ]
 }
