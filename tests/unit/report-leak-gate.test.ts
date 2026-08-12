@@ -68,4 +68,27 @@ describe('report leak import boundary', () => {
     assert.match(findings[0]!.entry, /reportar\.astro$/);
     assert.ok(findings[0]!.chain.some((path) => path.endsWith('pipeline/build.ts')));
   });
+
+  // Rooted at the REAL shipped src/, not a synthetic universe, and that is the
+  // whole point. The synthetic case above proves the gate can see a violation;
+  // this one proves the tree does not have one. Until it existed the gate ran
+  // only inside npm run ci:local, so a step could add a forbidden reach, keep
+  // the whole vitest suite green, and find out at the gate. That happened here:
+  // adding a type-only import of the correction file to the scoring engine
+  // pulled the report pages transitively into pipeline/ports.ts, and the gate
+  // does not distinguish a type-only import from a value one -- correctly, since
+  // it reads source text rather than a build graph, and fails closed.
+  it('finds no forbidden reach anywhere in the shipped source tree', async () => {
+    const gate = await productionGate();
+
+    const findings = gate.findForbiddenReportImports(
+      resolve(repositoryRoot, 'src'),
+    ) as readonly { entry: string; chain: readonly string[] }[];
+
+    assert.deepEqual(
+      findings.map((finding) => finding.chain.map((path) => path.split('/src/')[1] ?? path).join(' -> ')),
+      [],
+      'a report page reaches a forecast, publish or pipeline module through the chain above; keep the report flow on capture and observation modules only',
+    );
+  });
 });

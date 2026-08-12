@@ -19,7 +19,7 @@
 // constants reach no further than each other and estimate.
 
 import { SIGMA_EFF } from '../learning/constants';
-import type { GatedKey, StoredCorrection } from '../learning/correction-file';
+import type { GatedKey, StoredCorrection } from '../learning/correction-record';
 import { gateCorrection, type GateInput } from '../learning/gates';
 
 /** domain-model.md section 11: a stored score move is stated in display points, and Q is that scale over 100. */
