@@ -158,3 +158,15 @@ describe('the map decision, over any policy', () => {
     assert.equal(unknown?.kind === 'refused' ? unknown.reason : '', 'absent_from_policy');
   });
 });
+
+describe('the visible credit template', () => {
+  it('pins the exact X11 caption template so a data-only change cannot reword the credit', () => {
+    const rawPolicy = JSON.parse(readFileSync(POLICY_PATH, 'utf8')) as { caption_template: string };
+
+    assert.equal(
+      rawPolicy.caption_template,
+      'Diagrama de orientación. Ubicación: {coordinate_attribution}. Orientación: {orientation_attribution}.',
+      'the tracked caption_template moved; the visible credit on every break map rewords with it',
+    );
+  });
+});
