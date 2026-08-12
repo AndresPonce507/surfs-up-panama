@@ -945,7 +945,7 @@
             "selection carries per_decile coverage and solicited_share; pairwise carries pairs and target_pairs 400; mae carries both baselines.",
             "The file is operator-facing only: no reader exists at launch and nothing user-facing consumes it."
           ],
-          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/a-bad-month-degrades-to-day-zero-not-to-silently-wrong-numbers.feature",
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/the-monthly-file-watches-every-hazard-the-design-names.test.ts",
           "scenario_name": "The monthly file watches every hazard the design names",
           "slice_id": "slice-05",
           "surface_classification": "non-visual",
@@ -973,7 +973,7 @@
             "A month the corrections win leaves every correction applying; both verdicts are recorded in the metrics file and the outcome's events distinguish a kill month.",
             "cv.verdict is corrections-killed, corrections-stay or not_evaluated; the apply lane's behaviour and the published verdict never disagree."
           ],
-          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/a-bad-month-degrades-to-day-zero-not-to-silently-wrong-numbers.feature",
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/a-losing-month-switches-the-corrections-off-until-a-human-looks.test.ts",
           "scenario_name": "A month where the corrections lose on held-out mornings switches every one of them off until a human looks",
           "additional_scenarios": [
             "A month where the corrections help leaves them standing, and says so"
@@ -995,6 +995,9 @@
           "implementation_notes": "AMENDED 2026-08-12 by the lane orchestrator under Andres's same-day ruling; the original notes' PENDING_SLICES/.feature mechanics belong to recover/learning-build and do not exist on this base (wave-decisions.md D-2026-08-12-2). Mine recover/learning-build:src/learning/cross-validation.ts (rolling_origin_blocked CV_SCHEME, judgeRollingOriginCorrections; conforms to adr-correction-gates-and-clamps) but replace its |mean(residual)| block-bias comparison with MAE per the ADR letter (D-1 pin 1). The ruled-out mechanism (recover evaluate.ts:36-38 rewriting learned/corrections/v1/current/ in place) must not be ported. Verdict consumption lands at the apply seam: loadStoredCorrections (src/learning/load-correction.ts) reads the latest monthly metrics file (bounded probe: current month's learned/metrics/v1/dt=<YYYY-MM>/metrics.json, else previous month; no list() needed) and, on an affirmative corrections-killed, maps every spot to null -- the same day-zero cost as absent/corrupt files, the loader's own stated contract. The caller (src/pipeline/build.ts) hands the loader the build's clock. THE COUNTERFACTUAL IS EXACT, NOT RE-SIMULATED: height-side raw member heights are the prediction log's own rows; corrected-vs-raw needs no engine re-run. FIXTURES: a losing month = train block earning b=-0.22 then a held-out fortnight where the sign flips; a winning month keeps the held-out agreeing. Score-side counterfactual (law L10 recomposition) stays unbuilt, as on the reference branch; the vote is over gated height keys.",
           "deps": [
             "05-01"
+          ],
+          "additional_scenario_files": [
+            "tests/acceptance/f-forecast-learns-from-the-beach/a-winning-month-leaves-the-corrections-standing.test.ts"
           ]
         },
         {
@@ -1006,7 +1009,7 @@
             "The shipped source, once 05-02 lands, declares the rolling scheme and stays violation-free.",
             "Slice-01's zero-violation and two-rule scenarios stay green untouched."
           ],
-          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/a-bad-month-degrades-to-day-zero-not-to-silently-wrong-numbers.feature",
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/held-out-mornings-stay-forward-of-training.test.ts",
           "scenario_name": "Held-out mornings must stay forward of training, never shuffled with it",
           "slice_id": "slice-05",
           "surface_classification": "non-visual",
@@ -1032,7 +1035,7 @@
             "A month where high-confidence mornings hit less often than low names calibration.offending_term c_spread.",
             "The file names the term for removal; removing it is the scoring lane's edit, routed not performed."
           ],
-          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/a-bad-month-degrades-to-day-zero-not-to-silently-wrong-numbers.feature",
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/a-confidence-level-that-does-not-predict-correctness-is-named.test.ts",
           "scenario_name": "A confidence level that does not predict correctness is named for removal",
           "slice_id": "slice-05",
           "surface_classification": "non-visual",
@@ -1058,7 +1061,7 @@
             "A spot with eighty mornings still sixty percent shrunk is flagged true; healthy spots are not.",
             "The flag is an alarm for the operator, never an automatic behaviour change."
           ],
-          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/a-bad-month-degrades-to-day-zero-not-to-silently-wrong-numbers.feature",
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/a-spot-still-mostly-pooled-after-eighty-mornings-is-flagged.test.ts",
           "scenario_name": "A spot still mostly pooled after eighty mornings is flagged as a misconfiguration",
           "slice_id": "slice-05",
           "surface_classification": "non-visual",
