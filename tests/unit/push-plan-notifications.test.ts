@@ -227,6 +227,7 @@ describe('planNotifications', () => {
     );
   });
 
+
   it('reports at most one dated write and send for a subscriber across arbitrary runs in one spot-local day', () => {
     fc.assert(
       fc.property(
@@ -282,80 +283,106 @@ describe('planNotifications', () => {
   });
 });
 
-/** The three answers that mean the destination itself is gone for good. */
-const GONE_FOR_GOOD_STATUSES = [404, 410, 403] as const;
+// The gone set is written here from the specification (07-write-path.md §8.4
+// and adr-push-vapid-direct.md decision 4), never imported from the module
+// under test. An oracle that read the production constant would agree with any
+// gone set the implementation happened to hold, including "every non-2xx",
+// which is exactly the mistake step 01-14 exists to catch.
+const SPECIFIED_GONE_STATUSES: readonly number[] = [403, 404, 410];
 
-function attemptedSends(count: number): { endpoint_hash: string }[] {
-  return Array.from({ length: count }, (_, index) => ({ endpoint_hash: `suscriptor-${index + 1}` }));
+const endpointHash = fc.string({ minLength: 1, maxLength: 12 }).filter((value) => value.trim().length > 0);
+
+/** Weighted so the gone set is sampled densely while the rest of the HTTP
+ *  status space (2xx acks, 429 throttles, 5xx transients) is still explored. */
+const sendResponseStatus = fc.oneof(
+  fc.constantFrom(403, 404, 410),
+  fc.integer({ min: 100, max: 599 }),
+);
+
+function sendFor(hash: string) {
+  return {
+    spot_id: playaVenao.spot_id,
+    endpoint_hash: hash,
+    lang: 'es',
+    title: 'Mejor: Playa Venao, 95',
+    body: 'Playa Venao marca 95 esta mañana. Mira el pronóstico.',
+    url: '/spots/playa-venao/',
+    tag: playaVenao.spot_id,
+    ttl_seconds: 4 * 60 * 60,
+  };
 }
 
 describe('planSendReactions', () => {
-  it('marks the destination that answered gone, at its first failure and at every gone status', () => {
+  it('marks for deletion exactly the destinations the push service reported gone, prunes nobody on any other answer, and always returns a decision', () => {
     fc.assert(
       fc.property(
-        fc.integer({ min: 1, max: 5 }),
-        fc.integer({ min: 0, max: 4 }),
-        fc.constantFrom(...GONE_FOR_GOOD_STATUSES),
-        (attempted, whichFailed, goneStatus) => {
-          const sends = attemptedSends(attempted);
-          const failed = sends[whichFailed % attempted]!;
+        fc.uniqueArray(
+          fc.record({ endpoint_hash: endpointHash, status: sendResponseStatus }),
+          { selector: (response) => response.endpoint_hash, minLength: 0, maxLength: 12 },
+        ),
+        (responses) => {
+          const sends = responses.map((response) => sendFor(response.endpoint_hash));
+          const sendsBefore = JSON.stringify(sends);
+          const responsesBefore = JSON.stringify(responses);
 
-          // One answer, no second attempt: the marking is the reaction to the
-          // first failure, because there is no retry budget for a destination
-          // that no longer exists (07-write-path.md section 8.4).
-          const reactions = planSendReactions({
-            sends,
-            responses: [{ endpoint_hash: failed.endpoint_hash, status: goneStatus }],
-          });
+          const reactions = planSendReactions({ sends, responses });
 
           assert.ok(
-            reactions && typeof reactions === 'object',
-            'the rule has to decide, so that a later run with no deletions is distinguishable from a run that never decided',
+            reactions !== null && typeof reactions === 'object',
+            'la corrida no llegó a decidir nada sobre esos fallos, así que un cero de borrados todavía no prueba la regla',
           );
+          assert.ok(Array.isArray(reactions.deletions), 'a reaction decision always reports its deletions, even when there are none');
+          assert.ok(Array.isArray(reactions.events), 'a reaction decision always reports its events, even when there are none');
+
+          const goneHashes = responses
+            .filter((response) => SPECIFIED_GONE_STATUSES.includes(response.status))
+            .map((response) => response.endpoint_hash);
+
           assert.deepEqual(
             reactions.deletions,
-            [failed.endpoint_hash],
-            'a gone destination is marked at its first failure, and the destinations that were not answered for are left alone',
+            goneHashes,
+            'only 403, 404 and 410 prune, on the first failure; every other answer, transient ones included, costs nobody their subscription',
           );
+          assert.deepEqual(
+            reactions.events.map((event) => event.endpoint_hash),
+            goneHashes,
+            'every pruned destination leaves a loud witness naming it; a subscription deleted in silence is a broken promise nobody sees',
+          );
+          for (const event of reactions.events) {
+            assert.equal(event.kind, 'push_subscription_pruned', 'the prune witness carries the declared event kind');
+          }
+
+          assert.equal(JSON.stringify(sends), sendsBefore, 'reacting is pure and does not mutate the supplied sends');
+          assert.equal(JSON.stringify(responses), responsesBefore, 'reacting is pure and does not mutate the supplied responses');
         },
       ),
       { numRuns: 200 },
     );
   });
 
-  it('marks nobody for any answer outside the gone-for-good set, and still decides', () => {
-    // The law is a partition of the whole status space, not a list of the
-    // transient codes somebody thought of: three statuses prune, and every
-    // other answer in the space prunes nobody. An implementation that pruned
-    // on every failure satisfies the row above and fails here.
+  it('never prunes a destination this run has no send for, so an unmatched answer can delete nobody', () => {
     fc.assert(
       fc.property(
-        fc.integer({ min: 1, max: 5 }),
-        fc.integer({ min: 0, max: 4 }),
-        fc
-          .integer({ min: 100, max: 599 })
-          .filter((status) => !(GONE_FOR_GOOD_STATUSES as readonly number[]).includes(status)),
-        (attempted, whichAnswered, statusThatIsNotGone) => {
-          const sends = attemptedSends(attempted);
-          const answered = sends[whichAnswered % attempted]!;
+        endpointHash,
+        endpointHash,
+        fc.constantFrom(403, 404, 410),
+        (sentHash, unsentHash, goneStatus) => {
+          fc.pre(sentHash !== unsentHash);
 
           const reactions = planSendReactions({
-            sends,
-            responses: [{ endpoint_hash: answered.endpoint_hash, status: statusThatIsNotGone }],
+            sends: [sendFor(sentHash)],
+            responses: [{ endpoint_hash: unsentHash, status: goneStatus }],
           });
 
-          assert.ok(
-            reactions && typeof reactions === 'object',
-            'a zero-deletion result only proves the rule once the rule actually decided, so the reaction is produced rather than withheld',
-          );
+          assert.ok(reactions !== null && typeof reactions === 'object', 'the run still decides when an answer matches no send');
           assert.deepEqual(
             reactions.deletions,
             [],
-            'a passing failure costs nobody their subscription: only the three gone-for-good answers prune',
+            'a gone answer for a destination this run never sent to is evidence about nothing; deleting on it would destroy a live subscription',
           );
         },
       ),
-      { numRuns: 300 },
+      { numRuns: 100 },
     );
   });
 });

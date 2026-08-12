@@ -142,56 +142,71 @@ function eligibleMorningNotifications(input: PlanNotificationsInput): PlannedNot
   });
 }
 
-/** What the notify adapter reports back about one attempted send. */
+/**
+ * The push service's answer to one planned send, as the scheduled adapter
+ * observed it. Only the status is read here: a body tells this decision
+ * nothing a status code does not already say.
+ */
 export type SendResponse = {
   endpoint_hash: string;
   status: number;
 };
 
-/**
- * All the pruning rule reads off an attempted send is which destination it went
- * to. Asking for less than a full PlannedSend keeps the rule usable by any
- * caller that knows the identity of what it tried.
- */
-export type AttemptedSend = {
+/** One pruned destination, named. A deletion with no witness is a subscriber
+ *  lost with nobody to notice, which is the silent failure this project's
+ *  loud-skip discipline exists to refuse (07-write-path.md §8.4). */
+export type PruneEvent = {
+  kind: 'push_subscription_pruned';
   endpoint_hash: string;
+  status: number;
+};
+
+export type SendReactions = {
+  deletions: string[];
+  events: PruneEvent[];
 };
 
 export type PlanSendReactionsInput = {
-  /** The run these responses answer. Identity travels on the response, so the
-   *  rule does not read this; it stays in the declared input because the run is
-   *  what the caller has in hand. */
-  sends: readonly AttemptedSend[];
+  sends: readonly Pick<PlannedSend, 'endpoint_hash'>[];
   responses: readonly SendResponse[];
 };
 
-/** Deletions the caller must perform. This module performs none of them. */
-export type SendReactions = {
-  deletions: string[];
-  events: { kind: string }[];
-};
-
 /**
- * The three answers that mean the destination itself is gone for good, so
- * there is nobody left to reach by trying again.
+ * The three definitive rejections (07-write-path.md §8.4,
+ * adr-push-vapid-direct.md decision 4). Everything outside this set —
+ * 2xx acks, 429 throttles, 5xx transients — leaves the subscription alone.
+ * The partition is the rule: widening it to "every failure" would delete live
+ * subscribers on a bad afternoon at the push service.
  */
-const GONE_FOR_GOOD_STATUSES: readonly number[] = [404, 410, 403];
+const GONE_STATUSES: readonly number[] = [404, 410, 403];
 
-function isGoneForGood(response: SendResponse): boolean {
-  return GONE_FOR_GOOD_STATUSES.includes(response.status);
+function isGone(status: number): boolean {
+  return GONE_STATUSES.includes(status);
 }
 
 /**
- * Decide, but do not execute, what a run of sends means for the stored
- * subscriptions. A destination that answered gone is marked at its first
- * failure and carries no retry budget: it no longer exists, and insisting is
- * spending on nobody (07-write-path.md section 8.4). The actual delete belongs
- * to the notify job, which is why this returns the deletions as a value.
+ * React to what the push service answered, without executing anything. Returns
+ * the deletions the scheduled adapter should perform and a loud witness for
+ * each one. Pruning is first-failure with no retry budget: a destination that
+ * answers 404, 410 or 403 no longer exists, and retrying it spends egress on
+ * nobody.
+ *
+ * A response naming a destination this run never sent to is evidence about
+ * nothing, so it prunes nothing — deleting on it would destroy a live
+ * subscription on a mismatched or replayed answer.
  */
 export function planSendReactions(input: PlanSendReactionsInput): SendReactions {
+  const sentHashes = new Set(input.sends.map((send) => send.endpoint_hash));
+  const pruned = input.responses
+    .filter((response) => sentHashes.has(response.endpoint_hash))
+    .filter((response) => isGone(response.status));
   return {
-    deletions: input.responses.filter(isGoneForGood).map((response) => response.endpoint_hash),
-    events: [],
+    deletions: pruned.map((response) => response.endpoint_hash),
+    events: pruned.map((response) => ({
+      kind: 'push_subscription_pruned',
+      endpoint_hash: response.endpoint_hash,
+      status: response.status,
+    })),
   };
 }
 
