@@ -56,7 +56,15 @@ import { runLearningFitOnce } from "../../../src/learning/fit";
 const SPOT_ID = "playa-venao";
 const SOURCE = "ncep_gfswave016";
 const LEAD_BUCKET = "lead_24_48";
-const PROPERTY_RUNS = 20;
+/**
+ * Raised from 20 for the direction assertion below, which is CONDITIONAL: it
+ * fires only on generated shapes whose reporters are unevenly exposed to the
+ * spread, so a run of mostly balanced shapes never exercises it. At 20 runs a
+ * flipped offset sign was caught 4 times in 5. That is the same weakness that
+ * let the old corridor pass on most seeds while being wrong by 3.7e-3, and it
+ * costs nothing to remove: this file runs in under a tenth of a second at 20.
+ */
+const PROPERTY_RUNS = 200;
 const CORRIDOR_TOLERANCE = 1e-12;
 
 class FixedClock {

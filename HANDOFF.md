@@ -927,6 +927,17 @@ Four things found in delivery that the escalation did not know, all recorded in
   undated samples collapsing into one report, and one person's two beaches on one morning
   counting as one report.
 
+**Flagged, not acted on: this step multiplied the fit's compute.**
+`differencesAtEachKey` runs the whole pooling ladder — `estimatesFrom`, two `heightParents`
+passes and `provenSpotsAtEachKey` — once per backfit pass, because 06 §5.2's pseudocode puts
+`shrink(b_raw, n_key, tau_key, parent)` inside the loop. The ladder now runs about 7 times per
+fit where it ran twice. 06 §12 budgets backfitting at "milliseconds" for 20 spots and about a
+minute at 5,000, with the dominant cost being the `predictions/` re-derivation scan rather than
+the fit itself, so nothing here is near the tripwire and the suite runs in 8 seconds. But the
+ADR chose backfitting over MCMC partly because it "runs in plain code inside the Lambda budget",
+and that budget was written before the ladder went inside the loop. Worth re-checking against
+06 §12 before the spot count grows.
+
 Gate at delivery: `npm run typecheck` exit 0; 512 tests, 507 passed. The 5 failures are
 the pre-existing build-blocked ones in `staleness-stamp`, `staleness-stamp-format`,
 `staleness-flip` and `report-island` — all invoke `npm run build`, which the civil-day
