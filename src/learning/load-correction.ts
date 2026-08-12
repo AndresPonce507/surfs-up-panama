@@ -36,7 +36,11 @@
 // src/learning/declarations.ts's whole-source examination watches this file
 // stay that way.
 
-import type { GatedKey, StoredCorrection } from "./correction-file";
+import {
+  currentCorrectionKey,
+  type GatedKey,
+  type StoredCorrection,
+} from "./correction-file";
 
 /** The one schema this reader accepts. Anything else is a file it has no business trusting. */
 const SCHEMA = "spot-correction/1";
@@ -163,6 +167,43 @@ export async function loadStoredCorrection(input: {
     };
   }
   return { record: parsed.record, outcome: "loaded", events: [] };
+}
+
+/**
+ * Every published spot's stored correction, looked up at that spot's OWN
+ * `current/<spot_id>.json` and read once per build.
+ *
+ * ONE KEY PER SPOT, and the key is built by the same function the nightly fit
+ * writes with (`currentCorrectionKey`), not restated here: a reader and a
+ * writer that each spell the path themselves is how a build quietly stops
+ * finding files the fit is still writing.
+ *
+ * A spot maps to `null` for all three reasons a build can have no correction:
+ * no file was ever written, the file could not be trusted, or the store itself
+ * could not be reached. Every one of those costs the build exactly what no file
+ * costs -- the day-zero forecast -- so the caller has one case to handle rather
+ * than three, and cannot accidentally treat a corrupt file as a correction.
+ *
+ * The reader's events are not returned here. `runBuildOnce` has no event
+ * channel of its own to carry them to, and inventing one is not this seam's
+ * work; the archived call still names the gate that stopped a file it COULD
+ * read, which is the operator-visible half. Recorded as a known gap in the
+ * 02-03 contract rather than papered over.
+ */
+export async function loadStoredCorrections(input: {
+  store: CorrectionSource;
+  spotIds: readonly string[];
+}): Promise<ReadonlyMap<string, StoredCorrection | null>> {
+  const loaded = await Promise.all(
+    input.spotIds.map(async (spotId) => {
+      const report = await loadStoredCorrection({
+        store: input.store,
+        key: currentCorrectionKey(spotId),
+      });
+      return [spotId, report.record] as const;
+    }),
+  );
+  return new Map(loaded);
 }
 
 // ---------- field readers, one shape each ----------
