@@ -16,6 +16,12 @@ export const functionNames = {
   report: 'surfs-up-panama-report',
   mint: 'surfs-up-panama-mint',
   push: 'surfs-up-panama-push',
+  // The SEND lane, and a different function from `push` above: `push` is the
+  // POST /api/push subscribe endpoint behind a Function URL, `notify` is the
+  // hourly scheduled fan-out that is never on the request path
+  // (07-write-path.md section 2's function table; section 8.6 draws them as
+  // two participants).
+  notify: 'surfs-up-panama-notify',
   'photo-presign': 'surfs-up-panama-photo-presign',
   resize: 'surfs-up-panama-resize',
   breaker: 'surfs-up-panama-breaker',

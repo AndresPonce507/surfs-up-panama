@@ -70,6 +70,7 @@ export const lambdaTimeoutSeconds = {
   report: 5,
   mint: 5,
   push: 5,
+  notify: 120, // the send fan-out, covered by the `timeout-notify-export` guardrail row
   'photo-presign': 5,
   resize: 60,
   dispatcher: 10,

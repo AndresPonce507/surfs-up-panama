@@ -22,12 +22,31 @@ export const breakerInvocationThresholds = {
 
 export const breakerAlarmPeriodSeconds = 300;
 
-// Non-write reserved concurrency, guardrail 1: 2 on every function.
-export const defaultReservedConcurrency = 2;
+// The scheduled notify job, kept OUT of the two objects above on purpose:
+// both of them mean "the four write Function URLs the breaker trips", and
+// notify is neither URL-exposed nor breaker-tripped. Widening them would
+// silently pull a scheduled function into the breaker's blast radius.
+// Values from 07-write-path.md section 2's function table row `notify`; the
+// 256 MB is the figure the section 8.5 fan-out cost math is computed at.
+export const notifyReservedConcurrency = 1;
+export const notifyMemorySizeMb = 256;
+
+// Where the VAPID private key lives. This project NEVER holds key material in
+// the repository: the parameter is a SecureString a human provisions out of
+// band, and the Lambda reads it at cold start, exactly as report and mint read
+// the credential HMAC key. Path per 07-write-path.md section 8.5. The matching
+// public key ships in the client and is public by design.
+export const vapidPrivateKeyParameterName = '/surfsuppanama/prod/vapid-private-key';
 
 // The sum every deploy actually reserves. AWS rejects any reservation that
 // leaves fewer than 100 unreserved account-wide, so the applied Lambda
-// `Concurrent executions` quota must be at least this sum plus 100 (= 113)
+// `Concurrent executions` quota must be at least this sum plus 100 (= 114)
 // or PutFunctionConcurrency is rejected at deploy time and the write stack
 // must be rolled back (07-write-path section 7.2 item 0.15).
-export const reservedConcurrencySum = 13;
+//
+// Was 13 (quota >= 113) before the scheduled notify job added its 1.
+
+// Non-write reserved concurrency, guardrail 1: 2 on every function.
+export const defaultReservedConcurrency = 2;
+
+export const reservedConcurrencySum = 14;
