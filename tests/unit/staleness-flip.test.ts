@@ -1,40 +1,28 @@
 // The age notice is an inline progressive enhancement, so this drives the
 // emitted script against the document elements it actually consumes. It keeps
 // the clock injected: no three-hour wall-clock wait belongs in a unit test.
+//
+// The emitted HTML still comes from a real `npm run build` -- that has not
+// changed, and a fixture here would delete the only reason this test exists.
+// What changed (2026-08-12) is that the build is the run's single shared one
+// (tests/common/built-site.ts) instead of a fourth concurrent one racing three
+// siblings on the shared vite dependency cache.
 
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { copyFileSync, cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
 import vm from 'node:vm';
 
-import { afterAll, describe, it } from 'vitest';
+import { describe, it } from 'vitest';
 
+import { builtDocument, builtSite } from '../common/built-site';
 import { forecast } from '../../src/data/forecast';
 import { formatPanamaTime } from '../../src/publish/reading-state';
 
-const PROJECT_ROOT = process.cwd();
-const TEST_ROOT = mkdtempSync(join(tmpdir(), 'surfs-up-staleness-flip-'));
-const ISOLATED_PROJECT = join(TEST_ROOT, 'project');
-const OUT_DIR = join(ISOLATED_PROJECT, 'dist');
 const THREE_HOURS = 3 * 60 * 60 * 1000;
 
 type Notice = { hidden: boolean; textContent: string };
 
-function copyProjectForBuild(): void {
-  mkdirSync(ISOLATED_PROJECT);
-  for (const name of ['astro.config.mjs', 'package.json', 'package-lock.json', 'tsconfig.json']) {
-    copyFileSync(join(PROJECT_ROOT, name), join(ISOLATED_PROJECT, name));
-  }
-  for (const name of ['data', 'docs', 'public', 'scripts', 'src']) {
-    cpSync(join(PROJECT_ROOT, name), join(ISOLATED_PROJECT, name), { recursive: true });
-  }
-  symlinkSync(join(PROJECT_ROOT, 'node_modules'), join(ISOLATED_PROJECT, 'node_modules'), 'dir');
-}
-
 function renderedAgeScript(relativePath: string): string {
-  const html = readFileSync(resolve(OUT_DIR, relativePath), 'utf8');
+  const html = builtDocument(relativePath);
   const script = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
     .map((match) => match[1] ?? '')
     .find((body) => body.includes('data-stale-notice'));
@@ -61,15 +49,10 @@ function renderAgeNotice(script: string, elapsedMs: number): Notice {
   return notice;
 }
 
-afterAll(() => {
-  rmSync(TEST_ROOT, { recursive: true, force: true });
-});
-
 describe('the inline reading-document age notice', () => {
   it('keeps the notice hidden through exactly three hours, then reveals the shared Panama-clock truth', () => {
-    copyProjectForBuild();
-    const build = spawnSync('npm', ['run', 'build'], { cwd: ISOLATED_PROJECT, encoding: 'utf8' });
-    assert.equal(build.status, 0, `the age notice needs a production build:\n${build.stdout}\n${build.stderr}`);
+    const built = builtSite();
+    assert.equal(built.status, 0, `the age notice needs a production build:\n${built.stdout}\n${built.stderr}`);
 
     const expected = `Viejo. Lo último que vimos fue a las ${formatPanamaTime(forecast.published_at)} No pudimos sacar datos nuevos esta mañana.`;
     for (const page of ['index.html', 'manana.html', 'spots/playa-venao.html']) {
@@ -85,5 +68,5 @@ describe('the inline reading-document age notice', () => {
         `${page} must show the settled Viejo line with the publish moment's Panama clock once old`,
       );
     }
-  }, 60_000);
+  });
 });

@@ -19,6 +19,15 @@ export default getViteConfig({
     exclude: ['node_modules', 'dist', '.astro', 'tests/**/e2e/**'],
     environment: 'node',
     passWithNoTests: true,
+    // One production build for the whole run, before any worker starts. The
+    // files whose oracle is emitted HTML used to spawn a build each, and four
+    // concurrent `astro build` runs collide on the single shared
+    // `node_modules/.vite/deps` cache every isolated copy reaches through its
+    // `node_modules` symlink. Same collision ci-local-core.mjs already makes
+    // `budget` and `leak` serial for; the `test` job was missed because its
+    // builds are inside vitest rather than in the job list. Full reproduction
+    // and the observed errors: tests/common/built-site.ts.
+    globalSetup: ['tests/common/built-site.ts'],
     // Property tests explore a space, so a failure needs the seed to be
     // reproducible. fast-check prints it; this keeps the run deterministic
     // enough to act on.

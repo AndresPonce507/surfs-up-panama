@@ -27,14 +27,13 @@
 // hand-picked example.
 
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 
 import fc from 'fast-check';
-import { afterAll, describe, it } from 'vitest';
+import { describe, it } from 'vitest';
 
+import { builtDocument, builtSite } from '../common/built-site';
 import { region } from '../../src/data/region';
 import { paths } from '../../src/i18n/routes';
 import type { CommitOutcome, QueueOutcome, Refused } from '../../src/report/queue';
@@ -255,52 +254,37 @@ describe('reading the spot identity back out of the reveal address', () => {
 // had been written inside <body> -- verified against the real built output
 // with a real Chromium page load, both with and without a durably queued
 // report, before this comment was written.) Re-run against the fix: GREEN.
+//
+// 2026-08-12: the build behind this document is now the run's single shared
+// one (tests/common/built-site.ts). Still a real `npm run build` emitting a
+// real reportado document -- the oracle is unchanged. What is gone is this
+// block owning a fourth concurrent `astro build`, and with it a second defect
+// that made one root cause read as two: `buildOutput` stayed undefined when
+// the build failed, so the next test re-entered the builder and died on
+// `EEXIST` at `mkdirSync` instead of reporting the real reason.
 describe('cold load of the confirmation address (event ddc0ba7c)', () => {
-  const projectRoot = resolve(import.meta.dirname, '../..');
-  const testRoot = mkdtempSync(join(tmpdir(), 'surfs-up-report-island-'));
-  const isolatedProject = join(testRoot, 'project');
-  const reportadoDocument = resolve(isolatedProject, 'dist/spots/playa-venao/reportado.html');
-  let buildOutput: string | undefined;
+  const REPORTADO_DOCUMENT = 'spots/playa-venao/reportado.html';
 
-  function buildReportadoDocument(): string {
-    if (buildOutput !== undefined) return buildOutput;
-
-    mkdirSync(isolatedProject);
-    for (const name of ['astro.config.mjs', 'package.json', 'package-lock.json', 'tsconfig.json']) {
-      copyFileSync(join(projectRoot, name), join(isolatedProject, name));
-    }
-    for (const name of ['data', 'docs', 'public', 'scripts', 'src']) {
-      cpSync(join(projectRoot, name), join(isolatedProject, name), { recursive: true });
-    }
-    symlinkSync(join(projectRoot, 'node_modules'), join(isolatedProject, 'node_modules'), 'dir');
-
-    const build = spawnSync('npm', ['run', 'build'], {
-      cwd: isolatedProject,
-      encoding: 'utf8',
-    });
+  function reportadoDocument(): string {
+    const built = builtSite();
     assert.equal(
-      build.status,
+      built.status,
       0,
-      `the cold-load contract needs its own production build:\n${build.stdout}\n${build.stderr}`,
+      `the cold-load contract needs a production build:\n${built.stdout}\n${built.stderr}`,
     );
     assert.ok(
-      existsSync(reportadoDocument),
-      `WHAT: isolated build emitted no ${reportadoDocument}. HOW: restore the reportado route in the production builder.`,
+      existsSync(resolve(built.outDir, REPORTADO_DOCUMENT)),
+      `WHAT: the build emitted no ${REPORTADO_DOCUMENT}. HOW: restore the reportado route in the production builder.`,
     );
-    buildOutput = readFileSync(reportadoDocument, 'utf8');
-    return buildOutput;
+    return builtDocument(REPORTADO_DOCUMENT);
   }
 
-  afterAll(() => {
-    rmSync(testRoot, { recursive: true, force: true });
+  it('ships a document built by `npm run build` to examine', () => {
+    assert.match(reportadoDocument(), /<!doctype html>/i);
   });
 
-  it('ships a document built by `npm run build` to examine', () => {
-    assert.match(buildReportadoDocument(), /<!doctype html>/i);
-  }, 60_000);
-
   it('carries a script of its own, so a cold load can re-derive the confirmation from durable storage', () => {
-    const html = buildReportadoDocument();
+    const html = reportadoDocument();
     const scriptCount = (html.match(/<script\b/g) ?? []).length;
     assert.ok(
       scriptCount >= 1,

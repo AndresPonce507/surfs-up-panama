@@ -17,32 +17,13 @@
 // also the literal "true with JS off" proof section 12 asks for.
 
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { join, resolve } from 'node:path';
 
-import { afterAll, describe, it } from 'vitest';
+import { describe, it } from 'vitest';
 
-const PROJECT_ROOT = process.cwd();
-
-// This test builds into its own directory, never the shared `dist/`. Astro
-// clears its output directory at the start of a build, and the CI gate sends
-// `test` and `build` out in the same parallel wave, both against the same
-// worktree. Sharing `dist/` meant the two builds raced: one wiped the tree the
-// other was mid-write on, and the symptoms were ENOENT on `dist/index.html`
-// here and ERR_MODULE_NOT_FOUND on a `.prerender` chunk over in the ui job.
-// Neither is a product defect, and neither reproduces when a job runs alone,
-// which is what made it look like flake. The page-weight gate reads whatever
-// `--outDir` emitted (see astro.config.mjs), so it still runs on this build.
-const OUT_DIR = mkdtempSync(join(tmpdir(), 'surfs-up-staleness-'));
+import { builtDocument, builtSite } from '../common/built-site';
 
 const ISO_TIMESTAMP = /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z/;
 const PANAMA_CLOCK_STAMP = /Actualizado (?:[0-9]|1[0-2]):[0-5][0-9] (?:a\.m\.|p\.m\.)/;
-
-function readBuiltPage(relativePath: string): string {
-  return readFileSync(resolve(OUT_DIR, relativePath), 'utf8');
-}
 
 /** Text a surfer can read. Machine metadata in element attributes is the
  * deliberate companion truth of the rendered plain-clock stamp. */
@@ -50,26 +31,34 @@ function visibleText(html: string): string {
   return html.replace(/<[^>]*>/g, ' ');
 }
 
-afterAll(() => {
-  rmSync(OUT_DIR, { recursive: true, force: true });
-});
-
 describe('the staleness stamp on a built page', () => {
   it('never prints a machine ISO timestamp to a surfer, and always prints the settled Panama-local clock form', () => {
-    const build = spawnSync('npm', ['run', 'build', '--', '--outDir', OUT_DIR], {
-      cwd: PROJECT_ROOT,
-      encoding: 'utf8',
-    });
+    // This test never reads the shared `dist/`. Astro clears its output
+    // directory at the start of a build, and the CI gate sends `test` and
+    // `build` out in the same parallel wave, both against the same worktree.
+    // Sharing `dist/` meant the two builds raced: one wiped the tree the other
+    // was mid-write on, and the symptoms were ENOENT on `dist/index.html` here
+    // and ERR_MODULE_NOT_FOUND on a `.prerender` chunk over in the ui job.
+    // Neither is a product defect, and neither reproduces when a job runs
+    // alone, which is what made it look like flake. The shared build keeps that
+    // property -- it emits into its own throwaway directory -- and since
+    // 2026-08-12 it also closes the second half of the same story: this file
+    // was itself one of four concurrent `astro build` runs inside `npm test`,
+    // colliding on the shared vite dependency cache (tests/common/built-site.ts
+    // carries the reproduction). The page-weight gate runs inside `astro build`
+    // against whatever directory it emitted (see astro.config.mjs), so it still
+    // runs on this build.
+    const built = builtSite();
     assert.equal(
-      build.status,
+      built.status,
       0,
-      `the production build must succeed before its emitted HTML can be an oracle:\n${build.stdout}\n${build.stderr}`,
+      `the production build must succeed before its emitted HTML can be an oracle:\n${built.stdout}\n${built.stderr}`,
     );
 
     const pages: Readonly<Record<string, string>> = {
-      home: readBuiltPage('index.html'),
-      tomorrow: readBuiltPage('manana.html'),
-      'a spot page': readBuiltPage('spots/playa-venao.html'),
+      home: builtDocument('index.html'),
+      tomorrow: builtDocument('manana.html'),
+      'a spot page': builtDocument('spots/playa-venao.html'),
     };
 
     for (const [name, html] of Object.entries(pages)) {
@@ -88,7 +77,7 @@ describe('the staleness stamp on a built page', () => {
         `${name} must print the settled "Actualizado H:MM a.m./p.m." local-clock form (application-architecture.md section 10), baked in at build time so it stays true with JavaScript off (section 12).`,
       );
     }
-  }, 60_000);
+  });
 });
 
 function forecastPublishedAt(html: string): string {
