@@ -29,6 +29,7 @@ import type { Factor } from '../scoring/engine';
 import type {
   BestWindow,
   ConfLevel,
+  HourlySubscorePoint,
   PublishedSurfaceUpdate,
   SizeRangeM,
   WindState,
@@ -71,6 +72,19 @@ export type BundleDay = {
 /** Day-independent facts, held once per spot rather than once per spot per day. */
 export type BundleSpotDetail = {
   readonly name: string;
+  /**
+   * The already-scored hours spanning both published days, held HERE rather
+   * than per day summary for the same reason `name` is: array position in
+   * `days[]` is that day's rank, and a per-day copy of the projection would
+   * be a second place for the same hours to disagree with themselves. Each
+   * point carries its own spot-local timestamp, so which day a point belongs
+   * to is read off the point, never off where it was stored.
+   *
+   * Optional for retained legacy surfaces only; the shape and its
+   * missing-versus-empty rule are `SurfaceSpotDetail.hourly`'s, unchanged, so
+   * the bundle and the reading surface cannot drift.
+   */
+  readonly hourly?: readonly HourlySubscorePoint[];
 };
 
 export type RegionBundle = {
@@ -86,5 +100,5 @@ export type RegionBundle = {
 };
 
 // Re-exported so a reader that only ever touches the bundle has one import.
-export type { BestWindow, ConfLevel, SizeRangeM, WindState } from './static-surface';
+export type { BestWindow, ConfLevel, HourlySubscore, HourlySubscorePoint, SizeRangeM, WindState } from './static-surface';
 export type { SizeBandToken } from '../data/size-bands';

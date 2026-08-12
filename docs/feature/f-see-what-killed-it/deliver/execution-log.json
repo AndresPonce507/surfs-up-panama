@@ -897,6 +897,279 @@
       "s": "EXECUTED",
       "d": "PASS: Forward-only identity correction. Metadata bridge 4e227864c1ecbaf605d3df333959c068aafb7355 carries parseable Step-ID: 03-06 and attests reachable implementation 3f0d1ae6d196843bfa1219616d27ec8d7d110f8b. This supersedes the prior row only as the auditable step identity; historical rows remain preserved.",
       "t": "2026-08-11T12:20:43Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: two new strict-surface properties authorize the hourly best-window seam (Test budget: 2 behaviors x 2 = 4); falsifiability proven by breaking the validator each way, empty hourly array accepted and legacy detail rejected, each reverted. Retroactive seal from the 04-01 commit body.",
+      "t": "2026-08-11T18:00:52Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: mapped-only non-visual wire contract with the strict-surface PBT port exercised; refactoring L1+L2+L3 continuous; published-bundle-contract.test.ts deliberately untouched until 04-02 populates hourly.",
+      "t": "2026-08-11T18:00:52Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 48bd6e835306d330e6d9384aece974e7e1f6e348 is the genuine 04-01 implementation commit on build/f2-deltas-slice04-05; this evidence-only seal records the omitted phase history without changing the implementation.",
+      "t": "2026-08-11T18:00:52Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: 3 new unit tests (1 property) for the producer projection (Test budget: 3 behaviors x 2 = 6); falsifiability proven three ways, off-horizon hour admitted, null observation substituted with 0, and one hour's record reused for every point, each reverted. Retroactive seal from the 04-02 commit body.",
+      "t": "2026-08-11T18:09:19Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the projection groups by spot-local civil date, not the UTC prefix; real production build over data/predictions-capture emits 43 points per spot across exactly the two published local days, offsets intact, nulls preserved, with a point at each day summary's best_window.start; spot-index golden master re-pinned because the bundle now carries the projection.",
+      "t": "2026-08-11T18:09:19Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: e18423ccba24cdff5788f2aa27491bdad1738966 is the genuine 04-02 implementation commit on build/f2-deltas-slice04-05; evidence-only seal of the omitted phase history.",
+      "t": "2026-08-11T18:09:19Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: 2 new unit tests (1 property) for the window-hour reader (Test budget: 2 behaviors x 2 = 4); falsifiability proven twice, the join ignoring the published day and a fallback to another hour instead of refusing, each reverted. Retroactive seal from the 04-03 commit body.",
+      "t": "2026-08-11T18:12:51Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the join compares two already-local strings so no clock or time zone is computed on the reading path; unavailable is five named reasons, separating normal no-window and legacy days from producer-contract errors that must not be filed as an old surface.",
+      "t": "2026-08-11T18:12:51Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: a1a830cc9db2fd8ab539371be4ef43a6fa5feed2 is the genuine 04-03 implementation commit on build/f2-deltas-slice04-05; evidence-only seal of the omitted phase history.",
+      "t": "2026-08-11T18:12:51Z"
+    },
+    {
+      "sid": "04-04",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: 5 new unit tests (2 properties) for the four-row formatter (Test budget: 3 behaviors x 2 = 6); falsifiability proven twice, the arrow following the lowest bar and a missing observation drawn as a 0.00 bar, each reverted. Retroactive seal from the 04-04 commit body.",
+      "t": "2026-08-11T18:16:46Z"
+    },
+    {
+      "sid": "04-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: BreakdownFactorRow is a choice type, so no shape exists in which a missing observation carries a number or a zero-width fill; the weak row comes from the published weakest_link and nowhere else; breakdownCompatibilityGapEvent records only the legacy projection absence.",
+      "t": "2026-08-11T18:16:46Z"
+    },
+    {
+      "sid": "04-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 30f264c1b39311a6ada85cb60f5c0833cf01e80d is the genuine 04-04 implementation commit on build/f2-deltas-slice04-05; evidence-only seal of the omitted phase history.",
+      "t": "2026-08-11T18:16:46Z"
+    },
+    {
+      "sid": "04-05",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: 0 new unit tests; the reader and formatter this component composes are already covered by 04-03 and 04-04, and no line here exists without one of them requiring it. Retroactive seal from the 04-05 commit body.",
+      "t": "2026-08-11T18:25:01Z"
+    },
+    {
+      "sid": "04-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: emitted dist inspected with a planted projection: four rows in fixed order per day, arrow on the published weakest_link and not the shortest bar, missing observations rendering as a Spanish sentence with no track and no number, no undefined or NaN anywhere; spot document 5,815 B gz of a 14 KB ceiling. U1-U7 not recordable at this step: the tag filter matches zero scenarios until 04-06 authors them and the runner refuses a zero-scenario selection; the static half of the gate passes here.",
+      "t": "2026-08-11T18:25:01Z"
+    },
+    {
+      "sid": "04-05",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 012a95644ce6a45197d8f16570a74131a6f95af8 is the genuine 04-05 implementation commit on build/f2-deltas-slice04-05; evidence-only seal of the omitted phase history.",
+      "t": "2026-08-11T18:25:01Z"
+    },
+    {
+      "sid": "04-06",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: JIT DISTILL for slice-04 recovering the acceptance gap 04-01..04-05 left: six behaviors authored from slice-04-contract.md, one per roadmap scenario_name, every one tagged @slice-04; falsifiability proven with one mutation per behavior, each failing its own scenario for the named business reason, each reverted and the revert verified with git diff. Retroactive seal from the 04-06 commit body.",
+      "t": "2026-08-11T19:43:21Z"
+    },
+    {
+      "sid": "04-06",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: U1-U7 all green with a non-empty selection (2 scenarios each); U8 charter authored at the roadmap's charter_path with Vera PASS recorded in its Session log from a real Chromium at 390 px against the emitted dist over HTTP; whole-repo acceptance delta +7 scenarios, +7 passing, failures unchanged at 62 pre-existing; no production code changed. Flagged, not fixed: data/published-surface.json predates the projection, so the committed morning emits zero breakdown elements until the producer republishes.",
+      "t": "2026-08-11T19:43:21Z"
+    },
+    {
+      "sid": "04-06",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: e3b2791d1cc211b31fb999fd1afcb6f4853c496e is the genuine 04-06 JIT DISTILL commit on build/f2-deltas-slice04-05; evidence-only seal of the omitted phase history.",
+      "t": "2026-08-11T19:43:21Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: scenario 'Cada playa recibe un mapa con una fuente que s\u00ed podemos mostrar' authored at this step rather than deferred to 05-06, a recorded deviation learned from slice-04; falsifiability proven three ways, orientation refusal removed, caption dropping the orientation slot, and refusals filtered out of the list, each failing the named tests and reverted with git diff verified. Retroactive seal from the 05-01 commit body.",
+      "t": "2026-08-11T23:44:41Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: 5 new unit tests (3 properties) (Test budget: 3 behaviors x 2 = 6); X11 resolved to the orientation-only diagram with every rejected imagery source recorded; the refusal is real data, playa-la-barqueta and las-lajas carry orientation_source null and lose their map, 18 of 20 launch spots approved; decideStaticMapAssets is total and pure; npm test 397 passed, typecheck clean.",
+      "t": "2026-08-11T23:44:41Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 9cfa15f213d03f464d7537fe7cf8c8bcfd535f3d is the genuine 05-01 implementation commit on build/f2-deltas-slice04-05; evidence-only seal of the omitted phase history.",
+      "t": "2026-08-11T23:44:41Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: scenario 'El mapa que abre el surfista ya viene listo, sin pedir un mosaico'; falsifiability proven three ways, content address dropped from the path, Math.random() in the diagram source, and verify stopping byte comparison, each reverted; mutation 1 also exposed a circular unit assertion, rewritten to spell the path out. Retroactive seal from the 05-02 commit body.",
+      "t": "2026-08-12T00:01:25Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: 7 new unit tests (2 properties) (Test budget: 4 behaviors x 2 = 8); npm run build now runs maps:verify first and refuses unless the committed manifest and bytes are exactly what today's policy and seed produce; 18 content-addressed assets at 1,964 B each; npm test 404 passed, typecheck clean, npm run budget under every ceiling, build emits 18 files into dist/maps. Flagged, not fixed: one pre-existing @slice-03 scenario fails byte-identically at e3b2791, not caused by this lane.",
+      "t": "2026-08-12T00:01:25Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 9f4ee5da7d901842209f6903487df37dedba2ed2 is the genuine 05-02 implementation commit on build/f2-deltas-slice04-05; evidence-only seal of the omitted phase history.",
+      "t": "2026-08-12T00:01:25Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: scenario 'La flecha del mapa sigue la orientaci\u00f3n que conoce esa playa'; falsifiability proven three ways, one generic 180 arrow for every break, a missing facing falling back to 180, and the out-of-range guard removed, where nothing failed and the untested guard earned the test that now requires it before the mutation was re-run to failure; each reverted. Retroactive seal from the 05-03 commit body.",
+      "t": "2026-08-12T00:09:15Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: 8 new unit tests (2 properties; the count the 05-06 commit body corrects from the 6 first reported); shore_normal_deg is null when the seed says null, omits it, or states a value outside a compass turn, and the spot loses its map; 18 assets with 6 distinct digests matching the seed's 6 distinct facings; emitted Playa Venao asset inspected as an image, arrow south-southeast for its declared 158; npm test 412 passed, typecheck clean, build verifies 18 maps. Flagged: infra/test/guardrails.test.ts ENOENT race under a concurrent astro build, passed on a clean re-run.",
+      "t": "2026-08-12T00:09:15Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 24cd78ea370a0f7dc964b12de55f0833cf01e80d is the genuine 05-03 implementation commit on build/f2-deltas-slice04-05; evidence-only seal of the omitted phase history.",
+      "t": "2026-08-12T00:09:15Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: scenario 'El surfista ve el break y hacia d\u00f3nde mira sin abrir otro mapa', an outline over both themes and reduced motion; falsifiability proven four ways, loading switched to eager, aspect-ratio dropped, figcaption removed, and alt text reduced to one word, each failing its own step and reverted with the revert verified. Retroactive seal from the 05-04 commit body.",
+      "t": "2026-08-12T00:15:49Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: 0 new unit tests, every line already required by 05-01 through 05-03; U1-U7 2 scenarios pass under each of the seven tags, recordable at this step because the mount landed with the component, a recorded deviation onto 05-05's declared file; a spot with no approved asset renders nothing, verified on the built surface; the degrade surface is native with no JavaScript; npm test 412 passed, typecheck clean, build emits the figure on all 18 approved spot pages.",
+      "t": "2026-08-12T00:15:49Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: c7c3951e5a166fc0fbcd8fad8f3f615c71294456 is the genuine 05-04 implementation commit on build/f2-deltas-slice04-05; evidence-only seal of the omitted phase history.",
+      "t": "2026-08-12T00:15:49Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: scenario 'El mapa de la playa carga tarde sin pesar ni romper la p\u00e1gina'; falsifiability proven three ways, the mount removed from SpotDetail, lazy images counted as first-visit bytes, and maps:verify dropped from npm build, each reverted and the revert verified. Retroactive seal from the 05-05 commit body.",
+      "t": "2026-08-12T00:20:25Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: 1 new property in page-weight-laws.test.ts (Test budget: 3 behaviors x 2 = 6); X12 is not granted, so public/sw.js stays deliberately untouched and the cache-first bounded-image policy is deferred with its owner; the map exists on exactly one route with the other four asserted by name against the emitted documents; the refusal proven through a real npm run build over a full project copy with swapped bytes, aborting before any page is emitted; npm test 412 passed, typecheck clean.",
+      "t": "2026-08-12T00:20:25Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: f945a3016a59e23a42ed4225507f72f17792b30a is the genuine 05-05 implementation commit on build/f2-deltas-slice04-05; evidence-only seal of the omitted phase history.",
+      "t": "2026-08-12T00:20:25Z"
+    },
+    {
+      "sid": "05-06",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: 2 new behaviors, 4 scenarios; the sweep walks all twenty beaches in one Chromium session, 18 showing exactly one lazy local WebP served from the path their own manifest row credits and 2 showing no map element at all, every network request checked against the harness origin; the offline case aborts every /maps/ request and keeps the reserved frame, Spanish alt text and credit readable at 390 px; falsifiability proven two ways, a beach borrowing another's map and the reserved box collapsing, each reverted and the revert verified. Retroactive seal from the 05-06 commit bodies.",
+      "t": "2026-08-12T00:25:26Z"
+    },
+    {
+      "sid": "05-06",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: U1-U7 4 scenarios pass under each of the seven tags; U8 Vera source-blind on the real built surface PASS, observing the diagram in both themes, the compass N with marker and arrow, the caption reading as a normal credit, the failed-image box holding 320x180 with the Spanish sentence inside, and no orphaned caption on playa-la-barqueta; npm test 412 passed across 74 files, typecheck clean, build emits 18 maps into dist. Charter missing at the declared charter_path, flagged: Vera examined against the roadmap's own u8_observation text.",
+      "t": "2026-08-12T00:25:26Z"
+    },
+    {
+      "sid": "05-06",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: e0752a949053a23bb8726f09db3ce3a5126359fb is the genuine 05-06 JIT DISTILL commit on build/f2-deltas-slice04-05; evidence-only seal of the omitted phase history.",
+      "t": "2026-08-12T00:25:26Z"
+    },
+    {
+      "sid": "05-06",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: three review findings closed: the missing expectation charter authored at the declared charter_path with Vera's 2026-08-11 PASS recorded in its Session log; two unreachable guards, the 12 KB size ceiling and the manifest comparison, now driven by their own tests and both proven by mutation, disabling each branch fails its own new test alone; sharp pinned to 0.35.3 exactly; the 05-03 unit-count correction recorded. npm test 415 passed across 74 files, typecheck clean, npm run build green, 9 of 9 slice-05 acceptance scenarios pass.",
+      "t": "2026-08-12T00:31:59Z"
+    },
+    {
+      "sid": "05-06",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 6349f037e417271e6eab9f1534384d3eb25d47d3 seals the slice-05 review repairs for 05-06 on build/f2-deltas-slice04-05; evidence-only seal of the omitted phase history.",
+      "t": "2026-08-12T00:31:59Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: Identity correction. The immediately prior 05-03 COMMIT row mistyped the hash (24cd78ea370a0f7dc964b12de55f0833cf01e80d does not exist); the genuine 05-03 implementation commit is 24cd78ea370a0f7dc964b10ef96a2f4635b3e3e8 on build/f2-deltas-slice04-05, verified with git cat-file. Prior row preserved.",
+      "t": "2026-08-12T16:46:01Z"
     }
   ]
 }

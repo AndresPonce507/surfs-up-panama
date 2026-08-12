@@ -1,0 +1,184 @@
+{
+  "schema": "static-map-policy/1",
+  "region_id": "pa-pacific",
+  "path": "orientation-only",
+  "decision_record": "docs/product/architecture/adr-static-map-orientation-fallback.md",
+  "imagery_source": null,
+  "why_no_imagery_source": "No accepted project evidence establishes a legal static imagery source covering every launch spot with permitted build-time acquisition, exact credit, refresh terms and zero serving cost. Recorded webcam capture is prohibited, other commercial terms and coverage are unverified, and satellite imagery is unfit at break level. X11 therefore accepted the seed-only orientation diagram as a changed product fulfillment: a spot marker and the declared shore normal, and nothing else.",
+  "rejected_sources": {
+    "tile_api": "A visitor-time tile request is a third-party endpoint, a running cost and a tracking surface. Forbidden at every layer.",
+    "browser_map_library": "Route JavaScript for a map the page does not need. The document budget and the zero-route-JavaScript rule both refuse it.",
+    "scraped_imagery": "No licence, no credit, no refresh terms. Not publishable at any price.",
+    "recorded_webcam_capture": "Prohibited by the source terms recorded in the decision record.",
+    "satellite_imagery": "Unfit for a break-level diagram and unverified for redistribution."
+  },
+  "licence": {
+    "holder": "This project",
+    "basis": "The diagram is drawn from data/spots/pa-pacific.yaml, this project’s own human-owned seed. No third-party image, tile or basemap is copied, traced or redistributed.",
+    "coordinate_credit_required": "OpenStreetMap contributors, wherever a coordinate came from OpenStreetMap. Credited in Spanish on the visible caption of every affected spot.",
+    "refresh": "The asset is regenerated only when its own seed record or the generator version changes. There is no provider refresh clause because there is no provider."
+  },
+  "acquisition": {
+    "when": "Before the Astro route build, from the local seed. Never at visitor time.",
+    "network": "none",
+    "serving_cost": "Zero: the asset is a local file emitted into the same static bundle the pages already ship, served from the same origin, and never requested from a third party."
+  },
+  "content_rule": "The visual may carry only the declared spot marker and the shore-normal arrow. It must not depict or imply a coastline, satellite image, street, boundary, bathymetry, or any precision beyond the cited seed record.",
+  "generator_version": "static-map-orientation/1",
+  "seed_file": "data/spots/pa-pacific.yaml",
+  "asset": {
+    "dir": "public/maps",
+    "extension": ".webp",
+    "width": 320,
+    "height": 180,
+    "max_bytes": 12288
+  },
+  "caption_template": "Diagrama de orientación. Ubicación: {coordinate_attribution}. Orientación: {orientation_attribution}.",
+  "refusal_rules": [
+    "A launch spot absent from this policy receives no asset.",
+    "A launch spot whose visible coordinate credit is empty receives no asset.",
+    "A launch spot whose visible orientation credit is empty receives no asset, because no source states which way it faces."
+  ],
+  "spots": {
+    "playa-malibu": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "surf-forecast.com",
+      "coordinate_provenance": "OpenStreetMap natural=beach, Nueva Gorgona, Chame, Panamá Oeste, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Playa-Malibu_2 at 8.55N 79.87W, 2.9 km apart",
+      "orientation_provenance": "surf-forecast.com/breaks/Playa-Malibu_2, accessed 2026-08-08",
+      "coordinate_confidence": "verified"
+    },
+    "playa-serena": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "surf-forecast.com y deepswell.com",
+      "coordinate_provenance": "OpenStreetMap natural=beach, Coronado, Chame, Panamá Oeste, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Playa-Serena at 8.53N 79.89W, 1.3 km apart",
+      "orientation_provenance": "surf-forecast.com/breaks/Playa-Serena and deepswell.com/surf-guide/Central-America/Panama/Playa-Serena/1751, both accessed 2026-08-08",
+      "coordinate_confidence": "verified"
+    },
+    "playa-teta": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "surf-forecast.com",
+      "coordinate_provenance": "OpenStreetMap natural=beach, San Carlos, Panamá Oeste, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Playa-Teta at 8.51N 79.91W, 0.8 km apart",
+      "orientation_provenance": "surf-forecast.com/breaks/Playa-Teta, accessed 2026-08-08",
+      "coordinate_confidence": "verified"
+    },
+    "playa-el-palmar": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "surf-forecast.com",
+      "coordinate_provenance": "OpenStreetMap natural=beach, El Palmar, San Carlos, Panamá Oeste, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/El-Palmer at 8.46N 79.96W, 1.0 km apart",
+      "orientation_provenance": "surf-forecast.com/breaks/El-Palmer, accessed 2026-08-08",
+      "coordinate_confidence": "verified"
+    },
+    "playa-rio-mar": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "surf-forecast.com",
+      "coordinate_provenance": "OpenStreetMap natural=beach, San Carlos, Panamá Oeste, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Rio-Mar at 8.45N 79.98W, 1.4 km apart",
+      "orientation_provenance": "surf-forecast.com/breaks/Rio-Mar, accessed 2026-08-08",
+      "coordinate_confidence": "verified"
+    },
+    "san-carlos-point": {
+      "coordinate_attribution": "surf-forecast.com",
+      "orientation_attribution": "surf-forecast.com",
+      "coordinate_provenance": "surf-forecast.com/breaks/San-Carlos-Point, accessed 2026-08-08. Two decimal precision only.",
+      "orientation_provenance": "surf-forecast.com/breaks/San-Carlos-Point, accessed 2026-08-08",
+      "coordinate_confidence": "single-source"
+    },
+    "hawaiisito": {
+      "coordinate_attribution": "surf-forecast.com",
+      "orientation_attribution": "surf-forecast.com",
+      "coordinate_provenance": "surf-forecast.com/breaks/Hawaiisito, accessed 2026-08-08. Two decimal precision only.",
+      "orientation_provenance": "surf-forecast.com/breaks/Hawaiisito, accessed 2026-08-08",
+      "coordinate_confidence": "single-source"
+    },
+    "punta-chame": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "theriderexperience.com",
+      "coordinate_provenance": "OpenStreetMap place=village centroid, Chame, Panamá Oeste, via Nominatim, accessed 2026-08-08. This is the village, not the break.",
+      "orientation_provenance": "theriderexperience.com Punta Chame spot guide, via research file 10, accessed 2026-08-08",
+      "coordinate_confidence": "single-source"
+    },
+    "playa-venao": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "surf-forecast.com",
+      "coordinate_provenance": "OpenStreetMap natural=beach, Las Escobas del Venado, Pedasí, Los Santos, via Nominatim, accessed 2026-08-08. Corroborated by a separately mapped Playa Venao business at the same point, and by a distance check: the OSM Pedasí town node is at 7.5298888, -80.0259726, which puts this beach 21.2 km southwest of Pedasí. The surf-forecast coordinate would put it 9.6 km from Pedasí, on the wrong side of the peninsula corner.",
+      "orientation_provenance": "surf-forecast.com/breaks/Playa-Venao, accessed 2026-08-08, plus research file 10",
+      "coordinate_confidence": "verified"
+    },
+    "playa-los-destiladeros": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "surf-forecast.com",
+      "coordinate_provenance": "OpenStreetMap natural=beach, Pedasí, Los Santos, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Destiladeros at 7.47N 80.00W, 2.0 km apart",
+      "orientation_provenance": "surf-forecast.com/breaks/Destiladeros, accessed 2026-08-08",
+      "coordinate_confidence": "verified"
+    },
+    "playa-cambutal": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "surf-forecast.com",
+      "coordinate_provenance": "OpenStreetMap tourism=hotel Hotel Playa Cambutal, Cambutal, Tonosí, Los Santos, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Cambutal at 7.25N 80.49W, 0.4 km apart",
+      "orientation_provenance": "surf-forecast.com/breaks/Cambutal, accessed 2026-08-08, plus research file 10",
+      "coordinate_confidence": "verified"
+    },
+    "playa-guanico": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "surf-forecast.com",
+      "coordinate_provenance": "OpenStreetMap tourism=attraction Playa Guánico Abajo, Tonosí, Los Santos, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Playa-Guanico at 7.27N 80.42W, 0.4 km apart",
+      "orientation_provenance": "surf-forecast.com/breaks/Playa-Guanico, accessed 2026-08-08",
+      "coordinate_confidence": "verified"
+    },
+    "santa-catalina-la-punta": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "surf-forecast.com",
+      "coordinate_provenance": "OpenStreetMap place=hamlet Santa Catalina, Hicaco, Soná, Veraguas, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Playa-Santa-Catalina at 7.61N 81.24W, 3.1 km apart",
+      "orientation_provenance": "surf-forecast.com/breaks/Playa-Santa-Catalina, accessed 2026-08-08, plus thesurfatlas.com via research file 10",
+      "coordinate_confidence": "verified"
+    },
+    "punta-brava": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "surf-forecast.com",
+      "coordinate_provenance": "OpenStreetMap tourism=attraction Punta Brava, Vía El Estero, Santa Catalina, Hicaco, Soná, Veraguas, via Nominatim, accessed 2026-08-08; cross-checked against surf-forecast.com/breaks/Punta-Brava at 7.62N 81.24W, 0.5 km apart",
+      "orientation_provenance": "surf-forecast.com/breaks/Punta-Brava, accessed 2026-08-08",
+      "coordinate_confidence": "verified"
+    },
+    "playa-morrillo": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "booksurfcamps.com y puntaduarte.com",
+      "coordinate_provenance": "OpenStreetMap natural=beach, La Barra, Mariato, Veraguas, via Nominatim, accessed 2026-08-08. Corroborated by puntaduarte.com/location, which places its beachfront hotel at Punta Duarte, Morillo, Veraguas, 5 km past Torío, and by es.tourismpanama.com naming Playa Morrillo as one of five Veraguas surf beaches. Existence check, not a second coordinate: one of the two weakest verified rows, eyeball on a map first.",
+      "orientation_provenance": "booksurfcamps.com and puntaduarte.com both describe this stretch as Panama's Sunset Coast, accessed 2026-08-08",
+      "coordinate_confidence": "verified"
+    },
+    "playa-reina": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "trazo de costa de Playa Morrillo",
+      "coordinate_provenance": "OpenStreetMap natural=beach, Mariato, Veraguas, via Nominatim, accessed 2026-08-08. Corroborated by es.tourismpanama.com naming Playa Reina as one of five Veraguas surf beaches. Existence check, not a second coordinate: one of the two weakest verified rows, eyeball on a map first.",
+      "orientation_provenance": "derived from the same coastline trend as Playa Morrillo",
+      "coordinate_confidence": "verified"
+    },
+    "playa-torio": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "trazo de costa de Playa Morrillo",
+      "coordinate_provenance": "OpenStreetMap natural=beach, Torio, Veraguas, via Nominatim, accessed 2026-08-08. Corroborated by puntaduarte.com/location, which gives the road distance from Torío to Punta Duarte as 5 km. The straight-line distance between the OSM Torío beach node and the OSM Punta Duarte hotel node is 5.8 km, which is consistent. Geometry check, not a second coordinate.",
+      "orientation_provenance": "derived from the same coastline trend as Playa Morrillo",
+      "coordinate_confidence": "verified"
+    },
+    "mariatos": {
+      "coordinate_attribution": "surf-forecast.com",
+      "orientation_attribution": "surf-forecast.com",
+      "coordinate_provenance": "surf-forecast.com/breaks/Mariatos, accessed 2026-08-08. Two decimal precision only. A Nominatim reverse geocode on this point returned only the Veraguas administrative boundary with no feature, which neither confirms nor refutes it.",
+      "orientation_provenance": "surf-forecast.com/breaks/Mariatos, accessed 2026-08-08",
+      "coordinate_confidence": "single-source"
+    },
+    "playa-la-barqueta": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "",
+      "coordinate_provenance": "OpenStreetMap natural=beach, Guarumal, Alanje, Chiriquí, via Nominatim, accessed 2026-08-08",
+      "orientation_provenance": "ninguna fuente indica hacia dónde mira esta playa",
+      "coordinate_confidence": "single-source"
+    },
+    "las-lajas": {
+      "coordinate_attribution": "colaboradores de OpenStreetMap",
+      "orientation_attribution": "",
+      "coordinate_provenance": "OpenStreetMap natural=beach named Playa Jobo, Las Lajas, San Félix, Chiriquí, via Nominatim, accessed 2026-08-08. Nominatim has no feature under the exact name Playa Las Lajas; Playa Jobo is the mapped beach inside the Las Lajas locality.",
+      "orientation_provenance": "ninguna fuente indica hacia dónde mira esta playa",
+      "coordinate_confidence": "single-source"
+    }
+  }
+}

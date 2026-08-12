@@ -1,9 +1,13 @@
 ---
-// Spot detail: identity, both day summaries with size and best-window, a
-// path back to the list, and the report CTA in the bottom thumb zone
-// (decisions 13, 23). Breakdown bars, scorecard, static map and report
-// photos arrive with their data contracts; not scaffolded because each would
-// mean inventing content the bundle owns.
+// Spot detail: identity, both day summaries with size, best-window and the
+// four already-scored factors behind that window, a path back to the list,
+// and the report CTA in the bottom thumb zone (decisions 13, 23). Scorecard,
+// static map and report photos arrive with their data contracts; not
+// scaffolded because each would mean inventing content the bundle owns.
+//
+// The two Breakdown mounts are the shared-host edit slice-04 records as X10.
+// Each day section passes its own day index, so each reads its own selected
+// hour and its own published weakest_link; nothing is shared between them.
 //
 // Size and window are always rendered through formatSizeEs/formatBestWindowEs
 // (src/publish/display-format.ts) -- never formatted by hand here, so every
@@ -19,7 +23,9 @@ import { strings, type Locale } from '../i18n/strings';
 import { paths } from '../i18n/routes';
 import { formatBestWindowEs, formatSizeEs, formatUpdatedAtEs } from '../publish/display-format';
 import type { LinkAnnouncement } from '../share/link-announcement';
+import Breakdown from './Breakdown.astro';
 import WeakestLink from './WeakestLink.astro';
+import StaticMap from './StaticMap.astro';
 import TrackRecordBox from './TrackRecordBox.astro';
 
 interface Props {
@@ -85,6 +91,7 @@ const tomorrow = summaryFor(1);
           <p data-field="size">{sizeText(today)}</p>
           <p data-field="window">{windowText(today)}</p>
           <WeakestLink spotId={spotId} day={0} />
+          <Breakdown spotId={spotId} day={0} />
         </>
       ) : (
         <p>Todavía no hay número de hoy para este spot.</p>
@@ -100,12 +107,14 @@ const tomorrow = summaryFor(1);
           <p data-field="size">{sizeText(tomorrow)}</p>
           <p data-field="window">{windowText(tomorrow)}</p>
           <WeakestLink spotId={spotId} day={1} />
+          <Breakdown spotId={spotId} day={1} />
         </>
       ) : (
         <p>Todavía no hay número de mañana para este spot.</p>
       )
     }
   </section>
+  <StaticMap locale={locale} spotId={spotId} spotName={spot.name} />
   <TrackRecordBox spotId={spotId} />
   {
     shareCall !== undefined && shareHref !== undefined ? (

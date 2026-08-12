@@ -11,10 +11,16 @@
 // and is a contract violation, not a style preference.
 
 import { OPEN_ENDED_SIZE_BAND, sizeBands, type SizeBandToken } from '../data/size-bands';
-import { factorWord, type FactorWord } from './factor-vocab';
+import { FACTOR_TOKENS, factorWord, type FactorToken, type FactorWord } from './factor-vocab';
 import { formatPanamaTime } from './reading-state';
 import type { BestWindow } from './static-surface';
-import type { CounterfactualReading, SurfaceDayIndex, WeakestLinkReading } from './weakest-link';
+import type {
+  BestWindowBreakdownReading,
+  BreakdownUnavailableReason,
+  CounterfactualReading,
+  SurfaceDayIndex,
+  WeakestLinkReading,
+} from './weakest-link';
 
 const APPROXIMATELY = '≈';
 const RANGE_DASH = '–';
@@ -71,6 +77,99 @@ export function formatWeakestLinkEs(
   return counterfactual?.kind === 'available' && day !== undefined
     ? `${sentence} ${COUNTERFACTUAL_CLAUSE_ES.available(word, day, counterfactual.score_q)}`
     : sentence;
+}
+
+/**
+ * One factor's row inside a day's best-window breakdown.
+ *
+ * A choice type, not a record with optional fields, and that is the whole
+ * point: a row either shows a published number or states that the
+ * observation is missing. There is no shape in which a row carries both, and
+ * no shape in which an absent row carries a fill -- not even a zero-width
+ * one, which reads on screen as "the worst possible wind" rather than "we
+ * never saw the wind".
+ *
+ * `fillPercent` is presentation only. It follows the published value and
+ * decides nothing: `weakest` is set from the day summary's own published
+ * `weakest_link`, never from a bar height.
+ */
+export type BreakdownFactorRow =
+  | {
+    readonly kind: 'scored';
+    readonly factor: FactorToken;
+    readonly label: string;
+    /** The published raw score, two decimal places, unaltered. */
+    readonly value: string;
+    /** Bar length only. Never an input to `weakest`. */
+    readonly fillPercent: number;
+    readonly weakest: boolean;
+  }
+  | {
+    readonly kind: 'absent';
+    readonly factor: FactorToken;
+    readonly label: string;
+    readonly absence: string;
+    readonly weakest: boolean;
+  };
+
+export type BestWindowBreakdownDisplay =
+  | { readonly kind: 'present'; readonly rows: readonly BreakdownFactorRow[] }
+  | { readonly kind: 'unavailable'; readonly reason: BreakdownUnavailableReason };
+
+/**
+ * The one place the missing-observation sentence is worded. It names the
+ * factor and the day, so a surfer reading two stacked breakdowns is never
+ * left wondering which day lost its wind reading.
+ */
+const FACTOR_ABSENCE_ES = (word: FactorWord, day: SurfaceDayIndex): string =>
+  `sin dato de ${word.noun} ${day === 0 ? 'hoy' : 'mañana'}`;
+
+/**
+ * Turns one selected hour into the four Spanish factor rows a day's
+ * breakdown shows, in the engine's own fixed order.
+ *
+ * No scoring arithmetic happens here. The only number this function
+ * produces is a bar length, and it produces it from the value the producer
+ * already published.
+ *
+ * WHY THE WEAK ROW IS PASSED IN RATHER THAN COMPUTED: the lowest of these
+ * four numbers is frequently not the factor that cost the day its score,
+ * because the engine weights factors before comparing damages. Choosing the
+ * minimum here would be the page overruling the producer -- exactly the
+ * substitution this slice exists to prevent -- so the marked row comes from
+ * `weakest_link` and from nowhere else. A clean or unknown reading marks no
+ * row at all rather than falling back to a guess.
+ */
+export function formatBestWindowBreakdownEs(
+  breakdown: BestWindowBreakdownReading,
+  weakest: WeakestLinkReading,
+  day: SurfaceDayIndex,
+): BestWindowBreakdownDisplay {
+  if (breakdown.kind === 'unavailable') return { kind: 'unavailable', reason: breakdown.reason };
+  const named = weakest.kind === 'named' ? weakest.factor : null;
+  return {
+    kind: 'present',
+    rows: FACTOR_TOKENS.map((factor) => breakdownRow(factor, breakdown.sub[factor], day, factor === named)),
+  };
+}
+
+function breakdownRow(
+  factor: FactorToken,
+  published: number | null,
+  day: SurfaceDayIndex,
+  weakest: boolean,
+): BreakdownFactorRow {
+  const word = factorWord(factor);
+  const label = `${word.noun.slice(0, 1).toUpperCase()}${word.noun.slice(1)}`;
+  if (published === null) return { kind: 'absent', factor, label, absence: FACTOR_ABSENCE_ES(word, day), weakest };
+  return {
+    kind: 'scored',
+    factor,
+    label,
+    value: published.toFixed(2),
+    fillPercent: Math.round(published * 100),
+    weakest,
+  };
 }
 
 /**

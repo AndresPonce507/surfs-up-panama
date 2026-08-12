@@ -16,7 +16,13 @@ import type { SpotSeed } from '../../src/scoring/engine';
 
 const CAPTURE_ROOT = resolve(process.cwd(), 'data/predictions-capture');
 const BUILD_INSTANT = '2026-08-09T11:22:00Z';
-const BUNDLE_SHA256_AT_BUILD_INSTANT = '53d5fea339c0ebce353953ba5d3d900ce86a107bc2c2264d2a0c2a6fcc65f418';
+// A golden master of the whole emitted bundle: publishing the spot index must
+// not disturb it. It moves only when the bundle's own contract is
+// deliberately widened, and then the move is recorded here rather than
+// silently re-pinned. Last moved by slice-04 step 04-02, which added the
+// authorized `spot_detail[].hourly` projection (04-01's schema seam); the
+// spot-index publication itself is unchanged.
+const BUNDLE_SHA256_AT_BUILD_INSTANT = '9b297afa6a447eb94cde447d352cdab9a2d5c31435838b5a684bc86bdd135252';
 const MEMBER_SOURCES = ['ncep_gfswave016', 'ncep_gfswave025', 'meteofrance_wave', 'dwd_gwam'] as const;
 
 describe('spot-index publication', { timeout: 30_000 }, () => {
