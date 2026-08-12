@@ -1,0 +1,15 @@
+{
+  "step_id": "01-14",
+  "timestamp": "2026-08-12T12:00:00Z",
+  "kind": "commit",
+  "result": "PASS",
+  "commit": "bb58e002ff0264eb86be0c7dabf913910fbbd3da",
+  "review": "NOT RUN: no reviewer was dispatched in this lane. The step evidence is the prescribed widen-and-watch RED in red-green.json.",
+  "evidence": {
+    "contract": "Any answer outside the gone-for-good set marks nobody, and the reaction is produced rather than withheld.",
+    "falsification": "Widening the gone set to every non-2xx status failed this row alone at both levels while 01-13 stayed green, demonstrating the RED record's claim that an implementation pruning on every failure passes 01-13 and fails here. Reverted, src diff empty.",
+    "gates": "Focused properties 7/7, typecheck, acceptance for this feature 18/18. Full vitest 378 passed with 5 pre-existing failures unrelated to push.",
+    "scope": "Law and evidence only; src/push/plan-notifications.ts unchanged for this step, which is why the RED had to be produced by breaking and restoring.",
+    "budget": "1 behavior x 2 = 2; 1 property added, kept one-directional so it does not swallow 01-13."
+  }
+}

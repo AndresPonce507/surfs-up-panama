@@ -1,0 +1,12 @@
+{
+  "step_id": "01-12",
+  "timestamp": "2026-08-12T11:50:00Z",
+  "kind": "red-green",
+  "result": "PASS",
+  "evidence": {
+    "prepare": "Fresh worktree off origin/main at 6eeb4fc. The accepted scenario 'Pasado el tope de envios de una corrida, lo que queda se anuncia en voz alta' is present and carries no skip. Baseline acceptance for this feature: 14 passed, 4 failed, the 4 being 01-13 and 01-14 for a missing planSendReactions.",
+    "red_acceptance": "NOT_APPLICABLE: the run cap rule and its loud remainder event already existed in src/push/plan-notifications.ts, landed in 83a335f under step 01-06 together with the run_cap input, so the accepted scenario was already green on this base. No acceptance file was edited or invented.",
+    "red_unit": "PASS by falsification, twice, because the rule pre-existed. (1) eligible.slice(0, cap) replaced with eligible: only the new property failed, AssertionError 'one run sends at most its declared cap, counting every spot together'; the other four planner properties stayed green. (2) the cap event dropped while the cap itself stayed: only the new property failed, AssertionError 'a remainder is announced, and a run that deferred nobody announces nothing', and the acceptance scenario failed with 'la corrida no anuncio nada al pasar del tope'. Both breaks were reverted and git diff --stat src/ was empty afterwards.",
+    "green": "Focused planner properties 5/5, typecheck, and acceptance for this feature 14 passed / 4 failed unchanged. The source diff for this step is empty by design; only the law was added. The property quantifies over an arbitrary whole cap and an arbitrary eligible population split across two spots in one morning: sends is min(cap, n), deferred is max(0, n - cap), the cap pools per run rather than per spot, dated writes never exceed the sends the cap allowed, and a remainder is announced with its count. No configuration number is asserted; 10,000 stays the composition root's proposal."
+  }
+}

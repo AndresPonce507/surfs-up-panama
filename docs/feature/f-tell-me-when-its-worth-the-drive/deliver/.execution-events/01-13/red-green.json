@@ -1,0 +1,16 @@
+{
+  "step_id": "01-13",
+  "timestamp": "2026-08-12T11:55:00Z",
+  "kind": "red-green",
+  "result": "PASS",
+  "evidence": {
+    "prepare": "01-12 is committed. The accepted scenario outline 'Un destino que ya no existe se borra al primer fallo' is present, carries no skip, and was failing on this base because src/push/plan-notifications.ts exported no planSendReactions.",
+    "red_acceptance": "PASS: the three gone-status rows failed at their own behaviour oracle, 'quedaron 0 suscripciones marcadas para borrarse donde tenia que quedar una', with the absence named as 'src/push/plan-notifications.ts existe pero no exporta planSendReactions()'. Not a collection error.",
+    "red_unit": "PASS: the new property failed with 'TypeError: planSendReactions is not a function' while the five planner properties in the same file kept running, so the file collected and the failure was the missing rule.",
+    "green": "planSendReactions added as a pure decision returning deletions as a value. Focused properties 6/6, typecheck, acceptance for this feature 18/18. Falsification: deletions replaced with a constant empty array failed the new property and the three gone-status rows while 01-14's transient-failure row stayed green, which is the proof that 01-14 alone cannot catch a rule that prunes nobody. Restored byte-for-byte and re-verified."
+  },
+  "flags": {
+    "naming": "planSendReactions is DISTILL's invention, named by no document. Kept unchanged because tests/acceptance/f-tell-me-when-its-worth-the-drive/steps/support/declared-surface.ts hard-codes both the module path and the export name, and DELIVER may not edit acceptance tests.",
+    "input_shape": "The rule reads responses, never sends. Identity travels on the response, and the acceptance harness passes a StoredSub-shaped object into sends when no send was planned. The declared input asks only for { endpoint_hash } per attempted send: require only what is read."
+  }
+}

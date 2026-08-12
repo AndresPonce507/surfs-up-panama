@@ -1,0 +1,15 @@
+{
+  "step_id": "01-13",
+  "timestamp": "2026-08-12T11:55:00Z",
+  "kind": "commit",
+  "result": "PASS",
+  "commit": "323445d3b3f2c7a0e1a328c92863e5f27aad91a8",
+  "review": "NOT RUN: no reviewer was dispatched in this lane. The step evidence is the RED record and the falsification in red-green.json.",
+  "evidence": {
+    "contract": "A destination that answered 404, 410 or 403 is marked for deletion at its first failure, with no retry budget, and the deletion is reported as a value. The rule executes nothing.",
+    "falsification": "Constant empty deletions failed the property and the three acceptance rows; 01-14's row stayed green, confirming the two rows form a partition rather than a duplicate.",
+    "gates": "Focused properties 6/6, typecheck, acceptance for this feature 18/18.",
+    "scope": "src/push/plan-notifications.ts gained planSendReactions and its input and output types. No adapter, no SDK, no delete executed. src/pipeline/build.ts and public/sw.js untouched.",
+    "budget": "1 behavior x 2 = 2; 1 property added, stated one-directionally over the three gone statuses only so 01-14 keeps its purpose."
+  }
+}
