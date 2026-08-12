@@ -59,7 +59,7 @@ import {
   type SpotSeed,
 } from "./hierarchy";
 import { shrinkTowardParent, shrinkageWeightFromParent } from "./shrink";
-import { collapseSessionsToMedian } from "./weights";
+import { collapseSessionsToMedian, winsorizeAtDayFence } from "./weights";
 
 export const CORRECTIONS_PREFIX = "learned/corrections/v1/";
 
@@ -115,7 +115,7 @@ const NO_POOLING_ROSTER: PoolingInputs = {
  * gate is applied once upstream in fit.ts for the same reason.
  */
 function estimateOf(reported: readonly ResidualSample[]): RawEstimate | null {
-  const samples = collapseSessionsToMedian(reported);
+  const samples = winsorizeAtDayFence(collapseSessionsToMedian(reported));
   if (samples.length === 0) return null;
   const weighted: WeightedSample[] = samples.map((sample) => ({
     value: sample.value,

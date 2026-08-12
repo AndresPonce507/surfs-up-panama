@@ -44,6 +44,13 @@ export type ResidualSample = {
   readonly weight: number;
   readonly device_id: string;
   readonly day: string | null;
+  /**
+   * The width in metres of the band this sample was reported in, which is the
+   * unit the day fence is measured in (06 section 6.2 step 2). Null when the
+   * report named no band with two edges: the open top band has no upper edge
+   * and therefore no width, and a score residual has no band at all.
+   */
+  readonly bandWidthM: number | null;
 };
 
 /** One height residual sample, keyed to the model and lead bucket it was measured on (06 section 5.1). */
@@ -67,7 +74,7 @@ export function formHeightResidualRows(
 
     for (const prediction of predictions) {
       if (!pairs(observation, prediction, observedHourMs)) continue;
-      const { mid, varianceM2 } = bandMidAndVarianceM(band);
+      const { mid, varianceM2, widthM } = bandMidAndVarianceM(band);
       const value = hEff(prediction.swell_h_m, prediction.swell_t_s) - mid;
       rows.push({
         source: prediction.source,
@@ -77,6 +84,7 @@ export function formHeightResidualRows(
           weight: heightPrecisionWeight(varianceM2),
           device_id: deviceId,
           day: utcDayOf(observedHourMs),
+          bandWidthM: widthM,
         },
       });
     }
@@ -106,6 +114,10 @@ export function formScoreResidualSamples(observations: readonly ObservationRow[]
       weight: scorePrecisionWeight(),
       device_id: deviceId,
       day: observedHourMs === null ? null : utcDayOf(observedHourMs),
+      // A score residual is a difference between two points on the 0-100
+      // ladder. It was never reported as an interval, so it has no width and
+      // no fence can be measured in it.
+      bandWidthM: null,
     });
   }
   return samples;
@@ -146,12 +158,24 @@ function safeDateMs(iso: unknown): number | null {
 
 // ---------- band midpoint, variance, and precision weights (06 section 5.1, 6.1) ----------
 
-function bandMidAndVarianceM(band: SizeBandToken): { mid: number; varianceM2: number } {
-  if (band === OPEN_ENDED_SIZE_BAND) return { mid: TOP_BAND_NOMINAL_M, varianceM2: TOP_BAND_VARIANCE_M2 };
+/**
+ * `widthM` is null exactly where the band has no two edges to measure between:
+ * the open top band stands in for its missing upper edge with a nominal value
+ * and a nominal variance (06 section 5.1), and neither of those is a width. A
+ * fence measured in an invented width would claim a precision the report never
+ * carried, so a morning whose middle report is open-ended simply has no fence.
+ */
+function bandMidAndVarianceM(band: SizeBandToken): {
+  mid: number;
+  varianceM2: number;
+  widthM: number | null;
+} {
+  const openEnded = { mid: TOP_BAND_NOMINAL_M, varianceM2: TOP_BAND_VARIANCE_M2, widthM: null };
+  if (band === OPEN_ENDED_SIZE_BAND) return openEnded;
   const row = sizeBands.find((candidate) => candidate.value === band);
-  if (row === undefined) return { mid: TOP_BAND_NOMINAL_M, varianceM2: TOP_BAND_VARIANCE_M2 };
+  if (row === undefined) return openEnded;
   const width = row.hi_m - row.lo_m;
-  return { mid: (row.lo_m + row.hi_m) / 2, varianceM2: (width * width) / 12 };
+  return { mid: (row.lo_m + row.hi_m) / 2, varianceM2: (width * width) / 12, widthM: width };
 }
 
 /** w_precision = 1 / (sigma_eff^2 + width(band)^2/12), 06 section 6.1. */

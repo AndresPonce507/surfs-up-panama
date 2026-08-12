@@ -56,6 +56,87 @@ export function collapseSessionsToMedian(
 }
 
 /**
+ * 06 section 6.2 step 2, and research 09 section 13.5c's answer to gaming,
+ * trolling and localism: per (spot, day), once three or more device-samples
+ * exist, residuals are winsorized at two band widths either side of the
+ * spot-day median. A claim past the fence is PULLED BACK TO IT, never dropped
+ * -- the same "down-weight, never ban" line the rest of section 6.2 holds, and
+ * the reason one loud morning does not cost the whole day.
+ *
+ * THIS RUNS AFTER THE SESSION COLLAPSE, so a day's samples are already one per
+ * device and counting samples IS counting device-samples. Running it the other
+ * way round would let somebody who pressed send three times become the
+ * morning's median and fence the honest reporters instead.
+ *
+ * TWO BAND WIDTHS OF WHOSE BAND: the day median's own. A fence measured in the
+ * clipped sample's band would let a wilder claim buy itself a wider fence.
+ * When the median report named no band with two edges -- the open top band, or
+ * a score residual, which was never an interval at all -- there is no width to
+ * measure in, so the morning stands as reported rather than being fenced
+ * against an invented number.
+ *
+ * Below three device-samples nothing is fenced: with two reports there is no
+ * majority for anyone to be an outlier from, and 06 section 6.2 says so
+ * outright. Shrinkage and the apply-time clamp are the backstop there.
+ */
+export function winsorizeAtDayFence(
+  samples: readonly ResidualSample[],
+): ResidualSample[] {
+  const fenceByMorning = new Map<string, Fence | null>();
+  for (const [morning, reported] of morningsIn(samples)) {
+    fenceByMorning.set(morning, fenceFor(reported));
+  }
+
+  return samples.map((sample, index) => {
+    const fence = fenceByMorning.get(morningKeyOf(sample, index)) ?? null;
+    if (fence === null) return sample;
+    return { ...sample, value: clip(sample.value, fence) };
+  });
+}
+
+/** 06 section 6.2 step 2: three device-samples is where a morning has a middle worth trusting. */
+const MIN_DEVICE_SAMPLES_TO_FENCE = 3;
+/** 06 section 6.2 step 2: two band widths either side. */
+const FENCE_BAND_WIDTHS = 2;
+
+type Fence = { readonly middle: number; readonly reach: number };
+
+function fenceFor(morning: readonly ResidualSample[]): Fence | null {
+  if (morning.length < MIN_DEVICE_SAMPLES_TO_FENCE) return null;
+  const middle = medianSampleOf(morning);
+  if (middle.bandWidthM === null) return null;
+  return { middle: middle.value, reach: FENCE_BAND_WIDTHS * middle.bandWidthM };
+}
+
+function clip(value: number, fence: Fence): number {
+  return Math.min(
+    Math.max(value, fence.middle - fence.reach),
+    fence.middle + fence.reach,
+  );
+}
+
+/** Every sample grouped by the morning it was reported on; an undated sample is a morning of its own. */
+function morningsIn(
+  samples: readonly ResidualSample[],
+): Map<string, ResidualSample[]> {
+  const byMorning = new Map<string, ResidualSample[]>();
+  samples.forEach((sample, index) => {
+    const morning = morningKeyOf(sample, index);
+    const reported = byMorning.get(morning);
+    if (reported === undefined) {
+      byMorning.set(morning, [sample]);
+      return;
+    }
+    reported.push(sample);
+  });
+  return byMorning;
+}
+
+function morningKeyOf(sample: ResidualSample, index: number): string {
+  return sample.day === null ? ` undated ${index}` : sample.day;
+}
+
+/**
  * Same day, same device is one session. An unreadable day makes the sample a
  * session of its own.
  *
