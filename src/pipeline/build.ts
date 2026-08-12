@@ -215,7 +215,12 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
         source,
         lead_h: row.lead_h,
         swell: {
-          h_m: row.swell_h_m - correction.memberHBias(source, row.lead_h),
+          // G5 (06 section 7) bounds a stored height move at a fraction of the
+          // member's OWN forecast height, so the raw height goes in with the
+          // model and the lead time and the bound is taken where it is known.
+          // Raw, deliberately: bounding against an already-corrected height
+          // would be circular.
+          h_m: row.swell_h_m - correction.memberHBias(source, row.lead_h, row.swell_h_m),
           t_s: row.swell_t_s,
           dir_deg: row.swell_dir_deg,
         },

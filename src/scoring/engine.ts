@@ -18,7 +18,7 @@
 // same reason in the other direction, and the graph stays acyclic: gates and
 // constants reach no further than each other and estimate.
 
-import { SIGMA_EFF } from '../learning/constants';
+import { SIGMA_EFF, leadBucketOf } from '../learning/constants';
 import type { GatedKey, StoredCorrection } from '../learning/correction-record';
 import { gateCorrection, type GateInput } from '../learning/gates';
 
@@ -26,25 +26,10 @@ import { gateCorrection, type GateInput } from '../learning/gates';
 const DISPLAY_POINTS_PER_Q_UNIT = 100;
 
 /**
- * The metres subtracted from every member's height, at every model and every
- * lead bucket, whatever a correction file states: none.
- *
- * G5 (06 section 7) bounds a stored height move at forty percent of the
- * member's OWN height, and it is the half of that rule that makes the other
- * half safe to ship. This port is handed a model and a lead time and never
- * the member's height, so the fraction can only be taken at the one call site
- * that knows it, src/pipeline/build.ts. Subtracting the stored metres here
- * while their bound waits for that call site would leave the layer able to
- * order an absurd wave height for as long as the window stayed open, on a
- * product whose one rule is to never claim more certainty than the data
- * earns. So the metres and their clamp ship together, in the change that
- * teaches this port the member's height, or not at all. Until then the height
- * a surfer reads is the forecast day zero published, which is never a lie.
- *
- * This is a stated refusal, not an unwritten feature: the acceptance example
- * and the property in tests/unit/learning-apply-recheck.test.ts both drive a
- * record whose height keys clear every rung on their own evidence and require
- * exactly zero back.
+ * The metres subtracted from every member's height when there is no file to
+ * read, or when the file there was refused: none, at every model and every
+ * lead bucket. The day-zero forecast is what a surfer reads, which is never a
+ * lie.
  */
 const NO_MEMBER_HEIGHT_CORRECTION = (): number => 0;
 
@@ -141,8 +126,18 @@ export type SpotSeed = {
 
 export type CorrectionOutcome = {
   params: EffectiveSpotParams;
-  /** Metres to SUBTRACT from a member's h_m; identically 0 unless gated in. */
-  memberHBias: (source: string, lead_h: number) => number;
+  /**
+   * Metres to SUBTRACT from a member's h_m; identically 0 unless gated in.
+   *
+   * `member_h_m` is the member's OWN raw forecast height, and it is REQUIRED
+   * rather than optional because G5 (06 section 7) bounds the move at a
+   * fraction of exactly that number. An optional height has no honest default:
+   * a call site that forgot to pass it would silently return the whole stored
+   * move unbounded, or silently return zero, and either way every test would
+   * stay green while the published height was wrong. Requiring it makes a
+   * forgetful call site a compile error instead.
+   */
+  memberHBias: (source: string, lead_h: number, member_h_m: number) => number;
   /** Score-level delta in Q units; 0 unless gated in. */
   delta_q: number;
   gate: CorrectionGate;
@@ -416,11 +411,13 @@ export function rankSpots(
  * because residual and bias are forecast minus observed. 05 section 5's
  * delta_q line omits that minus and is stale against 06.
  *
- * G6 (06 section 7) binds here: the score move saturates at the limit the
- * record itself carries, so a corrupt file cannot order an absurd number.
- * G5, its height twin, cannot bind here at all, and so NO HEIGHT MOVES: see
- * NO_MEMBER_HEIGHT_CORRECTION above for why the metres wait for the clamp
- * that bounds them rather than shipping ahead of it.
+ * G5 AND G6 (06 section 7) both bind here: the score move saturates at the
+ * limit the record itself carries, and each member's height move saturates at
+ * the fraction of that member's OWN height the record allows. Neither limit is
+ * read from a shipped constant, so a file cannot be handed a bound it did not
+ * carry. memberHBias takes the member's height as a required argument for
+ * exactly this reason -- the metres and the number that bounds them arrive
+ * together or the call does not compile.
  *
  * The `applied` token is never written in this file. It is carried out of
  * gateCorrection's verdict, because src/learning/declarations.ts's
@@ -443,7 +440,8 @@ export function applyCorrection(
 
   return {
     params,
-    memberHBias: NO_MEMBER_HEIGHT_CORRECTION,
+    memberHBias: (source, lead_h, member_h_m) =>
+      storedMemberHeightMoveOf(correction, source, lead_h, member_h_m),
     delta_q: storedScoreMoveOf(correction),
     gate: verdict.reason,
   };
@@ -454,6 +452,53 @@ function storedScoreMoveOf(correction: StoredCorrection): number {
   const limit = correction.clamp.max_abs_score;
   const bounded = clamp(correction.score_delta?.b ?? 0, -limit, limit);
   return -bounded / DISPLAY_POINTS_PER_Q_UNIT;
+}
+
+/**
+ * The metres one member gives back at one model and one lead bucket, 06
+ * sections 4 and 7.
+ *
+ * TWO LADDERS, NOT ONE. The file-level score verdict has already opened this
+ * lane, and that verdict is about the file. This is the per-KEY gate on top of
+ * it: a stored height difference is its own claim, weighed on its own mornings,
+ * its own distinct reporters and its own standard error, against the HEIGHT
+ * noise floor rather than the score's. A spot whose score key earned its move
+ * has bought nothing for a lead bucket only two people ever reported.
+ *
+ * G5 THEN BOUNDS WHAT SURVIVES. The move saturates at a fraction of the
+ * member's own height, so however corrupt the file, the worst it can do to a
+ * published wave is bounded by the wave the forecast already predicted. The
+ * fraction is read off the RECORD, never off the shipped constant, so a file
+ * cannot be given a limit it did not carry. The bound is taken in absolute
+ * value because a record stating a negative fraction would otherwise invert
+ * the clamp and turn a bound into a floor.
+ *
+ * SIGN, 06 section 4: residual and bias are forecast minus observed, so the
+ * caller subtracts what this returns. A model that ran small stores a negative
+ * difference and the member goes UP.
+ */
+function storedMemberHeightMoveOf(
+  correction: StoredCorrection,
+  source: string,
+  lead_h: number,
+  member_h_m: number,
+): number {
+  const stated = correction.bias.swell_h_m.per_source[source]?.[leadBucketOf(lead_h)];
+  if (stated === undefined) return 0;
+  if (!gateCorrection(statedHeightEvidenceOf(stated)).applied) return 0;
+  const limit = Math.abs(correction.clamp.max_abs_h_frac * member_h_m);
+  return clamp(stated.b, -limit, limit);
+}
+
+/** What the ladder reads off one stored height key: its own evidence, at the height floor. */
+function statedHeightEvidenceOf(stated: GatedKey): GateInput {
+  return {
+    n: stated.n,
+    reporters: stated.reporters,
+    b: stated.b,
+    se: stated.se,
+    sigma_eff: SIGMA_EFF.height.value,
+  };
 }
 
 /**

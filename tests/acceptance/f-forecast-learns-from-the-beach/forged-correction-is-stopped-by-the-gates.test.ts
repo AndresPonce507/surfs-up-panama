@@ -27,22 +27,21 @@
 // b_score/100. 05 section 5's delta_q line omits that minus and is stale;
 // the oracles here assert the 06 sign in both lanes.
 //
-// THE HEIGHT LANE SHIPS INERT, AND THAT IS A CLAIM, NOT A GAP. The roadmap's
+// THE HEIGHT LANE SHIPS HERE, WITH ITS CLAMP, IN ONE CHANGE. The roadmap's
 // height criterion has two halves: the metres subtracted per (source, lead
 // bucket), and the clamp of that move to forty percent of the member's own
-// height. The two may only ship together. memberHBias is handed a model and a
-// lead time, never the member's height, so the fractional clamp can only bind
-// at the one call site that knows that height - src/pipeline/build.ts line
-// 218 - which this lane must not touch while a concurrent lane owns it.
-// Shipping the metres without their clamp would leave a window in which a
-// corrupt or forged file could order an absurd wave height the moment 02-03
-// wires the record in, and G5 (06 section 7) exists precisely to make that
-// impossible. So until the clamp can land in the same change, every member is
-// corrected by EXACTLY ZERO metres, and the last test below proves it against
-// a record whose height key clears its own ladder by a wide margin. Zero is
-// the day-zero forecast, which is never a lie; an unclamped move would be one.
-// The SCORE clamp needs no member height, travels inside the record as
-// clamp.max_abs_score, and IS claimed here and by this step's unit law.
+// height. 02-02 shipped the lane INERT and recorded why: memberHBias was
+// handed a model and a lead time and never the member's height, so the
+// fractional bound had nowhere to bind, and the metres could not honestly ship
+// ahead of it. That was a stated refusal with a stated condition -- the two
+// halves land together, in the change that teaches this port the member's
+// height -- and this is that change. memberHBias now takes the member's height
+// as a REQUIRED third argument, so no call site can subtract stored metres
+// without also handing over the number that bounds them. The two examples
+// below are the pair: one where the stored move fits inside its bound and is
+// subtracted whole, one where it does not and saturates. The SCORE clamp needs
+// no member height, travels inside the record as clamp.max_abs_score, and is
+// claimed here and by this step's unit law exactly as before.
 
 import assert from "node:assert/strict";
 
@@ -156,8 +155,11 @@ function forgedAsApplied(record: StoredCorrection): StoredCorrection {
   return forged;
 }
 
-function heightBiasApplied(outcome: CorrectionOutcome): number {
-  return outcome.memberHBias(SOURCE, LEAD_H);
+function heightBiasApplied(
+  outcome: CorrectionOutcome,
+  memberHeightM: number = MEMBER_HEIGHT_M,
+): number {
+  return outcome.memberHBias(SOURCE, LEAD_H, memberHeightM);
 }
 
 // ---------- oracles ----------
@@ -183,9 +185,17 @@ function assertStoppedByTheGates(
   );
 }
 
-function assertMovesTheScoreAndLeavesEveryHeightAtDayZero(
+/** The stored height key at the one (model, lead bucket) every fixture here is built around. */
+function storedHeightKeyOf(record: StoredCorrection) {
+  const stored = record.bias.swell_h_m.per_source[SOURCE]?.["lead_24_48"];
+  assert.ok(stored, "test bug: the record states no height difference at the fixture key");
+  return stored;
+}
+
+function assertMovesTheScoreAndTheHeight(
   outcome: CorrectionOutcome,
   record: StoredCorrection,
+  memberHeightM: number,
 ): void {
   const scoreDelta = record.score_delta;
   assert.ok(scoreDelta, "test bug: the record under test states no score move");
@@ -198,12 +208,16 @@ function assertMovesTheScoreAndLeavesEveryHeightAtDayZero(
     Math.abs(outcome.delta_q - -scoreDelta.b / 100) < 1e-12,
     `the score delta must be MINUS the stored score difference over 100 (06 section 4); the stored difference was ${scoreDelta.b} and the delta was ${outcome.delta_q}`,
   );
-  const storedHeight = record.bias.swell_h_m.per_source[SOURCE]?.["lead_24_48"];
-  assert.ok(storedHeight, "test bug: the record states no height difference at the fixture key");
-  assert.equal(
-    heightBiasApplied(outcome),
-    0,
-    `no member height may move until the forty-percent clamp can move with it: this record orders ${storedHeight.b} m at ${SOURCE} lead_24_48 and the apply body must subtract exactly zero, not ${heightBiasApplied(outcome)}`,
+  const storedHeight = storedHeightKeyOf(record);
+  // The bound is read off the record's OWN stated fraction and the member's
+  // OWN height, never off the shipped constant: a body that hardcoded 0.40
+  // would pass an oracle that hardcoded it too.
+  const bound = record.clamp.max_abs_h_frac * memberHeightM;
+  const expected = Math.max(-bound, Math.min(bound, storedHeight.b));
+  const moved = heightBiasApplied(outcome, memberHeightM);
+  assert.ok(
+    Math.abs(moved - expected) < 1e-12,
+    `a corrected member is raw MINUS the stored difference, bounded by G5 at ${record.clamp.max_abs_h_frac} of the member's own ${memberHeightM} m (${bound} m): this record orders ${storedHeight.b} m at ${SOURCE} lead_24_48, so the apply body must subtract ${expected} m, not ${moved}`,
   );
 }
 
@@ -256,44 +270,79 @@ describe("02-02 acceptance: a hand-forged correction file is stopped by the gate
     );
   });
 
-  it("moves the score when the record's own stated evidence clears every gate, and still moves no wave height at all", () => {
+  it("moves the score and subtracts the stored metres whole when they fit inside the member's own bound", () => {
     const honest = emittedRecord(18, 6);
 
-    // Guard against a vacuous pass, and it is this guard that gives the height
-    // half of this example its whole force. The fixture's height key clears
-    // every rung on its own stated evidence and orders a move of well over half
-    // a metre, so a body that shipped the metres without their clamp WOULD move
-    // this member. Zero here is therefore the apply body's deliberate refusal,
-    // never a record that asked for nothing.
-    const fixtureHeight = honest.bias.swell_h_m.per_source[SOURCE]?.["lead_24_48"];
-    assert.ok(fixtureHeight, "test bug: the fixture states no height difference at the key under test");
+    // Guard against a vacuous pass. The fixture's height key must clear every
+    // rung on its own stated evidence and order a genuinely non-zero move, or
+    // the claim below is satisfied by a record that asked for nothing.
+    const fixtureHeight = storedHeightKeyOf(honest);
     assert.ok(
       fixtureHeight.n >= 10 && fixtureHeight.reporters >= 5
         && Math.abs(fixtureHeight.b) > 2 * fixtureHeight.se
         && fixtureHeight.b !== 0,
-      `test bug: the fixture's height key must clear the ladder on its own stated evidence and order a non-zero move, or the inert claim below proves nothing; it states n=${fixtureHeight.n}, reporters=${fixtureHeight.reporters}, b=${fixtureHeight.b}, se=${fixtureHeight.se}`,
+      `test bug: the fixture's height key must clear the ladder on its own stated evidence and order a non-zero move; it states n=${fixtureHeight.n}, reporters=${fixtureHeight.reporters}, b=${fixtureHeight.b}, se=${fixtureHeight.se}`,
+    );
+    // This example is the PASS-THROUGH half of the pair, so the stored metres
+    // must genuinely fit inside the bound. If they did not, this example would
+    // silently become a second saturation test and nothing would ever check
+    // that an in-bound move is subtracted whole.
+    assert.ok(
+      Math.abs(fixtureHeight.b) < honest.clamp.max_abs_h_frac * MEMBER_HEIGHT_M,
+      `test bug: this example only proves pass-through if the stored ${fixtureHeight.b} m fits inside the ${honest.clamp.max_abs_h_frac * MEMBER_HEIGHT_M} m bound a ${MEMBER_HEIGHT_M} m member allows`,
     );
 
     const outcome = applyCorrection(seed, honest);
 
-    assertMovesTheScoreAndLeavesEveryHeightAtDayZero(outcome, honest);
+    assertMovesTheScoreAndTheHeight(outcome, honest, MEMBER_HEIGHT_M);
     assert.throws(
       () =>
-        assertMovesTheScoreAndLeavesEveryHeightAtDayZero(
+        assertMovesTheScoreAndTheHeight(
           { ...outcome, delta_q: -outcome.delta_q },
           honest,
+          MEMBER_HEIGHT_M,
         ),
       /MINUS the stored score difference/,
       "the oracle must reject a score delta applied with the wrong sign",
     );
     assert.throws(
       () =>
-        assertMovesTheScoreAndLeavesEveryHeightAtDayZero(
-          { ...outcome, memberHBias: () => fixtureHeight.b },
+        assertMovesTheScoreAndTheHeight(
+          { ...outcome, memberHBias: () => 0 },
           honest,
+          MEMBER_HEIGHT_M,
         ),
-      /must subtract exactly zero/,
-      "the oracle must reject an apply body that subtracts the stored metres with no clamp on them",
+      /the apply body must subtract/,
+      "the oracle must reject an apply body that leaves an earned height move at day zero",
+    );
+  });
+
+  it("saturates the stored metres at the fraction of its own height a small member can carry", () => {
+    const honest = emittedRecord(18, 6);
+    const fixtureHeight = storedHeightKeyOf(honest);
+    // A member barely a metre high. The record is the same one the example
+    // above drives, so the ONLY thing that changed is the member the correction
+    // is being applied to -- which is exactly what G5 says the bound depends on.
+    const smallMemberM = 1.0;
+    const bound = honest.clamp.max_abs_h_frac * smallMemberM;
+
+    // Guard against a vacuous pass: this example proves nothing unless the
+    // stored move genuinely exceeds what this member can carry.
+    assert.ok(
+      Math.abs(fixtureHeight.b) > bound,
+      `test bug: the clamp cannot be watched binding unless the stored ${fixtureHeight.b} m exceeds the ${bound} m a ${smallMemberM} m member allows`,
+    );
+
+    const outcome = applyCorrection(seed, honest);
+    const moved = heightBiasApplied(outcome, smallMemberM);
+
+    assert.ok(
+      Math.abs(moved - bound) < 1e-12,
+      `a stored ${fixtureHeight.b} m move on a ${smallMemberM} m member must reach that member as ${bound} m and no more, because G5 bounds the worst public error at ${honest.clamp.max_abs_h_frac} of the member's own height; it moved ${moved}`,
+    );
+    assert.ok(
+      moved < Math.abs(fixtureHeight.b),
+      "test bug: the clamp must have actually reduced the stored move, or this example watched nothing bind",
     );
   });
 
