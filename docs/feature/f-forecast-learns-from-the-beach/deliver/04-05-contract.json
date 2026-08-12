@@ -1,8 +1,8 @@
 {
   "id": "04-05",
   "name": "Backfit the per-reporter offset; subtract the habit",
-  "delivery_mode": "ESCALATED -- not delivered, not committed to src/",
-  "escalation_needed": true,
+  "delivery_mode": "DELIVERED -- escalation resolved in favour of the estimator (reading A)",
+  "escalation_needed": false,
   "accepted_context": "recover/learning-build:docs/feature/f-forecast-learns-from-the-beach/deliver/roadmap.json",
   "dependencies": [
     "04-04"
@@ -34,5 +34,34 @@
   "red_evidence": "The acceptance file was written first and run against the 04-04 body. Its oracle was validated at RED by the check the reviewer asked for: with no estimator in the code the measured share of full trust came out at 0.9999999999999997, within a billionth of 1.0, which proves the hand-computed counterfactual, the two-coast basin partition and the shrink-is-the-identity assumption together. The six unit laws were RED against the absent functions and GREEN against the implementation, including one example pinning three alternating passes to 481H/1600 -- distinguishable from one pass (H/4) and two (23H/80).",
   "what_the_unit_laws_found_on_the_way": "The three-pass example was written with arithmetic that assumed the honest reporters carry no offset. They do: the model is report = truth + u_r + eps for everybody, and their n_r = 1 shrinks theirs to a fifth. The TEST's arithmetic was corrected to the model rather than the model to the test, and the derivation is written out in the preserved patch. This is also the mechanism behind the five failures, seen small.",
   "gates_run": "After the revert: npm run typecheck exit 0; full suite at --maxWorkers=4 back to 496 tests, 491 passed, the same 5 failures in the same 4 files this lane does not own. The branch is exactly where 04-04 left it.",
-  "known_flake": "Unchanged: `npm run build` is refused before astro runs by the civil-day check in src/publish/publish-static-surface.ts, because data/published-surface.json was published for 2026-08-11 and Panama has rolled over to 2026-08-12. Not this lane's."
+  "known_flake": "Unchanged: `npm run build` is refused before astro runs by the civil-day check in src/publish/publish-static-surface.ts, because data/published-surface.json was published for 2026-08-11 and Panama has rolled over to 2026-08-12. Not this lane's.",
+  "escalation_resolution": {
+    "decided_by": "Andres",
+    "decided_on": "2026-08-12",
+    "decision": "Reading (A). The estimator is what 06 section 5.2 and adr-per-reporter-offset-estimator describe; it lands as designed. The five acceptance oracles that go red pinned numbers computed from residuals formed before this stage existed, and are repaired one file at a time.",
+    "cross_slice_authorisation": "EXPLICIT AND BOUNDED. Editing acceptance tests owned by 01-08, 01-13, 03-03 and 04-03 was authorised for this resolution only. Every repair commit says so in its body. This is not a standing licence to edit another slice's tests.",
+    "why_re_centring_was_not_reopened": "Unchanged from the escalation and confirmed in delivery: if the offsets sum to zero over a key the key's mean is exactly unchanged, so the habit is never subtracted from any stored number and criterion 2 of this step cannot hold. Re-centring and 'subtract the habit' cannot both be true.",
+    "commits": [
+      "d7e2236 feat(learning): backfit the per-reporter offset; subtract the habit",
+      "f6b8f90 test(learning): read 01-08's stored error off the mornings the fit actually reads",
+      "71340da test(learning): measure 01-13's corridor against the difference the fit forms",
+      "9bbe57f test(learning): read 03-04's tau off the record instead of inferring it",
+      "d86bffe test(learning): let 03-03's control move a little, and pin the weight instead",
+      "7b86dbb test(learning): guard 04-03's newcomer against a discount, not against a difference"
+    ],
+    "the_tree_was_knowingly_red_between_them": "There is no ordering in which the tree stays green mid-sequence: the estimator reds five earlier oracles the moment it lands. One commit per repair was chosen over one large commit because reviewability is the whole point of the sequencing, per the escalation's own recommendation. The final state is green."
+  },
+  "what_was_found_in_delivery_that_the_escalation_did_not_know": {
+    "a_sixth_test_was_wrong_the_same_way": "04-05's OWN acceptance oracle. It read the 9/(9+4) = 0.692 shrink weight off 06 section 5.2's table and asserted over two thirds of the habit would leave the stored difference. Two errors, both assuming a re-centring the estimator does not do: u_raw is measured against a key difference that already carries the habit's pull (so u_raw is near 0.46, not the 0.65 the reporter inflates by), and every reporter carries an offset including the honest ones, whose offsets sum to about -0.41 rather than cancelling and push the difference back down. Repaired with the derivation written out and the share pinned at 0.712 Pacific / 0.776 Caribbean, plus a second example running the SAME nine mornings under three names so only n_r moves.",
+    "no_seventh": "an-incident-file-excises-reporters (04-06, which landed after the patch was written) stays green. 04-06 excises at the top of the run in fit.ts, so the backfit sees excised rows already gone.",
+    "03_04_had_started_passing_for_a_false_reason": "Its assertion 'the stored difference sits further from its own mornings than the permanent floor allows, or tau was clamped to its floor rather than estimated' now states something false: with the offset stage in, tau at eight proven spots IS the floor. shrunk_from_global comes back 0.142857 (= 2/(12+2)) where before this stage it was 0.250371. The assertion survived only because the offset feedback inflated the distance past the hand-computed floor line. Rewritten rather than re-based. The tau move itself is 09 section 17.4's 'if spots truly differ, pooling self-cancels' being obeyed.",
+    "01_13_was_failing_intermittently_not_always": "The corridor is a property over generated shapes, and the overshoot only appears where a fixture's reporters are unevenly exposed to its spread. Swept across the generator's own range it reaches 3.7e-3, three thousand times the 1e-12 tolerance. fast-check's shrunk counterexamples sit at the boundary and look like rounding; they are not.",
+    "pooling_now_feeds_back_into_raw_estimates": "06 section 5.2 measures a reporter's habit against b_hat, the key's SHRUNK estimate. So a change in pooling anywhere in a run reaches everywhere the ladder connects. This is what moved 03-03's reef control (which could no longer be byte-identical) and what decoupled 03-04's distance from tau. It is NOT caused by unbalanced reporters: rebalancing 03-04's fixture moves spot-0 from 0.152802 to 0.152604."
+  },
+  "defects_in_the_preserved_patch_fixed_rather_than_inherited": [
+    "The report key was `${day ?? ''} ${device_id}`, so every UNDATED sample from one device collapsed into one counted report -- the opposite of 04-01's defended rule that a sample whose day cannot be read is its own session. The undated form now carries the sample's position in the whole run, matching sessionKeyOf's leading-space convention. This is what made the three-pass unit example read n_r = 1 where its own written-out arithmetic (481H/1600) means 4; that example is untouched and now passes for the reason its comment gives.",
+    "NEW, not in the escalation: a report is one person, one morning, ONE BEACH. Keying on (day, device) alone merged one person's two beaches on the same morning into a single report, which under-counts exactly the reporter 06 section 5.2's '>= 2 spots' rider calls the identifiable one. backfitReporterOffsets now takes a BackfitKey carrying the place its mornings were reported from; the shipped fit passes the spot id. A new unit law pins it."
+  ],
+  "gates_at_delivery": "npm run typecheck exit 0. Full suite 512 tests, 507 passed, 5 failed -- the same 5 pre-existing failures in the same 4 build-dependent files (staleness-stamp, staleness-stamp-format, staleness-flip, report-island), all of which invoke `npm run build` and are refused before astro runs by the civil-day check in src/publish/publish-static-surface.ts because data/published-surface.json was published for 2026-08-11. Not this lane's. Baseline before this work was 501 tests, 496 passed, the same 5 failures. Every learning acceptance and unit test is green.",
+  "falsifiability": "Every repair carries its own probes, run against the production code and reverted with `git diff --stat src/` verified empty. Recorded in each commit body. Two are worth carrying forward: 01-13's corridor could NOT catch a flipped offset sign on its own (a one-sided wall cannot), which is why a direction assertion was added; and 03-04's old floor assertion could no longer catch the estimator being replaced by a clamp, which is why a metamorphic comparison replaced it."
 }
