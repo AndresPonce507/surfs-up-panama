@@ -1,0 +1,46 @@
+{
+  "id": "02-06",
+  "name": "Deleting the file reverts to day zero",
+  "delivery_mode": "acceptance-evidence",
+  "accepted_context": "recover/learning-build:docs/feature/f-forecast-learns-from-the-beach/deliver/roadmap.json",
+  "dependencies": [
+    "02-03",
+    "02-04",
+    "02-05"
+  ],
+  "surface_classification": "non-visual",
+  "non_visual_rationale": "The observables are the published bundle's values and the archived rows of three builds of one morning. No template, string or style is touched by this step. U1-U8 and a Vera walk are N/A for the test work. The real rendered effect of the whole slice IS proven, through the shipped CLI against real captured predictions rather than through a test, and is recorded under real_surface_proof below.",
+  "production_change": false,
+  "why_no_production_change": "Reverting is not a feature; it is the absence of state. loadStoredCorrections reads the store on every build and remembers nothing between builds, so a deleted file simply reads as absent and applyCorrection returns the day-zero outcome it has returned since 01-01. This step proves that property holds end to end and, more importantly, that it CANNOT be quietly broken: the mutation that adds a per-process cache -- the plausible optimisation someone reaches for to save an object read -- fails this example by name. Nothing under src/ was touched.",
+  "criteria_delivered": [
+    "1. With the file deleted, the next build publishes field-identical values to the day-zero build. Compared as WHOLE published values with exactly two fields removed by name -- build_id and published_at -- rather than as a hand-picked subset, so a field added to the bundle tomorrow is compared by default instead of being silently skipped. The archived rows are compared the same way, with build_id removed. Both are deep equalities, not spot checks.",
+    "2. The archived call for the reverted build says no_file with zero applied bias, asserted directly on the reverted build's own row.",
+    "3. The build that had the correction had moved the number, and the revert is proven against that. The middle build is asserted to have moved BOTH the published score and the published wave, and to have archived applied, before any identity claim is made. The mutation that stops the record reaching the scoring path fails this example on exactly that guard, which is the proof the example cannot pass vacuously."
+  ],
+  "criteria_deferred": [
+    "NONE."
+  ],
+  "owned_paths": [
+    "tests/acceptance/f-forecast-learns-from-the-beach/a-correction-file-can-never-move-a-number-past-the-gates.test.ts",
+    "docs/feature/f-forecast-learns-from-the-beach/deliver/02-06-contract.json"
+  ],
+  "scope_note": "The accepted roadmap names tests/unit/learning-apply-recheck.test.ts for this step and nothing else, which correctly predicted that no production change was needed. The proof landed in the acceptance file instead, because the claim is about what three BUILDS publish across time and a unit file over a pure function cannot see a second build, let alone a third.",
+  "acceptance": "One example, three builds of one morning against ONE durable universe: before the file existed, while it did, and after it was deleted. Three build instants, not one, because a build archives under its own hour and re-running the same instant would leave the later builds' rows silently unwritten by the conditional PUT -- a shape that would have made this example pass while proving nothing. Identity is asserted to DIFFER between the two builds being compared, so excluding build_id and published_at cannot degenerate into reading one build twice.",
+  "test_budget": "One behaviour: deleting the file returns the published product to day zero and says so in the archive. Budget 2. Delivered 1 acceptance example. The 'says no_file with zero bias' half is one assertion inside it rather than a second example, because it is a property of the same third build.",
+  "unit_law": "NONE ADDED. The pure half -- an absent record yields gate no_file, zero delta and zero member bias -- is already carried by shipped scoring-laws R19 as an independent fence and by 02-02's generated laws. What is new here is that the BUILD forgets, which is a claim about a sequence of builds and has no unit-level home.",
+  "red_evidence": "No production code changes under this step, so RED was taken against the SHIPPED body by controlled mutation, each planted alone, each reverted, typecheck clean, zero collection errors. (1) The reader made to remember a record across builds -- a module-level cache holding the last record seen per spot, which is exactly the shape of the optimisation someone adds to save an object read: this example fails on 'with every correction file deleted the next build must publish the day-zero forecast again, field for field: a product that cannot be returned to what it was cannot be trusted to learn'. Recorded honestly: that mutation is process-wide, so it also reddened five other examples in the file. It is still the right mutation, because a cache is the realistic way this property dies. (2) The loaded record never reaching the scoring path: this example fails on its anti-vacuity guard, 'the middle build must have moved the published score, or the revert is proven against nothing'. That second red is the more important one -- it proves the example cannot pass by comparing three identical builds.",
+  "falsifiability_evidence": "The two mutations above ARE the falsifiability proof. After each revert `git diff --stat src/` was empty and `git status --short` named only this step's test file.",
+  "gates_run": "npm run typecheck exit 0. Full vitest 455/455 across 85 files, up from 454/85, which is exactly this step's one example.",
+  "real_surface_proof": {
+    "why": "This project's own CLAUDE.md records that its worst shipped bug passed all ten CI jobs, and this feature's whole slice would be worth nothing if the correction moved numbers only inside a test harness. So the slice's effect was measured on real published artefacts, through the shipped composition root, with no test framework involved.",
+    "how": "A scratch copy of data/predictions-capture -- 20 real launch spots, real captured Open-Meteo and NCEP members, 960 archived rows -- was built TWICE by the shipped CLI (`tsx src/pipeline/run-build-cli.ts --at 2026-08-09T11:22:00Z`), with real FilesystemStore adapters and the real 20-spot launch policy. The only difference between the two runs was one file at learned/corrections/v1/current/playa-guanico.json, written by the real nightly emitter (buildCorrectionRecords) from 18 mornings by 6 people who reported chest-to-head against a 1.85 m forecast and were shown a score of 100. Nothing was written into the repository's own data/ directory.",
+    "what_moved": "playa-guanico's published day: score_q 84 -> 35, size_band waist_chest -> knee_waist, size_range [0.7, 1.1] -> [0.4, 0.7], h_eff_m 0.9524928696146059 -> 0.5714957217687636 (exactly 0.6 of the forecast, so G5's forty percent bound is what stopped it on real data), best_window 06:00-18:00 -> 06:00-10:00, counterfactual_score_q 92 -> 80, and the Spanish sentence a surfer actually reads changed from 'Cintura a pecho, viento limpio, mejor de 06:00 a 18:00.' to 'Rodilla a cintura, viento limpio, mejor de 06:00 a 10:00.' The regional ranking moved it from first to twelfth. The archived row went from bias_gate no_file / bias_applied 0 to bias_gate applied / bias_applied -0.12, the clamped twelve points.",
+    "what_did_not_move": "48 of 960 archived rows differ, and every one of them is playa-guanico. Every other spot, including its neighbour playa-cambutal, is byte-identical across the two builds. One file belongs to one spot, on real data as in the tests."
+  },
+  "flagged_not_fixed": [
+    "THE TWELVE-POINT LIMIT IS NOT A LIMIT ON HOW FAR A PUBLISHED SCORE CAN MOVE, and the real-surface run is where that became visible rather than arguable. G6 bounds the score DELTA at 12 display points, and it did: bias_applied was exactly -0.12. But the published score fell 84 to 35, because the same file also cut the wave by the forty percent G5 allows and the size factor carries most of the score. Both clamps did exactly what they are specified to do; the point is that a reader of 06 section 7 could reasonably believe 'at most twelve points' bounds the public error on a score, and it does not. Nothing here is broken and no criterion is violated, so nothing was changed. Flagged for whoever owns the worst-case-public-error argument in 06.",
+    "THE ARCHIVE STILL CANNOT TELL A CORRUPT FILE FROM AN ABSENT ONE. Carried forward unchanged from 02-03: loadStoredCorrections drops the reader's events, so an unreadable file archives no_file exactly like no file at all. This step's revert claim is unaffected -- a deleted file IS absent -- but an operator watching a spot silently stop learning has no signal to read.",
+    "THE n_lt_10 TOKEN REMAINS IMPRECISE for a record that states height keys and no score move. Decided and recorded under 02-03; unchanged here."
+  ],
+  "single_writer": "One agent, one worktree, /Users/andres/psb-learning-slice1418 on build/f2-learning-01-14-18."
+}

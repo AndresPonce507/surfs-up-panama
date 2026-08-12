@@ -82,6 +82,9 @@ const LEAD_BUCKET = leadBucketOf(LEAD_H);
 /** A second build of the same civil day, three hours after the first. Both land inside 2026-08-09 in Panama. */
 const LATER_BUILD_INSTANT = '2026-08-09T15:22:00Z';
 
+/** A third build of that same civil day, three hours after the second. */
+const LAST_BUILD_INSTANT = '2026-08-09T18:22:00Z';
+
 /** Day-zero forecast heights. Today and tomorrow genuinely differ, so the build's clone guard cannot mask a bug. */
 const FORECAST_HEIGHT_M: Readonly<Record<string, Readonly<Record<string, number>>>> = {
   [TODAY]: { [CORRECTED_SPOT]: 1.2, [UNCORRECTED_SPOT]: 0.7 },
@@ -770,6 +773,87 @@ describe('02-05 acceptance: however big the stored move, the clamps bind where t
       storedBytes(withFile, CORRECTED_SPOT),
       JSON.stringify(overreaching),
       'the clamp binds where the number is published, never by rewriting the file: the stored record must survive the build byte for byte',
+    );
+  });
+});
+
+// ---------- 02-06 ----------
+
+/**
+ * Everything one build published that a later build of the same morning must
+ * be able to reproduce, with the two fields that CANNOT repeat removed by
+ * name: `build_id` and `published_at`. Both are identity, not value -- a build
+ * that reused either would be claiming to be a build it is not -- and they are
+ * excluded here explicitly rather than by comparing a hand-picked subset of
+ * fields, so a field added to the bundle tomorrow is compared by default
+ * instead of being silently skipped.
+ */
+function publishedValuesOf(build: PublishedBuild): Record<string, unknown> {
+  const bundle = JSON.parse(build.bundleBody) as Record<string, unknown>;
+  const { build_id: _buildId, published_at: _publishedAt, publish_surface, ...rest } = bundle;
+  const { published_at: _surfacePublishedAt, ...surface } = publish_surface as Record<string, unknown>;
+  return { ...rest, publish_surface: surface };
+}
+
+/** Every archived row of one build, with the one field that must differ between builds removed. */
+function archivedRowsOf(store: MemoryBuildStore, at: string): readonly Record<string, unknown>[] {
+  const body = archivedBody(store, at);
+  assert.ok(body, `the build at ${at} must have archived its rows`);
+  return body.split('\n').filter((line) => line !== '').map((line) => {
+    const { build_id, ...row } = JSON.parse(line) as Record<string, unknown>;
+    assert.equal(typeof build_id, 'string', 'test bug: every archived row must state the build that wrote it');
+    return row;
+  });
+}
+
+describe('02-06 acceptance: deleting the correction file returns the product to day zero on the next build', () => {
+  it('publishes field-identical values to the day-zero build once the file is gone, and says no_file again', async () => {
+    const passing = emittedRecord(MORNINGS_THAT_CLEAR_EVERY_RUNG);
+
+    // ONE durable universe, three builds of one morning: before the file
+    // existed, while it did, and after it was deleted. Three instants, because
+    // a build archives under its own hour and re-running the same instant
+    // would leave the second build's rows silently unwritten.
+    const dayZero = await publishOnce();
+    const store = dayZero.store;
+
+    store.objects.set(currentCorrectionKey(CORRECTED_SPOT), JSON.stringify(passing));
+    const corrected = await publishOnce({ store, at: LATER_BUILD_INSTANT });
+
+    store.objects.delete(currentCorrectionKey(CORRECTED_SPOT));
+    const reverted = await publishOnce({ store, at: LAST_BUILD_INSTANT });
+
+    // Not vacuous: the middle build genuinely moved what a surfer reads. If it
+    // did not, "the numbers came back" would be a claim about three identical
+    // builds and would hold however broken the revert was.
+    const zeroCall = rankedCall(dayZero, CORRECTED_SPOT);
+    const correctedCall = rankedCall(corrected, CORRECTED_SPOT);
+    assert.notEqual(correctedCall.score_q, zeroCall.score_q, 'test bug: the middle build must have moved the published score, or the revert is proven against nothing');
+    assert.notEqual(correctedCall.h_eff_m, zeroCall.h_eff_m, 'test bug: the middle build must have moved the published wave, or the revert is proven against nothing');
+    assert.equal(correctedCall.bias_gate, 'applied', 'test bug: the middle build must be the one that applied the correction');
+
+    assert.deepEqual(
+      publishedValuesOf(reverted),
+      publishedValuesOf(dayZero),
+      'with every correction file deleted the next build must publish the day-zero forecast again, field for field: a product that cannot be returned to what it was cannot be trusted to learn',
+    );
+    assert.deepEqual(
+      archivedRowsOf(store, LAST_BUILD_INSTANT),
+      archivedRowsOf(store, BUILD_INSTANT),
+      'the reverted build must archive the same rows the day-zero build archived, so the receipts agree with the page',
+    );
+
+    const revertedCall = rankedCall(reverted, CORRECTED_SPOT);
+    assert.equal(revertedCall.bias_gate, 'no_file', 'a spot whose file was deleted must archive no_file again, never the gate the deleted file used to earn');
+    assert.equal(revertedCall.bias_applied, 0, 'a build with no file to read must archive exactly zero applied bias');
+
+    // Identity is the one thing that must NOT repeat. Excluding two fields
+    // proves nothing unless they genuinely differed.
+    const identityOf = (build: PublishedBuild) => (JSON.parse(build.bundleBody) as Record<string, unknown>)['build_id'];
+    assert.notEqual(
+      identityOf(reverted),
+      identityOf(dayZero),
+      'test bug: the two builds compared must be genuinely different builds, or field-identity is being read off one build twice',
     );
   });
 });
