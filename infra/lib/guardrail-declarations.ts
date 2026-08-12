@@ -93,3 +93,64 @@ export const costAllocationTag = {
   'cost-allocation-tag-key': 'Project',
   'cost-allocation-tag-value': 'surfs-up-panama',
 } as const;
+
+// Slice-02 (F-TELL-US-WHAT-YOU-SAW-COLD): the write-address cost boundaries
+// the local gate inspects before any write resource can be deployed. Two
+// families, both from adr-write-path-off-cloudfront.md and 07-write-path.md
+// section 7.2:
+//
+//   * posture and origin -- the four write Function URLs are bare, auth type
+//     NONE, with CORS bound to one exact site origin and never '*'. CORS is
+//     browser-only discipline, not a defence; a loose origin simply lets
+//     another site spend this project's write budget.
+//   * reserved concurrency -- the real rate limiter and the first hard
+//     ceiling on an anonymous write flood (report 2, everything else 1,
+//     mirroring writeReservedConcurrency in write-declarations.ts).
+//   * write store capacity -- fixed PROVISIONED 25/25 is what makes the
+//     store throttle for free instead of billing; on-demand would make the
+//     bill the only limit (adr-write-store-provisioned-capacity.md).
+//   * breaker alarms -- one per write function, presence only; the
+//     thresholds live in write-declarations.ts.
+//   * device-only daily quotas -- 20 reports, 10 presigns, 20 subscription
+//     writes per device per day (07-write-path.md control 0.10). Guardrail
+//     7's per-IP rows are deliberately gone: Panama runs carrier-grade NAT,
+//     so one mobile address is a whole beach town, while an attacker
+//     rotates cloud addresses for cents.
+//   * sizing source -- which document these ceilings are allowed to come
+//     from. 07-write-path.md section 12's write-path arithmetic is
+//     falsified and cannot set a budget guard; system-architecture.md
+//     section 6.1 is the corrected sizing of record.
+//
+// The origin literal records the site origin the deployment binds. It is a
+// parameter, not a claim: the deployed stack imports the live origin from the
+// site stack's SurfsUpPanamaSiteOrigin export (write-stack.ts), and the synth
+// guardrail in infra/test/guardrails.test.ts is what proves that binding.
+// This file is the declaration surface the credential-free local gate parses,
+// so what it guards is declaration DRIFT -- a changed posture, a second or
+// looser origin, a raised ceiling.
+export const writePathGuardrailDeclarations = {
+  'report-url-auth': 'NONE',
+  'mint-url-auth': 'NONE',
+  'push-url-auth': 'NONE',
+  'photo-presign-url-auth': 'NONE',
+  'report-url-origin': 'https://preview.surfsuppanama.example',
+  'mint-url-origin': 'https://preview.surfsuppanama.example',
+  'push-url-origin': 'https://preview.surfsuppanama.example',
+  'photo-presign-url-origin': 'https://preview.surfsuppanama.example',
+  'report-limit': '2',
+  'mint-limit': '1',
+  'push-limit': '1',
+  'photo-presign-limit': '1',
+  'table-billing-mode': 'PROVISIONED',
+  'table-read-capacity': '25',
+  'table-write-capacity': '25',
+  'report-breaker-alarm': 'declared',
+  'mint-breaker-alarm': 'declared',
+  'push-breaker-alarm': 'declared',
+  'photo-presign-breaker-alarm': 'declared',
+  'report-device-limit': '20',
+  'presign-device-limit': '10',
+  'subscription-device-limit': '20',
+  'quota-identity': 'device-only',
+  'sizing-source': 'system-architecture.md section 6.1',
+} as const;

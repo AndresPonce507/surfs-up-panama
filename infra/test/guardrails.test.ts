@@ -1,10 +1,13 @@
 import { App } from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
+import fc from 'fast-check';
 import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { describe, expect, it } from 'vitest';
+
+import { assessWritePathDeclarations } from '../guardrail-evaluator.mjs';
 
 import { runLocalCi } from '../../scripts/ci-local.mjs';
 import {
@@ -22,6 +25,7 @@ import {
   guardrailDeclarations,
   lifecycleRules,
   predictionLifecyclePolicy,
+  writePathGuardrailDeclarations,
 } from '../lib/guardrail-declarations.js';
 import {
   breakerInvocationThresholds,
@@ -946,5 +950,94 @@ describe('real stack guardrails: the project cost-allocation tag (slice-03)', ()
       costAllocationTag['cost-allocation-tag-key'],
       costAllocationTag['cost-allocation-tag-value'],
     );
+  });
+});
+
+// F-TELL-US-WHAT-YOU-SAW-COLD slice-02, step 02-02. The declaration policy is
+// property-tested through its public evaluation port. The universe is the set
+// of port-exposed protection slots -- one per declared write-address boundary
+// -- never an internal field of the evaluator.
+describe('write-path declaration guardrails (F-TELL-US-WHAT-YOU-SAW-COLD slice-02)', () => {
+  type ProtectionSlot = Readonly<{
+    key: string;
+    protection: string;
+    status: 'satisfied' | 'refused';
+    observed?: string;
+    required?: string;
+    why?: string;
+    repair?: string;
+  }>;
+
+  const settledDeclarations: Readonly<Record<string, string>> = writePathGuardrailDeclarations;
+  const universe = Object.keys(settledDeclarations);
+  const originKeys = universe.filter((key) => key.endsWith('-url-origin'));
+
+  function protectionSlots(declarations: Readonly<Record<string, string>>): Record<string, ProtectionSlot> {
+    const slots = assessWritePathDeclarations(declarations) as readonly ProtectionSlot[];
+    return Object.fromEntries(slots.map((slot) => [slot.key, slot]));
+  }
+
+  const anyDriftedValue = fc.string({ minLength: 1, maxLength: 40 })
+    .filter((value) => !value.includes("'") && !value.includes('\n'));
+
+  it('reads the settled declaration as every write-address protection satisfied', () => {
+    const slots = protectionSlots(settledDeclarations);
+    expect(Object.keys(slots).sort()).toEqual([...universe].sort());
+    // 02-02's four addresses (posture + origin) and four concurrency ceilings,
+    // 02-03's store capacity, breaker alarms and device-only quotas, and
+    // 02-04's corrected sizing source.
+    expect(universe.length).toBe(24);
+    for (const key of universe) expect(slots[key]?.status, key).toBe('satisfied');
+  });
+
+  it('refuses every one-value drift with the protection, both values, the cost reason and the repair, and leaves every other protection unchanged', () => {
+    fc.assert(
+      fc.property(fc.constantFrom(...universe), anyDriftedValue, (key, drifted) => {
+        fc.pre(drifted !== settledDeclarations[key]);
+        const before = protectionSlots(settledDeclarations);
+        const after = protectionSlots({ ...settledDeclarations, [key]: drifted });
+
+        const bitten = after[key];
+        expect(bitten?.status, key).toBe('refused');
+        expect(bitten?.observed, key).toBe(drifted);
+        expect(bitten?.required, key).toBe(settledDeclarations[key]);
+        expect((bitten?.why ?? '').length, key).toBeGreaterThan(0);
+        expect(bitten?.repair, key).toBe(`restore ${key}`);
+        expect(bitten?.protection, key).toContain(key.startsWith('photo-presign') ? 'photo-presign' : key.split('-')[0]);
+
+        // Strict state-delta over the rest of the universe: a single drifted
+        // declaration must never move an adjacent protection's verdict.
+        for (const other of universe) {
+          if (other === key) continue;
+          expect(after[other], `${key} moved ${other}`).toEqual(before[other]);
+        }
+      }),
+      { numRuns: 300 },
+    );
+  });
+
+  it('refuses a removed declaration as observed missing rather than passing silently', () => {
+    fc.assert(
+      fc.property(fc.constantFrom(...universe), (key) => {
+        const withoutOne = { ...settledDeclarations };
+        delete withoutOne[key];
+        const bitten = protectionSlots(withoutOne)[key];
+        expect(bitten?.status, key).toBe('refused');
+        expect(bitten?.observed, key).toBe('missing');
+        expect(bitten?.repair, key).toBe(`restore ${key}`);
+      }),
+      { numRuns: 60 },
+    );
+  });
+
+  it('refuses a loose origin on every write address even when all four agree on it', () => {
+    for (const loose of ['*', 'http://insecure.example', 'https://site.example/reportar', '']) {
+      const declarations = { ...settledDeclarations, ...Object.fromEntries(originKeys.map((key) => [key, loose])) };
+      const slots = protectionSlots(declarations);
+      for (const key of originKeys) {
+        expect(slots[key]?.status, `${key} accepted ${JSON.stringify(loose)}`).toBe('refused');
+        expect(slots[key]?.observed, key).toBe(loose === '' ? 'missing' : loose);
+      }
+    }
   });
 });

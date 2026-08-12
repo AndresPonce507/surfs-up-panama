@@ -26,9 +26,11 @@
 
 import { composeReportRecord, type ReportAnswers } from './report-record';
 import { createCredentialProvider, type CredentialProvider } from './mint';
-import { finalizeSavedReport, sendWithCredentialRecovery, type SubmissionOutcome } from './submit';
+import { finalizeSavedReport, sendWithCredentialRecovery, type ReportReceipt, type SubmissionOutcome } from './submit';
+import { decideArrivalUi, type ComparisonLines } from './reveal';
 import {
   SENTINEL_KEY_PREFIX,
+  SETTLED_KEY_PREFIX,
   openReportQueue,
   type CommitOutcome,
   type QueueOutcome,
@@ -79,9 +81,11 @@ export const NOTHING_QUEUED_MESSAGE =
  */
 export const CONFIRMED_HEADING = 'Reporte guardado';
 export const NOTHING_QUEUED_HEADING = 'Sin reporte guardado';
-export const RECEIVED_HEADING = 'Reporte recibido';
-export const RECEIVED_MESSAGE = 'Gracias. Recibimos tu reporte.';
 export const SEND_REFUSED_MESSAGE = 'No pudimos enviar el reporte ahora.';
+
+// The arrived-state copy moved to src/report/reveal.ts in step 04-01, which
+// is the "consolidate into a copy module" boundary the note above was waiting
+// for. It lives beside the comparison it now shares a decision with.
 
 // ---------------------------------------------------------------------------
 // Pure decision ports. Plain data in, plain data out -- no DOM, no storage.
@@ -104,11 +108,16 @@ export interface RevealNav {
   readonly emphasis: 'quiet' | 'primary';
 }
 
-/** What a confirmed or not_found screen shows, regardless of which entry point rendered it. */
+/**
+ * What a confirmed, arrived or not_found screen shows, regardless of which
+ * entry point rendered it. `comparison` is present only when the receipt
+ * carried a whole one (src/report/reveal.ts decides that, never this layer).
+ */
 export interface RevealPresentation {
   readonly heading: string;
   readonly message: string;
   readonly nav: RevealNav;
+  readonly comparison?: ComparisonLines;
 }
 
 export type ProbeUiDecision = { readonly kind: 'ready' } | { readonly kind: 'notice'; readonly message: string };
@@ -248,8 +257,11 @@ function runRequest(
   });
 }
 
+/** Report rows are stored parsed; the probe sentinel and the settled marker are bare strings. */
 function toStorable(key: string, value: string): unknown {
-  return key.startsWith(SENTINEL_KEY_PREFIX) ? value : (JSON.parse(value) as unknown);
+  return key.startsWith(SENTINEL_KEY_PREFIX) || key.startsWith(SETTLED_KEY_PREFIX)
+    ? value
+    : (JSON.parse(value) as unknown);
 }
 
 function fromStorable(stored: unknown): string | undefined {
@@ -294,6 +306,18 @@ function showNotice(notice: HTMLElement, message: string): void {
   notice.hidden = false;
 }
 
+/**
+ * A notice is about the send that is happening now. Once a report arrives, an
+ * earlier refusal is no longer true, and leaving it on screen would put a
+ * clock refusal underneath "Reporte recibido" -- two states at once, one of
+ * them stale. This is the corrected-clock journey: the surfer fixes the phone,
+ * files a fresh report, and the screen must read as a normal arrival.
+ */
+function clearNotice(notice: HTMLElement): void {
+  notice.textContent = '';
+  notice.hidden = true;
+}
+
 function applyProbeUi(decision: ProbeUiDecision, elements: IslandElements): void {
   if (decision.kind === 'ready') {
     elements.form.dataset.storageReady = 'true';
@@ -318,13 +342,24 @@ function applyCommitUi(decision: CommitUiDecision, elements: IslandElements): vo
   renderRevealView(elements.confirmation, decision);
 }
 
-function applyReceivedUi(links: ConfirmationLinks, elements: IslandElements): void {
+/**
+ * The arrived state. What it may say is decided entirely by the receipt the
+ * server sent back plus the answers the surfer gave (src/report/reveal.ts);
+ * this layer only renders the decision, so there is no path here that can
+ * invent a comparison the response did not carry.
+ */
+function applyReceivedUi(
+  receipt: ReportReceipt,
+  observed: ReportAnswers | undefined,
+  links: ConfirmationLinks,
+  elements: IslandElements,
+): void {
   history.replaceState(null, '', links.historyUrl);
   elements.form.remove();
   elements.heading?.remove();
+  clearNotice(elements.notice);
   renderRevealView(elements.confirmation, {
-    heading: RECEIVED_HEADING,
-    message: RECEIVED_MESSAGE,
+    ...decideArrivalUi(receipt, observed),
     nav: { href: links.backHref, label: links.backLabel, emphasis: 'quiet' },
   });
 }
@@ -344,12 +379,26 @@ function renderRevealView(container: HTMLElement, presentation: RevealPresentati
   heading.textContent = presentation.heading;
 
   const card = document.createElement('section');
-  const message = document.createElement('p');
-  message.textContent = presentation.message;
-  card.append(message);
+  card.append(paragraph(presentation.message), ...comparedLines(presentation.comparison));
 
-  container.replaceChildren(heading, card, buildNavElement(presentation.nav));
+  // The count sits under the card, not inside it (application-architecture.md
+  // section 10's report screen 2 wireframe): the card is what we said against
+  // what they saw, the count is about the spot.
+  const countLine = presentation.comparison === undefined ? [] : [paragraph(presentation.comparison.count)];
+
+  container.replaceChildren(heading, card, ...countLine, buildNavElement(presentation.nav));
   container.hidden = false;
+}
+
+function comparedLines(comparison: ComparisonLines | undefined): readonly HTMLElement[] {
+  if (comparison === undefined) return [];
+  return [paragraph(comparison.said), paragraph(comparison.saw), paragraph(comparison.difference)];
+}
+
+function paragraph(text: string): HTMLElement {
+  const element = document.createElement('p');
+  element.textContent = text;
+  return element;
 }
 
 function buildNavElement(nav: RevealNav): HTMLElement {
@@ -469,7 +518,7 @@ async function submitReport(
       showNotice(elements.notice, SEND_REFUSED_MESSAGE);
       return;
     }
-    applyReceivedUi(links, elements);
+    applyReceivedUi(submission.receipt, answers, links, elements);
   } catch {
     // A missing signal preserves the actual queue and its settled local confirmation.
     applyCommitUi(decideCommitUi(outcome, links), elements);
@@ -488,6 +537,7 @@ async function sendQueuedReport(
     await sendWithCredentialRecovery(savedBytes, credential, fetch, reportEndpoint),
     {
       discard: (candidateId) => queue.discardSavedRecord?.(candidateId) ?? Promise.reject(new Error('report queue cannot discard receipt')),
+      settle: (candidateId) => queue.settleSavedRecord?.(candidateId) ?? Promise.reject(new Error('report queue cannot settle a refused report')),
     },
   );
 }
@@ -551,10 +601,29 @@ async function flushWaitingReport(
   if (waiting === undefined) return;
   const submission = await sendQueuedReport(queue, credential, reportEndpoint, waiting.report_id, waiting.bytes);
   if (submission.kind === 'received' && submission.receipt.report_id === waiting.report_id) {
-    applyReceivedUi(links, elements);
+    applyReceivedUi(submission.receipt, savedAnswers(waiting.bytes), links, elements);
     return;
   }
   if (submission.kind === 'refused') showNotice(elements.notice, submission.message);
+}
+
+/**
+ * The three answers read back off the durable record a waiting report was
+ * stored as, so a report sent on the next page load can still show the "Tú
+ * viste" half. Unreadable bytes yield undefined, which reveal.ts turns into
+ * the plain arrival -- never half a comparison.
+ */
+function savedAnswers(bytes: string): ReportAnswers | undefined {
+  try {
+    const record = JSON.parse(bytes) as { size_band?: unknown; wind?: unknown; quality?: unknown };
+    return parseAnswers({
+      size_band: typeof record.size_band === 'string' ? record.size_band : null,
+      wind: typeof record.wind === 'string' ? record.wind : null,
+      quality: typeof record.quality === 'string' ? record.quality : null,
+    });
+  } catch {
+    return undefined;
+  }
 }
 
 function configuredWriteEndpoints(form: HTMLFormElement): { readonly mint: string; readonly report: string } | undefined {
