@@ -122,6 +122,48 @@ describe('the generated map assets', () => {
     );
   });
 
+  it('refuses an asset that outgrew its own size target, before writing it', async () => {
+    // The 12 KB ceiling in the tracked policy is generous for a diagram this
+    // simple, so the guard is unreachable at the real setting. Lowering the
+    // policy is the only way to make it fire, and a guard no test can fire is
+    // a guard that is not there.
+    const root = isolatedProject();
+    const policyPath = join(root, 'data/maps/pa-pacific-map-policy.json');
+    const policy = JSON.parse(readFileSync(policyPath, 'utf8'));
+    policy.asset.max_bytes = 100;
+    writeFileSync(policyPath, `${JSON.stringify(policy, null, 2)}\n`);
+
+    await assert.rejects(
+      () => writeStaticMaps({ projectRoot: root }),
+      /over the 100 byte target/,
+      'an over-target asset was published instead of refused',
+    );
+    assert.deepEqual(
+      existsSync(join(root, 'public')) ? readdirSync(join(root, 'public')) : [],
+      [],
+      'the build wrote an over-target file before refusing',
+    );
+  });
+
+  it('refuses a committed manifest that disagrees with what the policy now produces', async () => {
+    // Distinct from the swapped-bytes case below: here the BYTES are untouched
+    // and the RECORD drifted, so the digest comparison would pass. Only the
+    // manifest comparison catches it, and until now nothing reached that branch.
+    const root = isolatedProject();
+    const manifestPath = join(root, 'data/maps/pa-pacific-map-manifest.json');
+    await writeStaticMaps({ projectRoot: root });
+    const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+    const drifted = Object.keys(manifest.spots)[0]!;
+    manifest.spots[drifted].caption = 'Diagrama de orientación. Ubicación: otra fuente. Orientación: otra fuente.';
+    writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+
+    await assert.rejects(
+      () => verifyStaticMaps({ projectRoot: root }),
+      /the committed map manifest is not what this policy and seed produce/,
+      'a manifest crediting something the policy no longer says passed verification',
+    );
+  });
+
   it('refuses a manifest that no longer matches the bytes beside it', async () => {
     const root = isolatedProject();
     const manifest = await writeStaticMaps({ projectRoot: root });
