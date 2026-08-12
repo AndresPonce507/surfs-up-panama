@@ -1,0 +1,807 @@
+diff --git a/src/learning/constants.ts b/src/learning/constants.ts
+index f4002b6..7f8e384 100644
+--- a/src/learning/constants.ts
++++ b/src/learning/constants.ts
+@@ -144,6 +144,25 @@ export const SELECTION_WEIGHT_CAP = 3;
+ /** 06 section 6.3: the propensities are measured over the trailing ninety days, pooled across spots. */
+ export const PROPENSITY_WINDOW_DAYS = 90;
+ 
++/**
++ * tau_u, 06 section 5.2: the per-reporter offset is shrunk toward ZERO by
++ * `n_r / (n_r + tau_u)`. Derived there from sigma_eff ~= 0.48 m against a
++ * between-reporter spread sigma_u ~= 0.25 m: 0.48^2 / 0.25^2 ~= 3.7, rounded
++ * to 4. It puts half weight on a habit at four reports and real trust at about
++ * eight spanning two or more spots, which is where se(u_raw) drops under half
++ * a band width.
++ */
++export const REPORTER_OFFSET_TAU = 4;
++
++/**
++ * 06 section 5.2: "Backfitting for a two-way additive model converges in 2-3
++ * passes; 3 is fixed." Fixed rather than run to convergence on purpose -- a
++ * nightly job with a stopping rule can take a different number of passes on
++ * two runs over nearly the same data and store two different numbers for a
++ * reason no reader could reconstruct.
++ */
++export const BACKFIT_PASSES = 3;
++
+ /** G5/G6, 06 section 7: the limits a correction's reader must enforce at apply/read time. This lane only states them. */
+ export const CLAMP_MAX_ABS_HEIGHT_FRACTION = 0.4;
+ export const CLAMP_MAX_ABS_SCORE_POINTS = 12;
+diff --git a/src/learning/correction-file.ts b/src/learning/correction-file.ts
+index be2eb23..4654b89 100644
+--- a/src/learning/correction-file.ts
++++ b/src/learning/correction-file.ts
+@@ -31,6 +31,7 @@
+ 
+ import type { Clock } from "../pipeline/ports";
+ import {
++  BACKFIT_PASSES,
+   CLAMP_MAX_ABS_HEIGHT_FRACTION,
+   CLAMP_MAX_ABS_SCORE_POINTS,
+   SIGMA_EFF,
+@@ -62,9 +63,11 @@ import { shrinkTowardParent, shrinkageWeightFromParent } from "./shrink";
+ import {
+   applyReporterWeights,
+   applySelectionWeights,
++  backfitReporterOffsets,
+   collapseSessionsToMedian,
+   concordanceWeightByReporter,
+   winsorizeAtDayFence,
++  withReporterOffsets,
+ } from "./weights";
+ 
+ export const CORRECTIONS_PREFIX = "learned/corrections/v1/";
+@@ -267,10 +270,72 @@ function everyKeyIn(
+ }
+ 
+ /** Turn one key\'s weighed samples into its estimate, once every weight is final. */
+-function estimatesFrom(
++/** Every key's samples with their concordance and rarity weights multiplied in, once and for good. */
++function frozenWeights(
+   height: WeighedHeightSamples,
+   earned: ReadonlyMap<string, number>,
+   rarity: SelectionWeights,
++): WeighedHeightSamples {
++  const bySpot: WeighedHeightSamples = new Map();
++  for (const [spotId, byKey] of height) {
++    const frozenByKey = new Map<string, Map<string, ResidualSample[]>>();
++    for (const [source, byLead] of byKey) {
++      const frozenByLead = new Map<string, ResidualSample[]>();
++      for (const [lead, samples] of byLead) {
++        frozenByLead.set(
++          lead,
++          applySelectionWeights(applyReporterWeights(samples, earned), spotId, rarity),
++        );
++      }
++      frozenByKey.set(source, frozenByLead);
++    }
++    bySpot.set(spotId, frozenByKey);
++  }
++  return bySpot;
++}
++
++/** Every height key this run holds, flattened once so the backfit can address them by position. */
++function flatKeysOf(
++  height: WeighedHeightSamples,
++): { spotId: string; source: string; lead: string; samples: ResidualSample[] }[] {
++  const keys: { spotId: string; source: string; lead: string; samples: ResidualSample[] }[] = [];
++  for (const [spotId, byKey] of height) {
++    for (const [source, byLead] of byKey) {
++      for (const [lead, samples] of byLead) keys.push({ spotId, source, lead, samples });
++    }
++  }
++  return keys;
++}
++
++/**
++ * One pass of the b half of the backfit: every key's SHRUNK difference, in the
++ * flattened key order, with the habits measured so far subtracted from each
++ * sample first. This is the whole pooling ladder, not a bare mean, because 06
++ * section 5.2's pseudocode puts `shrink(b_raw, n_key, tau_key, parent)` inside
++ * the loop.
++ */
++function differencesAtEachKey(
++  height: WeighedHeightSamples,
++  keys: readonly { spotId: string; source: string; lead: string }[],
++  pooling: PoolingInputs,
++  offsets: ReadonlyMap<string, number>,
++): number[] {
++  const raw = estimatesFrom(height, offsets);
++  const collapsedParents = heightParents(raw, pooling, () => NOTHING_PROVEN_YET);
++  const proven = provenSpotsAtEachKey(raw, collapsedParents);
++  const parents = heightParents(raw, pooling, proven.at);
++
++  return keys.map(({ spotId, source, lead }) => {
++    const own = raw.get(spotId)?.get(source)?.get(lead);
++    if (own === undefined) return 0;
++    const parent = parents.get(source)?.get(lead)?.get(spotId) ?? own.b;
++    return shrinkTowardParent(own.b, own.n, proven.tauAt(source, lead), parent);
++  });
++}
++
++function estimatesFrom(
++  height: WeighedHeightSamples,
++  offsets: ReadonlyMap<string, number>,
+ ): Map<string, Map<string, Map<string, RawEstimate>>> {
+   const bySpot = new Map<string, Map<string, Map<string, RawEstimate>>>();
+   for (const [spotId, byKey] of height) {
+@@ -278,9 +343,7 @@ function estimatesFrom(
+     for (const [source, byLead] of byKey) {
+       const rawByLead = new Map<string, RawEstimate>();
+       for (const [lead, samples] of byLead) {
+-        const raw = estimateOf(
+-          applySelectionWeights(applyReporterWeights(samples, earned), spotId, rarity),
+-        );
++        const raw = estimateOf(withReporterOffsets(samples, offsets));
+         if (raw !== null) rawByLead.set(lead, raw);
+       }
+       if (rawByLead.size > 0) rawByKey.set(source, rawByLead);
+@@ -441,7 +504,35 @@ export function buildCorrectionRecords(
+   }
+   const earned = concordanceWeightByReporter(everyKeyIn(weighedHeight, weighedScore));
+ 
+-  const rawHeightBySpot = estimatesFrom(weighedHeight, earned, selection);
++  // EVERY WEIGHT IS NOW FINAL, and it stays final for the rest of this run.
++  // 06 section 5.2 states the sample weights once, after the backfitting loop
++  // body, as what its weighted means are taken with -- not as a step inside
++  // it. Freezing them here is also the only safe reading: concordance inside
++  // the loop would be a feedback path, where a pass down-weights a habitual
++  // reporter for disagreeing, the next pass subtracts the habit so they agree,
++  // their weight rises, and the estimate moves again. With three fixed passes
++  // and no convergence check that could oscillate unseen.
++  const frozenHeight = frozenWeights(weighedHeight, earned, selection);
++  const frozenScore = new Map<string, ResidualSample[]>();
++  for (const [spotId, samples] of weighedScore) {
++    frozenScore.set(
++      spotId,
++      applySelectionWeights(applyReporterWeights(samples, earned), spotId, selection),
++    );
++  }
++
++  // 06 section 5.2: three fixed alternating passes over the frozen samples,
++  // then the record is built once more from the offsets those passes settled
++  // on -- so what is stored is consistent with the habits that were finally
++  // measured, rather than with the previous pass's.
++  const heightKeys = flatKeysOf(frozenHeight);
++  const offsets = backfitReporterOffsets(
++    heightKeys.map((key) => key.samples),
++    (habits) => differencesAtEachKey(frozenHeight, heightKeys, pooling, habits),
++    BACKFIT_PASSES,
++  );
++
++  const rawHeightBySpot = estimatesFrom(frozenHeight, offsets);
+   // Two passes, and only the second one's numbers are ever stored. The first
+   // runs the ladder collapsed, so the gate can weigh each spot's own evidence
+   // against its region alone; the second runs it again knowing which spots
+@@ -455,10 +546,11 @@ export function buildCorrectionRecords(
+   const parentsByKey = heightParents(rawHeightBySpot, pooling, proven.at);
+ 
+   const rawScoreBySpot = new Map<string, RawEstimate>();
+-  for (const [spotId, samples] of weighedScore) {
+-    const raw = estimateOf(
+-      applySelectionWeights(applyReporterWeights(samples, earned), spotId, selection),
+-    );
++  for (const [spotId, samples] of frozenScore) {
++    // No offset on the score lane: u_hat is a height in metres (06 section
++    // 5.1 subtracts it from mid(band) and nowhere else), and a display-point
++    // difference has no business carrying one.
++    const raw = estimateOf(samples);
+     if (raw !== null) rawScoreBySpot.set(spotId, raw);
+   }
+   // The score delta climbs the same ladder as the height keys, in the same two
+diff --git a/src/learning/estimate.ts b/src/learning/estimate.ts
+index 8fee07e..446faa3 100644
+--- a/src/learning/estimate.ts
++++ b/src/learning/estimate.ts
+@@ -64,6 +64,27 @@ export function gateStandardError(
+   );
+ }
+ 
++/**
++ * 06 section 5.2's `u_hat[r] = (n_r / (n_r + tau_u)) * u_raw[r]`: a measured
++ * habit, shrunk toward ZERO rather than toward any population average
++ * (research 09 section 13.2). Toward zero is the load-bearing word. Shrinking
++ * a reporter toward what other reporters do would import everybody else's
++ * habits into theirs; zero is the only prior that says "we have not measured a
++ * habit here", which is exactly the state a reporter starts in.
++ *
++ * At n_r = 0 it is exactly 0 and their report enters at face value. No finite
++ * number of reports ever reaches the measured value: a habit fully trusted is
++ * a habit fitted to noise.
++ */
++export function shrinkTowardZero(
++  measured: number,
++  reportCount: number,
++  tau: number,
++): number {
++  if (reportCount <= 0) return 0;
++  return (reportCount / (reportCount + tau)) * measured;
++}
++
+ function totalWeightOf(samples: readonly WeightedSample[]): number {
+   return samples.reduce((sum, sample) => sum + sample.weight, 0);
+ }
+diff --git a/src/learning/weights.ts b/src/learning/weights.ts
+index 2e58ef3..4029d43 100644
+--- a/src/learning/weights.ts
++++ b/src/learning/weights.ts
+@@ -18,12 +18,14 @@
+ // depend on fields the primitive deliberately cannot see.
+ 
+ import {
++  REPORTER_OFFSET_TAU,
+   SELECTION_WEIGHT_CAP,
+   CONCORDANCE_PRIOR_OBSERVATIONS,
+   CONCORDANCE_TAU,
+   CONCORDANCE_WEIGHT_CEILING,
+   CONCORDANCE_WEIGHT_FLOOR,
+ } from "./constants";
++import { shrinkTowardZero } from "./estimate";
+ import type { ResidualSample } from "./residuals";
+ 
+ /**
+@@ -393,3 +395,102 @@ export function applySelectionWeights(
+     return { ...sample, weight: sample.weight * rarity };
+   });
+ }
++
++/**
++ * 06 section 5.1's `mid(band_i) - u_hat[r(i)]` term, applied where the residual
++ * is finally read: `r_height = H_eff_pred - (mid - u_hat)`, which is the same
++ * number as the stored residual plus the reporter's own offset. This is the
++ * seam 01-13 shipped a constant zero into and promised would one day carry a
++ * measurement; it does now, and nothing else about how a residual is formed
++ * had to move.
++ *
++ * A reporter with no measured habit is left strictly alone rather than added
++ * to by zero, so a run in which nobody has a habit stores the bytes it always
++ * stored.
++ */
++export function withReporterOffsets(
++  samples: readonly ResidualSample[],
++  offsets: ReadonlyMap<string, number>,
++): ResidualSample[] {
++  return samples.map((sample) => {
++    const habit = offsets.get(sample.reporter_key);
++    if (habit === undefined || habit === 0) return sample;
++    return { ...sample, value: sample.value + habit };
++  });
++}
++
++/**
++ * 06 section 5.2's backfitting, three fixed passes, key means and reporter
++ * offsets alternately.
++ *
++ *   init  u_hat[r] = 0
++ *   loop:  b_hat[key] from the samples shifted by u_hat
++ *          u_raw[r]  = weighted mean over r's samples of ( b_hat[key] - r_i )
++ *          u_hat[r]  = shrink toward zero at tau_u
++ *
++ * WHICH ESTIMATOR THE PASSES ALTERNATE WITH IS A PARAMETER, not a hardcoded
++ * mean. The shipped fit hands in the whole pooling ladder -- two passes, the
++ * gates, the basin walls -- because 06 section 5.2's pseudocode puts
++ * `shrink(b_raw, n_key, tau_key, parent)` inside the loop. A test can hand in
++ * a plain weighted mean and check arithmetic by hand. `keyDifferences` returns
++ * one difference per key, in the order the keys were given.
++ *
++ * THE WEIGHTS ARE FROZEN BEFORE THIS RUNS AND DO NOT MOVE INSIDE IT. 06
++ * section 5.2 states the weights once, after the loop body, as what the
++ * weighted means are taken with -- not as a step of the loop. That reading is
++ * also the safe one: concordance inside the loop would be a feedback path,
++ * where pass 1 down-weights a habitual reporter for disagreeing, pass 2
++ * subtracts the habit so they now agree, their weight rises, and the estimate
++ * moves again. Three fixed passes with no convergence check would never show
++ * that oscillating, and the "converges in 2-3 passes" claim is about a
++ * two-way additive model with FIXED weights.
++ *
++ * u_raw is read against each sample's UNSHIFTED residual, so the measurement
++ * is of the whole habit every pass rather than of what is left of it.
++ */
++export function backfitReporterOffsets(
++  keys: readonly (readonly ResidualSample[])[],
++  keyDifferences: (offsets: ReadonlyMap<string, number>) => readonly number[],
++  passes: number,
++): Map<string, number> {
++  let offsets = new Map<string, number>();
++  for (let pass = 0; pass < passes; pass += 1) {
++    offsets = offsetsAgainst(keys, keyDifferences(offsets));
++  }
++  return offsets;
++}
++
++/** One pass: read every reporter's habit off how far their mornings sit from their keys' own differences. */
++function offsetsAgainst(
++  keys: readonly (readonly ResidualSample[])[],
++  differences: readonly number[],
++): Map<string, number> {
++  const measured = new Map<
++    string,
++    { total: number; weight: number; reports: Set<string> }
++  >();
++  keys.forEach((samples, key) => {
++    const difference = differences[key];
++    if (difference === undefined || !Number.isFinite(difference)) return;
++    for (const sample of samples) {
++      const so_far =
++        measured.get(sample.reporter_key) ?? { total: 0, weight: 0, reports: new Set<string>() };
++      so_far.total += sample.weight * (difference - sample.value);
++      so_far.weight += sample.weight;
++      // n_r COUNTS REPORTS, NOT SAMPLES. 06 section 5.2's table is stated per
++      // report ("n_r (reports by one person)", "se(u_raw) ~ 0.48/sqrt(n_r)")
++      // and tau_u is derived from per-report noise. One report pairing against
++      // two forecast models is two samples and still one morning of evidence
++      // about the person; counting samples would under-shrink them.
++      so_far.reports.add(`${sample.day ?? ""} ${sample.device_id}`);
++      measured.set(sample.reporter_key, so_far);
++    }
++  });
++
++  const offsets = new Map<string, number>();
++  for (const [reporter, habit] of measured) {
++    const raw = habit.weight === 0 ? 0 : habit.total / habit.weight;
++    offsets.set(reporter, shrinkTowardZero(raw, habit.reports.size, REPORTER_OFFSET_TAU));
++  }
++  return offsets;
++}
+diff --git a/tests/acceptance/f-forecast-learns-from-the-beach/a-habit-is-measured-and-mostly-subtracted.test.ts b/tests/acceptance/f-forecast-learns-from-the-beach/a-habit-is-measured-and-mostly-subtracted.test.ts
+new file mode 100644
+index 0000000..3d380b5
+--- /dev/null
++++ b/tests/acceptance/f-forecast-learns-from-the-beach/a-habit-is-measured-and-mostly-subtracted.test.ts
+@@ -0,0 +1,248 @@
++// Accepted roadmap 04-05: "Backfit the per-reporter offset; subtract the
++// habit".
++//
++// 06-learning-layer.md section 5.2, the priced cost of decision 28. Cold
++// capture removed the comparative field whose per-person size-inflation
++// constant cancels for free, so the constant is ESTIMATED instead: backfitting,
++// three fixed passes, key means and reporter offsets alternately, u_hat shrunk
++// toward zero with tau_u = 4. Research 09 section 13.5c is why it matters --
++// "per-user offset estimation catches persistent liars automatically" -- and
++// 06 section 5.1 is where it enters: r_height = H_eff_pred - (mid - u_hat),
++// subtracted before the residual is formed.
++//
++// At nine mornings the shrink weight is 9 / (9 + 4) = 0.692, so a little over
++// two thirds of the habit comes out and a little under a third stays. Never
++// zero, never all of it: an unshrunk offset at nine reports would be fitting
++// noise, and a reporter with a real habit would have it wholly attributed to
++// them on evidence that cannot carry it.
++//
++// THE FIXTURE ISOLATES THE OFFSET FROM EVERY OTHER WEIGHT. The habitual
++// reporter reports on mornings nobody else reported, so nobody ever
++// co-observes them and 04-03's rule gives them a flat full voice; there is no
++// call log, so no rarity bonus exists; every report names the same band, so
++// the precision weights cancel out of a weighted mean entirely. The two spots
++// sit on DIFFERENT COASTS, which is a hard partition in the pooling ladder, so
++// each spot's parent is itself and the stored difference is exactly that
++// spot's own weighted mean. That is what lets this file compute the
++// counterfactual by hand.
++//
++// THE ORACLE'S OWN CORRECTNESS IS CHECKED AT RED. With no estimator in the
++// code, the measured share of full trust must come out at 1.0 to within a
++// billionth. It did (see the contract's red_evidence), which is what proves
++// the hand-computed counterfactual, the two-coast partition and the
++// shrink-is-the-identity assumption all at once.
++
++import assert from "node:assert/strict";
++
++import { describe, it } from "vitest";
++
++import { runLearningFitOnce } from "../../../src/learning/fit";
++import type { SpotSeed } from "../../../src/learning/hierarchy";
++
++const SOURCE = "ncep_gfswave016";
++const LEAD_BUCKET = "lead_24_48";
++const CHEST_HEAD_MID_M = 1.35;
++
++const PACIFIC_SPOT = "playa-venao";
++const CARIBBEAN_SPOT = "isla-grande";
++
++/** How much bigger than the forecast the habitual reporter calls every single morning. */
++const HABIT_M = 0.65;
++/** Nine mornings TOTAL across the two beaches, which is what makes the habit identifiable. */
++const HABIT_MORNINGS_PACIFIC = 5;
++const HABIT_MORNINGS_CARIBBEAN = 4;
++
++const HONEST_MORNINGS = 12;
++const HONEST_REPORTERS = 6;
++/** The honest mornings disagree with the forecast either way in equal measure, so their own mean is zero. */
++const HONEST_SPREAD_M = 0.3;
++
++const HABIT_DEVICE = "d_calls_it_big";
++const AT_MOST_OF_FULL_TRUST = 0.5;
++
++class FixedClock {
++  now(): Date {
++    return new Date("2026-08-09T07:00:00.000Z");
++  }
++}
++
++class MemoryLearningStore {
++  private readonly values = new Map<string, string>();
++
++  async list(prefix: string): Promise<string[]> {
++    return [...this.values.keys()].filter((key) => key.startsWith(prefix)).sort();
++  }
++
++  async get(key: string): Promise<string | null> {
++    return this.values.get(key) ?? null;
++  }
++
++  async put(key: string, body: string): Promise<void> {
++    this.values.set(key, body);
++  }
++}
++
++const SEEDS: SpotSeed[] = [
++  { spot_id: PACIFIC_SPOT, region_id: "pa-pacific", coast: "pacific", break_type: "beach" },
++  { spot_id: CARIBBEAN_SPOT, region_id: "pa-caribbean", coast: "caribbean", break_type: "beach" },
++];
++
++function dayOf(index: number): string {
++  const day = new Date("2026-07-01T12:00:00Z");
++  day.setUTCDate(day.getUTCDate() + index);
++  return day.toISOString().slice(0, 10);
++}
++
++function habitMorningsAt(spotId: string): number {
++  return spotId === PACIFIC_SPOT ? HABIT_MORNINGS_PACIFIC : HABIT_MORNINGS_CARIBBEAN;
++}
++
++function logsFor(withTheHabitualReporter: boolean): {
++  observations: string;
++  predictions: string;
++} {
++  const observations: object[] = [];
++  const predictions: object[] = [];
++
++  for (const spotId of [PACIFIC_SPOT, CARIBBEAN_SPOT]) {
++    for (let index = 0; index < HONEST_MORNINGS; index += 1) {
++      const day = dayOf(index);
++      observations.push({
++        spot_id: spotId,
++        device_id: `d_honest_${index % HONEST_REPORTERS}`,
++        observed_at: `${day}T18:41:00Z`,
++        size_band: "chest_head",
++      });
++      predictions.push({
++        spot_id: spotId,
++        source: SOURCE,
++        valid_ts: `${day}T18:00:00Z`,
++        lead_h: 36,
++        swell_h_m:
++          CHEST_HEAD_MID_M + (index % 2 === 0 ? HONEST_SPREAD_M : -HONEST_SPREAD_M),
++        swell_t_s: 10,
++        land_masked: false,
++      });
++    }
++
++    // The habitual reporter's own mornings: nobody else was out those days, so
++    // nothing but their own habit can explain the difference they leave.
++    for (let index = 0; index < habitMorningsAt(spotId); index += 1) {
++      const day = dayOf(HONEST_MORNINGS + index);
++      if (withTheHabitualReporter) {
++        observations.push({
++          spot_id: spotId,
++          device_id: HABIT_DEVICE,
++          observed_at: `${day}T18:41:00Z`,
++          size_band: "chest_head",
++        });
++      }
++      predictions.push({
++        spot_id: spotId,
++        source: SOURCE,
++        valid_ts: `${day}T18:00:00Z`,
++        lead_h: 36,
++        // The forecast said this much; they called it chest-to-head anyway.
++        swell_h_m: CHEST_HEAD_MID_M - HABIT_M,
++        swell_t_s: 10,
++        land_masked: false,
++      });
++    }
++  }
++
++  return {
++    observations: observations.map((row) => JSON.stringify(row)).join("\n"),
++    predictions: predictions.map((row) => JSON.stringify(row)).join("\n"),
++  };
++}
++
++type StoredHeightKey = { b: number; n: number; reporters: number };
++
++async function storedFor(
++  withTheHabitualReporter: boolean,
++): Promise<Map<string, { key: StoredHeightKey; body: string }>> {
++  const store = new MemoryLearningStore();
++  const logs = logsFor(withTheHabitualReporter);
++  await store.put("log/observations/v1/dt=2026-07-01/reports.jsonl", logs.observations);
++  await store.put(
++    "predictions/v1/dt=2026-06-30/src=ncep_gfswave016/cyc=06Z/all.jsonl.gz",
++    logs.predictions,
++  );
++  await runLearningFitOnce({ store, clock: new FixedClock(), spots: SEEDS });
++
++  const stored = new Map<string, { key: StoredHeightKey; body: string }>();
++  for (const spotId of [PACIFIC_SPOT, CARIBBEAN_SPOT]) {
++    const body = await store.get(`learned/corrections/v1/current/${spotId}.json`);
++    assert.ok(body, `the run must have stored a correction record for ${spotId}`);
++    const record = JSON.parse(body) as {
++      bias: { swell_h_m: { per_source: Record<string, Record<string, StoredHeightKey>> } };
++    };
++    const key = record.bias.swell_h_m.per_source[SOURCE]?.[LEAD_BUCKET];
++    assert.ok(key, `${spotId}'s difference must stay keyed to its source and lead bucket`);
++    stored.set(spotId, { key, body });
++  }
++  return stored;
++}
++
++/**
++ * What the spot would store if the habit were believed outright. Every report
++ * names the same band, so the precision weights cancel and the stored
++ * difference is the plain mean of the residuals; the honest mornings average
++ * to exactly zero by construction, so all that is left is the habit's share.
++ */
++function differenceIfTheHabitWereBelieved(spotId: string): number {
++  const habitMornings = habitMorningsAt(spotId);
++  return (habitMornings * -HABIT_M) / (HONEST_MORNINGS + habitMornings);
++}
++
++describe("04-05 acceptance: a habit of calling it big, seen at two beaches, is measured and mostly subtracted", () => {
++  it("leaves under half the habit standing at both beaches, and never none of it", async () => {
++    const withTheHabit = await storedFor(true);
++    const withoutThem = await storedFor(false);
++
++    for (const spotId of [PACIFIC_SPOT, CARIBBEAN_SPOT]) {
++      const heard = withTheHabit.get(spotId)!.key;
++      const absent = withoutThem.get(spotId)!.key;
++      const believed = differenceIfTheHabitWereBelieved(spotId);
++
++      assert.equal(
++        heard.n,
++        HONEST_MORNINGS + habitMorningsAt(spotId),
++        `test bug: ${spotId} must weigh every morning the fixture wrote`,
++      );
++
++      const stillStanding = Math.abs(heard.b - absent.b) / Math.abs(believed - absent.b);
++      assert.ok(
++        stillStanding < AT_MOST_OF_FULL_TRUST,
++        `${spotId} still carries ${stillStanding} of the habit a believed reporter leaves: at nine mornings across two beaches most of it should have been measured and subtracted`,
++      );
++      assert.ok(
++        stillStanding > 0,
++        `${spotId} carries none of the habit at all: an offset shrunk toward zero can never be trusted completely, and subtracting all of a nine-morning habit would be exactly that`,
++      );
++
++      // The direction, which a share cannot say on its own. Somebody who calls
++      // it bigger than the forecast drags the stored difference down; taking
++      // their habit out has to bring it back UP, toward where the mornings
++      // nobody doubted already sit.
++      assert.ok(
++        heard.b > believed,
++        `${spotId} stored ${heard.b}, at or below the ${believed} believing the big-caller outright would leave: the habit was added rather than subtracted`,
++      );
++    }
++  });
++
++  it("names no reporter and carries no offset anywhere in what it stores", async () => {
++    const withTheHabit = await storedFor(true);
++
++    for (const spotId of [PACIFIC_SPOT, CARIBBEAN_SPOT]) {
++      const body = withTheHabit.get(spotId)!.body;
++      for (const forbidden of [HABIT_DEVICE, "d_honest_", "u_hat", "u_raw", "offset", "reporter_key"]) {
++        assert.ok(
++          !body.includes(forbidden),
++          `${spotId}'s stored correction contains "${forbidden}". Nothing under learned/ may name a reporter or carry a per-person offset: the estimate exists to correct a beach, not to keep a file on anybody.`,
++        );
++      }
++    }
++  });
++});
+diff --git a/tests/unit/learning-offset-laws.test.ts b/tests/unit/learning-offset-laws.test.ts
+new file mode 100644
+index 0000000..2c611cc
+--- /dev/null
++++ b/tests/unit/learning-offset-laws.test.ts
+@@ -0,0 +1,201 @@
++// The per-reporter offset's declared laws (src/learning/estimate.ts and
++// src/learning/weights.ts, 06-learning-layer.md section 5.2,
++// adr-per-reporter-offset-estimator, research 09 section 13.2).
++//
++// Port-to-port at domain scope: each exported function's signature IS its
++// port. The backfit takes the estimator it alternates with AS A PARAMETER,
++// which is what lets this file drive it with a plain weighted mean and check
++// arithmetic that can be worked out by hand, while the shipped fit hands it
++// the whole pooling ladder.
++//
++// Two things here are examples rather than properties, deliberately. The
++// SIGN of an offset is directional, and a symmetric property passes whichever
++// way round it is wired. The NUMBER OF PASSES is likewise invisible to any
++// property that only bounds the answer: three passes and one pass both land
++// inside every corridor worth stating, so the count is pinned by arithmetic
++// worked out in the test's own comment.
++
++import assert from "node:assert/strict";
++
++import fc from "fast-check";
++import { describe, it } from "vitest";
++
++import { REPORTER_OFFSET_TAU, SIGMA_EFF } from "../../src/learning/constants";
++import { shrinkTowardZero } from "../../src/learning/estimate";
++import { backfitReporterOffsets } from "../../src/learning/weights";
++import type { ResidualSample } from "../../src/learning/residuals";
++
++const PROPERTY_RUNS = 50;
++
++function reported(reporter: string, value: number): ResidualSample {
++  return {
++    value,
++    weight: 1,
++    device_id: reporter,
++    reporter_key: reporter,
++    day: null,
++    bandWidthM: 0.5,
++    sigmaEff: SIGMA_EFF.height.value,
++    solicited: false,
++  };
++}
++
++/** The plain weighted mean of a key's residuals, which is what the shipped fit wraps in a pooling ladder. */
++function plainKeyDifferences(
++  keys: readonly (readonly ResidualSample[])[],
++): (offsets: ReadonlyMap<string, number>) => number[] {
++  return (offsets) =>
++    keys.map((samples) => {
++      const total = samples.reduce(
++        (sum, sample) => sum + sample.weight * (sample.value + (offsets.get(sample.reporter_key) ?? 0)),
++        0,
++      );
++      const weight = samples.reduce((sum, sample) => sum + sample.weight, 0);
++      return weight === 0 ? 0 : total / weight;
++    });
++}
++
++describe("an offset is shrunk toward zero, never toward anybody's average (06 section 5.2)", () => {
++  it("is exactly zero for a reporter with no reports at all", () => {
++    fc.assert(
++      fc.property(fc.double({ min: -10, max: 10, noNaN: true }), (measured) => {
++        assert.equal(
++          shrinkTowardZero(measured, 0, REPORTER_OFFSET_TAU),
++          0,
++          "a reporter with no reports has no measured habit, so 06 section 5.2's n_r = 0 row must be exactly zero and their report enters at face value",
++        );
++      }),
++      { numRuns: PROPERTY_RUNS },
++    );
++  });
++
++  it("never trusts a habit further than it was measured, and never flips it", () => {
++    fc.assert(
++      fc.property(
++        fc.double({ min: -10, max: 10, noNaN: true }),
++        fc.integer({ min: 0, max: 500 }),
++        (measured, reports) => {
++          const trusted = shrinkTowardZero(measured, reports, REPORTER_OFFSET_TAU);
++          assert.ok(
++            Math.abs(trusted) <= Math.abs(measured),
++            `a habit measured at ${measured} was trusted at ${trusted}, which is further than it was ever measured`,
++          );
++          assert.ok(
++            trusted * measured >= 0,
++            `a habit measured at ${measured} was trusted at ${trusted}, on the other side of zero: shrinking toward zero may never turn a big-caller into a small-caller`,
++          );
++          if (Math.abs(measured) > 1e-6) {
++            assert.ok(
++              Math.abs(trusted) < Math.abs(measured),
++              `a habit measured at ${measured} was trusted at ${trusted}, its whole measured size: no finite number of reports may buy that`,
++            );
++          }
++        },
++      ),
++      { numRuns: PROPERTY_RUNS },
++    );
++  });
++
++  it("halves a habit at four reports and keeps two thirds of it at eight, per the 06 section 5.2 table", () => {
++    assert.equal(shrinkTowardZero(1, 4, REPORTER_OFFSET_TAU), 0.5);
++    assert.equal(shrinkTowardZero(1, 8, REPORTER_OFFSET_TAU), 8 / 12);
++    assert.equal(shrinkTowardZero(1, 16, REPORTER_OFFSET_TAU), 16 / 20);
++  });
++});
++
++describe("backfitting measures the habit itself (06 section 5.2)", () => {
++  it("reads somebody who calls it bigger than the rest as a positive habit, and the reverse as negative", () => {
++    fc.assert(
++      fc.property(fc.double({ min: 0.05, max: 3, noNaN: true }), (habit) => {
++        // Four reporters who agree, and one whose residual sits BELOW theirs
++        // every time -- which is what calling the wave bigger than it was
++        // looks like once the residual is forecast minus observed.
++        const key = [
++          reported("d_a", 0),
++          reported("d_b", 0),
++          reported("d_c", 0),
++          reported("d_d", 0),
++          reported("d_calls_it_big", -habit),
++          reported("d_calls_it_small", habit),
++        ];
++        const offsets = backfitReporterOffsets([key], plainKeyDifferences([key]), 3);
++
++        assert.ok(
++          offsets.get("d_calls_it_big")! > 0,
++          `somebody who called every morning ${habit} bigger than everyone else was measured at ${offsets.get("d_calls_it_big")}, which is not a positive habit: the sign is wired backwards and their reports are being pushed further from the truth`,
++        );
++        assert.ok(
++          offsets.get("d_calls_it_small")! < 0,
++          `somebody who called every morning ${habit} smaller was measured at ${offsets.get("d_calls_it_small")}`,
++        );
++        assert.ok(
++          Math.abs(offsets.get("d_a") ?? 0) < 1e-12,
++          "somebody who agreed with the key's own mean every morning has no habit to measure",
++        );
++      }),
++      { numRuns: PROPERTY_RUNS },
++    );
++  });
++
++  it("takes exactly three alternating passes, no more and no fewer", () => {
++    // Four honest mornings at 0, one reporter each, and four from one reporter
++    // at -H, all at equal weight. EVERY reporter gets an offset, the four
++    // honest ones included: the model is report = truth + u_r + eps for
++    // everybody, and there is no such thing as a reporter the fit has decided
++    // in advance has no habit. Their n_r = 1 shrinks theirs to a fifth, which
++    // is what keeps the shared component in the beach's own difference rather
++    // than letting it drain into the people (06 section 5.2's identifiability
++    // note). Writing the passes out with that included:
++    //
++    //   pass 1: b = -H/2        u_honest = -H/10      u_habit = H/4
++    //   pass 2: b = -17H/40     u_honest = -17H/200   u_habit = 23H/80
++    //   pass 3: b = -319H/800                         u_habit = 481H/1600
++    //
++    // One pass would stop at H/4 = 0.25 H and two at 23H/80 = 0.2875 H, against
++    // three passes' 481H/1600 = 0.300625 H. Nothing that merely bounds the
++    // answer can tell those three apart, which is why this is an example.
++    const habit = 0.8;
++    const key = [
++      reported("d_a", 0),
++      reported("d_b", 0),
++      reported("d_c", 0),
++      reported("d_d", 0),
++      reported("d_habit", -habit),
++      reported("d_habit", -habit),
++      reported("d_habit", -habit),
++      reported("d_habit", -habit),
++    ];
++
++    const afterThree = backfitReporterOffsets([key], plainKeyDifferences([key]), 3);
++    assert.ok(
++      Math.abs(afterThree.get("d_habit")! - (481 * habit) / 1600) < 1e-12,
++      `three alternating passes measured the habit at ${afterThree.get("d_habit")}, not the ${(481 * habit) / 1600} the arithmetic above gives`,
++    );
++    assert.ok(
++      afterThree.get("d_a")! < 0 && Math.abs(afterThree.get("d_a")!) < Math.abs(afterThree.get("d_habit")!),
++      `the four honest reporters were measured at ${afterThree.get("d_a")}: they must carry a small offset of their own, and a much smaller one than the habitual reporter, or the shared component is draining out of the beach and into the people`,
++    );
++  });
++
++  it("carries a habit measured at one beach across to the other, which is what makes it identifiable", () => {
++    // The same reporter on two keys. Their offset is one number read from both
++    // beaches at once, not one number per beach -- 06 section 5.2's
++    // identifiability rider, where a reporter whose samples span two spots
++    // identifies their offset directly instead of it being confounded with the
++    // spot.
++    const habit = 0.5;
++    const pacific = [reported("d_a", 0), reported("d_b", 0), reported("d_habit", -habit)];
++    const caribbean = [reported("d_c", 0), reported("d_d", 0), reported("d_habit", -habit)];
++    const together = backfitReporterOffsets(
++      [pacific, caribbean],
++      plainKeyDifferences([pacific, caribbean]),
++      3,
++    );
++    const oneBeachOnly = backfitReporterOffsets([pacific], plainKeyDifferences([pacific]), 3);
++
++    assert.ok(
++      together.get("d_habit")! > oneBeachOnly.get("d_habit")!,
++      `a habit seen at two beaches was measured at ${together.get("d_habit")}, no larger than the ${oneBeachOnly.get("d_habit")} one beach alone reads: at a single spot the habit is confounded with the spot's own bias and the shrink pushes it into the beach instead`,
++    );
++  });
++});
