@@ -848,6 +848,13 @@
       "s": "EXECUTED",
       "d": "Implemented rule three in src/learning/declarations.ts: exported RULE_HELD_OUT_STAYS_FORWARD_OF_TRAINING='held-out-mornings-must-stay-forward-of-training', LEGAL_CV_SCHEME_KIND='rolling_origin_blocked', a DeclaredCvScheme type, cvSchemesDeclaredIn() extraction (walks every 'const CV_SCHEME' literal in comment-masked text, reads the kind field, absence of a CV_SCHEME yields zero entries so absence stays legal per design intent), and heldOutMorningsStayForwardViolations() wired into the report's violations array alongside the two existing rules. No change to src/learning/cross-validation.ts (it already declares the legal kind, as anticipated) and no change to the slice-01 pin (the two shipped-source violations===[] tests stayed green without any edit). Focused run (AT + unit): npx vitest run tests/acceptance/.../held-out-mornings-stay-forward-of-training.test.ts tests/unit/learning-declarations.test.ts -> EXIT=0, 14 passed. Full suite: npx vitest run -> EXIT=0, 583 passed | 3 skipped (the two still-parked 05-04/05-05 AT files, unrelated to this step) -- no regressions, no other red. npm run typecheck -> EXIT=0. Falsifiability probe: mutated the filter to 'scheme.kind !== LEGAL_CV_SCHEME_KIND' -> 'false && scheme.kind !== LEGAL_CV_SCHEME_KIND', re-ran the AT + unit file -> EXIT=1, both the AT's refusing half and the new property test failed for the right reason; reverted the mutation and confirmed with git diff (grep for the mutation string returns clean) and a final green re-run (14 passed). Post-GREEN wiring check: git diff --name-only includes src/learning/declarations.ts (production file changed, not fixture theater). Non-visual (UI N/A): the entire observable surface is the examination's violations list over source text; nothing executes, nothing renders -- roadmap's stated rationale confirmed and carried into the contract.",
       "t": "2026-08-12T23:44:39Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "Staged only owned paths (src/learning/declarations.ts, the AT's skip marker, tests/unit/learning-declarations.test.ts, docs/feature/.../execution-log.json, and force-added the gitignored 05-03-contract.json), leaving gate-baseline.log untouched. Committed 69a6dad 'feat(learning): refuse shuffled CV structurally (rule three)' with trailer Step-ID: 05-03. 5 files changed, 169 insertions, 1 deletion. Wrote docs/feature/f-forecast-learns-from-the-beach/deliver/05-03-contract.json matching the 05-02-contract.json field set, validated as parseable JSON before commit.",
+      "t": "2026-08-12T23:46:27Z"
     }
   ]
 }
