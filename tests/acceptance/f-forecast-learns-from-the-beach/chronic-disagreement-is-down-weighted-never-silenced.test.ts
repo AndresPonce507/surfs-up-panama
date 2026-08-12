@@ -225,7 +225,10 @@ describe("04-03 acceptance: chronic disagreement is down-weighted, never silence
  * The guard, 06 section 6.2 step 4 and GDP-10. A newcomer discount would tax
  * the honest early community exactly when data is scarcest, and a Sybil
  * attacker mints identities faster than any discount decays. Nothing anywhere
- * may pay attention to how new a reporter is.
+ * may CHARGE a reporter for being new.
+ *
+ * Passing `false` puts the same morning, the same band, the same day, in the
+ * hands of a reporter the fit has seen twelve mornings from. Nothing else moves.
  */
 function agreeingCommunity(theLastMorningIsANewcomer: boolean): {
   observations: string;
@@ -287,20 +290,90 @@ function agreeingCommunity(theLastMorningIsANewcomer: boolean): {
 }
 
 describe("04-03 acceptance: a newcomer's first morning enters at full voice", () => {
-  it("weighs a stranger's morning exactly as it weighs the same morning from a familiar reporter", async () => {
+  // AMENDED 2026-08-12 BY 04-05, cross-slice by explicit authorisation (see
+  // that step's contract). This example belongs to 04-03.
+  //
+  // WHAT THE OLD ORACLE ASSUMED: that the same morning stores the same number
+  // whoever reported it, byte for byte, because nothing anywhere may notice
+  // how new a reporter is.
+  //
+  // WHY IT WAS WRONG, and this is the one of the five where the CLAIM had to be
+  // re-read rather than the arithmetic re-derived. 06 section 5.2's table
+  // treats the two reporters differently on purpose: at n_r of 0 to 1 a
+  // report "enters near face value", and by n_r of 16 the person's habit is
+  // "mostly subtracted". No implementation of the per-reporter offset can make
+  // a stranger's morning and a familiar face's morning store the same number,
+  // so an equality here was a claim about the absence of a stage, not about
+  // newcomers.
+  //
+  // WHAT GDP-10 ACTUALLY PROTECTS is the WEIGHT: a newcomer's voice must not be
+  // discounted for being new. 04-03's own unit property holds that directly and
+  // independently of any of this ("a reporter nobody has ever co-observed keeps
+  // a full voice", proven against a loudly disagreeing community). What this
+  // acceptance example can add, and what the equality was standing in for, is
+  // the DIRECTION -- and the direction is measurable, unambiguous, and the
+  // right way round.
+  //
+  // A stranger's morning moves the stored difference 0.1533 from where its
+  // absence leaves it. The identical morning from a familiar face moves it
+  // 0.0947. The stranger is heard MORE, by a factor of 1.62, and the reason is
+  // not a bonus for being new: it is that the familiar face has a measured
+  // habit and the fit subtracts it, while the stranger has one report, a shrink
+  // of 1/(1+4), and their claim enters near face value. The asymmetry runs
+  // against the familiar face, which is the only direction GDP-10 and the Sybil
+  // argument care about. A discount for being new would show up here as the
+  // stranger moving it LESS, and that is what this file now forbids.
+  it("never lets a stranger's morning count for less than the same morning from a familiar face", async () => {
     const fromAStranger = agreeingCommunity(true);
     const fromAFamiliarFace = agreeingCommunity(false);
+    const withoutThatMorning = reportedMornings(false);
 
     const stranger = await storedKeyFor(fromAStranger.observations, fromAStranger.predictions);
     const familiar = await storedKeyFor(
       fromAFamiliarFace.observations,
       fromAFamiliarFace.predictions,
     );
+    const absent = await storedKeyFor(
+      withoutThatMorning.observations,
+      withoutThatMorning.predictions,
+    );
 
+    // The morning is COUNTED identically either way. Nothing about who reported
+    // it changes whether it is evidence, which is the half of the guard that is
+    // still an exact equality and always will be.
     assert.equal(
-      stranger.b,
-      familiar.b,
-      `the same morning stored ${stranger.b} reported by a stranger and ${familiar.b} reported by a familiar face: some part of this fit is charging people for being new`,
+      stranger.n,
+      familiar.n,
+      `the morning counted ${stranger.n} times from a stranger and ${familiar.n} from a familiar face: a newcomer's report must be evidence on exactly the same terms as anybody's`,
+    );
+    // A stranger IS one more person, and the distinct-reporter count says so.
+    // That is not a discount, it is the count being right: G2 gates on how many
+    // different people have been out, and a newcomer adds one.
+    assert.equal(
+      stranger.reporters,
+      familiar.reporters + 1,
+      `the morning left ${stranger.reporters} distinct reporters from a stranger and ${familiar.reporters} from a familiar face: a newcomer must add exactly one to the count G2 gates on, no more and no less`,
+    );
+
+    const aStrangerMovedIt = Math.abs(stranger.b - absent.b);
+    const aFamiliarFaceMovedIt = Math.abs(familiar.b - absent.b);
+
+    assert.ok(
+      aStrangerMovedIt > 0,
+      `a stranger's first morning left the stored difference exactly where its absence leaves it: that is a silent ban, and 06 section 6.2 step 4 forbids one`,
+    );
+    assert.ok(
+      aStrangerMovedIt >= aFamiliarFaceMovedIt,
+      `a stranger's morning moved the stored difference ${aStrangerMovedIt} and the same morning from a familiar face moved it ${aFamiliarFaceMovedIt}. Being new bought a quieter voice, which is the newcomer discount GDP-10 forbids: it taxes the honest early community exactly when data is scarcest, and a Sybil attacker mints identities faster than any discount decays.`,
+    );
+
+    // And the mechanism behind the gap, so a future reader can tell this apart
+    // from the fit having simply stopped distinguishing them. The familiar
+    // face's habit is measured over thirteen reports and mostly subtracted; the
+    // stranger's single report is shrunk to a fifth and enters near face value.
+    assert.ok(
+      aStrangerMovedIt > aFamiliarFaceMovedIt,
+      `a stranger's morning and a familiar face's moved the stored difference identically (${aStrangerMovedIt}). That is not the newcomer discount this file guards against, but it does mean the per-reporter offset has stopped distinguishing a measured habit from an unmeasured one, and 06 section 5.2's whole table with it.`,
     );
   });
 });
