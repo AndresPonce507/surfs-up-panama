@@ -13,9 +13,11 @@ import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import fc from 'fast-check';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import {
+  RULE_HELD_OUT_STAYS_FORWARD_OF_TRAINING,
   RULE_ONLY_THE_GATE_MAY_MARK_APPLIED,
   RULE_WIND_RESIDUAL_NEEDS_ITS_OWN_FLOOR,
   evaluateLearningDeclarations,
@@ -226,5 +228,43 @@ describe('evaluateLearningDeclarations', () => {
       rule: RULE_WIND_RESIDUAL_NEEDS_ITS_OWN_FLOOR,
       detail: expect.any(String),
     });
+  });
+});
+
+// 05-03: unlike the two rules above (fixed syntactic shapes -- one literal
+// token, one specific residual form), rule three's contract genuinely
+// generalizes over the whole space of declared CV_SCHEME.kind strings, so a
+// property law is the right tool here even though the file header's default
+// exemption stands for the two example-shaped rules above it.
+describe('held-out mornings must stay forward of training (06-learning-layer.md section 7 G7)', () => {
+  it('refuses every declared CV_SCHEME whose kind is not rolling_origin_blocked, naming the rule, the file, and the kind, for any generated kind', async () => {
+    await fc.assert(
+      fc.asyncProperty(
+        fc.stringMatching(/^[a-z][a-z_]{0,19}$/).filter((kind) => kind !== 'rolling_origin_blocked'),
+        async (kind) => {
+          await writeUniverse({
+            'evaluation.ts': [`export const CV_SCHEME = { kind: '${kind}', folds: 10 } as const;`].join('\n'),
+          });
+
+          const report = await evaluateLearningDeclarations({ root });
+
+          const fired = report.violations.filter((violation) => violation.rule === RULE_HELD_OUT_STAYS_FORWARD_OF_TRAINING);
+          expect(fired).toHaveLength(1);
+          expect(fired[0]?.detail).toContain(join(root, 'evaluation.ts'));
+          expect(fired[0]?.detail).toContain(kind);
+        },
+      ),
+      { numRuns: 25 },
+    );
+  });
+
+  it('accepts a universe that declares no CV_SCHEME at all: absence is legal, not a violation', async () => {
+    await writeUniverse({
+      'plain-module.ts': ['export function double(n: number): number {', '  return n * 2;', '}'].join('\n'),
+    });
+
+    const report = await evaluateLearningDeclarations({ root });
+
+    expect(report.violations.filter((violation) => violation.rule === RULE_HELD_OUT_STAYS_FORWARD_OF_TRAINING)).toEqual([]);
   });
 });

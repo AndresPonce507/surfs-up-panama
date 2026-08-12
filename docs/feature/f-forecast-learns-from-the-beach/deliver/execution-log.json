@@ -820,6 +820,34 @@
       "s": "EXECUTED",
       "d": "Staged exactly the owned paths (src/learning/cross-validation.ts new, evaluate.ts/load-correction.ts/metrics.ts, src/pipeline/build.ts, both 05-02 acceptance test files, tests/unit/learning-cv-laws.test.ts new, tests/unit/learning-load-correction.test.ts, plus git add -f for the gitignored 05-02-contract.json and execution-log.json). gate-baseline.log left untracked, not staged. Committed a6563cf on branch build/f2-learning-slice05 with Step-ID: 05-02 trailer. git status confirms only gate-baseline.log remains untracked (not mine).",
       "t": "2026-08-12T19:18:35Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "Loaded tdd-methodology, quality-framework, fp-principles, fp-domain-modeling skills. Read src/learning/declarations.ts top-to-bottom (two existing rules + lexer mechanism), the acceptance test, tests/unit/learning-declarations.test.ts, src/learning/cross-validation.ts (CV_SCHEME kind rolling_origin_blocked shipped in 05-02), 06-learning-layer.md section 7 G7, and distill/red-classification-slice-05.md supersession note. Confirmed via grep that slice-01's 'only the two named rules' pin is not a literal violations-length assertion anywhere in the test suite -- the two shipped-source-scanning tests (shipped-residual-inventory.test.ts, unreadable-correction-is-read-as-absent.test.ts) assert report.violations deepEqual [] over the whole src/ tree, which stays true under rule three since the only shipped CV_SCHEME (cross-validation.ts) already declares the legal kind. Confirmed the AT is still describe.skip before RED (dry run: 2 skipped).",
+      "t": "2026-08-12T23:40:11Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "Removed describe.skip from held-out-mornings-stay-forward-of-training.test.ts and ran it standalone: npx vitest run tests/acceptance/f-forecast-learns-from-the-beach/held-out-mornings-stay-forward-of-training.test.ts -> EXIT=1, 1 failed | 1 passed. Refusing half fails for the right reason: AssertionError 'this universe shuffles time and the examination let it through: ... Violations reported: none' (semantic assertion on report.violations, no import/collection error). Accepting half (rolling-origin-blocked universe, zero violations) already passes -- the GUARD-ALREADY-GREEN rail confirmed live before any production change.",
+      "t": "2026-08-12T23:40:18Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "Added two tests to tests/unit/learning-declarations.test.ts: (1) a fast-check property 'refuses every declared CV_SCHEME whose kind is not rolling_origin_blocked, naming the rule, the file, and the kind, for any generated kind' (fc.stringMatching generator over lowercase kind strings excluding the legal value, numRuns 25) -- justified as a property despite the file's stated example-shaped-rule exemption because rule three's contract genuinely generalizes over the kind string domain, unlike the two fixed-shape rules; (2) an example test 'accepts a universe that declares no CV_SCHEME at all: absence is legal, not a violation' per the design intent that absence is not a violation. Ran npx vitest run tests/unit/learning-declarations.test.ts -> EXIT=1, 1 failed | 11 passed. The property test fails for the right reason: AssertionError 'expected [] to have a length of 1 but got +0' (semantic, RULE_HELD_OUT_STAYS_FORWARD_OF_TRAINING imports as undefined pre-implementation so zero violations match a rule name that does not exist yet -- no import/collection error). The no-CV_SCHEME test passes trivially pre-implementation (GUARD-ALREADY-GREEN, same pattern as the AT's accepting half).",
+      "t": "2026-08-12T23:41:53Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "Implemented rule three in src/learning/declarations.ts: exported RULE_HELD_OUT_STAYS_FORWARD_OF_TRAINING='held-out-mornings-must-stay-forward-of-training', LEGAL_CV_SCHEME_KIND='rolling_origin_blocked', a DeclaredCvScheme type, cvSchemesDeclaredIn() extraction (walks every 'const CV_SCHEME' literal in comment-masked text, reads the kind field, absence of a CV_SCHEME yields zero entries so absence stays legal per design intent), and heldOutMorningsStayForwardViolations() wired into the report's violations array alongside the two existing rules. No change to src/learning/cross-validation.ts (it already declares the legal kind, as anticipated) and no change to the slice-01 pin (the two shipped-source violations===[] tests stayed green without any edit). Focused run (AT + unit): npx vitest run tests/acceptance/.../held-out-mornings-stay-forward-of-training.test.ts tests/unit/learning-declarations.test.ts -> EXIT=0, 14 passed. Full suite: npx vitest run -> EXIT=0, 583 passed | 3 skipped (the two still-parked 05-04/05-05 AT files, unrelated to this step) -- no regressions, no other red. npm run typecheck -> EXIT=0. Falsifiability probe: mutated the filter to 'scheme.kind !== LEGAL_CV_SCHEME_KIND' -> 'false && scheme.kind !== LEGAL_CV_SCHEME_KIND', re-ran the AT + unit file -> EXIT=1, both the AT's refusing half and the new property test failed for the right reason; reverted the mutation and confirmed with git diff (grep for the mutation string returns clean) and a final green re-run (14 passed). Post-GREEN wiring check: git diff --name-only includes src/learning/declarations.ts (production file changed, not fixture theater). Non-visual (UI N/A): the entire observable surface is the examination's violations list over source text; nothing executes, nothing renders -- roadmap's stated rationale confirmed and carried into the contract.",
+      "t": "2026-08-12T23:44:39Z"
     }
   ]
 }
