@@ -28,12 +28,19 @@
 // would quietly reintroduce both risks. No analytics, no open tracking, no
 // click-through measurement, ever (BRIEF constraint 3).
 
-/** What a planned send carries onto the wire (see plan-notifications.ts). */
+/**
+ * What a planned send carries onto the wire. The grouping field is `tag`, and
+ * its value is the spot: that is the field name `PlannedSend` composes in
+ * plan-notifications.ts and the field name the acceptance payload carries.
+ * `spot_id` is a plan-side field, next to `endpoint_hash` and `ttl_seconds`,
+ * which route the send and never reach the notification.
+ */
 export type NotificationSeatPayload = {
+  v: number;
   title: string;
   body: string;
-  spot_id: string;
   url: string;
+  tag: string;
 };
 
 export type ShowNotificationOptions = {
@@ -128,7 +135,7 @@ function composeNotification(payload: Record<string, unknown> | null): {
     title: textField(fields, 'title') ?? UNREADABLE_PUSH_COPY_ES.title,
     options: {
       body: textField(fields, 'body') ?? UNREADABLE_PUSH_COPY_ES.body,
-      tag: textField(fields, 'spot_id') ?? UNREADABLE_PUSH_TAG,
+      tag: textField(fields, 'tag') ?? UNREADABLE_PUSH_TAG,
       data: { url: textField(fields, 'url') ?? SITE_ROOT_PATH },
     },
   };

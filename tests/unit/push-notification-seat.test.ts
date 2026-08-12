@@ -22,11 +22,24 @@ import { describe, it } from 'vitest';
 
 import { handleNotificationClick, handlePush } from '../../src/push/notification-seat';
 
+/**
+ * THE REAL WIRE PAYLOAD, not a near-miss of it. Both authorities on what a
+ * planned aviso carries name the grouping field `tag`: the acceptance oracle's
+ * payload (steps/push-handler.steps.ts) and the production `PlannedSend` that
+ * plan-notifications.ts composes. Only `PlannedSend` also carries `spot_id`,
+ * and that is an internal plan field, alongside `endpoint_hash` and
+ * `ttl_seconds`, which the notification never sees.
+ *
+ * This fixture previously declared `spot_id` and no `tag` at all, a shape
+ * nothing in the system produces, and that near-miss let the seat read the
+ * wrong key while every unit test stayed green. The real oracle caught it.
+ */
 const VENAO_PAYLOAD = {
+  v: 1,
   title: 'Mejor: Playa Venao, 95',
   body: 'Playa Venao marca 95 esta mañana. Mira el pronóstico.',
-  spot_id: 'playa-venao',
   url: '/spots/playa-venao/',
+  tag: 'playa-venao',
 };
 
 type ShowCall = { title: string; options: { body: string; tag: string; data: { url: string } } };
@@ -181,7 +194,7 @@ describe('handlePush', () => {
           fc.anything(),
           fc.constant(null),
           fc.constant(undefined),
-          fc.record({ title: fc.string(), body: fc.string(), spot_id: fc.string(), url: fc.string() }),
+          fc.record({ title: fc.string(), body: fc.string(), tag: fc.string(), url: fc.string() }),
         ),
         async (payload) => {
           const { scope, shown, touched } = trapScope();
@@ -224,8 +237,8 @@ describe('handlePush', () => {
     }
 
     assert.equal(shown.length, 2, 'both avisos are shown; replacement is the browser\'s job given a shared tag, never a suppressed second push');
-    assert.equal(shown[0]?.options.tag, VENAO_PAYLOAD.spot_id, 'the tag is the spot carried in the payload');
-    assert.equal(shown[1]?.options.tag, VENAO_PAYLOAD.spot_id, 'the second aviso shares the first one\'s tag, never a per-message identifier');
+    assert.equal(shown[0]?.options.tag, VENAO_PAYLOAD.tag, 'the tag is the spot carried in the payload');
+    assert.equal(shown[1]?.options.tag, VENAO_PAYLOAD.tag, 'the second aviso shares the first one\'s tag, never a per-message identifier');
   });
 
   it('shows the aviso without asking the network or reading or writing any storage', async () => {
