@@ -162,7 +162,7 @@ function tenWeeksTurningAgainstTheCorrection(): {
   };
 }
 
-describe.skip("05-02 acceptance: a losing month switches the corrections off until a human looks", () => {
+describe("05-02 acceptance: a losing month switches the corrections off until a human looks", () => {
   it("publishes corrections-killed into the metrics file, leaves every stored byte alone, and the apply lane degrades to day zero", async () => {
     const store = new MemoryLearningStore();
     await store.put(

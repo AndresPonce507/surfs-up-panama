@@ -785,6 +785,34 @@
       "s": "EXECUTED",
       "d": "Committed 3eb4ee1 on build/f2-learning-slice05: fix(learning): close the corrections-read coverage gap in the monthly metrics builder. Staged only owned paths (05-01-contract.json via git add -f, src/learning/metrics.ts, tests/unit/learning-metrics.test.ts). Trailer Step-ID: 05-01 present. 3 files changed, 92 insertions, 10 deletions.",
       "t": "2026-08-12T18:22:32Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "Loaded nw-tdd-methodology, nw-quality-framework, nw-fp-principles, nw-fp-domain-modeling, nw-pbt-fundamentals skills. Read wave-decisions.md D-2026-08-12-1 in full, 06-learning-layer.md section 7 (G7) and section 10, adr-correction-gates-and-clamps.md, both 05-02 acceptance test files, support/monthly-port.ts, current evaluate.ts/metrics.ts/load-correction.ts/build.ts/correction-record.ts/inputs.ts/residuals.ts, and the mined recover/learning-build:src/learning/cross-validation.ts reference (git show, read-only). Confirmed language/paradigm: TypeScript FP, fast-check PBT house style, functional paradigm declared in project CLAUDE.md.",
+      "t": "2026-08-12T19:16:55Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "Removed describe.skip from a-losing-month-switches-the-corrections-off-until-a-human-looks.test.ts and a-winning-month-leaves-the-corrections-standing.test.ts. Reverted production changes to HEAD (git checkout on evaluate.ts/metrics.ts/load-correction.ts/build.ts, removed cross-validation.ts) and ran both ATs: 2 files collected, 2 tests, 2 failed. Both failures are semantic AssertionError on cv.verdict ('not_evaluated' actual vs 'corrections-killed'/'corrections-stay' expected) at the exact metricAt(metrics,'cv.verdict') assertion line -- no collection or import errors, fail-for-right-reason gate satisfied. Restored the GREEN implementation afterward via a saved git-apply patch plus a saved copy of cross-validation.ts; both ATs immediately re-ran green (2 passed).",
+      "t": "2026-08-12T19:17:06Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "Authored tests/unit/learning-cv-laws.test.ts (4 fast-check properties against cross-validation.ts's exported heldOutBlockStart and judgeRollingOriginCorrections: fold-boundary law, not_evaluated-iff-nothing-judged, tie-spares majority, MAE credit/blame sign-flip) and appended one fast-check property to tests/unit/learning-load-correction.test.ts (Modeling-strategy oracle over the full verdict-probe vocabulary for loadStoredCorrections). Each was written to drive production code that did not yet exist/behave as required; run individually before the corresponding production code existed in final form (during the GREEN loop) they failed for the right reason (verdict mismatches / probe never firing), then passed once the implementation matched.",
+      "t": "2026-08-12T19:17:20Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "Implemented src/learning/cross-validation.ts (NEW: CV_SCHEME literal, heldOutBlockStart, judgeRollingOriginCorrections), wired the judge into src/learning/metrics.ts's cv field, added a distinguishing kill event in src/learning/evaluate.ts, widened src/learning/load-correction.ts's loadStoredCorrections to consume the latest monthly verdict (bounded probe, applied-key-gated to avoid an unrelated regression -- see contract scope_note), and passed the clock through in src/pipeline/build.ts. Both target ATs pass (2/2). Full suite: 107 files -- 100 passed/4 failed/3 skipped; 537 tests -- 527 passed/5 failed/5 skipped; the 5 failures are exactly the pre-existing staleness-stamp*/staleness-flip/report-island family named in the task context, unchanged by this diff. npm run typecheck: exit 0. Non-visual step: UI N/A rationale recorded in the contract; proceeding straight to COMMIT per the roadmap's own non_visual_rationale.",
+      "t": "2026-08-12T19:17:38Z"
     }
   ]
 }

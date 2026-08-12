@@ -144,7 +144,7 @@ function tenWeeksAgreeingWithTheCorrection(): {
   };
 }
 
-describe.skip("05-02 acceptance: a winning month leaves the corrections standing, and says so", () => {
+describe("05-02 acceptance: a winning month leaves the corrections standing, and says so", () => {
   it("publishes corrections-stay, touches no stored byte, and the apply lane keeps loading the record", async () => {
     const store = new MemoryLearningStore();
     await store.put(

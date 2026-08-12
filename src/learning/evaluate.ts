@@ -1,5 +1,5 @@
-// The monthly evaluation's driving port, accepted roadmap 05-01
-// (06-learning-layer.md section 10).
+// The monthly evaluation's driving port, accepted roadmap 05-01/05-02
+// (06-learning-layer.md section 10, section 7 row G7).
 //
 // METRICS-ONLY, per wave-decisions.md D-2026-08-12-1: this run writes
 // exactly one file, under learned/metrics/v1/, and touches nothing else in
@@ -7,15 +7,17 @@
 // recover/learning-build's evaluate.ts (lines 36-38, an in-place
 // `current/<spot_id>.json` rewrite on a corrections-killed verdict) is the
 // ruled-out mechanism and is not ported here in any form. A held-out kill
-// verdict, once a later step's judge produces one, is published INTO this
-// file's `cv.verdict` and consumed by the correction-apply lane; the stored
-// corrections stay byte-untouched by this job.
+// verdict is published INTO this file's `cv.verdict` (buildMonthlyMetrics, by
+// way of src/learning/cross-validation.ts's judge) and consumed by the
+// correction-apply lane (src/learning/load-correction.ts); the stored
+// corrections stay byte-untouched by this job on every verdict.
 //
-// `cv.verdict` stays the literal `not_evaluated` this step: the
-// rolling-origin held-out judge (06 section 7 G7) is 05-02's. Reporting an
-// unbuilt judgment as anything else would claim certainty this code does not
-// earn (repo CLAUDE.md's one rule: never claim more certainty than the data
-// earns).
+// `outcome.verdict` and the file's `cv.verdict` are one computation
+// (roadmap 05-02 criterion 5): both read straight off `metrics.cv.verdict`,
+// never recomputed a second way. A kill month also announces itself in
+// `outcome.events`, distinct from a winning or not-yet-evaluated month
+// (D-2026-08-12-1 pin 3) -- the file is the durable record, the event is the
+// same fact said out loud to whoever is watching the run itself.
 //
 // Store and clock are passed in; nothing here reads the ambient environment
 // or the ambient clock, per the rule at the top of src/pipeline/ports.ts.
@@ -35,6 +37,9 @@ import {
 import { buildMonthlyMetrics, type MonthlyMetrics } from './metrics';
 
 export const METRICS_PREFIX = 'learned/metrics/v1/';
+
+/** The one event a kill month adds beyond `metrics_written` (D-2026-08-12-1 pin 3): the outcome must distinguish a kill month, not just the file it wrote. */
+const EVENT_CORRECTIONS_KILLED = 'learning.cv.corrections_killed';
 
 /** What the monthly evaluation needs of the store: read its inputs, store the one file it writes. */
 export interface MonthlyEvaluationStore extends LearningInputStore {
@@ -83,11 +88,19 @@ export async function runMonthlyEvaluationOnce(
   const metricsKey = monthlyMetricsKey(now);
   await deps.store.put(metricsKey, JSON.stringify(metrics));
 
+  const events: MonthlyEvaluationOutcome['events'] = [{ type: 'metrics_written', detail: metricsKey }];
+  if (metrics.cv.verdict === 'corrections-killed') {
+    events.push({
+      type: EVENT_CORRECTIONS_KILLED,
+      detail: `${metricsKey}: cv.verdict is corrections-killed, so the apply lane degrades to day zero until a human looks`,
+    });
+  }
+
   return {
     completed: true,
     verdict: metrics.cv.verdict,
     metrics_key: metricsKey,
-    events: [{ type: 'metrics_written', detail: metricsKey }],
+    events,
   };
 }
 

@@ -3,14 +3,17 @@
 // a literal placeholder -- with two named exceptions this step deliberately
 // defers, per wave-decisions.md D-2026-08-12-1:
 //
-//   - `cv.verdict` stays the literal 'not_evaluated'. The held-out judge
-//     (rolling-origin CV, 06 section 7 G7) is 05-02's; publishing anything
-//     else here would claim a judgment this code has not yet earned.
 //   - `calibration.offending_term` stays the literal null. Naming which
 //     confidence term failed the calibration check is 05-04's; this step
 //     ships the bins the naming logic will read.
 //   - `shrinkage[].flagged` stays the literal false. The alarm threshold
 //     (09 section 17.4 guardrail 2) is 05-05's; this step ships the row.
+//
+// `cv.verdict` is 05-02's real judgment now (06 section 7 G7;
+// src/learning/cross-validation.ts), not the deferred literal 05-01 shipped:
+// rolling-origin blocked CV, mean absolute error rather than a signed mean
+// that can cancel (wave-decisions.md D-2026-08-12-1 pin 1), killed only when
+// losers are a strict majority of the gated keys actually judged.
 //
 // Pure function, in and out: no store, no clock, no ambient world. evaluate.ts
 // is the one module that reads the store and hands this module what it read.
@@ -22,6 +25,11 @@ import {
 } from '../data/size-bands';
 import type { GatedKey, StoredCorrection } from './correction-file';
 import { TOP_BAND_NOMINAL_M } from './constants';
+import {
+  judgeRollingOriginCorrections,
+  type CvVerdict,
+  type DatedResidualSample,
+} from './cross-validation';
 import { spotsReportedIn, type ObservationRow, type PredictionRow, type PublishedCallRow } from './inputs';
 import { formHeightResidualRows, reporterKeyOf } from './residuals';
 
@@ -57,7 +65,7 @@ export type MonthlyMetrics = {
     reporters: number;
     flagged: boolean;
   }[];
-  cv: { verdict: 'not_evaluated' };
+  cv: { verdict: CvVerdict };
 };
 
 export function buildMonthlyMetrics(input: {
@@ -73,7 +81,7 @@ export function buildMonthlyMetrics(input: {
     sigma_human: sigmaHumanOf(input.observations),
     calibration: calibrationOf(input.observations),
     shrinkage: shrinkageOf(input.corrections),
-    cv: { verdict: 'not_evaluated' },
+    cv: cvOf(input.observations, input.predictions, input.corrections),
   };
 }
 
@@ -260,6 +268,70 @@ function persistenceBaselineOf(points: readonly ObservedPoint[]): number | null 
 function baselinesOf(observations: readonly ObservationRow[]): MonthlyMetrics['mae']['baselines'] {
   const points = observedPointsOf(observations);
   return { climatology: climatologyBaselineOf(points), persistence: persistenceBaselineOf(points) };
+}
+
+// ---------- cv (06 section 7 G7: the monthly kill switch, judged here) ----------
+
+function cvOf(
+  observations: readonly ObservationRow[],
+  predictions: readonly PredictionRow[],
+  corrections: readonly StoredCorrection[],
+): MonthlyMetrics['cv'] {
+  return {
+    verdict: judgeRollingOriginCorrections({
+      gatedCorrections: gatedHeightCorrectionsOf(corrections),
+      samples: datedHeightResidualSamplesOf(observations, predictions),
+    }),
+  };
+}
+
+/**
+ * Every applied height key across every spot's stored correction, keyed the
+ * same way `cvKeyOf` keys a residual sample below. `applied` is READ here,
+ * never written: G4's marking rule (06 section 7) belongs to
+ * src/learning/gates.ts alone, and src/learning/declarations.ts's
+ * whole-source examination watches this file stay that way.
+ */
+function gatedHeightCorrectionsOf(corrections: readonly StoredCorrection[]): Map<string, number> {
+  const gated = new Map<string, number>();
+  for (const correction of corrections) {
+    for (const [source, byLead] of Object.entries(correction.bias.swell_h_m.per_source)) {
+      for (const [leadBucket, key] of Object.entries(byLead)) {
+        if (!key.applied) continue;
+        gated.set(cvKeyOf(correction.spot_id, source, leadBucket), key.b);
+      }
+    }
+  }
+  return gated;
+}
+
+/**
+ * Every height residual this month can date, spot by spot -- the same
+ * pairing `maeOf` forms above, kept as its own pass rather than shared: the
+ * CV judge and the displayed MAE are two different questions asked of the
+ * same rows, and entangling them would make either one harder to change
+ * alone. A residual with no day (06 section 5.1: a row that never said when
+ * it was seen) forms no CV sample, because the rolling origin cannot place
+ * it anywhere.
+ */
+function datedHeightResidualSamplesOf(
+  observations: readonly ObservationRow[],
+  predictions: readonly PredictionRow[],
+): DatedResidualSample[] {
+  const samples: DatedResidualSample[] = [];
+  for (const spotId of spotsReportedIn(observations)) {
+    const spotObservations = observations.filter((observation) => observation.spot_id === spotId);
+    for (const row of formHeightResidualRows(spotObservations, predictions)) {
+      if (row.sample.day === null) continue;
+      samples.push({ key: cvKeyOf(spotId, row.source, row.leadBucket), day: row.sample.day, residual: row.sample.value });
+    }
+  }
+  return samples;
+}
+
+/** (spot, source, lead_bucket), space-joined: the same collision-safety reasoning as `maeOf`'s own key, above. */
+function cvKeyOf(spotId: string, source: string, leadBucket: string): string {
+  return `${spotId} ${source} ${leadBucket}`;
 }
 
 // ---------- sigma_human (the ceiling no model can beat, 09 section 16.2) ----------
