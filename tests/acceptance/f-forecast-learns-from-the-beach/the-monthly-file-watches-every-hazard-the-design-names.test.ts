@@ -118,7 +118,7 @@ function ninetyDaysOfPublishedCalls(): [string, string][] {
   });
 }
 
-describe.skip("05-01 acceptance: the monthly file watches every hazard the design names", () => {
+describe("05-01 acceptance: the monthly file watches every hazard the design names", () => {
   it("reports its outcome, writes exactly one metrics file for the clock's own month, and touches nothing else", async () => {
     const store = new MemoryLearningStore();
     const fixture = aMonthOfMornings();
