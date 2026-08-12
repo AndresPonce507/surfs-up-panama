@@ -1,4 +1,5 @@
 import type { Fetcher } from './mint';
+import { SEND_REFUSED_MESSAGE, decideRefusal, type RefusalPersistence } from './refusal';
 
 /**
  * The call we had logged for that spot and hour, exactly the five fields
@@ -44,9 +45,20 @@ export interface ReportReceipt {
   readonly counter?: ReportCounter;
 }
 
+/**
+ * `persistence` is what the queue reads: a refusal the same bytes can never
+ * survive is settled and must stop sending itself, while everything else is
+ * still waiting (src/report/refusal.ts). Carrying only `message` is how a
+ * wrong phone clock ended up re-sent on every page load.
+ */
 export type SubmissionOutcome =
   | { readonly kind: 'received'; readonly receipt: ReportReceipt }
-  | { readonly kind: 'refused'; readonly message: string; readonly credentialInvalid: boolean };
+  | {
+    readonly kind: 'refused';
+    readonly message: string;
+    readonly persistence: RefusalPersistence;
+    readonly credentialInvalid: boolean;
+  };
 
 export interface SavedReportStore {
   discard(reportId: string): Promise<void>;
@@ -71,10 +83,13 @@ export async function sendSavedReport(
     body: savedBytes,
   });
   const body = await response.json().catch(() => undefined);
-  if (!response.ok) return { kind: 'refused', message: plainRefusal(body), credentialInvalid: response.status === 401 };
+  if (!response.ok) return { kind: 'refused', ...decideRefusal(body), credentialInvalid: response.status === 401 };
   const receipt = receiptFrom(body);
+  // An unreadable receipt is not a refusal the server explained: it may well
+  // have stored the report, so the label stays waiting and a later send
+  // collects its original receipt as a duplicate.
   return receipt === undefined
-    ? { kind: 'refused', message: 'No pudimos confirmar el reporte ahora.', credentialInvalid: false }
+    ? { kind: 'refused', message: 'No pudimos confirmar el reporte ahora.', persistence: 'may_arrive_later', credentialInvalid: false }
     : { kind: 'received', receipt };
 }
 
@@ -149,9 +164,7 @@ function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
-function plainRefusal(value: unknown): string {
-  if (typeof value !== 'object' || value === null || !('error' in value)) return 'No pudimos enviar el reporte ahora.';
-  const error = value.error;
-  if (typeof error !== 'object' || error === null || !('what' in error)) return 'No pudimos enviar el reporte ahora.';
-  return typeof error.what === 'string' ? error.what : 'No pudimos enviar el reporte ahora.';
-}
+// plainRefusal moved to src/report/refusal.ts as decideRefusal, which reads
+// the same WHAT sentence and, on the same pass, the code the queue needs.
+// SEND_REFUSED_MESSAGE is re-exported so the one sentence has one home.
+export { SEND_REFUSED_MESSAGE };

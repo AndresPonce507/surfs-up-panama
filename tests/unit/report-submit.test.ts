@@ -98,7 +98,9 @@ describe('the browser report transport', () => {
 
     assert.deepEqual(
       await sendSavedReport('{"report_id":"report-1"}', 'credential-1', fetcher, REPORT_URL),
-      { kind: 'refused', message: 'La playa indicada no es conocida.', credentialInvalid: false },
+      // An unknown beach keeps its label waiting: slice-05 settles only the
+      // one refusal the same bytes can never survive (src/report/refusal.ts).
+      { kind: 'refused', message: 'La playa indicada no es conocida.', persistence: 'may_arrive_later', credentialInvalid: false },
     );
   });
 
@@ -141,7 +143,7 @@ describe('the browser report transport', () => {
     assert.deepEqual(await finalizeSavedReport('report-1', matching, discard), matching);
     assert.deepEqual(removed, ['report-1']);
     for (const outcome of [
-      { kind: 'refused' as const, message: 'No pudimos enviar el reporte ahora.', credentialInvalid: false },
+      { kind: 'refused' as const, message: 'No pudimos enviar el reporte ahora.', persistence: 'may_arrive_later' as const, credentialInvalid: false },
       { kind: 'received' as const, receipt: { report_id: 'another-report', outcome: 'no_snapshot' as const, predicted: null } },
       await sendSavedReport(
         '{"report_id":"report-1"}',
