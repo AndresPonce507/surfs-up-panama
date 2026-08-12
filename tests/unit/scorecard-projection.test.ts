@@ -1,0 +1,118 @@
+import assert from 'node:assert/strict';
+
+import fc from 'fast-check';
+import { describe, it } from 'vitest';
+
+import * as projection from '../../src/scorecard/projection';
+import type { PredictionSnapshot, SurfReport } from '../../src/scorecard/pairing';
+import type { ScorecardAccumulator } from '../../src/scorecard/projection';
+
+type IncrementalProjection = (
+  accumulator: ScorecardAccumulator | null,
+  report: SurfReport,
+  input: unknown,
+) => ScorecardAccumulator;
+
+const reportSet = fc
+  .array(
+    fc.record({ day: fc.integer({ min: 1, max: 28 }), device: fc.integer({ min: 1, max: 7 }) }),
+    { maxLength: 40 },
+  )
+  .map((rows) =>
+    rows.map(
+      ({ day, device }): SurfReport => ({
+        spot_id: 'playa-venao',
+        device_id: `device-${device}`,
+        observed_at: `2026-08-${String(day).padStart(2, '0')}T12:00:00Z`,
+        size_band: 'waist_chest',
+        quality: 'good',
+        credential_issued_at: '2026-07-01T00:00:00Z',
+        received_at: `2026-08-${String(day).padStart(2, '0')}T12:00:00Z`,
+        predicted: { score_q: 70 },
+      }),
+    ),
+  );
+
+const predictionsFor = (reports: readonly SurfReport[]): readonly PredictionSnapshot[] =>
+  reports.map((report) => ({
+    spot_id: report.spot_id,
+    source: 'ncep_gfswave016',
+    run_ts: '2026-08-01T00:00:00Z',
+    valid_ts: report.observed_at,
+    lead_h: 24,
+    swell_h_m: 1.2,
+    land_masked: false,
+  }));
+
+describe('scorecard projection rebuild — immutable log contract', () => {
+  it('rebuilds the complete observable projection exactly from reports folded one at a time', () => {
+    assert.equal(
+      typeof projection['applyReport'],
+      'function',
+      'projectScorecard must expose applyReport so the immutable logs can be folded incrementally',
+    );
+    const applyReport = projection['applyReport'] as IncrementalProjection;
+
+    fc.assert(
+      fc.property(reportSet, (reports) => {
+        const input = {
+          predictions: predictionsFor(reports),
+          reports,
+          trustConfig: null,
+          resolveReporter: (deviceId: string): string => deviceId,
+          asOf: '2026-08-30T12:00:00Z',
+        };
+        const batch = projection.projectScorecard(input);
+        const accumulator = reports.reduce<ScorecardAccumulator | null>(
+          (current, report) => applyReport(current, report, { ...input, reports: [] }),
+          null,
+        );
+        const folded = projection.projectScorecard({ ...input, fromAccumulator: accumulator });
+
+        assert.deepEqual(
+          folded,
+          batch,
+          'folding immutable reports one at a time must rebuild the same projection as a from-scratch recompute',
+        );
+      }),
+    );
+  });
+
+  it('keeps every pairable stored report in the display counter while nonzero trust rules gate claims only', () => {
+    const reports: SurfReport[] = [
+      ...Array.from({ length: 10 }, (_, index) => ({
+        spot_id: 'playa-venao',
+        device_id: `veteran-${index}`,
+        observed_at: `2026-08-${String(index + 1).padStart(2, '0')}T12:00:00Z`,
+        size_band: 'waist_chest',
+        quality: 'good',
+        credential_issued_at: '2026-07-01T00:00:00Z',
+        received_at: `2026-08-${String(index + 1).padStart(2, '0')}T12:00:00Z`,
+        predicted: { score_q: 70 },
+      })),
+      {
+        spot_id: 'playa-venao',
+        device_id: 'young-reporter',
+        observed_at: '2026-08-20T12:00:00Z',
+        size_band: 'waist_chest',
+        quality: 'good',
+        credential_issued_at: '2026-08-20T11:00:00Z',
+        received_at: '2026-08-20T12:00:00Z',
+        predicted: { score_q: 70 },
+      },
+    ];
+    const sourcePredictions = predictionsFor(reports);
+    const result = projection.projectScorecard({
+      predictions: [...sourcePredictions, ...sourcePredictions.map((prediction) => ({ ...prediction, source: 'dwd_gwam' }))],
+      reports,
+      trustConfig: { min_credential_age_days: 7, min_prior_reports: 0, min_prior_spots: 2 },
+      resolveReporter: (deviceId) => deviceId,
+      asOf: '2026-08-30T12:00:00Z',
+    });
+
+    const block = result.blocks['playa-venao'];
+    assert.ok(block, 'a spot with pairable stored reports has a display block even when trust filtering removes samples from claim evidence');
+    assert.equal(block.n_obs, reports.length, 'the display counter counts all pairable stored reports, including trust-ineligible ones');
+    assert.equal(block.n_reporters, 10, 'only trust-eligible reporters contribute to the claim gate');
+  });
+});

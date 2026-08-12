@@ -1,0 +1,1 @@
+{"d": "FAIL", "failures": ["U1 exited 1", "U2 exited 1", "U3 exited 1", "U4 exited 1", "U5 exited 1", "U6 exited 1", "U7 exited 1"], "mandates": ["U1", "U2", "U3", "U4", "U5", "U6", "U7"], "p": "UI_CHECKS", "s": "EXECUTED", "sid": "01-07", "t": "2026-08-10T20:17:25Z"}
