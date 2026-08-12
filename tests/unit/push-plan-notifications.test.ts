@@ -322,4 +322,40 @@ describe('planSendReactions', () => {
       { numRuns: 200 },
     );
   });
+
+  it('marks nobody for any answer outside the gone-for-good set, and still decides', () => {
+    // The law is a partition of the whole status space, not a list of the
+    // transient codes somebody thought of: three statuses prune, and every
+    // other answer in the space prunes nobody. An implementation that pruned
+    // on every failure satisfies the row above and fails here.
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 5 }),
+        fc.integer({ min: 0, max: 4 }),
+        fc
+          .integer({ min: 100, max: 599 })
+          .filter((status) => !(GONE_FOR_GOOD_STATUSES as readonly number[]).includes(status)),
+        (attempted, whichAnswered, statusThatIsNotGone) => {
+          const sends = attemptedSends(attempted);
+          const answered = sends[whichAnswered % attempted]!;
+
+          const reactions = planSendReactions({
+            sends,
+            responses: [{ endpoint_hash: answered.endpoint_hash, status: statusThatIsNotGone }],
+          });
+
+          assert.ok(
+            reactions && typeof reactions === 'object',
+            'a zero-deletion result only proves the rule once the rule actually decided, so the reaction is produced rather than withheld',
+          );
+          assert.deepEqual(
+            reactions.deletions,
+            [],
+            'a passing failure costs nobody their subscription: only the three gone-for-good answers prune',
+          );
+        },
+      ),
+      { numRuns: 300 },
+    );
+  });
 });
