@@ -1,6 +1,6 @@
 # ADR: Pooling hierarchy — ship five levels collapsed, hard basin partition, tau floors until estimable
 
-**Status:** Proposed (DESIGN round 2, 2026-08-08) · **Context:** C3 Verification & Learning · **Implements:** research 09 §5.4, §17; BRIEF constraint 5 (global-ready, Panama first)
+**Status:** Accepted (2026-08-12, amended; was Proposed, DESIGN round 2, 2026-08-08) · **Context:** C3 Verification & Learning · **Implements:** research 09 §5.4, §17; BRIEF constraint 5 (global-ready, Panama first)
 
 ## Decision
 
@@ -10,6 +10,11 @@
 4. Parent levels use group-weighted means with influence caps (`n_eff = min(n, 200)` per region, per-reporter caps inside a region) so one hyperactive region cannot become the world prior (09 §17.5). At launch the global record carries `n_regions: 1` and is treated as regional until a second region corroborates it.
 5. tau per level is hand-set ONLY until estimable: prior tau = 6 at spot level (sigma ~0.42 over sigma_between ~0.17, unfit priors), permanent floor tau >= 2; switchover to method-of-moments (`sigma_between^2 = var(b_hat) - mean(se^2)` across gated spots) once >= 8 spots pass the gates. tau_u (reporter level) re-estimates at >= 50 reporters with >= 5 reports.
 6. The shrinkage weight per spot is published in the monthly metrics file (09 §17.4 guardrail 2): a spot with 80 observations still 60% shrunk is a misconfiguration alarm, not a curiosity.
+
+**Amendments (review against the built code, 2026-08-12):**
+
+- The shrinkage chain deliberately terminates at the basin. Decision 2's hard wall overrides decision 1's global level: a global term feeding back down into a basin would be cross-basin borrowing at a small weight, which guardrail 1 forbids at any weight. This matches the built code (`src/learning/hierarchy.ts`, learning lane): the global record stays a labeled report of one region's data (`n_regions: 1`), never a term any spot's stored number reads.
+- Decision 4's per-reporter effective-sample cap ships mechanism-built but uncapped: `SHIPPED_POOLING_CAPS.max_effective_samples_per_reporter` is `Infinity` because no design source declares a value (06 §8 declares only the per-region 200). The mechanism is proven to fire by injecting a cap in the unit laws; the VALUE decision remains open.
 
 ## Alternatives considered
 

@@ -24,3 +24,5 @@
 - Cold-start label noise is higher than the residual-question design would have had; the pairwise ranking metric is immune (within-person by construction) but the bias fit needs more reports per person, exactly as the DISCUSS note priced.
 - A reporter who loses browser storage restarts calibration (accepted cost, adr-identity-claim-merge); a later claim-merge retroactively unifies their offset because everything is recomputed from logs + current mapping.
 - tau_u mis-set only changes convergence speed, never correctness of the gates: no public number depends on u_r without G1-G3 passing.
+
+**Status note (2026-08-12):** stays Proposed. The backfit itself landed on the learning lane 2026-08-12 (`d7e2236`, "backfit the per-reporter offset; subtract the habit") but without decision 1's trailing 90-day fit window; the window is being added in the same lane, and this ADR flips to Accepted when it lands.
