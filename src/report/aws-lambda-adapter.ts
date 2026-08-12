@@ -15,10 +15,20 @@ type FunctionUrlEvent = Readonly<{
   readonly requestContext?: Readonly<{ readonly http?: Readonly<{ readonly method?: string; readonly sourceIp?: string }> }>;
 }>;
 
-let composition: Promise<LocalWriteLambda> | undefined;
+// Composition starts at module load, not first request. The Lambda init
+// phase runs with full-vCPU boost and its own 10s budget regardless of the
+// 128 MB memory guardrail, while in-handler cold composition (four SDK
+// imports plus SSM + DynamoDB round trips) on 128 MB's fractional vCPU
+// could not fit inside the 5 s guardrail timeout: every cold mint/report
+// died as a silent Status: timeout. Both guardrails stay as declared.
+const composition: Promise<LocalWriteLambda> = createComposition();
+// Swallow only the UNHANDLED-rejection signal: if composition fails before
+// the first request, the handler's own await below still receives and
+// reports the real error per-request instead of the runtime crashing.
+composition.catch(() => undefined);
 
 export async function handler(event: FunctionUrlEvent) {
-  const writeLambda = composition ??= createComposition();
+  const writeLambda = composition;
   const expectedPath = requiredEnvironment('WRITE_PATH');
   if (event.rawPath !== undefined && event.rawPath !== expectedPath && event.rawPath !== '/') {
     return functionUrlResponse(404, { error: { code: 'not_found', what: 'La ruta de escritura no existe.', why: 'Cada Function URL tiene una sola operación.', how: 'Usa la URL publicada por el sitio.' } });
