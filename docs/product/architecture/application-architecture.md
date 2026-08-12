@@ -286,7 +286,7 @@ FAIL, the ranked list is the product):
 | `spot_id` | string; IS the URL slug (language-neutral kebab, enforced at seed PR review) — no separate `slug` field | FAIL |
 | `score_q` | **int 0-100** | FAIL |
 | `conf_level` | enum `low` \| `medium` \| `high` | FAIL (decision 7) |
-| `confidence_reason` | one `{es,en}` object, ≤ 160 chars each | degrade: `<details>` reason omitted |
+| `confidence_reason` | one `{es,en}` object, ≤ 280 chars each (was ≤ 160; moved 2026-08-12 — the settled no-beach-report sentence is 168 chars alone, so 160 and the settled copy could not both hold; see F-KNOW-HOW-MUCH-TO-TRUST-IT feature-delta, wave decision W1) | degrade: `<details>` reason omitted |
 | `call` | one `{es,en}` object, ≤ 280 chars each | degrade: structured fields only (declared in P1 row) |
 | `size_band` | v1 7-band enum (domain §7.2) | FAIL |
 | `size_range_m` | `[lo, hi]` metres, always rendered with "≈", never a point | FAIL (decision 18) |
