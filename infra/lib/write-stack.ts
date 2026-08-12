@@ -12,7 +12,7 @@
 // provisioned fail-closed table, and the exact resources the $18 budget line
 // trips.
 
-import { CfnOutput, Duration, RemovalPolicy, Fn, Stack } from 'aws-cdk-lib';
+import { AssetHashType, CfnOutput, Duration, RemovalPolicy, Fn, Stack } from 'aws-cdk-lib';
 import type { StackProps } from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cloudwatchActions from 'aws-cdk-lib/aws-cloudwatch-actions';
@@ -84,6 +84,13 @@ export class WriteStack extends Stack {
     // directory. Nothing generated is committed: synth/package own the
     // deployable Lambda file while source stays in src/report/.
     const reportMintCode = lambda.Code.fromAsset(projectRoot, {
+      // Hash the bundling OUTPUT, not the source directory. With the default
+      // SOURCE hashing, CDK fingerprints every file under projectRoot on each
+      // synth, and any concurrent process mutating the worktree (astro build
+      // rewriting dist/, vitest refreshing node_modules/.vite) makes the scan
+      // throw ENOENT mid-walk. The bundle result is what deploys, so its hash
+      // is the honest identity anyway.
+      assetHashType: AssetHashType.OUTPUT,
       bundling: {
         image: lambda.Runtime.NODEJS_22_X.bundlingImage,
         local: {
