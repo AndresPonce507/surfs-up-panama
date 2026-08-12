@@ -17,6 +17,7 @@ import fc from "fast-check";
 import { describe, it } from "vitest";
 
 import {
+  applyOverrideWeights,
   collapseSessionsToMedian,
   concordanceWeightByReporter,
   selectionWeightByMorning,
@@ -503,6 +504,54 @@ describe("the weighing room counts a rarely-reported kind of morning for more (0
           );
         },
       ),
+      { numRuns: PROPERTY_RUNS },
+    );
+  });
+});
+
+// ---------- the incident file, 06 section 6.4 ----------
+
+describe("the incident file adjudicates reporters, and only ever downward (06 section 6.4)", () => {
+  it("never lets a named weight raise a voice above the one it already had", () => {
+    fc.assert(
+      fc.property(
+        fc.array(sample(fc.constant("2026-07-04"), fc.constantFrom("d_a", "d_b", "d_c")), {
+          minLength: 1,
+          maxLength: 12,
+        }),
+        fc.double({ min: 0, max: 1, noNaN: true }),
+        (samples, adjudicated) => {
+          const adjusted = applyOverrideWeights(samples, new Map([["d_b", adjudicated]]));
+
+          assert.equal(
+            adjusted.length,
+            samples.length,
+            "an override adjusts a weight; removing a reporter is a different act, and it happens before anything reads the log",
+          );
+          adjusted.forEach((sample, index) => {
+            const before = samples[index]!;
+            assert.equal(sample.value, before.value, "an incident file adjudicates a person, never a number they reported");
+            const expected = before.reporter_key === "d_b" ? before.weight * adjudicated : before.weight;
+            assert.ok(
+              Math.abs(sample.weight - expected) < 1e-12,
+              `${before.reporter_key} came out at ${sample.weight} where the file says ${expected}`,
+            );
+          });
+        },
+      ),
+      { numRuns: PROPERTY_RUNS },
+    );
+  });
+
+  it("leaves every sample untouched when the file names nobody", () => {
+    fc.assert(
+      fc.property(manySessions, (samples) => {
+        assert.deepEqual(
+          applyOverrideWeights(samples, new Map()),
+          [...samples],
+          "the shipped default is that no incident file exists, so an empty one must be the identity",
+        );
+      }),
       { numRuns: PROPERTY_RUNS },
     );
   });

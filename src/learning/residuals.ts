@@ -184,7 +184,7 @@ const SOLICITED_TRIGGER = 'push_solicited';
  * launch shape: no claim path ships yet, so every reporter_key IS a device id
  * today and this line changes no stored number until one does.
  */
-function reporterKeyOf(observation: ObservationRow, deviceId: string): string {
+export function reporterKeyOf(observation: ObservationRow, deviceId: string): string {
   const person = observation.person_id;
   return typeof person === 'string' && person !== '' ? person : deviceId;
 }

@@ -37,6 +37,8 @@ export const OBSERVATION_LOG_PREFIX = 'log/observations/v1/';
 export const PREDICTION_LOG_PREFIX = 'predictions/v1/';
 /** log/calls/v1/dt=<date>/build=<HH>Z/<region_id>.jsonl.gz: what the site published, one row per spot-hour. */
 export const CALL_LOG_PREFIX = 'log/calls/v1/';
+/** 06 section 6.4: the incident file, git-versioned and human-edited by pull request. Absent by default. */
+export const REPORTER_OVERRIDES_KEY = 'learned/overrides/v1/reporter-weights.json';
 
 /**
  * One row of the nightly observation export, domain-model.md section 7.3,
@@ -162,6 +164,35 @@ export async function readCallLog(store: LearningInputStore): Promise<PublishedC
     rows.push(...(parseJsonLines(body) as PublishedCallRow[]));
   }
   return rows;
+}
+
+/**
+ * 06 section 6.4's override weights: a flat map of reporter_key to weight.
+ *
+ * ABSENT MEANS EVERY WEIGHT IS ONE, and so does unreadable, and so does any
+ * entry that is not a number. A file nobody can parse names nobody: the one
+ * thing this reader must never do is turn a corrupt byte into somebody being
+ * dropped from the fit. Erring the other way is safe -- the campaign is still
+ * there, the incident is still open, and a human notices.
+ */
+export async function readReporterOverrides(
+  store: LearningInputStore,
+): Promise<Map<string, number>> {
+  const weights = new Map<string, number>();
+  const body = await store.get(REPORTER_OVERRIDES_KEY);
+  if (body === null) return weights;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(body);
+  } catch {
+    return weights;
+  }
+  if (!isRecord(parsed)) return weights;
+  for (const [reporterKey, weight] of Object.entries(parsed)) {
+    if (typeof weight !== 'number' || !Number.isFinite(weight) || weight < 0) continue;
+    weights.set(reporterKey, weight);
+  }
+  return weights;
 }
 
 /** The spots the log actually names, each once, in the order they first appear. */

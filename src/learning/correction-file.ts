@@ -60,6 +60,7 @@ import {
 } from "./hierarchy";
 import { shrinkTowardParent, shrinkageWeightFromParent } from "./shrink";
 import {
+  applyOverrideWeights,
   applyReporterWeights,
   applySelectionWeights,
   collapseSessionsToMedian,
@@ -271,6 +272,7 @@ function estimatesFrom(
   height: WeighedHeightSamples,
   earned: ReadonlyMap<string, number>,
   rarity: SelectionWeights,
+  overrides: ReadonlyMap<string, number>,
 ): Map<string, Map<string, Map<string, RawEstimate>>> {
   const bySpot = new Map<string, Map<string, Map<string, RawEstimate>>>();
   for (const [spotId, byKey] of height) {
@@ -279,7 +281,10 @@ function estimatesFrom(
       const rawByLead = new Map<string, RawEstimate>();
       for (const [lead, samples] of byLead) {
         const raw = estimateOf(
-          applySelectionWeights(applyReporterWeights(samples, earned), spotId, rarity),
+          applyOverrideWeights(
+            applySelectionWeights(applyReporterWeights(samples, earned), spotId, rarity),
+            overrides,
+          ),
         );
         if (raw !== null) rawByLead.set(lead, raw);
       }
@@ -425,6 +430,7 @@ export function buildCorrectionRecords(
   clock: Clock,
   pooling: PoolingInputs = NO_POOLING_ROSTER,
   selection: SelectionWeights = new Map<string, number>(),
+  overrides: ReadonlyMap<string, number> = new Map<string, number>(),
 ): Map<string, StoredCorrection> {
   const computedAt = clock.now().toISOString();
 
@@ -441,7 +447,7 @@ export function buildCorrectionRecords(
   }
   const earned = concordanceWeightByReporter(everyKeyIn(weighedHeight, weighedScore));
 
-  const rawHeightBySpot = estimatesFrom(weighedHeight, earned, selection);
+  const rawHeightBySpot = estimatesFrom(weighedHeight, earned, selection, overrides);
   // Two passes, and only the second one's numbers are ever stored. The first
   // runs the ladder collapsed, so the gate can weigh each spot's own evidence
   // against its region alone; the second runs it again knowing which spots
@@ -457,7 +463,10 @@ export function buildCorrectionRecords(
   const rawScoreBySpot = new Map<string, RawEstimate>();
   for (const [spotId, samples] of weighedScore) {
     const raw = estimateOf(
-      applySelectionWeights(applyReporterWeights(samples, earned), spotId, selection),
+      applyOverrideWeights(
+        applySelectionWeights(applyReporterWeights(samples, earned), spotId, selection),
+        overrides,
+      ),
     );
     if (raw !== null) rawScoreBySpot.set(spotId, raw);
   }

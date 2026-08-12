@@ -393,3 +393,24 @@ export function applySelectionWeights(
     return { ...sample, weight: sample.weight * rarity };
   });
 }
+
+/**
+ * 06 section 6.4's override weight, for the reporters an incident named who
+ * were down-weighted rather than removed. A weight of zero is not applied
+ * here at all: it is an EXCISION, handled upstream in fit.ts by dropping the
+ * reporter's rows before anything reads them, because a zero-weight sample
+ * would still count toward n, toward the distinct-reporter gate, toward the
+ * physical noise floor's n and toward a day's median. "Vanishes from the fit"
+ * has to mean vanishes.
+ */
+export function applyOverrideWeights(
+  samples: readonly ResidualSample[],
+  overrides: ReadonlyMap<string, number>,
+): ResidualSample[] {
+  if (overrides.size === 0) return [...samples];
+  return samples.map((sample) => {
+    const adjudicated = overrides.get(sample.reporter_key);
+    if (adjudicated === undefined || adjudicated === 1) return sample;
+    return { ...sample, weight: sample.weight * adjudicated };
+  });
+}

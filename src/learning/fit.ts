@@ -28,11 +28,13 @@ import {
   readCallLog,
   readObservationLog,
   readPredictionLog,
+  readReporterOverrides,
   spotsReportedIn,
   type LearningInputStore,
   type ObservationRow,
   type PublishedCallRow,
 } from './inputs';
+import { reporterKeyOf } from './residuals';
 import { selectTrustEligible, SHIPPED_TRUST_GATE, type TrustGateConfig } from './trust';
 import { morningKey, selectionWeightByMorning, type PublishedCall } from './weights';
 
@@ -82,9 +84,26 @@ export type LearningFitOutcome = {
 };
 
 export async function runLearningFitOnce(deps: LearningFitDeps): Promise<LearningFitOutcome> {
-  const observations = await readObservationLog(deps.store);
   const predictions = await readPredictionLog(deps.store);
   const calls = await readCallLog(deps.store);
+  const overrides = await readReporterOverrides(deps.store);
+
+  // 06 section 6.4. A reporter an incident put at zero is EXCISED HERE, before
+  // anything at all reads the log -- before eligibility, before the spots are
+  // counted, before the propensity denominators, before a single residual is
+  // formed. That placement is the criterion: their mornings have to leave the
+  // run byte-identically to never having been written, and a sample merely
+  // weighted zero still counts toward n, toward the distinct-reporter gate,
+  // toward the error floor's n and toward a day's median.
+  //
+  // This is the one filter in this lane that also removes a spot from
+  // spots_examined, and deliberately so. The trust gate excludes SAMPLES from
+  // the fit while leaving the spot examined (06 section 7); an incident file
+  // says those mornings should never have been in the log.
+  const observations = withExcisedReportersRemoved(
+    await readObservationLog(deps.store),
+    overrides,
+  );
 
   // Eligibility is applied ONCE, here, to the whole log before it is grouped
   // by spot. Two reasons. The history clause counts a reporter's earlier
@@ -127,6 +146,7 @@ export async function runLearningFitOnce(deps: LearningFitDeps): Promise<Learnin
       caps: deps.poolingCaps ?? SHIPPED_POOLING_CAPS,
     },
     selection,
+    overrides,
   );
 
   for (const [spotId, record] of records) {
@@ -172,4 +192,17 @@ function utcDayOf(timestamp: unknown): string | null {
   if (typeof timestamp !== 'string') return null;
   const ms = new Date(timestamp).getTime();
   return Number.isNaN(ms) ? null : new Date(ms).toISOString().slice(0, 10);
+}
+
+/** 06 section 6.4: every row from a reporter the incident file put at zero, gone before anything reads the log. */
+function withExcisedReportersRemoved(
+  observations: readonly ObservationRow[],
+  overrides: ReadonlyMap<string, number>,
+): ObservationRow[] {
+  if (overrides.size === 0) return [...observations];
+  return observations.filter((observation) => {
+    const deviceId = observation.device_id;
+    if (deviceId === undefined) return true;
+    return (overrides.get(reporterKeyOf(observation, deviceId)) ?? 1) > 0;
+  });
 }
