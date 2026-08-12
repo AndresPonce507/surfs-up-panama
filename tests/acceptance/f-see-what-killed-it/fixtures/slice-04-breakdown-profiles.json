@@ -1,0 +1,53 @@
+{
+  "_why": "Slice-04 preconditions only. Every value here is an INPUT the producer is allowed to publish on the hourly projection, never an expected rendering: the oracle lives in the assertions. Hours are declared by ROLE, not by clock time -- `window_hour` is planted at whatever hour that day's own published best_window starts in, and `neighbour_hours` at every other planted hour -- so the fixture keeps meaning if a future morning moves a window. Three deliberate traps: the published weakest_link is never the lowest of its four values, so a page that marked the shortest bar would pass nothing here; every neighbour hour is MORE attractive than the window hour, so averaging, interpolating or falling back to an adjacent hour is visible; and one day's four values are disjoint from the other's, so a section that read the wrong day's hour cannot round to the right answer.",
+  "default_hours": {
+    "window": { "dir": 0.8, "size": 0.7, "wind": 0.55, "tide": 0.4 },
+    "neighbour": { "dir": 0.95, "size": 0.95, "wind": 0.95, "tide": 0.95 }
+  },
+  "profiles": {
+    "desglose-honesto": {
+      "spot_id": "playa-cambutal",
+      "today": {
+        "link": "wind",
+        "window_hour": { "dir": 0.91, "size": 0.83, "wind": 0.62, "tide": 0.11 },
+        "neighbour_hours": { "dir": 0.99, "size": 0.99, "wind": 0.99, "tide": 0.99 }
+      },
+      "tomorrow": {
+        "link": "dir",
+        "window_hour": { "dir": 0.44, "size": 0.95, "wind": 0.71, "tide": 0.29 },
+        "neighbour_hours": { "dir": 0.98, "size": 0.98, "wind": 0.98, "tide": 0.98 }
+      }
+    },
+    "sin-viento-en-la-ventana": {
+      "spot_id": "playa-el-palmar",
+      "today": {
+        "link": "tide",
+        "window_hour": { "dir": 0.88, "size": 0.31, "wind": null, "tide": 0.66 },
+        "neighbour_hours": { "dir": 0.97, "size": 0.97, "wind": 0.97, "tide": 0.97 }
+      },
+      "tomorrow": {
+        "link": "wind",
+        "window_hour": { "dir": 0.72, "size": 0.58, "wind": 0.67, "tide": null },
+        "neighbour_hours": { "dir": 0.96, "size": 0.96, "wind": 0.96, "tide": 0.96 }
+      }
+    },
+    "sin-ventana": {
+      "spot_id": "las-lajas",
+      "today": {
+        "link": "size",
+        "drop_best_window": true
+      },
+      "tomorrow": {
+        "link": "tide",
+        "window_hour": { "dir": 0.86, "size": 0.74, "wind": 0.52, "tide": 0.63 },
+        "neighbour_hours": { "dir": 0.94, "size": 0.94, "wind": 0.94, "tide": 0.94 }
+      }
+    },
+    "sin-desglose-legado": {
+      "spot_id": "playa-teta",
+      "omit_hourly": true,
+      "today": { "link": "size" },
+      "tomorrow": { "link": "dir" }
+    }
+  }
+}

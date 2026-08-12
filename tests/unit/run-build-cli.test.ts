@@ -11,7 +11,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import fc from 'fast-check';
 
-import { publishedWeakestLinkSubscore } from '../../src/pipeline/build';
+import { publishedHourlyProjection, publishedWeakestLinkSubscore } from '../../src/pipeline/build';
 import { runProductionBuild } from '../../src/pipeline/run-build-cli';
 import type { RegionBundle } from '../../src/publish/region-bundle';
 import {
@@ -148,6 +148,31 @@ function assertBuild(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
+// ------------------------------------ slice-04 hourly projection input --
+//
+// Distinct values on every row and factor, so a projection that reused one
+// hour's record for another, or swapped two points, cannot pass by accident.
+// Rows are already ascending by instant, which is the order the published
+// projection owes; index alignment below therefore has meaning.
+
+const PROJECTION_TIMEZONE = 'America/Panama';
+const PROJECTION_DAYS: readonly [string, string] = [TODAY, TOMORROW];
+
+const PROJECTION_ROWS = [TODAY, TOMORROW].flatMap((date, dayIndex) => (
+  ['12', '15', '18', '21'].map((utcHour, hourIndex) => {
+    const step = (dayIndex * 4 + hourIndex) / 100;
+    return {
+      valid_ts: `${date}T${utcHour}:00Z`,
+      sub: {
+        dir: 0.11 + step,
+        size: 0.31 + step,
+        wind: hourIndex === 3 ? null : 0.51 + step,
+        tide: hourIndex === 3 ? null : 0.71 + step,
+      } as ScoreResult['sub'],
+    };
+  })
+));
+
 describe('runProductionBuild (the missing production caller for runBuildOnce)', () => {
   let predictionsRoot: string;
   let workDir: string;
@@ -278,6 +303,44 @@ describe('runProductionBuild (the missing production caller for runBuildOnce)', 
       expect(Object.hasOwn(row, 'counterfactual_score_q')).toBe(false);
       expect(Object.hasOwn(row, 'counterfactual_suppression')).toBe(false);
     }
+  });
+
+  // Slice-04, step 04-02. The projection is a pure re-addressing of scored
+  // hours, so one hour's score moving may not disturb another hour, another
+  // factor, or any timestamp. Everything a day summary decides -- ranking,
+  // weakest_link, best_window -- is computed from CallRow fields this
+  // function never receives, which is why they cannot appear here.
+  it('moves exactly one projected sub-score when one scored hour changes, leaving every other hour and stamp untouched', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: PROJECTION_ROWS.length - 1 }),
+        factorArb,
+        fc.integer({ min: 0, max: 100 }),
+        (rowIndex, factor, hundredths) => {
+          const moved = hundredths / 100;
+          const changed = PROJECTION_ROWS.map((row, index) => (
+            index === rowIndex ? { ...row, sub: { ...row.sub, [factor]: moved } } : row
+          ));
+
+          const before = publishedHourlyProjection(PROJECTION_ROWS, PROJECTION_TIMEZONE, PROJECTION_DAYS);
+          const after = publishedHourlyProjection(changed, PROJECTION_TIMEZONE, PROJECTION_DAYS);
+
+          expect(after).toHaveLength(before.length);
+          after.forEach((point, index) => {
+            const original = before[index]!;
+            expect(point.t, 'a sub-score change moved a published local hour').toBe(original.t);
+            if (index !== rowIndex) {
+              expect(point.sub, `hour ${point.t} changed because a different hour did`).toEqual(original.sub);
+              return;
+            }
+            expect(point.sub[factor], 'the changed factor did not reach its own point').toBe(moved);
+            for (const untouched of FACTORS.filter((candidate) => candidate !== factor)) {
+              expect(point.sub[untouched], `${untouched} moved when only ${factor} changed`).toBe(original.sub[untouched]);
+            }
+          });
+        },
+      ),
+    );
   });
 
   it('carries only the selected factor score, regardless of unselected factor changes', () => {

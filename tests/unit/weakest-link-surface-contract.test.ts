@@ -32,9 +32,13 @@ import {
   type SurfaceCall,
 } from '../../src/publish/static-surface';
 import {
+  breakdownCompatibilityGapEvent,
+  resolveBestWindowBreakdown,
   resolveCounterfactual,
   resolveWeakestLink,
+  type BreakdownUnavailableReason,
   type CounterfactualReading,
+  type SurfaceDayIndex,
   type WeakestLinkReading,
 } from '../../src/publish/weakest-link';
 
@@ -872,6 +876,451 @@ describe('resolveCounterfactual: one published counterfactual state for one spot
           assert.deepEqual(surface, before, 'counterfactual reader changed the published rows it only reads');
         },
       ),
+    );
+  });
+});
+
+// ------------------------------------------- hourly best-window seam --
+//
+// Slice-04, step 04-01: `spot_detail` gains the already-scored two-day
+// hourly projection that the best-window breakdown will read. WIRE
+// CONTRACT ONLY. Populating it is 04-02's producer edit and selecting one
+// point from it is 04-03's reader; neither is asserted here.
+//
+// THE DISTINCTION THIS STEP MUST NOT COLLAPSE, again: a spot_detail entry
+// with NO `hourly` key is a surface published before this field existed and
+// degrades by omitting bars. A present `hourly` is a fresh projection and
+// must be well formed all the way down, because a malformed fresh point is
+// a producer-contract error, never material a page may turn into plausible
+// bars. That is why an empty array is refused rather than read as "legacy":
+// the two facts would otherwise render identically while meaning opposite
+// things.
+//
+// `t` is the PRECOMPUTED spot-local timestamp with a numeric offset. A `Z`
+// instant is refused on purpose: accepting one would push the local-hour
+// decision into whoever reads it, which is exactly the browser time-zone
+// calculation this product forbids.
+
+type HourlySubRecord = {
+  readonly dir: number;
+  readonly size: number;
+  readonly wind: number | null;
+  readonly tide: number | null;
+};
+
+type SpotDetailEntry = { readonly name: string; readonly hourly?: readonly unknown[] };
+
+const rawScoreArb = fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true });
+const nullableRawScoreArb = fc.oneof(rawScoreArb, fc.constant(null));
+const subArb: fc.Arbitrary<HourlySubRecord> = fc.record({
+  dir: rawScoreArb,
+  size: rawScoreArb,
+  wind: nullableRawScoreArb,
+  tide: nullableRawScoreArb,
+});
+
+/** The published local wall clock for one scored hour, offset and all. */
+function localHourStamp(civil: string, hour: number): string {
+  return `${civil}T${String(hour).padStart(2, '0')}:00:00-05:00`;
+}
+
+/**
+ * A two-day projection, one point per generated hour on each published civil
+ * day. Every record is rebuilt as a plain object: a published surface is JSON
+ * on disk, and comparing a generator's null-prototype record against a parsed
+ * one measures fast-check, not the wire.
+ */
+function twoDayProjection(surfDate: string, subs: readonly HourlySubRecord[]): readonly unknown[] {
+  const tomorrowDate = nextCivilDate(surfDate);
+  return subs.flatMap((sub, index) => {
+    const plain = { dir: sub.dir, size: sub.size, wind: sub.wind, tide: sub.tide };
+    return [
+      { t: localHourStamp(surfDate, index), sub: plain },
+      { t: localHourStamp(tomorrowDate, index), sub: plain },
+    ];
+  });
+}
+
+function surfaceWithSpotDetail(
+  surfDate: string,
+  spotDetail: Readonly<Record<string, SpotDetailEntry>>,
+): unknown {
+  const tomorrowDate = nextCivilDate(surfDate);
+  const today = [baseCall('playa-0', 10, 'hoy')];
+  const tomorrow = [baseCall('playa-0', 40, 'mañana')];
+  return {
+    schema: 'published-surface-update/v1',
+    surf_date: surfDate,
+    published_at: `${surfDate}T11:00:00.000Z`,
+    build_kind: 'dawn',
+    calls: today,
+    days: [
+      { date: surfDate, spots: today },
+      { date: tomorrowDate, spots: tomorrow },
+    ],
+    spot_detail: spotDetail,
+  };
+}
+
+/** How a downstream reader must be able to tell the two absences apart. */
+function readHourlyPresence(detail: SpotDetailEntry): 'legacy-omitted' | 'projected' {
+  return withoutOwnKey(detail as unknown as Record<string, unknown>, 'hourly') ? 'legacy-omitted' : 'projected';
+}
+
+type MalformedProjection =
+  | 'empty-array'
+  | 'not-an-array'
+  | 'utc-instant'
+  | 'offsetless-stamp'
+  | 'day-outside-horizon'
+  | 'extra-point-key'
+  | 'missing-sub'
+  | 'extra-sub-key'
+  | 'missing-sub-key'
+  | 'null-dir'
+  | 'null-size'
+  | 'sub-above-one'
+  | 'sub-below-zero'
+  | 'sub-not-finite'
+  | 'sub-not-a-number'
+  | 'detail-without-name';
+
+const SOUND_SUB: HourlySubRecord = { dir: 0.8, size: 0.6, wind: null, tide: 0.4 };
+
+function malformedSpotDetail(kind: MalformedProjection, surfDate: string): Readonly<Record<string, SpotDetailEntry>> {
+  const sound = { t: localHourStamp(surfDate, 6), sub: SOUND_SUB };
+  const broken: Readonly<Record<MalformedProjection, SpotDetailEntry>> = {
+    'empty-array': { name: 'Playa Cero', hourly: [] },
+    'not-an-array': { name: 'Playa Cero', hourly: { '0': sound } as unknown as readonly unknown[] },
+    'utc-instant': { name: 'Playa Cero', hourly: [{ t: `${surfDate}T11:00:00Z`, sub: SOUND_SUB }] },
+    'offsetless-stamp': { name: 'Playa Cero', hourly: [{ t: `${surfDate}T11:00:00`, sub: SOUND_SUB }] },
+    'day-outside-horizon': { name: 'Playa Cero', hourly: [{ t: localHourStamp(nextCivilDate(nextCivilDate(surfDate)), 6), sub: SOUND_SUB }] },
+    'extra-point-key': { name: 'Playa Cero', hourly: [{ ...sound, wind_kt: 12 }] },
+    'missing-sub': { name: 'Playa Cero', hourly: [{ t: sound.t }] },
+    'extra-sub-key': { name: 'Playa Cero', hourly: [{ t: sound.t, sub: { ...SOUND_SUB, total: 0.5 } }] },
+    'missing-sub-key': { name: 'Playa Cero', hourly: [{ t: sound.t, sub: { dir: 0.8, size: 0.6, wind: null } }] },
+    'null-dir': { name: 'Playa Cero', hourly: [{ t: sound.t, sub: { ...SOUND_SUB, dir: null } }] },
+    'null-size': { name: 'Playa Cero', hourly: [{ t: sound.t, sub: { ...SOUND_SUB, size: null } }] },
+    'sub-above-one': { name: 'Playa Cero', hourly: [{ t: sound.t, sub: { ...SOUND_SUB, tide: 1.01 } }] },
+    'sub-below-zero': { name: 'Playa Cero', hourly: [{ t: sound.t, sub: { ...SOUND_SUB, wind: -0.01 } }] },
+    'sub-not-finite': { name: 'Playa Cero', hourly: [{ t: sound.t, sub: { ...SOUND_SUB, dir: Number.POSITIVE_INFINITY } }] },
+    'sub-not-a-number': { name: 'Playa Cero', hourly: [{ t: sound.t, sub: { ...SOUND_SUB, size: '0.6' } }] },
+    'detail-without-name': { hourly: [sound] } as unknown as SpotDetailEntry,
+  };
+  return { 'playa-0': broken[kind] };
+}
+
+describe('SurfaceSpotDetail.hourly: the already-scored two-day projection behind the best-window bars', () => {
+  it('accepts a fresh two-day projection beside a legacy detail and keeps every score, null and absence readable on the wire', () => {
+    fc.assert(
+      fc.property(
+        dayOffsetArb,
+        fc.array(subArb, { minLength: 1, maxLength: 6 }),
+        (dayOffset, subs) => {
+          const surfDate = civilDate(dayOffset);
+          const projected = twoDayProjection(surfDate, subs);
+          const supplied = surfaceWithSpotDetail(surfDate, {
+            'playa-0': { name: 'Playa Cero', hourly: projected },
+            'playa-legada': { name: 'Playa Legada' },
+          });
+
+          const outcome = tryValidate(supplied);
+          assert.ok(!outcome.threw, outcome.threw ? outcome.message : 'a well-formed two-day projection must validate');
+
+          // The reading surface is a committed JSON file; the round trip is
+          // the real transport, not a stand-in.
+          const onTheWire = JSON.parse(JSON.stringify(outcome.value)) as {
+            spot_detail: Record<string, SpotDetailEntry>;
+          };
+          const fresh = onTheWire.spot_detail['playa-0'];
+          const legacy = onTheWire.spot_detail['playa-legada'];
+          assert.ok(fresh && legacy, 'validation dropped a spot_detail entry it only reads');
+
+          assert.equal(readHourlyPresence(fresh), 'projected', 'a fresh projection must survive the wire as a present key');
+          assert.equal(readHourlyPresence(legacy), 'legacy-omitted', 'a legacy detail must keep NO hourly key, never an empty one');
+          assert.deepEqual(fresh.hourly, projected, 'the projection changed shape, value or null between publish and read');
+        },
+      ),
+    );
+  });
+
+  it('refuses a fresh projection that is empty, browser-timed, off-horizon, over-wide or not a finite raw score', () => {
+    fc.assert(
+      fc.property(
+        dayOffsetArb,
+        fc.constantFrom<MalformedProjection>(
+          'empty-array', 'not-an-array', 'utc-instant', 'offsetless-stamp', 'day-outside-horizon',
+          'extra-point-key', 'missing-sub', 'extra-sub-key', 'missing-sub-key', 'null-dir',
+          'null-size', 'sub-above-one', 'sub-below-zero', 'sub-not-finite', 'sub-not-a-number',
+          'detail-without-name',
+        ),
+        (dayOffset, kind) => {
+          const surfDate = civilDate(dayOffset);
+          const supplied = surfaceWithSpotDetail(surfDate, malformedSpotDetail(kind, surfDate));
+          const before = structuredClone(supplied);
+
+          const outcome = tryValidate(supplied);
+
+          assert.ok(outcome.threw, `a "${kind}" projection reached a page instead of being refused at publish time`);
+          assert.deepEqual(supplied, before, 'the validator mutated the surface it only inspects');
+        },
+      ),
+    );
+  });
+});
+
+// ------------------------------------------ best-window hour reader --
+//
+// Slice-04, step 04-03: given ONE spot and ONE day, return the four raw
+// sub-scores of the single already-scored hour that day's published
+// `best_window` starts in.
+//
+// It is a lookup, not a decision. The reader never averages two hours,
+// never interpolates, never re-scores, never picks the lowest factor, never
+// falls back to a neighbouring hour, and never converts a time zone: the
+// hour it compares was precomputed by the producer and travels on the point
+// itself. Selecting WHICH factor is to blame stays with the published
+// `weakest_link` (resolveWeakestLink), which this reader does not touch.
+//
+// The unavailable reasons are deliberately not one reason. A day with no
+// window is the accepted normal omission; a surface published before the
+// projection existed is a backward-compatibility gap the caller logs once;
+// a fresh projection that cannot answer for its own published hour is a
+// producer-contract error and must never be disguised as either.
+
+type BreakdownFixtureDay = {
+  readonly windowStart?: string;
+  readonly hours: readonly { readonly hhmm: string; readonly sub: HourlySubRecord }[];
+};
+
+const DISTINCT_SUBS: readonly HourlySubRecord[] = [
+  { dir: 0.11, size: 0.21, wind: 0.31, tide: 0.41 },
+  { dir: 0.12, size: 0.22, wind: null, tide: 0.42 },
+  { dir: 0.13, size: 0.23, wind: 0.33, tide: null },
+  { dir: 0.14, size: 0.24, wind: null, tide: null },
+  { dir: 0.15, size: 0.25, wind: 0.35, tide: 0.45 },
+];
+
+function plainSub(sub: HourlySubRecord): HourlySubRecord {
+  return { dir: sub.dir, size: sub.size, wind: sub.wind, tide: sub.tide };
+}
+
+function breakdownRow(spotId: string, scoreQ: number, label: string, windowStart: string | undefined): SurfaceCall {
+  const base = baseCall(spotId, scoreQ, label);
+  return windowStart === undefined
+    ? base
+    : { ...base, best_window: { start: windowStart, end: '18:00' } };
+}
+
+/**
+ * Two spots x two days, each with its own hours and its own window, so a
+ * reader that reached for a neighbouring spot, the other day, or another
+ * hour reads a value that belongs to somebody else and is caught.
+ */
+function breakdownSurface(
+  surfDate: string,
+  plan: Readonly<Record<string, { readonly today: BreakdownFixtureDay; readonly tomorrow: BreakdownFixtureDay }>>,
+  options: { readonly omitHourly?: readonly string[] } = {},
+): PublishedSurfaceUpdate {
+  const tomorrowDate = nextCivilDate(surfDate);
+  const spotIdList = Object.keys(plan);
+  const calls = spotIdList.map((spotId, index) => breakdownRow(spotId, 10 + index, 'hoy', plan[spotId]!.today.windowStart));
+  const tomorrowSpots = spotIdList.map((spotId, index) => breakdownRow(spotId, 40 + index, 'mañana', plan[spotId]!.tomorrow.windowStart));
+  const spot_detail = Object.fromEntries(spotIdList.map((spotId) => {
+    const detail = { name: `Playa ${spotId}` };
+    if (options.omitHourly?.includes(spotId) === true) return [spotId, detail];
+    const hourly = [
+      ...plan[spotId]!.today.hours.map((hour) => ({ t: `${surfDate}T${hour.hhmm}:00-05:00`, sub: plainSub(hour.sub) })),
+      ...plan[spotId]!.tomorrow.hours.map((hour) => ({ t: `${tomorrowDate}T${hour.hhmm}:00-05:00`, sub: plainSub(hour.sub) })),
+    ];
+    return [spotId, { ...detail, ...(hourly.length === 0 ? {} : { hourly }) }];
+  }));
+  return {
+    schema: 'published-surface-update/v1',
+    surf_date: surfDate,
+    published_at: `${surfDate}T11:00:00.000Z`,
+    build_kind: 'dawn',
+    calls,
+    days: [
+      { date: surfDate, spots: calls },
+      { date: tomorrowDate, spots: tomorrowSpots },
+    ],
+    spot_detail,
+  } as PublishedSurfaceUpdate;
+}
+
+const HOUR_LABELS = ['06', '09', '13', '16'] as const;
+
+function fixtureDay(windowHourIndex: number | undefined, subOffset: number): BreakdownFixtureDay {
+  const hours = HOUR_LABELS.map((hour, index) => ({
+    hhmm: `${hour}:00`,
+    sub: DISTINCT_SUBS[(index + subOffset) % DISTINCT_SUBS.length]!,
+  }));
+  return windowHourIndex === undefined
+    ? { hours }
+    : { windowStart: `${HOUR_LABELS[windowHourIndex]!}:00`, hours };
+}
+
+describe('resolveBestWindowBreakdown: the four raw scores of the hour a day\'s window starts in', () => {
+  it('returns exactly that spot, that day and that published hour, keeping every missing observation null', () => {
+    fc.assert(
+      fc.property(
+        dayOffsetArb,
+        fc.integer({ min: 0, max: HOUR_LABELS.length - 1 }),
+        fc.integer({ min: 0, max: HOUR_LABELS.length - 1 }),
+        fc.integer({ min: 0, max: DISTINCT_SUBS.length - 1 }),
+        (dayOffset, todayHourIndex, tomorrowHourIndex, subOffset) => {
+          const surfDate = civilDate(dayOffset);
+          const surface = breakdownSurface(surfDate, {
+            'playa-elegida': {
+              today: fixtureDay(todayHourIndex, subOffset),
+              tomorrow: fixtureDay(tomorrowHourIndex, subOffset + 1),
+            },
+            // A neighbour whose every hour and window differ, so borrowing
+            // from it is visible rather than coincidentally equal.
+            'playa-vecina': {
+              today: fixtureDay((todayHourIndex + 1) % HOUR_LABELS.length, subOffset + 2),
+              tomorrow: fixtureDay((tomorrowHourIndex + 1) % HOUR_LABELS.length, subOffset + 3),
+            },
+          });
+          const validated = assertStrictTwoDayUpdate(surface);
+          const before = structuredClone(validated);
+
+          for (const [day, hourIndex, offset] of [[0, todayHourIndex, subOffset], [1, tomorrowHourIndex, subOffset + 1]] as const) {
+            const expected = DISTINCT_SUBS[(hourIndex + offset) % DISTINCT_SUBS.length]!;
+            assert.deepEqual(
+              resolveBestWindowBreakdown(validated, 'playa-elegida', day as SurfaceDayIndex),
+              { kind: 'available', sub: plainSub(expected) },
+              `day ${day}: the breakdown must be the sub-scores of the hour this day's own window starts in, for this spot only`,
+            );
+          }
+
+          assert.deepEqual(validated, before, 'the breakdown reader changed the published surface it only reads');
+        },
+      ),
+    );
+  });
+
+  it('names why a breakdown is unavailable instead of inventing a factor value', () => {
+    const surfDate = civilDate(0);
+    const soundDay = fixtureDay(1, 0);
+
+    const noWindow = assertStrictTwoDayUpdate(breakdownSurface(surfDate, {
+      'playa-elegida': { today: fixtureDay(undefined, 0), tomorrow: soundDay },
+    }));
+    assert.deepEqual(
+      resolveBestWindowBreakdown(noWindow, 'playa-elegida', 0),
+      { kind: 'unavailable', reason: 'no_best_window' },
+      'a day that published no window has nothing to explain; that is the accepted normal omission, not a fault',
+    );
+    assert.deepEqual(
+      resolveBestWindowBreakdown(noWindow, 'playa-ausente', 0),
+      { kind: 'unavailable', reason: 'no_best_window' },
+      'a spot with no row on that day publishes no window either',
+    );
+
+    const legacy = assertStrictTwoDayUpdate(breakdownSurface(surfDate, {
+      'playa-elegida': { today: soundDay, tomorrow: soundDay },
+    }, { omitHourly: ['playa-elegida'] }));
+    assert.deepEqual(
+      resolveBestWindowBreakdown(legacy, 'playa-elegida', 0),
+      { kind: 'unavailable', reason: 'legacy_hourly_missing' },
+      'a surface published before the projection existed is a compatibility gap the caller logs once, never a producer fault',
+    );
+
+    // A fresh projection that cannot answer for the hour it published is a
+    // producer-contract error. It must not borrow the legacy reason, which
+    // would file a real defect as an old surface.
+    const unprojectedHour = assertStrictTwoDayUpdate(breakdownSurface(surfDate, {
+      'playa-elegida': {
+        today: { windowStart: '11:00', hours: soundDay.hours },
+        tomorrow: soundDay,
+      },
+    }));
+    assert.deepEqual(
+      resolveBestWindowBreakdown(unprojectedHour, 'playa-elegida', 0),
+      { kind: 'unavailable', reason: 'hour_not_projected' },
+      'a published window hour with no scored point must refuse, never slide to the nearest hour',
+    );
+
+    const duplicated = breakdownSurface(surfDate, {
+      'playa-elegida': {
+        today: { windowStart: '06:00', hours: [{ hhmm: '06:00', sub: DISTINCT_SUBS[0]! }, { hhmm: '06:30', sub: DISTINCT_SUBS[1]! }] },
+        tomorrow: soundDay,
+      },
+    });
+    assert.deepEqual(
+      resolveBestWindowBreakdown(assertStrictTwoDayUpdate(duplicated), 'playa-elegida', 0),
+      { kind: 'unavailable', reason: 'hour_duplicated' },
+      'two points inside one published hour give no single honest answer; picking either would be a choice the producer never made',
+    );
+
+    // Cast, not built: a malformed sub cannot pass the strict validator, and
+    // this reader must still be total for a surface that reached it by a
+    // JSON.parse and a type assertion.
+    const malformed = JSON.parse(JSON.stringify(breakdownSurface(surfDate, {
+      'playa-elegida': { today: { windowStart: '06:00', hours: [{ hhmm: '06:00', sub: DISTINCT_SUBS[0]! }] }, tomorrow: soundDay },
+    }))) as { spot_detail: Record<string, { hourly: { sub: Record<string, unknown> }[] }> };
+    malformed.spot_detail['playa-elegida']!.hourly[0]!.sub = { dir: 0.1, size: 'alto', wind: null, tide: 0.4 };
+    assert.deepEqual(
+      resolveBestWindowBreakdown(malformed as unknown as PublishedSurfaceUpdate, 'playa-elegida', 0),
+      { kind: 'unavailable', reason: 'malformed_point' },
+      'a malformed point is refused whole; no page may read three good bars and one invented one',
+    );
+  });
+});
+
+// ------------------------------ the legacy-projection compatibility gap --
+//
+// Slice-04, step 04-04. Exactly ONE of the five unavailable reasons is a
+// compatibility gap worth recording: a surface published before the hourly
+// projection existed. Recording any of the others would file a producer
+// defect as an old surface and hide the only signal that the build is
+// wrong; recording the normal no-window day would cry wolf twenty times a
+// morning.
+//
+// This is a build-side record. It is a value here, written by the publish
+// -time renderer, and it never becomes a browser beacon, metric, endpoint
+// or fetch.
+
+describe('breakdownCompatibilityGapEvent: the one absence the build records', () => {
+  it('records only a legacy projection absence, naming the spot, the day and the publish stamp', () => {
+    fc.assert(
+      fc.property(
+        fc.constantFrom<BreakdownUnavailableReason>('no_best_window', 'legacy_hourly_missing', 'hour_not_projected', 'hour_duplicated', 'malformed_point'),
+        fc.constantFrom<SurfaceDayIndex>(0, 1),
+        fc.string({ minLength: 1, maxLength: 24 }).filter((value) => value.trim().length > 0),
+        dayOffsetArb,
+        (reason, day, spotId, dayOffset) => {
+          const publishedAt = `${civilDate(dayOffset)}T11:00:00.000Z`;
+
+          assert.deepEqual(
+            breakdownCompatibilityGapEvent({ kind: 'unavailable', reason }, spotId, day, publishedAt),
+            reason === 'legacy_hourly_missing'
+              ? {
+                event: 'health.publish.breakdown_hourly_missing',
+                spot_id: spotId,
+                day: day === 0 ? 'today' : 'tomorrow',
+                published_at: publishedAt,
+              }
+              : null,
+            `"${reason}" must ${reason === 'legacy_hourly_missing' ? 'be recorded once with its spot, day and stamp' : 'record nothing: it is either a normal omission or a producer fault, and neither is a compatibility gap'}`,
+          );
+        },
+      ),
+    );
+  });
+
+  it('records nothing for a day whose breakdown was available', () => {
+    assert.equal(
+      breakdownCompatibilityGapEvent(
+        { kind: 'available', sub: { dir: 0.8, size: 0.7, wind: null, tide: 0.5 } },
+        'playa-elegida',
+        0,
+        '2026-08-09T11:00:00.000Z',
+      ),
+      null,
+      'a day that showed its four rows has no compatibility gap to record, missing observations included',
     );
   });
 });

@@ -1,0 +1,112 @@
+---
+// WHY-NEW-FILE: src/components/StaticMap.astro
+//   CLOSEST-EXISTING: src/components/Breakdown.astro
+//   EXTENSION-COST: Breakdown mounts once per DAY SECTION and reads that day's
+//     own published hour. The map is one per SPOT and has no day at all.
+//     Extending it would mean a component that renders twice on a page while one
+//     of its two halves must render once, which is the mount bug this slice
+//     cannot afford.
+//   PARALLEL-RATIONALE: incompatible interface. Breakdown's props are
+//     (spotId, day) and every line of it is keyed on `day`; this takes no day
+//     and returns a figure, not a list. They also read different artefacts: one
+//     the republished morning, the other a manifest that changes only when a
+//     source or the seed changes.
+//
+// The static break map: one lazily loaded, pre-rendered diagram per spot, its
+// visible credit, and nothing else.
+//
+// WHAT ARRIVES IN THE BROWSER: an <img> and a caption. No fetch, no map library,
+// no control, no token, no coordinate arithmetic, no orientation derivation, no
+// script of any kind. Everything this figure says was decided at build time by
+// scripts/generate-static-maps.ts and recorded in the manifest imported below.
+//
+// SPACE IS RESERVED BEFORE THE IMAGE ARRIVES. The frame carries the asset's own
+// aspect ratio, so a lazy image that arrives late, arrives slowly, or never
+// arrives at all costs the page zero layout shift. When it cannot load, the
+// browser's own alt-text rendering stays inside that same sunken frame: that is
+// the settled degrade surface, and it is why there is no spinner, no skeleton
+// and no JavaScript fallback here.
+//
+// A SPOT WITH NO APPROVED ASSET RENDERS NOTHING. Not an empty figure, not a
+// placeholder, not a grey box with a shrug. Two launch beaches carry no citable
+// orientation and the manifest refuses them by name; on their pages the map
+// simply does not exist, the same way a day with no published culprit renders no
+// culprit element.
+//
+// THE STYLE BLOCK IS SCOPED, NOT components.css, AND THAT IS A BUDGET DECISION
+// (the same one Breakdown.astro and WeakestLink.astro recorded): Base.astro
+// inlines components.css into EVERY document, including /spots/{slug}/reportado,
+// which has tens of bytes of headroom against a 4 KB ceiling. `npm run budget`
+// decides this, not a preference.
+import manifest from '../../data/maps/pa-pacific-map-manifest.json';
+import { strings, type Locale } from '../i18n/strings';
+
+interface Props {
+  locale: Locale;
+  spotId: string;
+  spotName: string;
+}
+
+type MapRow = {
+  readonly path: string;
+  readonly width: number;
+  readonly height: number;
+  readonly caption: string;
+};
+
+const { locale, spotId, spotName } = Astro.props;
+const t = strings[locale];
+const row: MapRow | undefined = (manifest.spots as Record<string, MapRow | undefined>)[spotId];
+---
+
+{
+  row === undefined ? null : (
+    <figure class="static-map" data-field="static-map">
+      <div class="img-frame" style={`aspect-ratio:${row.width} / ${row.height}`}>
+        <img
+          src={row.path}
+          width={row.width}
+          height={row.height}
+          loading="lazy"
+          decoding="async"
+          alt={t.spot.mapAlt(spotName)}
+        />
+      </div>
+      <figcaption>{row.caption}</figcaption>
+    </figure>
+  )
+}
+
+<style>
+  .static-map {
+    margin: var(--sp-4) 0 0;
+  }
+
+  /* Space reserved via aspect-ratio, zero CLS; the alt text renders readable
+     on --sunken while the image is loading, or when it never arrives. */
+  .static-map .img-frame {
+    display: flex;
+    align-items: center;
+    overflow: hidden;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-m);
+    background: var(--sunken);
+    color: var(--ink);
+    font-size: var(--text-meta);
+    line-height: 1.45;
+  }
+
+  .static-map .img-frame img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  .static-map figcaption {
+    margin-top: var(--sp-2);
+    color: var(--ink-2);
+    font-size: var(--text-meta);
+    font-weight: 500;
+    line-height: 1.45;
+  }
+</style>

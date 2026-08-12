@@ -1,0 +1,145 @@
+---
+// WHY-NEW-FILE: src/components/Breakdown.astro
+//   CLOSEST-EXISTING: src/components/WeakestLink.astro
+//   EXTENSION-COST: WeakestLink.astro renders ONE sentence from a three-way
+//     tagged reading and renders nothing for both of its silent cases. The
+//     breakdown renders four list rows from a different reading, with its own
+//     five-way unavailable taxonomy and its own per-row absent/scored split;
+//     folding it in would give one component two unrelated markup contracts
+//     and two unrelated silence rules behind one name, and the acceptance
+//     oracle for each ("no element at this selector") would start matching
+//     the other one's element.
+//   PARALLEL-RATIONALE: the two are mounted independently and go silent for
+//     DIFFERENT reasons on the same day -- a clean day hides the sentence but
+//     still shows its four bars, and a legacy surface hides the bars while the
+//     sentence still names the culprit. One file cannot hold two silence
+//     rules that disagree without a flag deciding which is in force, which is
+//     precisely the shape this codebase models with types instead.
+//
+// The four already-scored factors behind one day's best window: direction,
+// size, wind and tide, in the engine's own fixed order, taken from the single
+// published hour that day's window starts in (04-03's reader) and worded by
+// 04-04's formatter. This component performs no lookup, no arithmetic, no
+// selection and no time-zone work of its own.
+//
+// THE ARROW IS NOT THE SHORTEST BAR. It marks the factor the producer
+// published as `weakest_link`, which is regularly not the lowest of these
+// four numbers, because the engine weights factors before comparing their
+// damage. The row is identified by the arrow glyph AND by the callout
+// sentence beside it, which names the same factor in words, so the callout
+// never rests on colour alone.
+//
+// A MISSING OBSERVATION IS A SENTENCE, NOT A SHORT BAR. An absent row carries
+// no number and no track at all: a zero-width fill reads as "the worst wind
+// on record" rather than "nobody saw the wind this morning".
+//
+// ZERO NEW JAVASCRIPT (adr-publish-time-html-rendering.md): everything here
+// resolves at publish time; nothing ships to the browser.
+//
+// THE STYLE BLOCK BELOW IS SCOPED, NOT components.css, AND THAT IS A BUDGET
+// DECISION RATHER THAN A STYLE ONE. Base.astro inlines components.css into
+// EVERY document, and /spots/{slug}/reportado ships at 4,060 B gz against a
+// 4 KB (4,096 B) ceiling -- thirty-six bytes of headroom. These rules were
+// measured there first: in components.css they put twenty routes over their
+// ceiling and the page-weight gate refused the build. Scoped, they reach
+// only the documents that mount this component, which is the same reason
+// WeakestLink.astro keeps its own block. The shared .bars/.bar/.track/.fill
+// recipe stays in components.css, where the ranked list already consumes it.
+//
+// Rationale lives here and not in an HTML comment beside the block on
+// purpose: an HTML comment is emitted into every spot document, twice, once
+// per day section. Frontmatter is not.
+//
+// Nothing here animates, so no reduced-motion branch is owed.
+import { formatBestWindowBreakdownEs } from '../publish/display-format';
+import { assertStrictTwoDayUpdate } from '../publish/static-surface';
+import {
+  breakdownCompatibilityGapEvent,
+  resolveBestWindowBreakdown,
+  resolveWeakestLink,
+  type SurfaceDayIndex,
+} from '../publish/weakest-link';
+import surface from '../../data/published-surface.json';
+
+interface Props {
+  spotId: string;
+  day: SurfaceDayIndex;
+}
+
+const { spotId, day } = Astro.props;
+const publishedSurface = assertStrictTwoDayUpdate(surface.current);
+const breakdown = resolveBestWindowBreakdown(publishedSurface, spotId, day);
+const display = formatBestWindowBreakdownEs(
+  breakdown,
+  resolveWeakestLink(publishedSurface, spotId, day),
+  day,
+);
+
+// The one absence the build records, and only that one: a surface published
+// before the hourly projection existed. It is written here, at publish time,
+// to this process's own output. No beacon, metric, endpoint or fetch.
+const compatibilityGap = breakdownCompatibilityGapEvent(breakdown, spotId, day, publishedSurface.published_at);
+if (compatibilityGap !== null) {
+  process.stdout.write(`\n${JSON.stringify(compatibilityGap)}\n`);
+}
+---
+
+{display.kind === 'present' && (
+  <ul class="breakdown bars" data-field="breakdown">
+    {display.rows.map((row) => (
+      <li class:list={['bar', { weakest: row.weakest }]} data-factor={row.factor}>
+        {row.kind === 'scored' ? (
+          <>
+            <span class="factor">
+              {row.weakest && <span class="arrow" aria-hidden="true">▸</span>}
+              {row.label}
+            </span>
+            <span class="track"><span class="fill" style={`width:${row.fillPercent}%`}></span></span>
+            <span class="value">{row.value}</span>
+          </>
+        ) : (
+          /* The absence sentence NAMES ITS OWN FACTOR, so rendering the label
+             column beside it reads "Viento / sin dato de viento hoy" -- the
+             same word twice. The sentence takes the whole row instead. The
+             factor is still named in words, which is the property that
+             matters; only the duplication goes. */
+          <span class="absence">
+            {row.weakest && <span class="arrow" aria-hidden="true">▸</span>}
+            {row.absence}
+          </span>
+        )}
+      </li>
+    ))}
+  </ul>
+)}
+
+<style>
+  .breakdown {
+    margin: var(--sp-2) 0 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .breakdown .bar {
+    color: var(--ink);
+    line-height: var(--leading-snug);
+  }
+
+  /* An absent factor has no label column, no track and no number, so its
+     sentence takes the whole row. A gap where the track would sit reads as a
+     bar of length zero, which is the one thing a missing observation is not. */
+  .breakdown .absence {
+    grid-column: 1 / -1;
+    color: var(--ink-2);
+  }
+
+  .breakdown .value {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+
+  .breakdown .arrow {
+    margin-right: var(--sp-1);
+    color: var(--danger);
+  }
+</style>

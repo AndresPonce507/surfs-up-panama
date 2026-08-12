@@ -1,0 +1,20 @@
+{
+  "purpose": "Roles, not spot ids. Slice-05 asserts against the committed manifest, which is the production oracle; this file only names WHICH beach plays each role so a seed or policy change moves one line here instead of rewriting a scenario.",
+  "approved_count": 18,
+  "refused": [
+    {
+      "spot_id": "playa-la-barqueta",
+      "reason": "orientation_attribution_missing"
+    },
+    {
+      "spot_id": "las-lajas",
+      "reason": "orientation_attribution_missing"
+    }
+  ],
+  "roles": {
+    "longest_name": "santa-catalina-la-punta",
+    "faces_its_own_way": "playa-venao",
+    "shares_a_facing_with_others": "playa-malibu",
+    "no_citable_orientation": "playa-la-barqueta"
+  }
+}

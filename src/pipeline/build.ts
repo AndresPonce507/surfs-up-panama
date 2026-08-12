@@ -28,6 +28,7 @@ import type {
   BestWindow,
   ConfidenceReason,
   ConfLevel,
+  HourlySubscorePoint,
   SizeRangeM,
   SurfaceCall,
   WindState,
@@ -152,8 +153,22 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
   // never encode a ranking that disagrees with either day array. Computed
   // once and referenced from both the bundle and the surface below: not a
   // second projection that could disagree with the first, the same object.
+  //
+  // The hourly projection rides here for the same reason: it is day-
+  // independent by construction, because each point states which day it
+  // belongs to on its own face.
   const spot_detail: Readonly<Record<string, BundleSpotDetail>> = Object.fromEntries(
-    spots.map((spot) => [spot.spot_id, { name: spot.name }]),
+    spots.map((spot) => {
+      const hourly = publishedHourlyProjection(
+        calls.filter((call) => call.spot_id === spot.spot_id),
+        spot.timezone,
+        dates,
+      );
+      // A spot with no scored hour inside either published day omits the key
+      // entirely, exactly like a legacy surface. An empty array would be a
+      // third state meaning neither "legacy" nor "here are the hours".
+      return [spot.spot_id, { name: spot.name, ...(hourly.length === 0 ? {} : { hourly }) }];
+    }),
   );
   const bundle: RegionBundle = {
     schema: 'region-bundle/1',
@@ -464,6 +479,66 @@ const BEST_WINDOW_RATIO = 0.8;
 /** The UTC calendar-date prefix of an hourly `valid_ts`, e.g. `2026-08-09`. */
 function civilDatePrefix(validTs: string): string {
   return validTs.slice(0, 10);
+}
+
+/**
+ * `2026-08-09T06:00:00-05:00`. The spot's own wall clock for one scored
+ * instant, offset included, computed HERE so nothing downstream ever has to.
+ *
+ * This is not `civilDatePrefix` with a suffix. That helper reads the UTC
+ * prefix, which is what the rest of this file ranks by; a Panama hour is five
+ * behind, so 00:00Z on a published day is 19:00 the previous evening. The two
+ * groupings genuinely differ and the projection owes the local one.
+ */
+function spotLocalTimestamp(validTs: string, timezone: string): string {
+  const fields = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+    timeZoneName: 'longOffset',
+  }).formatToParts(new Date(validTs));
+  const part = (type: Intl.DateTimeFormatPartTypes): string => fields.find((field) => field.type === type)?.value ?? '';
+  // Intl spells a zero offset plain "GMT"; every other zone reads "GMT-05:00".
+  const offset = part('timeZoneName').replace('GMT', '') || '+00:00';
+  return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}:${part('second')}${offset}`;
+}
+
+/** The producer-side input for one already-scored hour. Nothing else is needed. */
+export type HourlyProjectionRow = Pick<CallRow, 'valid_ts' | 'sub'>;
+
+/**
+ * One spot's already-scored hours, re-addressed by their own spot-local hour
+ * and narrowed to the two civil days this surface publishes.
+ *
+ * A PROJECTION, in the strict sense: every number here was produced by the
+ * scoring core for that exact hour, and this function copies it. It performs
+ * no scoring, no averaging, no interpolation, no substitution of a missing
+ * observation, and it makes no selection -- choosing which hour explains a
+ * day is 04-03's reader, working from the day summary's own published
+ * `best_window`.
+ *
+ * Hours outside the published horizon are DROPPED rather than re-dated. An
+ * hour that is 19:00 the previous Panama evening belongs to a day this
+ * surface does not publish; moving it onto a published day would put a
+ * number under a date that never produced it.
+ */
+export function publishedHourlyProjection(
+  rows: readonly HourlyProjectionRow[],
+  timezone: string,
+  publishedDays: readonly [string, string],
+): readonly HourlySubscorePoint[] {
+  return rows
+    .map((row) => ({
+      t: spotLocalTimestamp(row.valid_ts, timezone),
+      sub: { dir: row.sub.dir, size: row.sub.size, wind: row.sub.wind, tide: row.sub.tide },
+    }))
+    .filter((point) => publishedDays.includes(point.t.slice(0, 10)))
+    .sort((left, right) => left.t.localeCompare(right.t));
 }
 
 /** `06:00`. Spot-local clock time, the same format the published field carries. */

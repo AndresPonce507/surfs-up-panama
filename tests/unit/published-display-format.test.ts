@@ -17,9 +17,24 @@ import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
 import { sizeBands } from '../../src/data/size-bands';
-import { formatBestWindowEs, formatSizeEs, formatWeakestLinkEs } from '../../src/publish/display-format';
+import {
+  formatBestWindowBreakdownEs,
+  formatBestWindowEs,
+  formatSizeEs,
+  formatWeakestLinkEs,
+  type BreakdownFactorRow,
+} from '../../src/publish/display-format';
 import { FACTOR_TOKENS, factorWord } from '../../src/publish/factor-vocab';
-import type { CounterfactualReading, SurfaceDayIndex } from '../../src/publish/weakest-link';
+import type {
+  BestWindowBreakdownReading,
+  CounterfactualReading,
+  SurfaceDayIndex,
+} from '../../src/publish/weakest-link';
+
+/** The row's visible name is the shared vocabulary noun, opened with a capital. */
+function capitalisedNoun(noun: string): string {
+  return `${noun.slice(0, 1).toUpperCase()}${noun.slice(1)}`;
+}
 
 // domain-model.md section 7.2, transcribed. The test owns this table as its
 // oracle so a silent edit of the constants file cannot also edit the expectation.
@@ -254,5 +269,117 @@ describe('published weakest-link display format', () => {
         },
       ),
     );
+  });
+});
+
+// ------------------------------------- the four best-window factor rows --
+//
+// Slice-04, step 04-04. Four rows, always in the engine's own tiebreak
+// order, each showing the number the producer already published for that
+// factor in that hour, or saying plainly that the observation is missing.
+//
+// TWO THINGS THIS FORMATTER MUST NEVER DO, both of which would look right
+// on screen:
+//   - turn a missing observation into a number. A null is not a zero and
+//     not a small bar; it is a sentence.
+//   - let a bar height decide the callout. The weak factor was decided by
+//     the producer and published as `weakest_link`; the lowest of these
+//     four numbers is frequently a different factor, and following it
+//     would be the page re-deciding what killed the day.
+
+const RAW_SCORE = fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true });
+const dayIndexArb = fc.constantFrom<SurfaceDayIndex>(0, 1);
+
+function availableBreakdown(sub: { dir: number; size: number; wind: number | null; tide: number | null }): BestWindowBreakdownReading {
+  return { kind: 'available', sub };
+}
+
+function scoredValue(row: BreakdownFactorRow): number | null {
+  return row.kind === 'scored' ? Number(row.value) : null;
+}
+
+describe('formatBestWindowBreakdownEs: four honest rows for one published hour', () => {
+  it('prints every published value verbatim, states every missing observation, and marks only the published weak factor', () => {
+    fc.assert(
+      fc.property(
+        RAW_SCORE,
+        RAW_SCORE,
+        fc.oneof(RAW_SCORE, fc.constant(null)),
+        fc.oneof(RAW_SCORE, fc.constant(null)),
+        anyWeakestLinkReading,
+        dayIndexArb,
+        (dir, size, wind, tide, weakest, day) => {
+          const sub = { dir, size, wind, tide };
+          const display = formatBestWindowBreakdownEs(availableBreakdown(sub), weakest, day);
+
+          assert.equal(display.kind, 'present', 'a selected hour must produce rows');
+          if (display.kind !== 'present') return;
+
+          assert.deepEqual(
+            display.rows.map((row) => row.factor),
+            [...FACTOR_TOKENS],
+            'the four rows keep the engine\'s own fixed order; a page must not reorder them by size',
+          );
+
+          for (const row of display.rows) {
+            const published = sub[row.factor];
+            assert.equal(row.label, capitalisedNoun(factorWord(row.factor).noun), `${row.factor}: the row must be named with the shared Spanish vocabulary`);
+            if (published === null) {
+              assert.equal(row.kind, 'absent', `${row.factor}: a missing observation must be a stated absence, never a row with a number`);
+              if (row.kind !== 'absent') continue;
+              assert.equal(
+                row.absence,
+                `sin dato de ${factorWord(row.factor).noun} ${day === 0 ? 'hoy' : 'mañana'}`,
+                `${row.factor}: the absence must say which factor and which day, in Spanish`,
+              );
+              assert.ok(!Object.hasOwn(row, 'value') && !Object.hasOwn(row, 'fillPercent'), `${row.factor}: an absent row carries no number and no fill, not even a zero one`);
+              assert.ok(!/\d/u.test(row.absence), `${row.factor}: the absence sentence must carry no digit: "${row.absence}"`);
+              continue;
+            }
+            assert.equal(row.kind, 'scored', `${row.factor}: a published value must render as a scored row`);
+            if (row.kind !== 'scored') continue;
+            assert.equal(row.value, published.toFixed(2), `${row.factor}: the row must print the published value to two places, unaltered`);
+            assert.equal(row.fillPercent, Math.round(published * 100), `${row.factor}: the fill is presentation only and follows the same published value`);
+          }
+
+          const marked = display.rows.filter((row) => row.weakest).map((row) => row.factor);
+          assert.deepEqual(
+            marked,
+            weakest.kind === 'named' ? [weakest.factor] : [],
+            `only the published weakest_link may be marked; got ${JSON.stringify(marked)} for reading ${JSON.stringify(weakest)}`,
+          );
+
+          for (const row of display.rows) {
+            const text = row.kind === 'absent' ? row.absence : row.label;
+            assert.ok(!CODE_LEAK.test(text) && !EM_DASH.test(text) && !DATA_PUNCTUATION.test(text), `${row.factor}: the row leaks technical text: "${text}"`);
+          }
+        },
+      ),
+    );
+  });
+
+  it('never lets the lowest bar take the arrow from the factor the morning published', () => {
+    // tide is the numeric minimum on every one of these hours; wind is what
+    // the producer published as the weakness. This is the substitution the
+    // slice exists to prevent, pinned as an example because it is the exact
+    // shape a reviewer needs to see.
+    const sub = { dir: 0.90, size: 0.80, wind: 0.64, tide: 0.12 };
+    const display = formatBestWindowBreakdownEs(availableBreakdown(sub), { kind: 'named', factor: 'wind' }, 0);
+
+    assert.equal(display.kind, 'present');
+    if (display.kind !== 'present') return;
+    const marked = display.rows.filter((row) => row.weakest);
+    assert.deepEqual(marked.map((row) => row.factor), ['wind'], 'the arrow follows the published weakest_link, not the shortest bar');
+    assert.equal(scoredValue(display.rows.find((row) => row.factor === 'tide')!), 0.12, 'the lower tide stays an ordinary row with its own published value');
+  });
+
+  it('passes an unavailable breakdown through with its own reason and invents no row', () => {
+    for (const reason of ['no_best_window', 'legacy_hourly_missing', 'hour_not_projected', 'hour_duplicated', 'malformed_point'] as const) {
+      assert.deepEqual(
+        formatBestWindowBreakdownEs({ kind: 'unavailable', reason }, { kind: 'named', factor: 'wind' }, 0),
+        { kind: 'unavailable', reason },
+        `"${reason}" must reach the caller as itself: the page decides whether to omit the element, and the build decides whether to log a compatibility gap`,
+      );
+    }
   });
 });
