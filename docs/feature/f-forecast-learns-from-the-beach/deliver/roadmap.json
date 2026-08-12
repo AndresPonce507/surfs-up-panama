@@ -921,7 +921,7 @@
             "src/learning/inputs.ts",
             "tests/unit/learning-weight-laws.test.ts"
           ],
-          "implementation_notes": "FIRST MOVE OF THIS SLICE'S DELIVER: delete its entry from PENDING_SLICES in tests/acceptance/f-forecast-learns-from-the-beach/steps/support/pending-slices.ts (one line). The scenarios are fully authored, step-defined and were proven RED at authoring (distill/red-classification.md, 2026-08-10); the skip marker is the ADR-025 scaffold parking, nothing else. 06 section 6.4 and D3 recommendation (a): git-versioned, human PR only, incident-only — research 15 section 3's recovery story (data poisoning is recoverable in an afternoon by recompute) requires SOME down-weight mechanism, and this is the auditable one that does not violate decision 24, because it touches reporters, never reports. Weight zero must excise cleanly: out of the fit AND out of every gated count (n, distinct reporters, the floor's n), which the byte-identity oracle enforces wholesale. Pre-requisite 6 records Andres's sign-off on the file's existence; the shipped default is the file absent.",
+          "implementation_notes": "FIRST MOVE OF THIS SLICE'S DELIVER: delete its entry from PENDING_SLICES in tests/acceptance/f-forecast-learns-from-the-beach/steps/support/pending-slices.ts (one line). The scenarios are fully authored, step-defined and were proven RED at authoring (distill/red-classification.md, 2026-08-10); the skip marker is the ADR-025 scaffold parking, nothing else. 06 section 6.4 and D3 recommendation (a): git-versioned, human PR only, incident-only \u2014 research 15 section 3's recovery story (data poisoning is recoverable in an afternoon by recompute) requires SOME down-weight mechanism, and this is the auditable one that does not violate decision 24, because it touches reporters, never reports. Weight zero must excise cleanly: out of the fit AND out of every gated count (n, distinct reporters, the floor's n), which the byte-identity oracle enforces wholesale. Pre-requisite 6 records Andres's sign-off on the file's existence; the shipped default is the file absent.",
           "deps": [
             "04-05"
           ]
@@ -945,7 +945,7 @@
             "selection carries per_decile coverage and solicited_share; pairwise carries pairs and target_pairs 400; mae carries both baselines.",
             "The file is operator-facing only: no reader exists at launch and nothing user-facing consumes it."
           ],
-          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/a-bad-month-degrades-to-day-zero-not-to-silently-wrong-numbers.feature",
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/the-monthly-file-watches-every-hazard-the-design-names.test.ts",
           "scenario_name": "The monthly file watches every hazard the design names",
           "slice_id": "slice-05",
           "surface_classification": "non-visual",
@@ -967,12 +967,13 @@
           "id": "05-02",
           "name": "The kill switch, watched killing and sparing",
           "criteria": [
-            "Rolling-origin blocked CV: train weeks one to eight, test nine and ten, system-level, monthly.",
-            "Corrected losing to raw at the majority of gated keys flips applied false on every stored correction until a human looks.",
-            "A month the corrections win leaves every applied flag standing; both verdicts are recorded in the metrics file.",
-            "cv.verdict is corrections-killed or corrections-stay; the flip and the verdict never disagree."
+            "Rolling-origin blocked CV: train weeks one to eight, test nine and ten, system-level, monthly; the judge compares corrected mean absolute error to raw on the held-out block, per gated key (06 s7 G7, adr-correction-gates-and-clamps decision 3).",
+            "RULING 2026-08-12 (wave-decisions.md D-2026-08-12-1): the monthly job is metrics-only. A month the corrections lose at the majority of gated keys publishes cv.verdict corrections-killed INTO the metrics file; the job writes nothing outside learned/metrics/v1/ and every stored correction stays byte-identical.",
+            "The correction-apply lane consumes the latest verdict at load time: while it is corrections-killed, every spot's correction costs the build exactly what no file costs (day zero). corrections-stay, not_evaluated, an absent or unreadable metrics file all leave the per-correction gates as the authority; only an affirmative kill kills.",
+            "A month the corrections win leaves every correction applying; both verdicts are recorded in the metrics file and the outcome's events distinguish a kill month.",
+            "cv.verdict is corrections-killed, corrections-stay or not_evaluated; the apply lane's behaviour and the published verdict never disagree."
           ],
-          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/a-bad-month-degrades-to-day-zero-not-to-silently-wrong-numbers.feature",
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/a-losing-month-switches-the-corrections-off-until-a-human-looks.test.ts",
           "scenario_name": "A month where the corrections lose on held-out mornings switches every one of them off until a human looks",
           "additional_scenarios": [
             "A month where the corrections help leaves them standing, and says so"
@@ -986,11 +987,17 @@
           "files_to_modify": [
             "src/learning/evaluate.ts",
             "src/learning/cross-validation.ts",
-            "tests/unit/learning-cv-laws.test.ts"
+            "src/learning/load-correction.ts",
+            "src/pipeline/build.ts",
+            "tests/unit/learning-cv-laws.test.ts",
+            "tests/unit/learning-load-correction.test.ts"
           ],
-          "implementation_notes": "FIRST MOVE OF THIS SLICE'S DELIVER: delete its entry from PENDING_SLICES in tests/acceptance/f-forecast-learns-from-the-beach/steps/support/pending-slices.ts (one line). The scenarios are fully authored, step-defined and were proven RED at authoring (distill/red-classification.md, 2026-08-10); the skip marker is the ADR-025 scaffold parking, nothing else. Also owns 'A month where the corrections help leaves them standing, and says so' — a switch only ever seen killing proves nothing about its judgment. G7 per 06 section 7 and adr-correction-gates-and-clamps decision 3: deliberately system-level, because per-spot CV at n ~= 10 is noise and would flap. THE COUNTERFACTUAL IS EXACT, NOT RE-SIMULATED: what would have been published without the correction is recomposable from each archived call's own decomposition, law L10 of 05-scoring-engine.md lines 281-296: damage_dir = -ln(S_dir); damage_i = (w_i / sumW) * -ln(S_i) for i in {size, wind, tide}; Q = exp(-(damage_dir + damage_size + damage_wind + damage_tide)). The archived sub-scores are in CallRow.sub, the weights are engine constants, so the raw-vs-corrected comparison needs no engine re-run. Height-side counterfactual is simpler still: raw member heights are the prediction log's own rows. FIXTURES: the losing month's held-out weeks flip the sign of the bias (train -0.22, test +0.22); the winning month keeps it. Kill means EVERY key on EVERY stored current/ record, score delta included.",
+          "implementation_notes": "AMENDED 2026-08-12 by the lane orchestrator under Andres's same-day ruling; the original notes' PENDING_SLICES/.feature mechanics belong to recover/learning-build and do not exist on this base (wave-decisions.md D-2026-08-12-2). Mine recover/learning-build:src/learning/cross-validation.ts (rolling_origin_blocked CV_SCHEME, judgeRollingOriginCorrections; conforms to adr-correction-gates-and-clamps) but replace its |mean(residual)| block-bias comparison with MAE per the ADR letter (D-1 pin 1). The ruled-out mechanism (recover evaluate.ts:36-38 rewriting learned/corrections/v1/current/ in place) must not be ported. Verdict consumption lands at the apply seam: loadStoredCorrections (src/learning/load-correction.ts) reads the latest monthly metrics file (bounded probe: current month's learned/metrics/v1/dt=<YYYY-MM>/metrics.json, else previous month; no list() needed) and, on an affirmative corrections-killed, maps every spot to null -- the same day-zero cost as absent/corrupt files, the loader's own stated contract. The caller (src/pipeline/build.ts) hands the loader the build's clock. THE COUNTERFACTUAL IS EXACT, NOT RE-SIMULATED: height-side raw member heights are the prediction log's own rows; corrected-vs-raw needs no engine re-run. FIXTURES: a losing month = train block earning b=-0.22 then a held-out fortnight where the sign flips; a winning month keeps the held-out agreeing. Score-side counterfactual (law L10 recomposition) stays unbuilt, as on the reference branch; the vote is over gated height keys.",
           "deps": [
             "05-01"
+          ],
+          "additional_scenario_files": [
+            "tests/acceptance/f-forecast-learns-from-the-beach/a-winning-month-leaves-the-corrections-standing.test.ts"
           ]
         },
         {
@@ -1002,7 +1009,7 @@
             "The shipped source, once 05-02 lands, declares the rolling scheme and stays violation-free.",
             "Slice-01's zero-violation and two-rule scenarios stay green untouched."
           ],
-          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/a-bad-month-degrades-to-day-zero-not-to-silently-wrong-numbers.feature",
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/held-out-mornings-stay-forward-of-training.test.ts",
           "scenario_name": "Held-out mornings must stay forward of training, never shuffled with it",
           "slice_id": "slice-05",
           "surface_classification": "non-visual",
@@ -1028,7 +1035,7 @@
             "A month where high-confidence mornings hit less often than low names calibration.offending_term c_spread.",
             "The file names the term for removal; removing it is the scoring lane's edit, routed not performed."
           ],
-          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/a-bad-month-degrades-to-day-zero-not-to-silently-wrong-numbers.feature",
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/a-confidence-level-that-does-not-predict-correctness-is-named.test.ts",
           "scenario_name": "A confidence level that does not predict correctness is named for removal",
           "slice_id": "slice-05",
           "surface_classification": "non-visual",
@@ -1041,7 +1048,7 @@
             "src/learning/metrics.ts",
             "tests/unit/learning-metrics.test.ts"
           ],
-          "implementation_notes": "FIRST MOVE OF THIS SLICE'S DELIVER: delete its entry from PENDING_SLICES in tests/acceptance/f-forecast-learns-from-the-beach/steps/support/pending-slices.ts (one line). The scenarios are fully authored, step-defined and were proven RED at authoring (distill/red-classification.md, 2026-08-10); the skip marker is the ADR-025 scaffold parking, nothing else. This lane owns the confidence kill switch (06 section 10; 09 section 3.6 consequence 3): if high-confidence days are not more often right, the offending term is REMOVED, and C_spread is the first candidate to die — the side 06 section 13 takes on research 09's own contradiction. The monthly file NAMES the removal; the actual removal is 05-scoring-engine's edit (S4 note: scoring must not couple anything else to C_spread's existence), so the metrics file is the routing paper trail. The naive v1 probability is score_q/100, stated as naive in the file.",
+          "implementation_notes": "FIRST MOVE OF THIS SLICE'S DELIVER: delete its entry from PENDING_SLICES in tests/acceptance/f-forecast-learns-from-the-beach/steps/support/pending-slices.ts (one line). The scenarios are fully authored, step-defined and were proven RED at authoring (distill/red-classification.md, 2026-08-10); the skip marker is the ADR-025 scaffold parking, nothing else. This lane owns the confidence kill switch (06 section 10; 09 section 3.6 consequence 3): if high-confidence days are not more often right, the offending term is REMOVED, and C_spread is the first candidate to die \u2014 the side 06 section 13 takes on research 09's own contradiction. The monthly file NAMES the removal; the actual removal is 05-scoring-engine's edit (S4 note: scoring must not couple anything else to C_spread's existence), so the metrics file is the routing paper trail. The naive v1 probability is score_q/100, stated as naive in the file.",
           "deps": [
             "05-03"
           ]
@@ -1054,7 +1061,7 @@
             "A spot with eighty mornings still sixty percent shrunk is flagged true; healthy spots are not.",
             "The flag is an alarm for the operator, never an automatic behaviour change."
           ],
-          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/a-bad-month-degrades-to-day-zero-not-to-silently-wrong-numbers.feature",
+          "test_file": "tests/acceptance/f-forecast-learns-from-the-beach/a-spot-still-mostly-pooled-after-eighty-mornings-is-flagged.test.ts",
           "scenario_name": "A spot still mostly pooled after eighty mornings is flagged as a misconfiguration",
           "slice_id": "slice-05",
           "surface_classification": "non-visual",
@@ -1129,7 +1136,7 @@
             "infra/guardrail-evaluator.mjs",
             "infra/test/guardrails.test.ts"
           ],
-          "implementation_notes": "FIRST MOVE OF THIS SLICE'S DELIVER: delete its entry from PENDING_SLICES in tests/acceptance/f-forecast-learns-from-the-beach/steps/support/pending-slices.ts (one line). The scenarios are fully authored, step-defined and were proven RED at authoring (distill/red-classification.md, 2026-08-10); the skip marker is the ADR-025 scaffold parking, nothing else. Extends the production evaluator the same way F-BILL's slices did (their bill-and-uptime-guardrails.steps.ts is the mechanical precedent; this feature's learning-infra.steps.ts mirrors it). A green result must NAME what it protected — the two nightly shelves, the metrics shelf, predictions/ in the denied complement, both schedules — because a bare success is indistinguishable from a check that never ran. The real-repo scenario runs the actual infra job read-only; budget its runtime, the step timeout in the AT is 120 s.",
+          "implementation_notes": "FIRST MOVE OF THIS SLICE'S DELIVER: delete its entry from PENDING_SLICES in tests/acceptance/f-forecast-learns-from-the-beach/steps/support/pending-slices.ts (one line). The scenarios are fully authored, step-defined and were proven RED at authoring (distill/red-classification.md, 2026-08-10); the skip marker is the ADR-025 scaffold parking, nothing else. Extends the production evaluator the same way F-BILL's slices did (their bill-and-uptime-guardrails.steps.ts is the mechanical precedent; this feature's learning-infra.steps.ts mirrors it). A green result must NAME what it protected \u2014 the two nightly shelves, the metrics shelf, predictions/ in the denied complement, both schedules \u2014 because a bare success is indistinguishable from a check that never ran. The real-repo scenario runs the actual infra job read-only; budget its runtime, the step timeout in the AT is 120 s.",
           "deps": [
             "06-01"
           ]
@@ -1159,7 +1166,7 @@
             "infra/guardrail-evaluator.mjs",
             "infra/test/guardrails.test.ts"
           ],
-          "implementation_notes": "FIRST MOVE OF THIS SLICE'S DELIVER: delete its entry from PENDING_SLICES in tests/acceptance/f-forecast-learns-from-the-beach/steps/support/pending-slices.ts (one line). The scenarios are fully authored, step-defined and were proven RED at authoring (distill/red-classification.md, 2026-08-10); the skip marker is the ADR-025 scaffold parking, nothing else. Also owns 'A contained declaration with no nightly clock at all is rejected' and 'A contained declaration letting the monthly evaluation rewrite corrections is rejected'. The learning evaluation must run BEFORE the vitest/synth phases (the F-BILL evaluator's placement), so a bare fixture copy with no node_modules is rejected on the learning regression, fast and by name — the fixture scenarios rely on that ordering. Rejections name the witness and the observed value; a generic 'IAM invalid' fails the oracles.",
+          "implementation_notes": "FIRST MOVE OF THIS SLICE'S DELIVER: delete its entry from PENDING_SLICES in tests/acceptance/f-forecast-learns-from-the-beach/steps/support/pending-slices.ts (one line). The scenarios are fully authored, step-defined and were proven RED at authoring (distill/red-classification.md, 2026-08-10); the skip marker is the ADR-025 scaffold parking, nothing else. Also owns 'A contained declaration with no nightly clock at all is rejected' and 'A contained declaration letting the monthly evaluation rewrite corrections is rejected'. The learning evaluation must run BEFORE the vitest/synth phases (the F-BILL evaluator's placement), so a bare fixture copy with no node_modules is rejected on the learning regression, fast and by name \u2014 the fixture scenarios rely on that ordering. Rejections name the witness and the observed value; a generic 'IAM invalid' fails the oracles.",
           "deps": [
             "06-02"
           ]
@@ -1184,7 +1191,7 @@
           "files_to_modify": [
             "infra/lib/learning-stack.ts"
           ],
-          "implementation_notes": "GENUINELY BLOCKED, recorded honestly per the feature-delta: Pre-requisite 4 (no learning stack owner named, zero CloudFormation stacks deployed, CLI identity denied CloudFormation writes) and Pre-requisite 2 (the log/observations/v1/ export producer is an ownership gap — without it a deployed nightly job would read an empty prefix forever). Everything buildable was built in 06-01..06-03; do NOT invent a deploy path, do NOT request broader credentials on the agent side (prod-affecting actions are human-applied in this house). When Andres names the stack owner and lifts the wall, this step closes with: cdk deploy by the human path, schedule verification from CloudWatch, and one denied test write proving the complement.",
+          "implementation_notes": "GENUINELY BLOCKED, recorded honestly per the feature-delta: Pre-requisite 4 (no learning stack owner named, zero CloudFormation stacks deployed, CLI identity denied CloudFormation writes) and Pre-requisite 2 (the log/observations/v1/ export producer is an ownership gap \u2014 without it a deployed nightly job would read an empty prefix forever). Everything buildable was built in 06-01..06-03; do NOT invent a deploy path, do NOT request broader credentials on the agent side (prod-affecting actions are human-applied in this house). When Andres names the stack owner and lifts the wall, this step closes with: cdk deploy by the human path, schedule verification from CloudWatch, and one denied test write proving the complement.",
           "deps": [
             "06-03"
           ]
@@ -1218,7 +1225,7 @@
           "files_to_modify": [
             "tests/unit/learning-e2e-chain.test.ts"
           ],
-          "implementation_notes": "FIRST MOVE OF THIS SLICE'S DELIVER: delete its entry from PENDING_SLICES in tests/acceptance/f-forecast-learns-from-the-beach/steps/support/pending-slices.ts (one line). The scenarios are fully authored, step-defined and were proven RED at authoring (distill/red-classification.md, 2026-08-10); the skip marker is the ADR-025 scaffold parking, nothing else. Everything here should already be green if slices 01-06 are honest: the scenario reuses slice-01's Givens (the mornings, the fit) and slice-02's builder observations; expect 'already green, remove skip' and treat a red as a defect upstream. Depends on slice-02's wiring (Pre-requisite 1 landed) — without it the builder still passes null and this whole phase stays red at the same oracles. The fixture disclaims itself: scenario and feature prose say invented mornings, machinery, never learning (DoD row 13).",
+          "implementation_notes": "FIRST MOVE OF THIS SLICE'S DELIVER: delete its entry from PENDING_SLICES in tests/acceptance/f-forecast-learns-from-the-beach/steps/support/pending-slices.ts (one line). The scenarios are fully authored, step-defined and were proven RED at authoring (distill/red-classification.md, 2026-08-10); the skip marker is the ADR-025 scaffold parking, nothing else. Everything here should already be green if slices 01-06 are honest: the scenario reuses slice-01's Givens (the mornings, the fit) and slice-02's builder observations; expect 'already green, remove skip' and treat a red as a defect upstream. Depends on slice-02's wiring (Pre-requisite 1 landed) \u2014 without it the builder still passes null and this whole phase stays red at the same oracles. The fixture disclaims itself: scenario and feature prose say invented mornings, machinery, never learning (DoD row 13).",
           "deps": [
             "02-06",
             "06-03"
@@ -1243,7 +1250,7 @@
           "files_to_modify": [
             "tests/unit/learning-e2e-chain.test.ts"
           ],
-          "implementation_notes": "FIRST MOVE OF THIS SLICE'S DELIVER: delete its entry from PENDING_SLICES in tests/acceptance/f-forecast-learns-from-the-beach/steps/support/pending-slices.ts (one line). The scenarios are fully authored, step-defined and were proven RED at authoring (distill/red-classification.md, 2026-08-10); the skip marker is the ADR-025 scaffold parking, nothing else. The epic row's second half, stated as a fence: every thinner-evidence spot publishes exactly what it would have published with no learning layer at all. The archived bias_gate for a stored-but-refused correction is n_lt_10, NOT no_file — the distinction is the audit trail's whole value, and the stale 06 section 11 token no_correction must not resurface (code and keystone AT say no_file for the absent case; distill/red-classification.md carries the flag).",
+          "implementation_notes": "FIRST MOVE OF THIS SLICE'S DELIVER: delete its entry from PENDING_SLICES in tests/acceptance/f-forecast-learns-from-the-beach/steps/support/pending-slices.ts (one line). The scenarios are fully authored, step-defined and were proven RED at authoring (distill/red-classification.md, 2026-08-10); the skip marker is the ADR-025 scaffold parking, nothing else. The epic row's second half, stated as a fence: every thinner-evidence spot publishes exactly what it would have published with no learning layer at all. The archived bias_gate for a stored-but-refused correction is n_lt_10, NOT no_file \u2014 the distinction is the audit trail's whole value, and the stale 06 section 11 token no_correction must not resurface (code and keystone AT say no_file for the absent case; distill/red-classification.md carries the flag).",
           "deps": [
             "07-01"
           ]
@@ -1336,7 +1343,7 @@
           "files_to_modify": [
             "scripts/checks/assert-learning-adds-no-ui-surface.mjs"
           ],
-          "implementation_notes": "GENUINELY BLOCKED ON DATA THAT DOES NOT EXIST, and nothing can be built toward it: research 09 section 13.4 gates stage 1 at roughly 10-30 reports from at least 5 distinct reporters per spot, and zero reports exist. Community behaviour cannot be scheduled (Pre-requisite 3, owner: nobody; time and surfers). UI DISPOSITION (feature-delta classification): this slice adds ZERO new pixels; the moved number renders on existing keystone-owned surfaces, so U1-U7 hold by inheritance. The ui_checks argv makes that inheritance EXECUTABLE rather than asserted: scripts/checks/assert-learning-adds-no-ui-surface.mjs fails if the learning lane's commits touched src/components, src/pages, src/layouts, src/styles or src/i18n — write it as part of this step, it is a guard script, not a feature. U8 goes to the examiner through the charter (docs/product/expectations/f-forecast-learns-from-the-beach/the-published-number-finally-moves-and-the-archive-says-why.md): public-surface observation only, exactly the u8_observation text. THE SYBIL RESIDUAL IS STATED, NOT SOLVED: statistics cannot tell sock puppets from strangers when identities are free; prevention is the write path's half, damage-bounding (clamp 0.40/12) and recovery (recompute with overrides) are delivered here. Human seed values are never overwritten (decision 22): machine writes never touch data/spots/, provable from git history at review.",
+          "implementation_notes": "GENUINELY BLOCKED ON DATA THAT DOES NOT EXIST, and nothing can be built toward it: research 09 section 13.4 gates stage 1 at roughly 10-30 reports from at least 5 distinct reporters per spot, and zero reports exist. Community behaviour cannot be scheduled (Pre-requisite 3, owner: nobody; time and surfers). UI DISPOSITION (feature-delta classification): this slice adds ZERO new pixels; the moved number renders on existing keystone-owned surfaces, so U1-U7 hold by inheritance. The ui_checks argv makes that inheritance EXECUTABLE rather than asserted: scripts/checks/assert-learning-adds-no-ui-surface.mjs fails if the learning lane's commits touched src/components, src/pages, src/layouts, src/styles or src/i18n \u2014 write it as part of this step, it is a guard script, not a feature. U8 goes to the examiner through the charter (docs/product/expectations/f-forecast-learns-from-the-beach/the-published-number-finally-moves-and-the-archive-says-why.md): public-surface observation only, exactly the u8_observation text. THE SYBIL RESIDUAL IS STATED, NOT SOLVED: statistics cannot tell sock puppets from strangers when identities are free; prevention is the write path's half, damage-bounding (clamp 0.40/12) and recovery (recompute with overrides) are delivered here. Human seed values are never overwritten (decision 22): machine writes never touch data/spots/, provable from git history at review.",
           "deps": [
             "07-03",
             "06-04"

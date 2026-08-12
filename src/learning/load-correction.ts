@@ -35,7 +35,32 @@
 // is not marking one, and nothing here ever constructs the applied state -
 // src/learning/declarations.ts's whole-source examination watches this file
 // stay that way.
+//
+// VERDICT CONSUMPTION AT THE APPLY SEAM (wave-decisions.md D-2026-08-12-1,
+// roadmap 05-02 pin 4). The monthly evaluation job (src/learning/evaluate.ts)
+// is metrics-only: it never rewrites a stored correction, on any verdict. The
+// kill lives at THIS seam instead. `loadStoredCorrections` now also consults
+// the latest monthly verdict under learned/metrics/v1/ before trusting any
+// stored record: while that verdict is an affirmative `corrections-killed`,
+// every spot costs the build exactly what an absent or corrupt file costs --
+// null, the day-zero forecast. `corrections-stay`, `not_evaluated`, and any
+// verdict this reader cannot make sense of all leave the per-correction gates
+// (G1-G6) as the sole authority; only an affirmative kill kills, mirroring
+// readReporterOverrides' rule that a byte nobody can parse must never flip
+// system state in either direction.
+//
+// The metrics-file probe is bounded and reads no directory listing: current
+// calendar month first, by the injected clock; the previous month only when
+// the current month's read is not a KNOWN verdict at all (absent, corrupt,
+// or a value outside the three this reader recognises). The metrics-key
+// format is restated here rather than imported from evaluate.ts: that module
+// owns the monthly job's own heavier import graph (inputs.ts, metrics.ts,
+// cross-validation.ts), and pulling all of it into the build's hourly hot
+// path merely to share one template string is the wrong trade -- the same
+// reasoning evaluate.ts itself gives for restating fit.ts's fit-window
+// boundary rather than importing it.
 
+import type { Clock } from "../pipeline/ports";
 import {
   currentCorrectionKey,
   type GatedKey,
@@ -178,11 +203,22 @@ export async function loadStoredCorrection(input: {
  * writer that each spell the path themselves is how a build quietly stops
  * finding files the fit is still writing.
  *
- * A spot maps to `null` for all three reasons a build can have no correction:
- * no file was ever written, the file could not be trusted, or the store itself
- * could not be reached. Every one of those costs the build exactly what no file
- * costs -- the day-zero forecast -- so the caller has one case to handle rather
- * than three, and cannot accidentally treat a corrupt file as a correction.
+ * A spot maps to `null` for all four reasons a build can have no correction:
+ * no file was ever written, the file could not be trusted, the store itself
+ * could not be reached, or the latest monthly verdict is an affirmative
+ * `corrections-killed` (D-2026-08-12-1). Every one of those costs the build
+ * exactly what no file costs -- the day-zero forecast -- so the caller has
+ * one case to handle rather than four, and cannot accidentally treat a
+ * corrupt file, or a killed month, as a correction.
+ *
+ * BOUNDED PROBE: the monthly verdict is only ever consulted when at least one
+ * loaded record this build actually holds carries an applied key (height or
+ * score). A record with none is already the day-zero cost on its own --
+ * nothing the gates ever approved is standing to be killed -- so a killed
+ * month can change nothing about what that spot would publish, and the probe
+ * is skipped rather than spent on a question whose answer moves no number.
+ * This is the same reasoning G5/G6's own read-time clamps rest on: a check
+ * that cannot change a published value is not owed a read.
  *
  * The reader's events are not returned here. `runBuildOnce` has no event
  * channel of its own to carry them to, and inventing one is not this seam's
@@ -193,6 +229,7 @@ export async function loadStoredCorrection(input: {
 export async function loadStoredCorrections(input: {
   store: CorrectionSource;
   spotIds: readonly string[];
+  clock: Clock;
 }): Promise<ReadonlyMap<string, StoredCorrection | null>> {
   const loaded = await Promise.all(
     input.spotIds.map(async (spotId) => {
@@ -203,7 +240,80 @@ export async function loadStoredCorrections(input: {
       return [spotId, report.record] as const;
     }),
   );
-  return new Map(loaded);
+
+  const anyAppliedKeyLoaded = loaded.some(([, record]) => record !== null && hasAnyAppliedKey(record));
+  const killed = anyAppliedKeyLoaded && (await correctionsAreKilled(input.store, input.clock.now()));
+
+  return new Map(
+    loaded.map(([spotId, record]) => [
+      spotId,
+      killed && record !== null && hasAnyAppliedKey(record) ? null : record,
+    ]),
+  );
+}
+
+/** Any height key, or the score move, the gates already marked applied. Property access only -- never the literal `applied: true` -- so declarations.ts's whole-source examination reads this module as what it is: a carrier of the gate's verdict, never its author. */
+function hasAnyAppliedKey(record: StoredCorrection): boolean {
+  const heightApplied = Object.values(record.bias.swell_h_m.per_source).some((byLead) =>
+    Object.values(byLead).some((key) => key.applied),
+  );
+  return heightApplied || (record.score_delta?.applied ?? false);
+}
+
+// ---------- the verdict-consumption seam (D-2026-08-12-1) ----------
+
+const METRICS_PREFIX = "learned/metrics/v1/";
+
+/** Must match evaluate.ts's own `monthlyMetricsKey` byte for byte: METRICS_PREFIX + the UTC year-month + `/metrics.json`. */
+function monthlyMetricsKeyFor(when: Date): string {
+  return `${METRICS_PREFIX}dt=${when.toISOString().slice(0, 7)}/metrics.json`;
+}
+
+/**
+ * Current month first, by the injected clock; only when that read is not a
+ * known verdict at all does this fall back to the previous month. The first
+ * known verdict found wins outright -- "latest verdict wins" means the
+ * newest determinable answer, never an average of two months.
+ */
+async function correctionsAreKilled(store: CorrectionSource, now: Date): Promise<boolean> {
+  const current = await knownMonthlyVerdict(store, now);
+  if (current !== undefined) return current === "corrections-killed";
+  const previous = await knownMonthlyVerdict(store, oneMonthBefore(now));
+  return previous === "corrections-killed";
+}
+
+/** `undefined` for absent, unreadable, or any value outside the three-word vocabulary -- never a fault, just nothing this reader can act on. */
+async function knownMonthlyVerdict(store: CorrectionSource, when: Date): Promise<string | undefined> {
+  let bytes: string | null;
+  try {
+    bytes = await store.getCorrection(monthlyMetricsKeyFor(when));
+  } catch {
+    return undefined;
+  }
+  if (bytes === null) return undefined;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(bytes);
+  } catch {
+    return undefined;
+  }
+  if (!isRecord(parsed)) return undefined;
+  const cv = parsed.cv;
+  if (!isRecord(cv)) return undefined;
+  const verdict = cv.verdict;
+  return isKnownVerdict(verdict) ? verdict : undefined;
+}
+
+function isKnownVerdict(value: unknown): value is string {
+  return value === "corrections-killed" || value === "corrections-stay" || value === "not_evaluated";
+}
+
+/** The first of the month before `now`, day-of-month normalised first so a day-31 instant can never overflow into the wrong month. */
+function oneMonthBefore(now: Date): Date {
+  const firstOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  firstOfMonth.setUTCMonth(firstOfMonth.getUTCMonth() - 1);
+  return firstOfMonth;
 }
 
 // ---------- field readers, one shape each ----------

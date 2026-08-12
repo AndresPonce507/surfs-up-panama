@@ -141,6 +141,7 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
   const corrections = await loadStoredCorrections({
     store: deps.store,
     spotIds: spots.map((spot) => spot.spot_id),
+    clock: deps.clock,
   });
   const calls = spots.flatMap((spot) => callsForSpot(spot, rows, dates, hour, corrections.get(spot.spot_id) ?? null));
   if (calls.length === 0) return { published: false, reason: 'no usable wave members' };

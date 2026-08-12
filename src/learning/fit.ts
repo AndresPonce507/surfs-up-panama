@@ -22,7 +22,7 @@
 
 import type { Clock } from '../pipeline/ports';
 import { buildCorrectionRecords, currentCorrectionKey } from './correction-file';
-import { PROPENSITY_WINDOW_DAYS } from './constants';
+import { FIT_WINDOW_DAYS, PROPENSITY_WINDOW_DAYS } from './constants';
 import { SHIPPED_POOLING_CAPS, type PoolingCaps, type SpotSeed } from './hierarchy';
 import {
   readCallLog,
@@ -101,7 +101,7 @@ export async function runLearningFitOnce(deps: LearningFitDeps): Promise<Learnin
   // the fit while leaving the spot examined (06 section 7); an incident file
   // says those mornings should never have been in the log.
   const observations = withExcisedReportersRemoved(
-    await readObservationLog(deps.store),
+    await readObservationLog(deps.store, oldestFitWindowBoundary(deps.clock.now())),
     overrides,
   );
 
@@ -161,6 +161,20 @@ export async function runLearningFitOnce(deps: LearningFitDeps): Promise<Learnin
     corrections_written: records.size,
     events,
   };
+}
+
+/**
+ * `now` minus FIT_WINDOW_DAYS: the observation log's own trailing-window
+ * boundary (06 section 5.2, section 8's "Fit window | trailing 90 d"),
+ * computed the same way `publishedCallsWithin` below computes the call log's
+ * `oldest` -- a day strictly before this instant is outside the window.
+ * Resolved here, once, because reading the clock belongs to this module, not
+ * to inputs.ts (src/pipeline/ports.ts's rule).
+ */
+function oldestFitWindowBoundary(now: Date): Date {
+  const oldest = new Date(now);
+  oldest.setUTCDate(oldest.getUTCDate() - FIT_WINDOW_DAYS);
+  return oldest;
 }
 
 /** Every published call inside 06 section 6.3's trailing window, as the propensity table reads them. */

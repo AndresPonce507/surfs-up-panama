@@ -736,6 +736,90 @@
       "s": "EXECUTED",
       "d": "Two commits: 47803f9 makes the height lane inert and 5 files change (engine, both test files, contract, phase log); cc2a480 fixes the report-leak gate regression the first one exposed and adds the net that catches its class in the unit loop. Neither touches src/pipeline/build.ts; git show --stat over both names only this step's owned paths. A third party merged build/f2-deltas-slice04-05 into this branch at 19:27:38, between the two commits, bringing 76 lines of build.ts with it -- not this step's doing, and the call site still reads applyCorrection(spot, null). Everything re-verified on the post-merge tip: tsc exit 0, vitest 443/443 across 84 files, npm run ci:local:fast 11 passed / 0 failed / 0 skipped. HEAD carries no unclamped height path: memberHeightBiasOf, per_source, leadBucketOf and swell_h_m all appear zero times in the committed engine.ts, and all three memberHBias sites are the inert constant. Branch is not on origin; nothing pushed, nothing merged by this step.",
       "t": "2026-08-12T00:32:09Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "Loaded tdd-methodology, quality-framework, fp-principles, fp-domain-modeling skills. Read wave-decisions.md D-2026-08-12-1/2/3, 06-learning-layer.md sections 2/10/12, the AT scaffold, support/monthly-port.ts, fit.ts, inputs.ts, correction-file.ts, correction-record.ts, weights.ts, residuals.ts, trust.ts, gates.ts, constants.ts, report-vocab.ts, size-bands.ts, pipeline/ports.ts, and read (read-only, git show) recover/learning-build's evaluate.ts and metrics.ts for reference. Removed describe.skip from the AT file; confirmed exactly one scenario enabled.",
+      "t": "2026-08-12T18:08:22Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "Moved src/learning/evaluate.ts and metrics.ts out of the tree (untracked, no prior code) and ran the unskipped AT: 1 test collected, 1 failed, semantic AssertionError 'the monthly evaluation port does not exist yet: nothing at src/learning/evaluate.ts answers when the monthly conscience is asked to run (accepted roadmap 05-01)' thrown from driveMonthlyEvaluationOnce, no collection or import errors (evidence: /tmp/vitest-0501-red.log). Files restored immediately after, before any GREEN work.",
+      "t": "2026-08-12T18:08:32Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "Authored tests/unit/learning-metrics.test.ts, 8 fast-check properties/examples against buildMonthlyMetrics covering branches the single-spot AT fixture cannot reach (solicited_share bound; pairwise cross-spot requirement and tie-exclusion; sigma_human order-independence and non-negativity; mae baselines on a degenerate single-report fixture; mae.per_key against an independently computed hEff+band-midpoint oracle; shrinkage reading a stored correction's own fields; shrinkage omitting an ungated spot). Written and iterated against metrics.ts during GREEN decomposition; all 8 pass (evidence: /tmp/vitest-0501-v2.log). Test budget: 8 behaviours x 2 = 16, delivered 8, well under budget, no consolidation needed (nw-test-optimization skill section 4 procedure run).",
+      "t": "2026-08-12T18:08:43Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "Implemented src/learning/evaluate.ts (runMonthlyEvaluationOnce driving port, metrics-only per D-2026-08-12-1) and src/learning/metrics.ts (buildMonthlyMetrics: selection, pairwise, mae, sigma_human, calibration, shrinkage, cv sections, each computed honestly from store rows except the three explicitly-deferred literals: cv.verdict='not_evaluated', calibration.offending_term=null, shrinkage[].flagged=false). AT green on first implementation; self-review before commit caught and fixed two defects: mae.per_key was keyed only on (source, leadBucket), silently averaging two spots' errors -- fixed by looping spotsReportedIn per fit.ts's own precedent, verified with a throwaway two-spot script (two distinct rows post-fix); and three stray NUL bytes from a write-tool transcription artifact in template-literal separators, corrected via perl. Full suite (npx vitest run): 106 files, 97 passed/4 failed/5 skipped; 530 tests, 518 passed/5 failed/7 skipped -- the 5 failures are the pre-existing HANDOFF-documented staleness-stamp/staleness-flip/report-island family, unchanged in count/identity (evidence: /tmp/vitest-0501-final2.log). npm run typecheck: exit 0 (/tmp/typecheck-0501-v3.log). Non-visual step: UI N/A rationale recorded in 05-01-contract.json; no U1-U7, no Vera.",
+      "t": "2026-08-12T18:08:58Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "Committed 3a328e0 on build/f2-learning-slice05: feat(learning): the monthly port reports its outcome and writes the metrics file. Staged only owned paths (src/learning/evaluate.ts, src/learning/metrics.ts, tests/unit/learning-metrics.test.ts, the AT activation edit, 05-01-contract.json via git add -f, execution-log.json). gate-baseline.log left untracked (not owned). Trailer Step-ID: 05-01 present. 6 files changed, 925 insertions, 1 deletion.",
+      "t": "2026-08-12T18:10:17Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "Advisor review pass found evaluate.ts's readCurrentCorrections path was untested (all 8 original unit tests drove buildMonthlyMetrics directly) and a plain-space delimiter collision risk in mae.per_key's map key. Fixed both: added tests/unit/learning-metrics.test.ts tests driving the real runMonthlyEvaluationOnce against a real InMemoryStore (two applied keys of different n, exercising fullestAppliedKeyOf's tie-break; one unparseable-byte refusal path), verified discriminating by stubbing readCurrentCorrections to return [] and watching the new test fail for the right reason, then reverting (diff clean). Switched mae.per_key's key join from a plain space to a double colon. Full suite: 106 files, 97 passed/4 failed/5 skipped; 532 tests, 520 passed/5 failed/7 skipped -- same pre-existing 5-failure family, unchanged. typecheck exit 0. No stray NUL bytes remain in any touched file (verified byte-scan).",
+      "t": "2026-08-12T18:22:20Z"
+    },
+    {
+      "sid": "05-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "Committed 3eb4ee1 on build/f2-learning-slice05: fix(learning): close the corrections-read coverage gap in the monthly metrics builder. Staged only owned paths (05-01-contract.json via git add -f, src/learning/metrics.ts, tests/unit/learning-metrics.test.ts). Trailer Step-ID: 05-01 present. 3 files changed, 92 insertions, 10 deletions.",
+      "t": "2026-08-12T18:22:32Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "Loaded nw-tdd-methodology, nw-quality-framework, nw-fp-principles, nw-fp-domain-modeling, nw-pbt-fundamentals skills. Read wave-decisions.md D-2026-08-12-1 in full, 06-learning-layer.md section 7 (G7) and section 10, adr-correction-gates-and-clamps.md, both 05-02 acceptance test files, support/monthly-port.ts, current evaluate.ts/metrics.ts/load-correction.ts/build.ts/correction-record.ts/inputs.ts/residuals.ts, and the mined recover/learning-build:src/learning/cross-validation.ts reference (git show, read-only). Confirmed language/paradigm: TypeScript FP, fast-check PBT house style, functional paradigm declared in project CLAUDE.md.",
+      "t": "2026-08-12T19:16:55Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "Removed describe.skip from a-losing-month-switches-the-corrections-off-until-a-human-looks.test.ts and a-winning-month-leaves-the-corrections-standing.test.ts. Reverted production changes to HEAD (git checkout on evaluate.ts/metrics.ts/load-correction.ts/build.ts, removed cross-validation.ts) and ran both ATs: 2 files collected, 2 tests, 2 failed. Both failures are semantic AssertionError on cv.verdict ('not_evaluated' actual vs 'corrections-killed'/'corrections-stay' expected) at the exact metricAt(metrics,'cv.verdict') assertion line -- no collection or import errors, fail-for-right-reason gate satisfied. Restored the GREEN implementation afterward via a saved git-apply patch plus a saved copy of cross-validation.ts; both ATs immediately re-ran green (2 passed).",
+      "t": "2026-08-12T19:17:06Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "Authored tests/unit/learning-cv-laws.test.ts (4 fast-check properties against cross-validation.ts's exported heldOutBlockStart and judgeRollingOriginCorrections: fold-boundary law, not_evaluated-iff-nothing-judged, tie-spares majority, MAE credit/blame sign-flip) and appended one fast-check property to tests/unit/learning-load-correction.test.ts (Modeling-strategy oracle over the full verdict-probe vocabulary for loadStoredCorrections). Each was written to drive production code that did not yet exist/behave as required; run individually before the corresponding production code existed in final form (during the GREEN loop) they failed for the right reason (verdict mismatches / probe never firing), then passed once the implementation matched.",
+      "t": "2026-08-12T19:17:20Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "Implemented src/learning/cross-validation.ts (NEW: CV_SCHEME literal, heldOutBlockStart, judgeRollingOriginCorrections), wired the judge into src/learning/metrics.ts's cv field, added a distinguishing kill event in src/learning/evaluate.ts, widened src/learning/load-correction.ts's loadStoredCorrections to consume the latest monthly verdict (bounded probe, applied-key-gated to avoid an unrelated regression -- see contract scope_note), and passed the clock through in src/pipeline/build.ts. Both target ATs pass (2/2). Full suite: 107 files -- 100 passed/4 failed/3 skipped; 537 tests -- 527 passed/5 failed/5 skipped; the 5 failures are exactly the pre-existing staleness-stamp*/staleness-flip/report-island family named in the task context, unchanged by this diff. npm run typecheck: exit 0. Non-visual step: UI N/A rationale recorded in the contract; proceeding straight to COMMIT per the roadmap's own non_visual_rationale.",
+      "t": "2026-08-12T19:17:38Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "Staged exactly the owned paths (src/learning/cross-validation.ts new, evaluate.ts/load-correction.ts/metrics.ts, src/pipeline/build.ts, both 05-02 acceptance test files, tests/unit/learning-cv-laws.test.ts new, tests/unit/learning-load-correction.test.ts, plus git add -f for the gitignored 05-02-contract.json and execution-log.json). gate-baseline.log left untracked, not staged. Committed a6563cf on branch build/f2-learning-slice05 with Step-ID: 05-02 trailer. git status confirms only gate-baseline.log remains untracked (not mine).",
+      "t": "2026-08-12T19:18:35Z"
     }
   ]
 }
