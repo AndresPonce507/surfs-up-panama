@@ -1,0 +1,16 @@
+{
+  "step_id": "01-15",
+  "timestamp": "2026-08-12T13:10:00Z",
+  "kind": "commit",
+  "result": "PASS",
+  "commit": "b0870de",
+  "review": "NOT RUN: no reviewer was dispatched in this lane. The evidence of record is the captured acceptance RED before the merge and the per-row falsifiability break below.",
+  "evidence": {
+    "contract": "Every push received shows a notification",
+    "falsification": "waitUntil replaced with a bare void call: ONLY 'Cada aviso que llega se muestra, ninguno llega en silencio' failed, on 'el handler termino sin esperar a que la notificacion estuviera mostrada'. The other four stayed green. Restored; file diff identical.",
+    "gates": "See red-green.json.",
+    "scope": "src/push/notification-seat.ts and tests/unit/push-notification-seat.test.ts only. src/pipeline/build.ts and public/sw.js untouched.",
+    "seam_still_owed": "FLAGGED. This ships the handler MODULE only. The two listener registrations belong to F-WORKS-WITH-NO-SIGNAL's service worker file and are handed over as a contract, not written here. Pre-requisite 4(a), that lane's written acknowledgement of the payload contract, is still OPEN. Push is therefore NOT wired end to end: the seat is correct and proven, and nothing mounts it yet.",
+    "budget": "5 behaviours x 2 = 10 permitted; 8 unit tests, 7 example-based per the roadmap's EXEMPT FROM PARADIGM ruling for service worker event wiring, plus 1 property for the never-a-silent-push law which is a genuine invariant over arbitrary payloads."
+  }
+}

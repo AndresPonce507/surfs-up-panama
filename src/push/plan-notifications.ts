@@ -143,6 +143,74 @@ function eligibleMorningNotifications(input: PlanNotificationsInput): PlannedNot
 }
 
 /**
+ * The push service's answer to one planned send, as the scheduled adapter
+ * observed it. Only the status is read here: a body tells this decision
+ * nothing a status code does not already say.
+ */
+export type SendResponse = {
+  endpoint_hash: string;
+  status: number;
+};
+
+/** One pruned destination, named. A deletion with no witness is a subscriber
+ *  lost with nobody to notice, which is the silent failure this project's
+ *  loud-skip discipline exists to refuse (07-write-path.md §8.4). */
+export type PruneEvent = {
+  kind: 'push_subscription_pruned';
+  endpoint_hash: string;
+  status: number;
+};
+
+export type SendReactions = {
+  deletions: string[];
+  events: PruneEvent[];
+};
+
+export type PlanSendReactionsInput = {
+  sends: readonly Pick<PlannedSend, 'endpoint_hash'>[];
+  responses: readonly SendResponse[];
+};
+
+/**
+ * The three definitive rejections (07-write-path.md §8.4,
+ * adr-push-vapid-direct.md decision 4). Everything outside this set —
+ * 2xx acks, 429 throttles, 5xx transients — leaves the subscription alone.
+ * The partition is the rule: widening it to "every failure" would delete live
+ * subscribers on a bad afternoon at the push service.
+ */
+const GONE_STATUSES: readonly number[] = [404, 410, 403];
+
+function isGone(status: number): boolean {
+  return GONE_STATUSES.includes(status);
+}
+
+/**
+ * React to what the push service answered, without executing anything. Returns
+ * the deletions the scheduled adapter should perform and a loud witness for
+ * each one. Pruning is first-failure with no retry budget: a destination that
+ * answers 404, 410 or 403 no longer exists, and retrying it spends egress on
+ * nobody.
+ *
+ * A response naming a destination this run never sent to is evidence about
+ * nothing, so it prunes nothing — deleting on it would destroy a live
+ * subscription on a mismatched or replayed answer.
+ */
+export function planSendReactions(input: PlanSendReactionsInput): SendReactions {
+  const sentHashes = new Set(input.sends.map((send) => send.endpoint_hash));
+  const pruned = input.responses
+    .filter((response) => sentHashes.has(response.endpoint_hash))
+    .filter((response) => isGone(response.status));
+  return {
+    deletions: pruned.map((response) => response.endpoint_hash),
+    events: pruned.map((response) => ({
+      kind: 'push_subscription_pruned',
+      endpoint_hash: response.endpoint_hash,
+      status: response.status,
+    })),
+  };
+}
+
+/**
  * Plan, but do not execute, morning Web Push sends. `now`, the surface scores,
  * subscriptions, and run cap are all supplied by the caller so this decision
  * is deterministic and independent of process state.

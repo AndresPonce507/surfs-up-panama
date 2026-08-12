@@ -1,0 +1,12 @@
+{
+  "step_id": "01-14",
+  "timestamp": "2026-08-12T12:00:00Z",
+  "kind": "red-green",
+  "result": "PASS",
+  "evidence": {
+    "prepare": "01-13 is committed. The accepted scenario 'Un fallo pasajero del servicio de avisos no borra a nadie' is present, carries no skip, and went green on 01-13's implementation, so this row's RED had to be produced the way the roadmap prescribes for it.",
+    "red_acceptance": "PASS by the prescribed break: isGoneForGood widened to every non-2xx status, which is exactly the plausible wrong implementation this row exists to catch. Only 'Un fallo pasajero del servicio de avisos no borra a nadie' failed, with 'borro 1 suscripciones por un fallo pasajero'. The three gone-status rows of 01-13 stayed green, 17 of 18.",
+    "red_unit": "PASS on the same break: only the new property failed, AssertionError 'a passing failure costs nobody their subscription: only the three gone-for-good answers prune', shrunk to counterexample [1, 0, 300]. 01-13's property stayed green, 6 of 7.",
+    "green": "Reverted with git checkout. git diff --stat src/ empty, focused properties 7/7, acceptance for this feature 18/18, typecheck green. The property states the law as a partition over the whole 100-599 status space minus the gone set, so 503 is covered as an instance rather than as the fixture's pet case, and it asserts the rule returned a result at all so a zero-deletion answer is distinguishable from a run that never decided."
+  }
+}

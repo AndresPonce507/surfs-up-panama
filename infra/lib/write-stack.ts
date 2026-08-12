@@ -21,6 +21,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as logs from 'aws-cdk-lib/aws-logs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
+import * as scheduler from 'aws-cdk-lib/aws-scheduler';
 import * as sns from 'aws-cdk-lib/aws-sns';
 import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import type { Construct } from 'constructs';
@@ -42,6 +43,9 @@ import {
   breakerAlarmPeriodSeconds,
   breakerInvocationThresholds,
   defaultReservedConcurrency,
+  notifyMemorySizeMb,
+  notifyReservedConcurrency,
+  vapidPrivateKeyParameterName,
   writeReservedConcurrency,
 } from './write-declarations.js';
 
@@ -195,6 +199,111 @@ export class WriteStack extends Stack {
       actions: ['ssm:GetParameter'],
       resources: [`arn:aws:ssm:${projectRegion}:${projectAccountId}:parameter/surfsuppanama/prod/credential-hmac-key`],
     }));
+
+    // ------------------------------------------------------------------
+    // The scheduled notify job (adr-push-vapid-direct.md decision 1).
+    //
+    // IT IS NOT THE `push` FUNCTION ABOVE. 07-write-path.md section 2 lists
+    // them as two rows and section 8.6 draws them as two participants: `push`
+    // is the POST /api/push subscribe endpoint behind a Function URL, `notify`
+    // is the hourly send fan-out that is "never on the request path". Hence no
+    // Function URL here, no CORS, and no breaker membership: the ADR's cost
+    // argument rests on this lane being unreachable from the internet, so its
+    // worst case is bounded by subscriptions x dedup rules x the per-run cap
+    // rather than by an attacker's request rate.
+    //
+    // It lives in THIS stack rather than the ingest stack because the write
+    // store it queries is declared here; putting it next to fetch/build would
+    // buy a cross-stack table reference and perturb the mandated deploy order.
+    //
+    // THE SCHEDULE SHIPS DISABLED, ON PURPOSE. The send adapter (VAPID ES256
+    // JWT per push-service origin, aes128gcm payload encryption, the HTTP POST
+    // itself) has not landed; the pure decisions it will consult have
+    // (src/push/plan-notifications.ts). An ENABLED hourly schedule in front of
+    // a handler that cannot send would be a job that pretends to run 720 times
+    // a month. Copy never runs ahead of the data, and neither does a cron.
+    // Flip `state` to ENABLED in the same change that lands the real handler,
+    // once the VAPID SecureString below is provisioned.
+    const notifyLogs = new logs.LogGroup(this, 'NotifyLogs', {
+      logGroupName: `/aws/lambda/${functionNames.notify}`,
+      retention: logs.RetentionDays.TWO_WEEKS, // guardrail 3
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+    const notifyFn = new lambda.Function(this, 'Notify', {
+      functionName: functionNames.notify,
+      runtime: lambda.Runtime.NODEJS_22_X,
+      architecture: lambda.Architecture.ARM_64,
+      handler: 'index.handler',
+      // Loud rather than silent: if this is ever invoked before the send
+      // adapter lands, it fails and says why instead of quietly doing nothing.
+      code: lambda.Code.fromInline(
+        'exports.handler = async () => {'
+        + " throw new Error('not_implemented: the notify send adapter (VAPID"
+        + " signing and the Web Push POST) has not landed; this schedule is"
+        + " DISABLED until it does'); };",
+      ),
+      memorySize: notifyMemorySizeMb, // 07-write-path 8.5 costs the fan-out at 0.25 GB
+      timeout: Duration.seconds(lambdaTimeoutSeconds.notify), // guardrail 2
+      reservedConcurrentExecutions: notifyReservedConcurrency,
+      logGroup: notifyLogs,
+      environment: {
+        WRITE_STORE_TABLE: writeStore.tableName,
+        SITE_BUCKET: siteBucketName,
+        // The NAME of the parameter, never the key. The value is a
+        // SecureString a human provisions out of band; nothing in this
+        // repository ever holds VAPID private key material.
+        VAPID_PRIVATE_KEY_PARAMETER: vapidPrivateKeyParameterName,
+      },
+    });
+    // Duplicate EventBridge delivery must not double-send. The 1/spot/
+    // subscriber/day rule (07-write-path 8.2) already makes a repeated run a
+    // no-op, so a Lambda-level retry could only ever repeat work.
+    notifyFn.configureAsyncInvoke({ retryAttempts: 0 });
+
+    // Exactly the subscription operations the send rule needs: query the subs
+    // for a spot, stamp last_notified_date after a delivered send, and delete
+    // the item a 404/410/403 pruned. No PutItem (the send job never creates a
+    // subscription), no Scan (a fan-out that scans this table walks reports
+    // and the credential ledger too), no transaction.
+    notifyFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['dynamodb:DescribeTable', 'dynamodb:Query', 'dynamodb:UpdateItem', 'dynamodb:DeleteItem'],
+      resources: [writeStore.tableArn],
+    }));
+    // NO BUCKET GRANT, DELIBERATELY, AND FLAGGED. The send rule compares "the
+    // current bundle score" (07-write-path.md 8.2) but no document says where
+    // the job reads it: section 8.6's sequence gives notify exactly two edges,
+    // query the subs and POST to the push service, with no S3 read anywhere.
+    // planNotifications takes `scores` as a declared input precisely because
+    // the source is the composition root's business, and that root is the
+    // unlanded send adapter. Granting a bucket read on a guess would be the
+    // one over-grant in an otherwise exact policy, so this lane grants none
+    // and the sender's author adds the read path they actually use.
+    notifyFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['ssm:GetParameter'],
+      resources: [`arn:aws:ssm:${projectRegion}:${projectAccountId}:parameter${vapidPrivateKeyParameterName}`],
+    }));
+
+    // Hourly at :25, three minutes after the :22 build, so a run always reads
+    // this hour's published bundle (07-write-path 8.2).
+    const notifySchedulerRole = new iam.Role(this, 'NotifySchedulerRole', {
+      assumedBy: new iam.ServicePrincipal('scheduler.amazonaws.com'),
+      description: 'Lets EventBridge Scheduler invoke the notify function, nothing else',
+    });
+    notifyFn.grantInvoke(notifySchedulerRole);
+    new scheduler.CfnSchedule(this, 'NotifySchedule', {
+      name: 'surfs-up-panama-notify-hourly',
+      description: 'Hourly push send fan-out at :25, three minutes after the build',
+      scheduleExpression: 'cron(25 * * * ? *)',
+      scheduleExpressionTimezone: 'UTC',
+      state: 'DISABLED', // until the VAPID send adapter lands; see the note above
+      flexibleTimeWindow: { mode: 'OFF' },
+      target: {
+        arn: notifyFn.functionArn,
+        roleArn: notifySchedulerRole.roleArn,
+        input: JSON.stringify({ job: 'notify' }),
+        retryPolicy: { maximumRetryAttempts: 0 },
+      },
+    });
 
     // Resize exists because the write path mints photo-presign URLs; its
     // ObjectCreated trigger and S3 grants arrive with the real photo

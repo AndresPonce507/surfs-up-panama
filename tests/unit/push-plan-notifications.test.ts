@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
-import { planNotifications } from '../../src/push/plan-notifications';
+import { planNotifications, planSendReactions } from '../../src/push/plan-notifications';
 import type { StoredSub } from '../../src/push/types';
 
 const playaVenao = {
@@ -152,6 +152,82 @@ describe('planNotifications', () => {
     );
   });
 
+  it('sends at most the declared run cap, pooled across spots, and announces the remainder out loud', () => {
+    // The cap is whatever the caller declares. No configuration number is
+    // asserted here: 10,000 is the composition root's proposal in
+    // adr-push-vapid-direct.md, not this module's rule, so the law is stated
+    // over every whole cap from zero upward.
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 8 }),
+        fc.integer({ min: 0, max: 8 }),
+        fc.integer({ min: 0, max: 20 }),
+        (subscribersAtFirstSpot, subscribersAtSecondSpot, declaredRunCap) => {
+          const firstSpot = playaVenao;
+          const secondSpot = { ...playaVenao, spot_id: 'santa-catalina', slug: 'santa-catalina', name: 'Santa Catalina' };
+          const subscriptionsFor = (spot: typeof playaVenao, count: number): StoredSub[] =>
+            Array.from({ length: count }, (_, index) => subscriptionWithBar(55, {
+              spot_id: spot.spot_id,
+              endpoint_hash: `${spot.spot_id}-suscriptor-${index + 1}`,
+            }));
+          const eligible = subscribersAtFirstSpot + subscribersAtSecondSpot;
+
+          const plan = planNotifications({
+            now: '2026-08-10T07:25:00-05:00',
+            spots: [firstSpot, secondSpot],
+            scores: { [firstSpot.spot_id]: 95, [secondSpot.spot_id]: 95 },
+            subscriptions: [
+              ...subscriptionsFor(firstSpot, subscribersAtFirstSpot),
+              ...subscriptionsFor(secondSpot, subscribersAtSecondSpot),
+            ],
+            default_threshold_score: fixtureServerThresholdScore,
+            run_cap: declaredRunCap,
+          });
+
+          assert.ok(plan && typeof plan === 'object', 'a capped run still returns a plan');
+          assert.equal(
+            plan.sends.length,
+            Math.min(declaredRunCap, eligible),
+            'one run sends at most its declared cap, counting every spot together',
+          );
+          assert.equal(
+            plan.deferred,
+            Math.max(0, eligible - declaredRunCap),
+            'what did not fit is carried as the deferred remainder',
+          );
+
+          // A write that escapes the cap would stamp last_notified_date on a
+          // subscriber who never received anything, costing them both the
+          // aviso and the follow-up that solicits their report.
+          assert.equal(plan.writes.length, plan.sends.length, 'the cap holds the dated writes to the sends it allowed');
+          assert.deepEqual(
+            plan.writes,
+            plan.sends.map((send) => ({
+              spot_id: send.spot_id,
+              endpoint_hash: send.endpoint_hash,
+              last_notified_date: '2026-08-10',
+            })),
+            'each allowed write belongs to an allowed send',
+          );
+
+          const announcements = plan.events.filter((event) => /cap|tope|skip|omit/i.test(event.kind));
+          assert.equal(
+            announcements.length,
+            plan.deferred > 0 ? 1 : 0,
+            'a remainder is announced, and a run that deferred nobody announces nothing',
+          );
+          assert.equal(
+            announcements[0]?.deferred,
+            plan.deferred > 0 ? plan.deferred : undefined,
+            'the announcement carries how many were left for later, never a silent truncation',
+          );
+        },
+      ),
+      { numRuns: 200 },
+    );
+  });
+
+
   it('reports at most one dated write and send for a subscriber across arbitrary runs in one spot-local day', () => {
     fc.assert(
       fc.property(
@@ -200,6 +276,110 @@ describe('planNotifications', () => {
           assert.equal(sends, 1, 'at most one morning send reaches a subscriber for the same spot-local day');
           assert.equal(writes, 1, 'the plan reports one date write for that one send');
           assert.equal(original.last_notified_date, null, 'planning is pure and does not mutate the supplied subscription state');
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+});
+
+// The gone set is written here from the specification (07-write-path.md §8.4
+// and adr-push-vapid-direct.md decision 4), never imported from the module
+// under test. An oracle that read the production constant would agree with any
+// gone set the implementation happened to hold, including "every non-2xx",
+// which is exactly the mistake step 01-14 exists to catch.
+const SPECIFIED_GONE_STATUSES: readonly number[] = [403, 404, 410];
+
+const endpointHash = fc.string({ minLength: 1, maxLength: 12 }).filter((value) => value.trim().length > 0);
+
+/** Weighted so the gone set is sampled densely while the rest of the HTTP
+ *  status space (2xx acks, 429 throttles, 5xx transients) is still explored. */
+const sendResponseStatus = fc.oneof(
+  fc.constantFrom(403, 404, 410),
+  fc.integer({ min: 100, max: 599 }),
+);
+
+function sendFor(hash: string) {
+  return {
+    spot_id: playaVenao.spot_id,
+    endpoint_hash: hash,
+    lang: 'es',
+    title: 'Mejor: Playa Venao, 95',
+    body: 'Playa Venao marca 95 esta mañana. Mira el pronóstico.',
+    url: '/spots/playa-venao/',
+    tag: playaVenao.spot_id,
+    ttl_seconds: 4 * 60 * 60,
+  };
+}
+
+describe('planSendReactions', () => {
+  it('marks for deletion exactly the destinations the push service reported gone, prunes nobody on any other answer, and always returns a decision', () => {
+    fc.assert(
+      fc.property(
+        fc.uniqueArray(
+          fc.record({ endpoint_hash: endpointHash, status: sendResponseStatus }),
+          { selector: (response) => response.endpoint_hash, minLength: 0, maxLength: 12 },
+        ),
+        (responses) => {
+          const sends = responses.map((response) => sendFor(response.endpoint_hash));
+          const sendsBefore = JSON.stringify(sends);
+          const responsesBefore = JSON.stringify(responses);
+
+          const reactions = planSendReactions({ sends, responses });
+
+          assert.ok(
+            reactions !== null && typeof reactions === 'object',
+            'la corrida no llegó a decidir nada sobre esos fallos, así que un cero de borrados todavía no prueba la regla',
+          );
+          assert.ok(Array.isArray(reactions.deletions), 'a reaction decision always reports its deletions, even when there are none');
+          assert.ok(Array.isArray(reactions.events), 'a reaction decision always reports its events, even when there are none');
+
+          const goneHashes = responses
+            .filter((response) => SPECIFIED_GONE_STATUSES.includes(response.status))
+            .map((response) => response.endpoint_hash);
+
+          assert.deepEqual(
+            reactions.deletions,
+            goneHashes,
+            'only 403, 404 and 410 prune, on the first failure; every other answer, transient ones included, costs nobody their subscription',
+          );
+          assert.deepEqual(
+            reactions.events.map((event) => event.endpoint_hash),
+            goneHashes,
+            'every pruned destination leaves a loud witness naming it; a subscription deleted in silence is a broken promise nobody sees',
+          );
+          for (const event of reactions.events) {
+            assert.equal(event.kind, 'push_subscription_pruned', 'the prune witness carries the declared event kind');
+          }
+
+          assert.equal(JSON.stringify(sends), sendsBefore, 'reacting is pure and does not mutate the supplied sends');
+          assert.equal(JSON.stringify(responses), responsesBefore, 'reacting is pure and does not mutate the supplied responses');
+        },
+      ),
+      { numRuns: 200 },
+    );
+  });
+
+  it('never prunes a destination this run has no send for, so an unmatched answer can delete nobody', () => {
+    fc.assert(
+      fc.property(
+        endpointHash,
+        endpointHash,
+        fc.constantFrom(403, 404, 410),
+        (sentHash, unsentHash, goneStatus) => {
+          fc.pre(sentHash !== unsentHash);
+
+          const reactions = planSendReactions({
+            sends: [sendFor(sentHash)],
+            responses: [{ endpoint_hash: unsentHash, status: goneStatus }],
+          });
+
+          assert.ok(reactions !== null && typeof reactions === 'object', 'the run still decides when an answer matches no send');
+          assert.deepEqual(
+            reactions.deletions,
+            [],
+            'a gone answer for a destination this run never sent to is evidence about nothing; deleting on it would destroy a live subscription',
+          );
         },
       ),
       { numRuns: 100 },

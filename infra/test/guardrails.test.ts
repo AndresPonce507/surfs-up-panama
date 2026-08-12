@@ -29,6 +29,7 @@ import {
 } from '../lib/guardrail-declarations.js';
 import {
   breakerInvocationThresholds,
+  notifyReservedConcurrency,
   reservedConcurrencySum,
   writeReservedConcurrency,
 } from '../lib/write-declarations.js';
@@ -478,6 +479,10 @@ const declaredRealTimeouts: Readonly<Record<string, number>> = {
   [functionNames.report]: 5,
   [functionNames.mint]: 5,
   [functionNames.push]: 5,
+  // The scheduled send fan-out, declared by 07-write-path.md section 2's
+  // function table long before it was built. It is a ninth function, not a
+  // reshaping of `push`: different trigger, timeout, memory, blast radius.
+  [functionNames.notify]: 120,
   [functionNames['photo-presign']]: 5,
   [functionNames.resize]: 60,
   [functionNames.breaker]: 10,
@@ -489,6 +494,7 @@ const declaredRealReservedConcurrency: Readonly<Record<string, number>> = {
   [functionNames.report]: writeReservedConcurrency.report,
   [functionNames.mint]: writeReservedConcurrency.mint,
   [functionNames.push]: writeReservedConcurrency.push,
+  [functionNames.notify]: notifyReservedConcurrency,
   [functionNames['photo-presign']]: writeReservedConcurrency['photo-presign'],
   [functionNames.resize]: 2,
   [functionNames.breaker]: 2,
@@ -508,7 +514,7 @@ describe('real stack guardrails: Lambda cost caps (guardrails 1 and 2)', () => {
       reserved: numberProperty(properties, 'ReservedConcurrentExecutions'),
     }));
 
-  it('deploys exactly the eight declared functions, no strays', () => {
+  it('deploys exactly the nine declared functions, no strays', () => {
     expect(functions.map(({ name }) => name).sort())
       .toEqual(Object.keys(declaredRealTimeouts).sort());
   });
@@ -527,7 +533,7 @@ describe('real stack guardrails: Lambda cost caps (guardrails 1 and 2)', () => {
     }
   });
 
-  it('keeps the account-wide reservation sum at the documented 13, so quota >= 113 is the deploy precondition', () => {
+  it('keeps the account-wide reservation sum at the documented 14, so quota >= 114 is the deploy precondition', () => {
     const sum = functions.reduce((total, fn) => total + fn.reserved, 0);
     expect(sum).toBe(reservedConcurrencySum);
   });
