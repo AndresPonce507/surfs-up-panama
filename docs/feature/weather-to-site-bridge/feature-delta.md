@@ -94,3 +94,91 @@ Notes on the plan:
 
 One line: nothing of this bridge exists in code; every seam it must honor is already committed
 and tested, and the bridge's job is to compose them inside one bounded function.
+
+## Wave: DISTILL / [REF] Slice-01 acceptance design
+
+Authored 2026-08-12 (Quinn, DISTILL). Reconciliation across feature-delta DISCUSS sections, the
+ADR, and the slice charter: **0 contradictions** (the ADR's "midnight rule fires inside `npm run
+build`" and the port's injected-clock civil-day check are belt and suspenders — the core check is
+pinned here; the real render's verify stays proven by the ARM64 smoke per pre-requisite 3).
+
+### Feature files (the executable SSOT)
+
+| File | Scenarios |
+|---|---|
+| `tests/acceptance/weather-to-site-bridge/a-fresh-bundle-republishes-the-site.feature` | 7 |
+| `tests/acceptance/weather-to-site-bridge/the-publisher-answers-only-its-build.feature` | 2 |
+
+Steps: `tests/acceptance/weather-to-site-bridge/steps/publish-pipeline.steps.ts`,
+`steps/publish-handler.steps.ts`, `steps/support/world.ts` (fakes, fixtures, port pins).
+The runner's existing globs (`tests/**/*.feature`, `tests/**/steps/**/*.ts`) already cover them;
+no runner change was needed. 9 scenarios total; 5 of 9 are refusal/error paths (56%).
+
+### The pinned driving-port contract (crafter implements to exactly this seam)
+
+`src/pipeline/publish-site.ts` exports `runPublishOnce(deps): Promise<PublishOutcome>` with deps
+`{ invocation: { build_id, bundle_key }, store: { get(key), put(key, body) }, renderer:
+(mergedSurfaceJson) => Promise<distDir>, commandRunner: (command, args) => Promise<unknown>,
+clock: { now() } }` and `PublishOutcome = { published: true, build_id, uploaded_objects,
+directory_aliases } | { published: false, reason }`. Publication target fixed to production
+inside the port. Refusals RESOLVE with a named reason, never throw. Durable archive key:
+`site/published-surface.json`. `derivePublishLogLines(outcome)` is exported from
+`src/pipeline/lambda/log-events.ts` (the `deriveBuildLogLines` pattern; scaffold-audit row
+"Publish log events" already places it there). `src/pipeline/lambda/publish-handler.ts` exports
+`runPublish(event, overrides)` with overrides `{ environment?, publish? }`, answering
+`{ statusCode: 200 }` published / `{ statusCode: 204 }` refused (build-handler precedent).
+
+### Scenario titles (exact) and RED classification
+
+Run: `npm run test:at -- --tags "@feature-weather-to-site-bridge and @slice-01"` → exit 1,
+`9 scenarios (9 failed)`, zero undefined steps, zero import crashes. Every failure is an
+`AssertionError` carrying its stated absence — MISSING_FUNCTIONALITY, correct RED, all nine:
+
+| # | Scenario | RED classification (one line) |
+|---|---|---|
+| 1 | A fresh bundle for today republishes every page with no human in the loop | MISSING_FUNCTIONALITY — assertion "the publish cycle produced no outcome at all", stated absence: `src/pipeline/publish-site.ts` does not exist yet |
+| 2 | A bundle for the wrong civil day refuses by name and touches nothing | MISSING_FUNCTIONALITY — same stated absence, fails on "the cycle refuses naming both civil days" |
+| 3 | A site rendered for another origin refuses before anything is uploaded | MISSING_FUNCTIONALITY — same stated absence, fails on "refuses naming the origin the site was really rendered for" |
+| 4 | A bundle that is not the build the publisher was asked for refuses before any work | MISSING_FUNCTIONALITY — same stated absence, fails on "refuses because the bundle is not the build it was asked to publish" |
+| 5 | A publish cycle only ever adds, it never lists and never deletes | MISSING_FUNCTIONALITY — same stated absence; the PUT-only Then guards against a vacuous pass by first requiring a completed cycle |
+| 6 | Dawn receipts survive the day's later cycles, and a first run seeds honestly | MISSING_FUNCTIONALITY — assertion "nothing is get-able at the durable archive key site/published-surface.json", same stated absence |
+| 7 | A publish that could not finish never claims success | MISSING_FUNCTIONALITY — same stated absence, fails on "the cycle does not claim it published" |
+| 8 | The front door passes Build's call through unchanged and answers with what happened | MISSING_FUNCTIONALITY — assertion "the cycle behind the door never received anything", stated absence: `src/pipeline/lambda/publish-handler.ts` does not exist yet |
+| 9 | A front door missing a setting refuses loudly and starts nothing | MISSING_FUNCTIONALITY — assertion "the door answered as if it could run", same stated absence |
+
+### What runs real vs fake (per the Project Infrastructure Policy, rows appended this run)
+
+Real through the port: `mergePublishedSurface`, `assertStrictTwoDayUpdate` (also validates every
+fixture at build time, so no scenario can fail for fixture reasons), the civil-day rule against
+the injected instant, and `publishBuild`'s walk + alias double-write + content types + no-cache +
+`assertPublicationArtifactOrigin` over the fake renderer's REAL temp directory. Fake: recording
+get/put store, recording command runner (breakable on the Nth put), fixture renderer (writes the
+dist shape incl. the origin receipt), fixed injected clock. Expected archives in Thens are
+computed through the real `mergePublishedSurface` — the oracle is the checked-in seam.
+
+### Tier and paradigm decisions
+
+Tier A only; Tier B (state-machine PBT) deliberately skipped: this is a layer-3 suite (real FS +
+recorded ports), sad paths are enumerated example-based per Mandates 9/11, and the input-space
+exploration belongs to DELIVER's fast-check unit layer (project functional paradigm). State-delta
+universe (`archive.bytes`, `uploads.keys` — port-exposed names via `tests/common/state_delta.ts`)
+guards the refusal scenarios fail-closed and the happy-cycle delta.
+
+### Flags
+
+1. **Pinned decision — log-lines home**: `derivePublishLogLines` is pinned to
+   `src/pipeline/lambda/log-events.ts` (where the scaffold audit already expects publish events).
+   If the crafter wants it elsewhere, that is a DISTILL change, not a DELIVER one.
+2. **Pinned decision — front-door answer**: 200/204 mapping and the `{ environment, publish }`
+   overrides shape are pinned from the build-handler precedent + the policy's explicit read-only
+   environment input. Required settings pinned to exactly `BUCKET_NAME` + `PUBLIC_SITE_ORIGIN`;
+   needing a third required setting comes back through DISTILL.
+3. **Pinned decision — refusals name things**: both civil days (scenario 2), both build ids
+   (scenario 4), the receipt's real origin (scenario 3), and the broken upload's own error
+   message (scenario 7). A reason that swallows its cause fails.
+4. **Stronger than the dispatch minimum**: scenario 4 also asserts zero uploads and an untouched
+   archive (follows the ADR's step-1 ordering: identity check before merge).
+5. Cucumber's summary line counts every registered sibling hook as hidden steps ("201 steps" for
+   48 real ones); the per-scenario step counts above are from the JSON formatter.
+6. Nothing was committed and no git command was run (dispatch constraint); the ARM64 container
+   smoke and everything under `src/`, `scripts/`, `infra/` remain DELIVER's.
