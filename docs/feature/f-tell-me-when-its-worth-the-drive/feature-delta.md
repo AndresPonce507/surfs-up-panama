@@ -302,3 +302,30 @@ loudly by design, which is correct since pushes to it are undeliverable. Residua
 Samsung Internet rides FCM per 2016-era interop docs with no current vendor page naming its host;
 if its subscribers get rejected in production the loud reject names the host, which is the
 designed self-report.
+
+## Wave: DELIVER / [REF] DES enforcement waiver, slice-01 close lane (2026-08-12)
+
+Ruling relayed by the DELIVER coordinator on 2026-08-12, applying the HANDOFF.md §10 waiver 2
+precedent ("the legacy DES commit gates do not exist and were not faked"): the installed DES Stop
+hook anchors its validation to the dispatching session's original working directory, which for
+this lane is a FOREIGN integration worktree carrying a stale copy of this feature's execution log
+(it ends at step 01-11). Hook validation there is meaningless for this lane and writing there
+would contaminate another worktree. Therefore, for the remaining steps of this lane:
+
+- Crafter dispatches carry `DES-ENFORCEMENT: exempt` instead of DES-VALIDATION markers.
+- What replaces the hook, per step, no exceptions: (1) real RED and GREEN runs with exit codes
+  captured in the log entries or commit message; (2) focused slice tags green plus the fast gate
+  with 0 skipped, every gate redirected to a file and the file read, never piped; (3)
+  `des-log-phase` with absolute `--project-dir` into this worktree's
+  `docs/feature/f-tell-me-when-its-worth-the-drive/deliver`, refusals noted, nothing fabricated;
+  (4) Vera examinations recorded through `des-record-examine` for user-visible steps.
+- Step 01-20 predates this ruling and ran WITH DES-VALIDATION markers; its five phase entries
+  landed correctly in THIS worktree's log (the shim accepted the relative --project-dir from the
+  worktree root), and only the Stop hook's foreign-worktree complaint is disregarded, per this
+  waiver.
+
+Unblocking note, same date: the repo-wide `publish:surface --verify` civil-day guard was refusing
+every build-dependent job on this lane (surface dated 2026-08-11, Panama civil day 2026-08-12).
+Resolved by carrying the sibling lane's already-gate-verified data commit `1488dac` file-for-file
+(this lane's commit `f63a8ab`), not by weakening the guard. The guard now reports "current
+2026-08-12; tomorrow 2026-08-13".
