@@ -30,6 +30,7 @@ import { finalizeSavedReport, sendWithCredentialRecovery, type ReportReceipt, ty
 import { decideArrivalUi, type ComparisonLines } from './reveal';
 import {
   SENTINEL_KEY_PREFIX,
+  SETTLED_KEY_PREFIX,
   openReportQueue,
   type CommitOutcome,
   type QueueOutcome,
@@ -256,8 +257,11 @@ function runRequest(
   });
 }
 
+/** Report rows are stored parsed; the probe sentinel and the settled marker are bare strings. */
 function toStorable(key: string, value: string): unknown {
-  return key.startsWith(SENTINEL_KEY_PREFIX) ? value : (JSON.parse(value) as unknown);
+  return key.startsWith(SENTINEL_KEY_PREFIX) || key.startsWith(SETTLED_KEY_PREFIX)
+    ? value
+    : (JSON.parse(value) as unknown);
 }
 
 function fromStorable(stored: unknown): string | undefined {
@@ -302,6 +306,18 @@ function showNotice(notice: HTMLElement, message: string): void {
   notice.hidden = false;
 }
 
+/**
+ * A notice is about the send that is happening now. Once a report arrives, an
+ * earlier refusal is no longer true, and leaving it on screen would put a
+ * clock refusal underneath "Reporte recibido" -- two states at once, one of
+ * them stale. This is the corrected-clock journey: the surfer fixes the phone,
+ * files a fresh report, and the screen must read as a normal arrival.
+ */
+function clearNotice(notice: HTMLElement): void {
+  notice.textContent = '';
+  notice.hidden = true;
+}
+
 function applyProbeUi(decision: ProbeUiDecision, elements: IslandElements): void {
   if (decision.kind === 'ready') {
     elements.form.dataset.storageReady = 'true';
@@ -341,6 +357,7 @@ function applyReceivedUi(
   history.replaceState(null, '', links.historyUrl);
   elements.form.remove();
   elements.heading?.remove();
+  clearNotice(elements.notice);
   renderRevealView(elements.confirmation, {
     ...decideArrivalUi(receipt, observed),
     nav: { href: links.backHref, label: links.backLabel, emphasis: 'quiet' },
@@ -520,6 +537,7 @@ async function sendQueuedReport(
     await sendWithCredentialRecovery(savedBytes, credential, fetch, reportEndpoint),
     {
       discard: (candidateId) => queue.discardSavedRecord?.(candidateId) ?? Promise.reject(new Error('report queue cannot discard receipt')),
+      settle: (candidateId) => queue.settleSavedRecord?.(candidateId) ?? Promise.reject(new Error('report queue cannot settle a refused report')),
     },
   );
 }

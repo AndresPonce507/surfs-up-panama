@@ -137,7 +137,11 @@ describe('the browser report transport', () => {
 
   it('removes a durable report only after its valid matching receipt', async () => {
     const removed: string[] = [];
-    const discard = { discard: async (reportId: string) => { removed.push(reportId); } };
+    const settled: string[] = [];
+    const discard = {
+      discard: async (reportId: string) => { removed.push(reportId); },
+      settle: async (reportId: string) => { settled.push(reportId); },
+    };
     const matching = { kind: 'received' as const, receipt: { report_id: 'report-1', outcome: 'no_snapshot' as const, predicted: null } };
 
     assert.deepEqual(await finalizeSavedReport('report-1', matching, discard), matching);
@@ -161,5 +165,6 @@ describe('the browser report transport', () => {
       /offline/,
     );
     assert.deepEqual(removed, ['report-1'], 'a network refusal must leave the exact queued label available for retry');
+    assert.deepEqual(settled, [], 'none of these outcomes is a refusal waiting cannot fix, so none may stop its label sending');
   });
 });

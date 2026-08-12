@@ -28,8 +28,9 @@ import {
   type LocalWriteLambda,
   type WriteStore,
 } from '../../src/report/local-lambda';
-import type { ReportRecord } from '../../src/report/report-record';
-import { sendSavedReport } from '../../src/report/submit';
+import { openReportQueue, type CommitOutcome, type QueueStore } from '../../src/report/queue';
+import { composeReportRecord, type ReportRecord } from '../../src/report/report-record';
+import { finalizeSavedReport, sendSavedReport, type SubmissionOutcome } from '../../src/report/submit';
 
 const SECRET = 'test-only-credential-secret-that-is-long-enough';
 const SERVER_NOW = new Date('2026-08-10T18:30:00.000Z');
@@ -210,5 +211,103 @@ describe('telling a wrong clock apart from a full daily allowance', () => {
       'may_arrive_later',
       'an unreadable refusal must never strand a report the server may well accept next time',
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// What the durable queue does with a report the server has settled.
+//
+// The report page drains its queue on every visit (flushWaitingReport in
+// src/report/island.ts), so "does not send itself again" cannot live in the
+// island: a reload starts a new island. It lives in the queue, the same way
+// "commit never runs after a refused probe" already does -- pendingRecords
+// stops listing a settled report, and the flush has no rule to remember.
+//
+// The label itself is never deleted. A settled report keeps its durable bytes
+// and stays readable; it simply stops being something to send.
+// ---------------------------------------------------------------------------
+
+const ANSWERS = { size_band: 'waist_chest', wind: 'choppy', quality: 'good' } as const;
+
+/** The three verbs plus enumeration, in memory. Refuses nothing, records everything. */
+function memoryQueueStore(): QueueStore {
+  const rows = new Map<string, string>();
+  return {
+    put: async (key, value) => { rows.set(key, value); },
+    get: async (key) => rows.get(key),
+    remove: async (key) => { rows.delete(key); },
+    entries: async () => [...rows].map(([key, value]) => ({ key, value })),
+  };
+}
+
+async function queueWithReports(count: number) {
+  const opened = await openReportQueue({
+    openStore: async () => memoryQueueStore(),
+    newSentinel: () => 'sentinel-for-this-probe',
+  });
+  assert.equal(opened.kind, 'ready', 'the in memory store must pass the Earned Trust probe');
+  const reportIds: string[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const committed: CommitOutcome = await opened.queue.commit(
+      composeReportRecord(() => SERVER_NOW, Math.random, 'playa-venao', ANSWERS),
+    );
+    assert.equal(committed.kind, 'queued', 'the label must reach durable storage before anything is settled');
+    reportIds.push(committed.report_id);
+  }
+  return { queue: opened.queue, reportIds };
+}
+
+describe('keeping a settled report out of the next visit flush', () => {
+  it('stops listing exactly the settled reports and keeps every saved label readable', async () => {
+    await fc.assert(fc.asyncProperty(
+      fc.array(fc.boolean(), { minLength: 1, maxLength: 6 }),
+      async (isSettled) => {
+        const { queue, reportIds } = await queueWithReports(isSettled.length);
+        assert.ok(queue.settleSavedRecord, 'the queue must be able to settle a report the server will never accept');
+
+        const settled = reportIds.filter((_, index) => isSettled[index]);
+        const waiting = reportIds.filter((_, index) => !isSettled[index]);
+        for (const reportId of settled) await queue.settleSavedRecord(reportId);
+
+        const pending = (await queue.pendingRecords?.() ?? []).map(({ report_id }) => report_id);
+        assert.deepEqual(
+          [...pending].sort(),
+          [...waiting].sort(),
+          'a settled report must leave the flush list, and a waiting one must stay in it',
+        );
+        for (const reportId of settled) {
+          assert.notEqual(
+            await queue.savedRecord?.(reportId),
+            undefined,
+            'the label is settled, not deleted: the surfer was told, so the bytes stay readable',
+          );
+        }
+      },
+    ), { numRuns: 25 });
+  });
+});
+
+describe('deciding what a send outcome does to the durable label', () => {
+  it('discards only on its own receipt and settles only a refusal waiting cannot fix', async () => {
+    const done: string[] = [];
+    const store = {
+      discard: async (reportId: string) => { done.push(`discard ${reportId}`); },
+      settle: async (reportId: string) => { done.push(`settle ${reportId}`); },
+    };
+    const receipt = { report_id: 'report-1', outcome: 'no_snapshot' as const, predicted: null };
+    const outcomes: readonly SubmissionOutcome[] = [
+      { kind: 'received', receipt },
+      { kind: 'refused', message: 'La hora del reporte no parece correcta.', persistence: 'settled', credentialInvalid: false },
+      { kind: 'refused', message: 'Este dispositivo ya llegó a su límite de hoy.', persistence: 'may_arrive_later', credentialInvalid: false },
+      { kind: 'received', receipt: { ...receipt, report_id: 'a-different-report' } },
+    ];
+
+    for (const outcome of outcomes) {
+      assert.deepEqual(await finalizeSavedReport('report-1', outcome, store), outcome, 'the outcome itself is passed straight through');
+    }
+
+    // The whole observable surface of this port, in order: nothing else may
+    // have happened to the durable row.
+    assert.deepEqual(done, ['discard report-1', 'settle report-1']);
   });
 });

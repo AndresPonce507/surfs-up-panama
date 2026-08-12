@@ -22,6 +22,14 @@ import type { ReportRecord } from './report-record';
 
 /** Rows written by the probe live under this prefix, never under a report_id. */
 export const SENTINEL_KEY_PREFIX = 'sentinel/';
+
+/**
+ * A report the write path has settled is marked under this prefix, beside the
+ * label rather than on top of it: domain-model.md section 10 gives SurfReport
+ * no edit command, so the stored row is never rewritten, not even to record
+ * that it will never be sent.
+ */
+export const SETTLED_KEY_PREFIX = 'settled/';
 const IDENTITY_KEY = 'identity/anonymous';
 
 /** The three verbs the queue needs from durable storage. Every one may refuse. */
@@ -66,6 +74,13 @@ export interface ReportQueue {
   /** The verified durable bytes, used for a later network send without rebuilding the record. */
   readonly savedRecord?: (reportId: string) => Promise<string | undefined>;
   readonly discardSavedRecord?: (reportId: string) => Promise<void>;
+  /**
+   * Records the write path refused for something the saved bytes can never
+   * survive, most of all a badly wrong phone clock. The row is kept and stays
+   * readable -- the surfer was told plainly and the label is theirs -- but it
+   * stops being something to send.
+   */
+  readonly settleSavedRecord?: (reportId: string) => Promise<void>;
   /** Immutable records already waiting before this page opened, never a new form value. */
   readonly pendingRecords?: () => Promise<readonly { readonly report_id: string; readonly bytes: string }[]>;
   readonly identity?: {
@@ -121,9 +136,8 @@ export async function openReportQueue(deps: QueueDependencies): Promise<QueueOut
       commit: (record) => append(store, record),
       savedRecord: (reportId) => store.get(reportId),
       discardSavedRecord: (reportId) => store.remove(reportId),
-      pendingRecords: async () => (await store.entries())
-        .filter(({ key }) => key !== IDENTITY_KEY && !key.startsWith(SENTINEL_KEY_PREFIX))
-        .map(({ key, value }) => ({ report_id: key, bytes: value })),
+      settleSavedRecord: (reportId) => store.put(`${SETTLED_KEY_PREFIX}${reportId}`, reportId),
+      pendingRecords: async () => pendingFrom(await store.entries()),
       identity: {
         read: async () => parseIdentity(await store.get(IDENTITY_KEY)),
         write: (value) => store.put(IDENTITY_KEY, JSON.stringify(value)),
@@ -131,6 +145,29 @@ export async function openReportQueue(deps: QueueDependencies): Promise<QueueOut
       },
     },
   };
+}
+
+/**
+ * The reports a later visit may still send: every durable row that is not
+ * bookkeeping and has not been settled.
+ *
+ * The exclusion lives here rather than at the flush call site on purpose. The
+ * report page drains its queue on every visit, so a rule the caller has to
+ * remember is a rule one future caller forgets, and the report that gets sent
+ * anyway is the one the server already refused. Reading it off the rows makes
+ * "a settled report never sends itself again" a property of the queue, the
+ * same way a refused probe makes commit unreachable rather than forbidden.
+ */
+function pendingFrom(
+  rows: readonly { readonly key: string; readonly value: string }[],
+): readonly { readonly report_id: string; readonly bytes: string }[] {
+  const settled = new Set(
+    rows.filter(({ key }) => key.startsWith(SETTLED_KEY_PREFIX)).map(({ key }) => key.slice(SETTLED_KEY_PREFIX.length)),
+  );
+  return rows
+    .filter(({ key }) => key !== IDENTITY_KEY && !key.startsWith(SENTINEL_KEY_PREFIX) && !key.startsWith(SETTLED_KEY_PREFIX))
+    .filter(({ key }) => !settled.has(key))
+    .map(({ key, value }) => ({ report_id: key, bytes: value }));
 }
 
 function parseIdentity(value: string | undefined): { readonly deviceId: string; readonly credential: string } | undefined {

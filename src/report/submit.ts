@@ -62,6 +62,8 @@ export type SubmissionOutcome =
 
 export interface SavedReportStore {
   discard(reportId: string): Promise<void>;
+  /** Keep the label, stop sending it: the write path will never accept these bytes. */
+  settle(reportId: string): Promise<void>;
 }
 
 /** Sends only the immutable bytes read from the durable queue. */
@@ -106,7 +108,13 @@ export async function sendWithCredentialRecovery(
   return sendSavedReport(savedBytes, await credential.get(), fetcher, reportEndpoint);
 }
 
-/** A durable label leaves the queue only once its own receipt is valid and matches. */
+/**
+ * The one place that decides what a send outcome does to the durable label.
+ *
+ * A label leaves the queue only once its own receipt is valid and matches. A
+ * refusal waiting cannot fix keeps the label but settles it, so no later visit
+ * sends it again. Everything else leaves the row exactly as it was, waiting.
+ */
 export async function finalizeSavedReport(
   reportId: string,
   outcome: SubmissionOutcome,
@@ -114,6 +122,10 @@ export async function finalizeSavedReport(
 ): Promise<SubmissionOutcome> {
   if (outcome.kind === 'received' && outcome.receipt.report_id === reportId) {
     await store.discard(reportId);
+    return outcome;
+  }
+  if (outcome.kind === 'refused' && outcome.persistence === 'settled') {
+    await store.settle(reportId);
   }
   return outcome;
 }
