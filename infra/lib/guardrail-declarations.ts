@@ -106,6 +106,16 @@ export const costAllocationTag = {
 //   * reserved concurrency -- the real rate limiter and the first hard
 //     ceiling on an anonymous write flood (report 2, everything else 1,
 //     mirroring writeReservedConcurrency in write-declarations.ts).
+//   * write store capacity -- fixed PROVISIONED 25/25 is what makes the
+//     store throttle for free instead of billing; on-demand would make the
+//     bill the only limit (adr-write-store-provisioned-capacity.md).
+//   * breaker alarms -- one per write function, presence only; the
+//     thresholds live in write-declarations.ts.
+//   * device-only daily quotas -- 20 reports, 10 presigns, 20 subscription
+//     writes per device per day (07-write-path.md control 0.10). Guardrail
+//     7's per-IP rows are deliberately gone: Panama runs carrier-grade NAT,
+//     so one mobile address is a whole beach town, while an attacker
+//     rotates cloud addresses for cents.
 //
 // The origin literal records the site origin the deployment binds. It is a
 // parameter, not a claim: the deployed stack imports the live origin from the
@@ -127,4 +137,15 @@ export const writePathGuardrailDeclarations = {
   'mint-limit': '1',
   'push-limit': '1',
   'photo-presign-limit': '1',
+  'table-billing-mode': 'PROVISIONED',
+  'table-read-capacity': '25',
+  'table-write-capacity': '25',
+  'report-breaker-alarm': 'declared',
+  'mint-breaker-alarm': 'declared',
+  'push-breaker-alarm': 'declared',
+  'photo-presign-breaker-alarm': 'declared',
+  'report-device-limit': '20',
+  'presign-device-limit': '10',
+  'subscription-device-limit': '20',
+  'quota-identity': 'device-only',
 } as const;

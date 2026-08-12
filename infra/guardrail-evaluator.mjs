@@ -323,6 +323,35 @@ const WRITE_CONCURRENCY_CEILINGS = [
 
 const WRITE_ADDRESS_NAMES = ['report', 'mint', 'push', 'photo-presign'];
 
+// 07-write-path.md section 7.2 control 0.4 and adr-write-store-provisioned-
+// capacity.md: fixed capacity is what makes the store throttle for free
+// instead of billing. On-demand would make the bill the only limit.
+const WRITE_STORE_CAPACITY = [
+  ['table-billing-mode', 'write table billing mode', 'PROVISIONED', 'on-demand writes make the bill the only limit'],
+  ['table-read-capacity', 'write table read capacity', '25', 'the fixed free-tier read ceiling must not drift'],
+  ['table-write-capacity', 'write table write capacity', '25', 'the fixed free-tier write ceiling must not drift'],
+];
+
+// Control 0.6: one circuit breaker per write function on the free Invocations
+// metric. Presence only here -- the thresholds live in write-declarations.ts
+// and the synth guardrail proves the alarms exist on the real template.
+const WRITE_BREAKER_ALARMS = [
+  ['report-breaker-alarm', 'report breaker alarm', 'declared', 'a report flood can keep spending without an alarm'],
+  ['mint-breaker-alarm', 'mint breaker alarm', 'declared', 'a mint flood can keep spending without an alarm'],
+  ['push-breaker-alarm', 'push breaker alarm', 'declared', 'a push flood can keep spending without an alarm'],
+  ['photo-presign-breaker-alarm', 'photo-presign breaker alarm', 'declared', 'a presign flood can keep spending without an alarm'],
+];
+
+// Control 0.10, and the deliberate removal of guardrail 7's per-IP rows:
+// Panama runs carrier-grade NAT, so one mobile IP is a whole town at the
+// beach while an attacker rotates cloud IPs for cents. Quotas are device-only.
+const DEVICE_QUOTA_LIMITS = [
+  ['report-device-limit', 'report device daily limit', '20', 'anonymous reports need the settled daily device ceiling'],
+  ['presign-device-limit', 'presign device daily limit', '10', 'photo grants need the settled daily device ceiling'],
+  ['subscription-device-limit', 'subscription device daily limit', '20', 'subscription writes need the settled daily device ceiling'],
+  ['quota-identity', 'quota identity', 'device-only', 'per-IP quotas do not match the anonymous credential boundary'],
+];
+
 function satisfiedProtection(key, protection) {
   return { key, protection, status: 'satisfied' };
 }
@@ -393,6 +422,9 @@ export function assessWritePathDeclarations(declarations) {
     ...WRITE_URL_POSTURES.map(([key, protection, why]) => assessFixedValue(declarations, [key, protection, 'NONE', why])),
     ...assessOrigins(declarations),
     ...WRITE_CONCURRENCY_CEILINGS.map((ceiling) => assessFixedValue(declarations, ceiling)),
+    ...WRITE_STORE_CAPACITY.map((capacity) => assessFixedValue(declarations, capacity)),
+    ...WRITE_BREAKER_ALARMS.map((alarm) => assessFixedValue(declarations, alarm)),
+    ...DEVICE_QUOTA_LIMITS.map((limit) => assessFixedValue(declarations, limit)),
   ];
 }
 
@@ -437,6 +469,9 @@ export async function evaluateWritePathGuardrails({ root, output }) {
   const siteOrigin = declarations['report-url-origin'];
   emit(output, lines, `write addresses: ${WRITE_ADDRESS_NAMES.join(', ')}; AuthType: NONE on every one; CORS bound to the exact site origin ${siteOrigin}, never *`);
   emit(output, lines, `reserved concurrency ceilings: ${WRITE_CONCURRENCY_CEILINGS.map(([key, , required]) => `${key.replace(/-limit$/, '')} ${declarations[key] ?? required}`).join(', ')}`);
+  emit(output, lines, `write store capacity: ${declarations['table-billing-mode']} at ${declarations['table-read-capacity']} RCU and ${declarations['table-write-capacity']} WCU, so it throttles for free instead of billing`);
+  emit(output, lines, `four write breaker alarms declared: ${WRITE_ADDRESS_NAMES.join(', ')}`);
+  emit(output, lines, `device-only daily quotas: ${declarations['report-device-limit']} reports, ${declarations['presign-device-limit']} presigns, ${declarations['subscription-device-limit']} subscription writes per device per day; no per-IP rows, because carrier-grade NAT makes one mobile address a whole beach town`);
   emit(output, lines, `write-path preflight: passed; ${slots.length} declared write-path protections inspected without AWS credentials`);
   return { exitCode: 0, lines };
 }

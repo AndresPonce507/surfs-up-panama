@@ -983,7 +983,9 @@ describe('write-path declaration guardrails (F-TELL-US-WHAT-YOU-SAW-COLD slice-0
   it('reads the settled declaration as every write-address protection satisfied', () => {
     const slots = protectionSlots(settledDeclarations);
     expect(Object.keys(slots).sort()).toEqual([...universe].sort());
-    expect(universe.length).toBe(12);
+    // 02-02's four addresses (posture + origin) and four concurrency ceilings,
+    // plus 02-03's store capacity, breaker alarms and device-only quotas.
+    expect(universe.length).toBe(23);
     for (const key of universe) expect(slots[key]?.status, key).toBe('satisfied');
   });
 
