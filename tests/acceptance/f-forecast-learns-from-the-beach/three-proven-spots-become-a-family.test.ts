@@ -14,9 +14,36 @@
 // activation can have changed it.
 //
 // The reefs are the control. Three of them pass the gates in both runs, so
-// their family is active in both, and their stored numbers must come out
-// byte-identical. A run where the reefs moved too would mean something other
+// their family is active in both, and their stored numbers must barely move. A
+// run where the reefs moved as much as the newcomer would mean something other
 // than beach-family activation had shifted underneath.
+//
+// AMENDED 2026-08-12 BY 04-05, cross-slice by explicit authorisation (see that
+// step's contract). This file belongs to 03-03.
+//
+// WHAT THE OLD CONTROL ASSUMED: that a reef's stored difference is byte-
+// identical across the two runs, because nothing a beach does can reach a
+// reef whose own family is active in both.
+//
+// WHY IT WAS WRONG: 06 section 5.2 measures a reporter's habit against the
+// key's SHRUNK estimate. So pooling now feeds back into raw estimates, and a
+// change in pooling anywhere in the run reaches everywhere the ladder connects.
+// The newcomer is two of this fixture's seventy-four mornings and sits in the
+// same region as the reefs; when beach-family activation changes what carries
+// the newcomer, the newcomer's own estimate moves, the region-wide mean moves
+// with it, and the reefs are pooled toward a parent that is no longer the same
+// number. There is no path by which the reefs could have stayed identical, and
+// the old assertion was only ever true because raw estimates did not depend on
+// pooling before this stage existed.
+//
+// WHAT THE CONTROL NOW SAYS, and it is the same control. The reef must move by
+// at least two orders of magnitude LESS than the newcomer: 0.0013 against
+// 0.178, a ratio of 142. That keeps the whole force of the original -- if the
+// reefs moved comparably, the comparison below would be measuring general
+// drift rather than beach-family activation -- while stating something that is
+// true of the system as designed. The ratio is asserted rather than the reef's
+// absolute move, because the absolute move is a consequence of this fixture's
+// proportions and the ratio is the thing the control is actually about.
 
 import assert from "node:assert/strict";
 
@@ -30,6 +57,12 @@ const SOURCE = "ncep_gfswave016";
 const LEAD_BUCKET = "lead_24_48";
 const CHEST_HEAD_MID_M = 1.35;
 const TOLERANCE = 1e-6;
+/**
+ * How much less a reef may move than the newcomer across the two runs. Two
+ * orders of magnitude, against the 142 times measured, so the control states a
+ * separation of scale rather than pinning this fixture's exact proportions.
+ */
+const A_REEF_MOVES_THIS_MUCH_LESS = 100;
 
 const NEWCOMER = "playa-recien-abierta";
 const THIRD_BEACH = "beach-tres";
@@ -130,7 +163,17 @@ function logsFor(spots: readonly SpotMornings[]): {
   return { observations: observations.join("\n"), predictions: predictions.join("\n") };
 }
 
-type StoredHeightKey = { b: number; n: number; reporters: number; applied: boolean };
+type StoredHeightKey = {
+  b: number;
+  n: number;
+  reporters: number;
+  applied: boolean;
+  /** tau / (n + tau): how much of this spot's stored number came from its parent rather than its own mornings. */
+  shrunk_from_global: number;
+};
+
+/** The prior at a two-morning spot: 6 / (2 + 6). A newcomer is three quarters carried. */
+const A_NEWCOMER_IS_CARRIED_THIS_MUCH = 0.75;
 
 async function runOver(spots: readonly SpotMornings[]): Promise<Map<string, StoredHeightKey>> {
   const store = new MemoryLearningStore();
@@ -201,16 +244,24 @@ describe("03-03 acceptance: three proven spots of one break type start pooling a
       "the third beach spot must report the same mornings in both runs; only who reported them changes",
     );
 
-    // The control: the reefs are three-gated in both runs, so their family is
-    // active in both and their stored numbers must not move at all.
-    assert.equal(
-      withFamily.get(A_REEF)!.b,
-      withoutFamily.get(A_REEF)!.b,
-      "a reef's stored difference must be identical across the two runs, or something other than beach-family activation moved underneath this comparison",
-    );
-
     const newcomerWithFamily = withFamily.get(NEWCOMER)!.b;
     const newcomerWithoutFamily = withoutFamily.get(NEWCOMER)!.b;
+
+    // The control: the reefs are three-gated in both runs, so their own family
+    // is active in both. They still move a little, because the offset stage
+    // measures habits against pooled estimates and the newcomer shares their
+    // region -- but they must move so much less than the newcomer that nothing
+    // below could be general drift wearing activation's name.
+    const theReefMoved = Math.abs(withFamily.get(A_REEF)!.b - withoutFamily.get(A_REEF)!.b);
+    const theNewcomerMoved = Math.abs(newcomerWithFamily - newcomerWithoutFamily);
+    assert.ok(
+      theNewcomerMoved > theReefMoved * A_REEF_MOVES_THIS_MUCH_LESS,
+      `the newcomer moved ${theNewcomerMoved} between the two runs and a reef moved ${theReefMoved}, under ${A_REEF_MOVES_THIS_MUCH_LESS} times as much. The reefs are three-gated in both runs, so beach-family activation may only reach them the long way round, through the newcomer's own estimate and the region-wide mean. A reef moving comparably means something else shifted underneath and this example is measuring drift.`,
+    );
+    assert.ok(
+      withFamily.get(A_REEF)!.b > 0 && withoutFamily.get(A_REEF)!.b > 0,
+      "a reef must go on reading the forecast as running big in both runs: the control has to stay the same kind of number, not merely a nearby one",
+    );
     const family = beachFamilyEstimate(familyProven);
     const regionWide = regionWideEstimate(familyProven);
 
@@ -224,12 +275,30 @@ describe("03-03 acceptance: three proven spots of one break type start pooling a
       `once the family exists the newcomer's stored difference ${newcomerWithFamily} must sit nearer the beach family's estimate ${family} than it did without one (${newcomerWithoutFamily})`,
     );
 
-    // Two beach spots are not yet a family: the region-wide parent carries the
-    // newcomer, pinned exactly rather than compared loosely.
-    const carriedByTheRegion = (2 / (2 + 6)) * NEWCOMER_RAW + (6 / (2 + 6)) * regionWide;
+    // WHAT ACTIVATION CHANGES IS WHICH PARENT, NEVER HOW HARD. Pinned exactly
+    // rather than compared loosely, and read off the record rather than
+    // recomputed: the newcomer is three quarters carried by its parent in BOTH
+    // runs, because it has two mornings against a tau of six either way. The
+    // old form of this assertion recomputed the carried value by hand from
+    // NEWCOMER_RAW and the region-wide mean, and both of those moved once the
+    // offset stage began measuring habits against pooled estimates -- the
+    // newcomer's own estimate is no longer its raw 0.6, and the region-wide
+    // mean is no longer the plain morning-weighted mean of the fixture's
+    // numbers. The WEIGHT never moved, and it is the thing this assertion was
+    // always about.
+    for (const [label, keys] of [["with a family", withFamily], ["without one", withoutFamily]] as const) {
+      assert.ok(
+        Math.abs(keys.get(NEWCOMER)!.shrunk_from_global - A_NEWCOMER_IS_CARRIED_THIS_MUCH) < TOLERANCE,
+        `${label} the newcomer was carried ${keys.get(NEWCOMER)!.shrunk_from_global} by its parent, not the ${A_NEWCOMER_IS_CARRIED_THIS_MUCH} two mornings against a tau of six give it: a similarity family forming must change WHICH parent carries a newcomer and never how hard it is carried`,
+      );
+    }
+
+    // And which parent it was. Two beach spots are not yet a family, so the
+    // region carries the newcomer and its stored number sits on the region's
+    // side of the gap between the two candidate parents.
     assert.ok(
-      Math.abs(newcomerWithoutFamily - carriedByTheRegion) < TOLERANCE,
-      `with only two proven beach spots the newcomer must be carried by the region-wide parent (${carriedByTheRegion}), not by ${newcomerWithoutFamily}`,
+      Math.abs(newcomerWithoutFamily - regionWide) < Math.abs(newcomerWithoutFamily - family),
+      `with only two proven beach spots the newcomer's stored ${newcomerWithoutFamily} sits nearer the beach family's ${family} than the region-wide ${regionWide}: a family that has not formed may not carry anybody`,
     );
 
     // Anti-vacuity: the family and the region must actually say different
