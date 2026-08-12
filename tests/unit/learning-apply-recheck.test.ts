@@ -30,13 +30,20 @@
 // difference, and the score delta is MINUS the stored score difference over
 // 100. 05 section 5's delta_q line omits that minus and is stale.
 //
-// SCOPE. The height half of G5 - clamping a member's move to forty percent of
-// that member's own height - is NOT claimed here. memberHBias is handed a
-// model and a lead time, never the member's height, so the fractional clamp
-// can only bind at the one call site that knows that height
-// (src/pipeline/build.ts), which this lane does not own. The SCORE clamp
-// needs no member height, travels inside the record as clamp.max_abs_score,
-// and is claimed by the second law below.
+// SCOPE, AND THE ONE CLAIM THAT IS A REFUSAL. G5's height clamp - a member's
+// move bounded by forty percent of that member's own height - cannot bind in
+// this function: memberHBias is handed a model and a lead time, never the
+// member's height, so the fraction can only be taken at the one call site that
+// knows it (src/pipeline/build.ts), which this lane does not own. The metres
+// and their clamp therefore ship together or not at all, because a body that
+// subtracted the stored metres with no clamp on them would let a corrupt file
+// order an absurd wave height the moment the record is wired in. Until then
+// the height lane is INERT: exactly zero metres for every model and every lead
+// bucket, whatever the record states. The last law below is that claim, and it
+// carries a counter proving the generated space really does contain keys an
+// unclamped body would have moved. The SCORE clamp needs no member height,
+// travels inside the record as clamp.max_abs_score, and is claimed by the
+// second law below.
 //
 // Layer: unit, pure functions only. applyCorrection reads nothing but its two
 // arguments; no store, no clock, no ambient world.
@@ -78,15 +85,39 @@ const seed: SpotSeed = {
 // ---------- generators ----------
 
 /**
+ * A stored magnitude at the two decimals the emitter actually writes, drawn
+ * evenly across its whole range.
+ *
+ * NOT fc.double, and the difference is load bearing rather than stylistic.
+ * fc.double samples uniformly over the REPRESENTABLE doubles of a range, and
+ * representable doubles crowd around zero: the overwhelming majority of draws
+ * from `fc.double({min: -1.5, max: 1.5})` land within a rounding error of 0,
+ * so a stored height difference essentially never reaches the region where
+ * its own ladder can clear. Measured on this file's own generators: with
+ * fc.double, 300 runs produced ZERO keys whose evidence cleared the height
+ * ladder, which silently emptied every law below of the cases it exists to
+ * cover. Scaled integers put the draws where the gates actually live.
+ */
+function someStoredMagnitude(limit: number): fc.Arbitrary<number> {
+  const hundredths = Math.round(limit * 100);
+  return fc.integer({ min: -hundredths, max: hundredths }).map((value) => value / 100);
+}
+
+/** A stated standard error: never negative, same two decimals. */
+function someStoredStandardError(limit: number): fc.Arbitrary<number> {
+  return fc.integer({ min: 0, max: Math.round(limit * 100) }).map((value) => value / 100);
+}
+
+/**
  * One stated key. `applied` is generated independently of everything beside
  * it on purpose: a record whose verdict agrees with its evidence and a record
  * whose verdict was forged are the same shape, and the reader must not be
  * able to tell them apart by trusting the field.
  */
-function someGatedKey(bLimit: number): fc.Arbitrary<GatedKey> {
+function someGatedKey(bLimit: number, seLimit: number): fc.Arbitrary<GatedKey> {
   return fc.record({
-    b: fc.double({ min: -bLimit, max: bLimit, noNaN: true, noDefaultInfinity: true }),
-    se: fc.double({ min: 0, max: 5, noNaN: true, noDefaultInfinity: true }),
+    b: someStoredMagnitude(bLimit),
+    se: someStoredStandardError(seLimit),
     n: fc.integer({ min: 0, max: 60 }),
     reporters: fc.integer({ min: 0, max: 12 }),
     applied: fc.boolean(),
@@ -102,13 +133,18 @@ type RecordShape = {
   readonly maxAbsScore: number;
 };
 
+/** Display points, against a score error the emitter states on the same scale. */
+const someScoreKey = someGatedKey(40, 5);
+/** Metres, against a height error on the metre scale rather than the score's. */
+const someHeightKey = someGatedKey(1.5, 1.5);
+
 const someRecordShape: fc.Arbitrary<RecordShape> = fc.record({
   // Sometimes no score move at all: the emitter omits it for a spot whose
   // reports never carried the score a build had shown them.
-  scoreDelta: fc.option(someGatedKey(40), { nil: null }),
-  nearA: someGatedKey(1.5),
-  farA: someGatedKey(1.5),
-  farB: someGatedKey(1.5),
+  scoreDelta: fc.option(someScoreKey, { nil: null }),
+  nearA: someHeightKey,
+  farA: someHeightKey,
+  farB: someHeightKey,
   // Generated rather than pinned to the shipped constant, so a body that
   // hardcoded 12 instead of reading the record's own limit is caught.
   maxAbsScore: fc.double({ min: 1, max: 30, noNaN: true, noDefaultInfinity: true }),
@@ -224,25 +260,6 @@ describe("applyCorrection: the point -- a stored verdict has no power, the ladde
             `the score moved by ${outcome.delta_q} on evidence the ladder refuses: ${JSON.stringify(record.score_delta)}`,
           );
         }
-        for (const [source, leadH] of [
-          [SOURCE_A, LEAD_H_NEAR],
-          [SOURCE_A, LEAD_H_FAR],
-          [SOURCE_B, LEAD_H_FAR],
-        ] as const) {
-          const bias = outcome.memberHBias(source, leadH);
-          if (bias === 0) continue;
-          assert.ok(
-            statedEvidenceClearsTheLadder(record.score_delta, SIGMA_EFF.score.value),
-            `a member height moved by ${bias} m on a file the score ladder refused; a refused file must move nothing at all`,
-          );
-          assert.ok(
-            statedEvidenceClearsTheLadder(
-              record.bias.swell_h_m.per_source[source]?.[leadBucketOf(leadH)],
-              SIGMA_EFF.height.value,
-            ),
-            `a member height moved by ${bias} m at ${source} ${leadBucketOf(leadH)} on evidence that key's own ladder refuses`,
-          );
-        }
       }),
       { numRuns: 200 },
     );
@@ -303,20 +320,29 @@ describe("applyCorrection: the score move carries 06 section 4's sign and satura
   });
 });
 
-describe("applyCorrection: a member is corrected at its own model and its own lead bucket, or not at all", () => {
-  it("subtracts the difference stored at the member's own key, and exactly nothing at a key no record states", () => {
+describe("applyCorrection: no wave height moves until the clamp that bounds it can move with it", () => {
+  it("subtracts exactly zero metres from every member, including keys whose own evidence clears every rung", () => {
+    // The counter is what stops this law being a tautology. A body that
+    // returned zero because no generated record ever ORDERED a height move
+    // would satisfy the assertions below and prove nothing, so the runs that
+    // an unclamped body would genuinely have moved are counted, and the law
+    // fails if the generated space never produced one.
+    let keysAnUnclampedBodyWouldHaveMoved = 0;
+
     fc.assert(
       fc.property(someRecordShape, (shape) => {
         const record = recordOf(shape);
         const outcome = applyCorrection(seed, record);
+        const fileClears = statedEvidenceClearsTheLadder(
+          record.score_delta,
+          SIGMA_EFF.score.value,
+        );
 
         assert.equal(
           outcome.memberHBias(UNSTATED_SOURCE, LEAD_H_FAR),
           0,
           "a model the record says nothing about must be corrected by exactly zero, never by another model's difference",
         );
-
-        if (!statedEvidenceClearsTheLadder(record.score_delta, SIGMA_EFF.score.value)) return;
 
         for (const [source, leadH] of [
           [SOURCE_A, LEAD_H_NEAR],
@@ -325,17 +351,26 @@ describe("applyCorrection: a member is corrected at its own model and its own le
         ] as const) {
           const stated = record.bias.swell_h_m.per_source[source]?.[leadBucketOf(leadH)];
           assert.ok(stated, "test bug: the generated record states no key here");
-          const expected = statedEvidenceClearsTheLadder(stated, SIGMA_EFF.height.value)
-            ? stated.b
-            : 0;
+          if (
+            fileClears
+            && stated.b !== 0
+            && statedEvidenceClearsTheLadder(stated, SIGMA_EFF.height.value)
+          ) {
+            keysAnUnclampedBodyWouldHaveMoved += 1;
+          }
           assert.equal(
             outcome.memberHBias(source, leadH),
-            expected,
-            `${source} at ${leadBucketOf(leadH)} must be corrected by the metres stored at its OWN key (${expected}), not by any other key's difference`,
+            0,
+            `${source} at ${leadBucketOf(leadH)} must be corrected by exactly zero metres while G5's forty-percent clamp cannot bind, whatever the record states there (${stated.b} m on n=${stated.n}, reporters=${stated.reporters}, se=${stated.se}); the metres and their clamp ship together or not at all`,
           );
         }
       }),
-      { numRuns: 200 },
+      { numRuns: 300 },
+    );
+
+    assert.ok(
+      keysAnUnclampedBodyWouldHaveMoved > 0,
+      "this law is vacuous unless the generated records contain at least one key an unclamped body would have moved; none did, so the generators, not the apply body, are what passed",
     );
   });
 });

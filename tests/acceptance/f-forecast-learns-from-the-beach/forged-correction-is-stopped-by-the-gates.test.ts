@@ -27,15 +27,22 @@
 // b_score/100. 05 section 5's delta_q line omits that minus and is stale;
 // the oracles here assert the 06 sign in both lanes.
 //
-// WHAT THIS FILE DOES NOT CLAIM. The roadmap's height criterion has two
-// halves: the metres subtracted per (source, lead bucket), and the clamp of
-// that move to forty percent of the member's own height. Only the first half
-// is claimed here. memberHBias is handed a model and a lead time, never the
-// member's height, so the only place the fractional clamp can bind is the one
-// call site that knows that height - src/pipeline/build.ts line 218 - which
-// this lane must not touch while a concurrent lane owns it. The score clamp
-// needs no member height and IS claimed: it travels inside the record as
-// clamp.max_abs_score and is exercised by this step's unit law.
+// THE HEIGHT LANE SHIPS INERT, AND THAT IS A CLAIM, NOT A GAP. The roadmap's
+// height criterion has two halves: the metres subtracted per (source, lead
+// bucket), and the clamp of that move to forty percent of the member's own
+// height. The two may only ship together. memberHBias is handed a model and a
+// lead time, never the member's height, so the fractional clamp can only bind
+// at the one call site that knows that height - src/pipeline/build.ts line
+// 218 - which this lane must not touch while a concurrent lane owns it.
+// Shipping the metres without their clamp would leave a window in which a
+// corrupt or forged file could order an absurd wave height the moment 02-03
+// wires the record in, and G5 (06 section 7) exists precisely to make that
+// impossible. So until the clamp can land in the same change, every member is
+// corrected by EXACTLY ZERO metres, and the last test below proves it against
+// a record whose height key clears its own ladder by a wide margin. Zero is
+// the day-zero forecast, which is never a lie; an unclamped move would be one.
+// The SCORE clamp needs no member height, travels inside the record as
+// clamp.max_abs_score, and IS claimed here and by this step's unit law.
 
 import assert from "node:assert/strict";
 
@@ -176,7 +183,7 @@ function assertStoppedByTheGates(
   );
 }
 
-function assertMovesTheNumberInTheDeclaredDirection(
+function assertMovesTheScoreAndLeavesEveryHeightAtDayZero(
   outcome: CorrectionOutcome,
   record: StoredCorrection,
 ): void {
@@ -191,12 +198,12 @@ function assertMovesTheNumberInTheDeclaredDirection(
     Math.abs(outcome.delta_q - -scoreDelta.b / 100) < 1e-12,
     `the score delta must be MINUS the stored score difference over 100 (06 section 4); the stored difference was ${scoreDelta.b} and the delta was ${outcome.delta_q}`,
   );
-  const storedHeight =
-    record.bias.swell_h_m.per_source[SOURCE]?.["lead_24_48"];
+  const storedHeight = record.bias.swell_h_m.per_source[SOURCE]?.["lead_24_48"];
   assert.ok(storedHeight, "test bug: the record states no height difference at the fixture key");
-  assert.ok(
-    Math.abs(heightBiasApplied(outcome) - storedHeight.b) < 1e-12,
-    `the metres subtracted from a member must be the stored difference at its own model and lead bucket; stored ${storedHeight.b}, applied ${heightBiasApplied(outcome)}`,
+  assert.equal(
+    heightBiasApplied(outcome),
+    0,
+    `no member height may move until the forty-percent clamp can move with it: this record orders ${storedHeight.b} m at ${SOURCE} lead_24_48 and the apply body must subtract exactly zero, not ${heightBiasApplied(outcome)}`,
   );
 }
 
@@ -249,32 +256,44 @@ describe("02-02 acceptance: a hand-forged correction file is stopped by the gate
     );
   });
 
-  it("still moves the number when the record's own stated evidence clears every gate", () => {
+  it("moves the score when the record's own stated evidence clears every gate, and still moves no wave height at all", () => {
     const honest = emittedRecord(18, 6);
 
-    // Guard against a vacuous pass: this example only means anything if the
-    // fixture's own evidence really does clear the ladder in BOTH lanes, so
-    // that "the number moved" is the apply body's doing and not a fixture
-    // that never asked for a move.
+    // Guard against a vacuous pass, and it is this guard that gives the height
+    // half of this example its whole force. The fixture's height key clears
+    // every rung on its own stated evidence and orders a move of well over half
+    // a metre, so a body that shipped the metres without their clamp WOULD move
+    // this member. Zero here is therefore the apply body's deliberate refusal,
+    // never a record that asked for nothing.
     const fixtureHeight = honest.bias.swell_h_m.per_source[SOURCE]?.["lead_24_48"];
     assert.ok(fixtureHeight, "test bug: the fixture states no height difference at the key under test");
     assert.ok(
       fixtureHeight.n >= 10 && fixtureHeight.reporters >= 5
-        && Math.abs(fixtureHeight.b) > 2 * fixtureHeight.se,
-      `test bug: the fixture's height key must clear the ladder on its own stated evidence; it states n=${fixtureHeight.n}, reporters=${fixtureHeight.reporters}, b=${fixtureHeight.b}, se=${fixtureHeight.se}`,
+        && Math.abs(fixtureHeight.b) > 2 * fixtureHeight.se
+        && fixtureHeight.b !== 0,
+      `test bug: the fixture's height key must clear the ladder on its own stated evidence and order a non-zero move, or the inert claim below proves nothing; it states n=${fixtureHeight.n}, reporters=${fixtureHeight.reporters}, b=${fixtureHeight.b}, se=${fixtureHeight.se}`,
     );
 
     const outcome = applyCorrection(seed, honest);
 
-    assertMovesTheNumberInTheDeclaredDirection(outcome, honest);
+    assertMovesTheScoreAndLeavesEveryHeightAtDayZero(outcome, honest);
     assert.throws(
       () =>
-        assertMovesTheNumberInTheDeclaredDirection(
+        assertMovesTheScoreAndLeavesEveryHeightAtDayZero(
           { ...outcome, delta_q: -outcome.delta_q },
           honest,
         ),
       /MINUS the stored score difference/,
       "the oracle must reject a score delta applied with the wrong sign",
+    );
+    assert.throws(
+      () =>
+        assertMovesTheScoreAndLeavesEveryHeightAtDayZero(
+          { ...outcome, memberHBias: () => fixtureHeight.b },
+          honest,
+        ),
+      /must subtract exactly zero/,
+      "the oracle must reject an apply body that subtracts the stored metres with no clamp on them",
     );
   });
 

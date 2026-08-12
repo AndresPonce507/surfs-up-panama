@@ -18,12 +18,35 @@
 // same reason in the other direction, and the graph stays acyclic: gates and
 // constants reach no further than each other and estimate.
 
-import { leadBucketOf, SIGMA_EFF } from '../learning/constants';
+import { SIGMA_EFF } from '../learning/constants';
 import type { GatedKey, StoredCorrection } from '../learning/correction-file';
 import { gateCorrection, type GateInput } from '../learning/gates';
 
 /** domain-model.md section 11: a stored score move is stated in display points, and Q is that scale over 100. */
 const DISPLAY_POINTS_PER_Q_UNIT = 100;
+
+/**
+ * The metres subtracted from every member's height, at every model and every
+ * lead bucket, whatever a correction file states: none.
+ *
+ * G5 (06 section 7) bounds a stored height move at forty percent of the
+ * member's OWN height, and it is the half of that rule that makes the other
+ * half safe to ship. This port is handed a model and a lead time and never
+ * the member's height, so the fraction can only be taken at the one call site
+ * that knows it, src/pipeline/build.ts. Subtracting the stored metres here
+ * while their bound waits for that call site would leave the layer able to
+ * order an absurd wave height for as long as the window stayed open, on a
+ * product whose one rule is to never claim more certainty than the data
+ * earns. So the metres and their clamp ship together, in the change that
+ * teaches this port the member's height, or not at all. Until then the height
+ * a surfer reads is the forecast day zero published, which is never a lie.
+ *
+ * This is a stated refusal, not an unwritten feature: the acceptance example
+ * and the property in tests/unit/learning-apply-recheck.test.ts both drive a
+ * record whose height keys clear every rung on their own evidence and require
+ * exactly zero back.
+ */
+const NO_MEMBER_HEIGHT_CORRECTION = (): number => 0;
 
 // ---------- input types (05 section 3) ----------
 
@@ -387,19 +410,17 @@ export function rankSpots(
  * height included -- which is what "the waves and score a surfer reads are
  * exactly what day zero published" means. A record stating no score move at
  * all states no evidence this body can weigh, and is refused on the first
- * rung like any other file with too few mornings behind it. Past that, each
- * member is still corrected only if its OWN key clears the ladder too, so one
- * thinly-sampled lead bucket costs its own bucket and not the whole file.
+ * rung like any other file with too few mornings behind it.
  *
- * SIGN, 06 section 4: residual and bias are forecast minus observed, so a
- * corrected member is raw MINUS the stored metres and the score moves by
- * MINUS the stored points over 100. 05 section 5's delta_q line omits that
- * minus and is stale against 06.
+ * SIGN, 06 section 4: the score moves by MINUS the stored points over 100,
+ * because residual and bias are forecast minus observed. 05 section 5's
+ * delta_q line omits that minus and is stale against 06.
  *
  * G6 (06 section 7) binds here: the score move saturates at the limit the
- * record itself carries, so a corrupt file cannot order an absurd number. G5,
- * its height twin, is a fraction of the member's OWN height and can only bind
- * where that height is known, which is the caller, not here.
+ * record itself carries, so a corrupt file cannot order an absurd number.
+ * G5, its height twin, cannot bind here at all, and so NO HEIGHT MOVES: see
+ * NO_MEMBER_HEIGHT_CORRECTION above for why the metres wait for the clamp
+ * that bounds them rather than shipping ahead of it.
  *
  * The `applied` token is never written in this file. It is carried out of
  * gateCorrection's verdict, because src/learning/declarations.ts's
@@ -412,50 +433,42 @@ export function applyCorrection(
 ): CorrectionOutcome {
   const params = paramsFrom(seed);
   if (correction === null) {
-    return { params, memberHBias: () => 0, delta_q: 0, gate: 'no_file' };
+    return { params, memberHBias: NO_MEMBER_HEIGHT_CORRECTION, delta_q: 0, gate: 'no_file' };
   }
 
-  const verdict = gateCorrection(gateInputFor(correction.score_delta, SIGMA_EFF.score.value));
+  const verdict = gateCorrection(statedScoreEvidenceOf(correction.score_delta));
   if (!verdict.applied) {
-    return { params, memberHBias: () => 0, delta_q: 0, gate: verdict.reason };
+    return { params, memberHBias: NO_MEMBER_HEIGHT_CORRECTION, delta_q: 0, gate: verdict.reason };
   }
 
   return {
     params,
-    memberHBias: (source, lead_h) => memberHeightBiasOf(correction, source, lead_h),
-    delta_q: -clamp(
-      correction.score_delta?.b ?? 0,
-      -correction.clamp.max_abs_score,
-      correction.clamp.max_abs_score,
-    ) / DISPLAY_POINTS_PER_Q_UNIT,
+    memberHBias: NO_MEMBER_HEIGHT_CORRECTION,
+    delta_q: storedScoreMoveOf(correction),
     gate: verdict.reason,
   };
 }
 
-/** Metres to subtract from one member: the difference stored at its own model and lead bucket, or nothing. */
-function memberHeightBiasOf(
-  correction: StoredCorrection,
-  source: string,
-  lead_h: number,
-): number {
-  const stated = correction.bias.swell_h_m.per_source[source]?.[leadBucketOf(lead_h)];
-  if (stated === undefined) return 0;
-  const verdict = gateCorrection(gateInputFor(stated, SIGMA_EFF.height.value));
-  return verdict.applied ? stated.b : 0;
+/** The published score move: MINUS the stored points over 100, bounded by the record's own limit. */
+function storedScoreMoveOf(correction: StoredCorrection): number {
+  const limit = correction.clamp.max_abs_score;
+  const bounded = clamp(correction.score_delta?.b ?? 0, -limit, limit);
+  return -bounded / DISPLAY_POINTS_PER_Q_UNIT;
 }
 
 /**
- * What the ladder reads off one stated key. A key the record never stated
- * carries no evidence at all, and a claim with no evidence behind it is
- * refused on the first rung rather than waved through.
+ * What the ladder reads off the record's stated score key. A record that
+ * states no score move carries no evidence this body can weigh, and a claim
+ * with no evidence behind it is refused on the first rung rather than waved
+ * through.
  */
-function gateInputFor(stated: GatedKey | undefined, sigmaEff: number): GateInput {
+function statedScoreEvidenceOf(stated: GatedKey | undefined): GateInput {
   return {
     n: stated?.n ?? 0,
     reporters: stated?.reporters ?? 0,
     b: stated?.b ?? 0,
     se: stated?.se ?? 0,
-    sigma_eff: sigmaEff,
+    sigma_eff: SIGMA_EFF.score.value,
   };
 }
 

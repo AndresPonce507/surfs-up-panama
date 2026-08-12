@@ -701,6 +701,27 @@
       "s": "EXECUTED",
       "d": "PASS: production step committed as c6237ed (feat(learning): let a correction file move a number only on its own evidence), 10 files, 846 insertions. git show --stat confirms src/pipeline/build.ts is NOT among them. INCIDENT during this step: a second process was writing into this worktree - it replaced this step's unit-law file at 18:46 with its own incompatible version, and later reverted both src/scoring/engine.ts and src/learning/gates.ts to HEAD mid-verification. Both were restored from this session's own record and re-verified green before the commit. The foreign unit-law file is preserved outside the repo for the lane owner.",
       "t": "2026-08-11T23:58:41Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "SECOND PASS, inert height lane. The first pass of this step shipped the height correction UNCLAMPED (c6237ed); an explicit decision rejected that, because G5's forty-percent bound can only be taken at src/pipeline/build.ts, which this lane may not touch, and shipping the metres ahead of their bound would let a corrupt file order an absurd wave height the moment 02-03 wires a record in. New acceptance assertion written against the SHIPPED unclamped body rather than a stub: a record whose height key clears every rung on its own evidence and orders 0.60 m must be corrected by exactly zero. It failed semantically -- 'the apply body must subtract exactly zero, not 0.5999999999999998' -- with tsc clean and zero collection errors, so the red was behavioural. A second doctored-outcome rejection was added to the oracle so it provably refuses an unclamped body.",
+      "t": "2026-08-12T00:17:18Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "The generated law that used to demand the per-key metres now demands exactly zero at every key, and carries a counter that fails the law outright if the generated space contained no key an unclamped body would have moved. That counter immediately exposed a defect in the inherited generators: fc.double samples uniformly over REPRESENTABLE doubles, which crowd around zero, so a stored height difference essentially never reached the region where its own ladder clears -- the counter read ZERO over 300 runs, meaning the law would have passed against an unclamped body for want of a case. Generators replaced with scaled integers at the two decimals the emitter writes, and a height key's stated error moved onto the metre scale. The counter then read 18 per 300 runs and the law failed on a shrunk counterexample: 'must be corrected by exactly zero metres ... (0.13 m on n=14, reporters=5, se=0)'. Laws (a) through (c) share those generators and are strictly stronger for the change.",
+      "t": "2026-08-12T00:17:33Z"
+    },
+    {
+      "sid": "02-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "The per-key height lookup is deleted, not disabled: memberHeightBiasOf is gone, the leadBucketOf import it orphaned is gone, and all three return sites carry one named constant NO_MEMBER_HEIGHT_CORRECTION whose comment states why the metres wait for the clamp that bounds them. There is no flag to flip and no dead lookup left in the tree. The score lane is unchanged in behaviour and was extracted into storedScoreMoveOf for readability. Full vitest 409/409 across 82 files, tsc --noEmit exit 0, npm run build exit 0 with 109 pages under every ceiling. Post-GREEN wiring check: src/scoring/engine.ts is in the diff, so this is not fixture theatre, and src/pipeline/build.ts is NOT in the diff. Falsifiability proven by three reverted mutations -- the inert constant made to return 0.01 m (6 failures across three files, including shipped scoring-laws R19, the independent fence), the score sign flipped (3), the record's own clamp dropped (2). After the reverts git status names only the three paths this commit changes. UI checks N/A: non-visual step, and build.ts still hands applyCorrection a literal null, so no published byte can move on this step at all.",
+      "t": "2026-08-12T00:17:46Z"
     }
   ]
 }
