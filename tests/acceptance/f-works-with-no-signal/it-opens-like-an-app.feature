@@ -6,19 +6,20 @@ Feature: It opens like an app
   iPhone that installed context is also the only door through which alerts
   can ever be offered, which is why the settled A2HS hint exists.
 
-  THE HINT IS STAGED, ON PURPOSE. The settled hint copy ("¿Quieres avisos? En
-  iPhone: Compartir, y luego Añadir a pantalla de inicio. Sin eso, iPhone no
-  deja avisar.") opens by promising avisos, and no live way to ask for avisos
-  exists until the alerts feature ships its subscribe path. No slice ships a
-  sentence that is not true at the moment it ships — the same rule that
-  staged the offline copy — so the hint's public rendering waits for that
-  subscribe path, and the second scenario below asserts its ABSENCE on
-  purpose. Do not "fix" it by rendering the hint early. When the alerts
-  feature (F-TELL-ME-WHEN-ITS-WORTH-THE-DRIVE) brings the subscribe path
-  live, IT flips the hint visible and amends that scenario in the same
-  change: verbatim section 10 words, a plain disclosure the surfer taps open,
-  no script, home footer. The hint markup, staged dark, ships here; the
-  ownership call and the flip are recorded in the slice-05 roadmap step.
+  THE HINT RENDERS SOFTENED, BY RATIFIED DECISION (2026-08-12). The settled
+  hint copy ("¿Quieres avisos? En iPhone: Compartir, y luego Añadir a
+  pantalla de inicio. Sin eso, iPhone no deja avisar.") opens by promising
+  avisos, and no live way to ask for avisos exists until the push feature
+  ships its subscribe path. No slice ships a sentence that is not true at
+  the moment it ships — the rule that first staged this hint dark. Andres
+  ruled on 2026-08-12 that the hint itself renders NOW, wearing only what is
+  true today: installing puts the site one tap away and it opens without
+  signal. The settled avisos wording returns in the same change that brings
+  the subscribe path live, owned by the push lane's launch checklist
+  (docs/feature/f-tell-me-when-its-worth-the-drive/launch-checklist.md; the
+  decision and restore condition are recorded in this feature's delta). The
+  second scenario below asserts BOTH halves: the install hint is present,
+  and no aviso word renders anywhere on the page.
 
   @slice-05 @driving_port @real-io @covers-R31
   Scenario: The site offers itself to the home screen with its settled identity
@@ -30,7 +31,8 @@ Feature: It opens like an app
   @slice-05 @driving_port @real-io @error @covers-R32 @covers-R41
   Scenario: No promise of avisos before avisos exist
     Given a surfer has read the home page with signal
-    Then the page makes no promise of avisos yet
+    Then the install hint promises only what exists today
+    And the page makes no promise of avisos yet
 
   @slice-05 @real-io @nfr @covers-R33
   Scenario: Opening like an app costs almost nothing on a normal visit
