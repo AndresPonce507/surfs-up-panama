@@ -813,6 +813,13 @@
       "s": "EXECUTED",
       "d": "Implemented src/learning/cross-validation.ts (NEW: CV_SCHEME literal, heldOutBlockStart, judgeRollingOriginCorrections), wired the judge into src/learning/metrics.ts's cv field, added a distinguishing kill event in src/learning/evaluate.ts, widened src/learning/load-correction.ts's loadStoredCorrections to consume the latest monthly verdict (bounded probe, applied-key-gated to avoid an unrelated regression -- see contract scope_note), and passed the clock through in src/pipeline/build.ts. Both target ATs pass (2/2). Full suite: 107 files -- 100 passed/4 failed/3 skipped; 537 tests -- 527 passed/5 failed/5 skipped; the 5 failures are exactly the pre-existing staleness-stamp*/staleness-flip/report-island family named in the task context, unchanged by this diff. npm run typecheck: exit 0. Non-visual step: UI N/A rationale recorded in the contract; proceeding straight to COMMIT per the roadmap's own non_visual_rationale.",
       "t": "2026-08-12T19:17:38Z"
+    },
+    {
+      "sid": "05-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "Staged exactly the owned paths (src/learning/cross-validation.ts new, evaluate.ts/load-correction.ts/metrics.ts, src/pipeline/build.ts, both 05-02 acceptance test files, tests/unit/learning-cv-laws.test.ts new, tests/unit/learning-load-correction.test.ts, plus git add -f for the gitignored 05-02-contract.json and execution-log.json). gate-baseline.log left untracked, not staged. Committed a6563cf on branch build/f2-learning-slice05 with Step-ID: 05-02 trailer. git status confirms only gate-baseline.log remains untracked (not mine).",
+      "t": "2026-08-12T19:18:35Z"
     }
   ]
 }
