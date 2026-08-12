@@ -38,6 +38,7 @@
 
 import {
   PARENT_MAX_EFFECTIVE_SAMPLES_PER_REGION,
+  SIMILARITY_GROUP_MIN_GATED_SPOTS,
   TAU_PARENT_LEVEL_PRIOR,
 } from "./constants";
 import { weightedMean } from "./estimate";
@@ -85,15 +86,21 @@ export type SpotEvidence = {
   readonly n: number;
   /** How many of those mornings each distinct reporter contributed; sums to n. */
   readonly samplesPerReporter: readonly number[];
+  /**
+   * Whether this spot's own evidence passed the correction gates when the
+   * ladder was collapsed. Carried as a decided boolean rather than re-judged
+   * here: only src/learning/gates.ts weighs evidence, and the count of spots
+   * that cleared it is the only thing a similarity family activates on.
+   */
+  readonly gated: boolean;
 };
 
 /** A spot with no seed row sits in one unnamed basin and one unnamed region, which is the launch shape. */
 const UNSEEDED = "";
 
-/** One region's own estimate and the weight it carries in its basin's mean. */
+/** One region's spots, its own estimate, and the weight it carries in its basin's mean. */
 type Region = {
-  readonly regionId: string;
-  readonly spotIds: readonly string[];
+  readonly spots: readonly SpotEvidence[];
   readonly own: number;
   readonly weight: number;
 };
@@ -109,32 +116,65 @@ export function parentEstimateBySpot(
 
   for (const basin of groupedBy(evidence, (spot) => placement.coastOf(spot.spotId))) {
     const regions = groupedBy(basin, (spot) => placement.regionOf(spot.spotId)).map(
-      (spotsOfRegion) => regionOf(spotsOfRegion, placement, caps),
+      (spotsOfRegion) => regionOf(spotsOfRegion, caps),
     );
     const basinEstimate = estimateOfBasin(regions);
     for (const region of regions) {
-      const estimate = shrinkTowardParent(
+      const regionEstimate = shrinkTowardParent(
         region.own,
         region.weight,
         TAU_PARENT_LEVEL_PRIOR,
         basinEstimate,
       );
-      for (const spotId of region.spotIds) parents.set(spotId, estimate);
+      const families = groupedBy(region.spots, (spot) =>
+        placement.breakTypeOf(spot.spotId),
+      );
+      for (const family of families) {
+        const parent = familyParent(family, regionEstimate, caps);
+        for (const spot of family) parents.set(spot.spotId, parent);
+      }
     }
   }
 
   return parents;
 }
 
-/** Where the seed roster says each spot sits. A spot the roster does not name sits in the unnamed pair. */
+/**
+ * What carries a break-type family: its region, until three of its own spots
+ * have passed the gates, and then itself. The similarity level ships collapsed
+ * and comes into existence per family on the evidence alone -- no code change
+ * and no configuration flip (06 section 5.3,
+ * adr-pooling-hierarchy-activation decision 3). Below the threshold this
+ * returns the region's estimate untouched, so a family that has not formed
+ * costs its members nothing, not even a rounding step.
+ */
+function familyParent(
+  family: readonly SpotEvidence[],
+  regionEstimate: number,
+  caps: PoolingCaps,
+): number {
+  const proven = family.filter((spot) => spot.gated).length;
+  if (proven < SIMILARITY_GROUP_MIN_GATED_SPOTS) return regionEstimate;
+  const pooled = poolOf(family, caps);
+  return shrinkTowardParent(
+    pooled.own,
+    pooled.weight,
+    TAU_PARENT_LEVEL_PRIOR,
+    regionEstimate,
+  );
+}
+
+/** Where the seed roster says each spot sits. A spot the roster does not name sits in the unnamed levels. */
 function placementFrom(seeds: readonly SpotSeed[]): {
   coastOf: (spotId: string) => string;
   regionOf: (spotId: string) => string;
+  breakTypeOf: (spotId: string) => string;
 } {
   const bySpot = new Map(seeds.map((seed) => [seed.spot_id, seed]));
   return {
     coastOf: (spotId) => bySpot.get(spotId)?.coast ?? UNSEEDED,
     regionOf: (spotId) => bySpot.get(spotId)?.region_id ?? UNSEEDED,
+    breakTypeOf: (spotId) => bySpot.get(spotId)?.break_type ?? UNSEEDED,
   };
 }
 
@@ -151,21 +191,27 @@ function groupedBy(
   return [...groups.values()];
 }
 
-/** A region's own estimate: the weighted mean of its spots' own estimates (09 section 17.5 item 1). */
-function regionOf(
+/** A set of spots pooled into one estimate: the weighted mean of their own estimates (09 section 17.5 item 1). */
+function poolOf(
   spots: readonly SpotEvidence[],
-  placement: { regionOf: (spotId: string) => string },
   caps: PoolingCaps,
-): Region {
+): { own: number; weight: number } {
   const weights = spots.map((spot) => effectiveSpotWeight(spot, caps));
-  const total = weights.reduce((sum, weight) => sum + weight, 0);
   return {
-    regionId: placement.regionOf(spots[0]!.spotId),
-    spotIds: spots.map((spot) => spot.spotId),
     own: weightedMean(
       spots.map((spot, index) => ({ value: spot.b, weight: weights[index]! })),
     ),
-    weight: Math.min(total, caps.max_effective_samples_per_region),
+    weight: weights.reduce((sum, weight) => sum + weight, 0),
+  };
+}
+
+/** A region: its spots pooled, with its influence on the basin above it capped. */
+function regionOf(spots: readonly SpotEvidence[], caps: PoolingCaps): Region {
+  const pooled = poolOf(spots, caps);
+  return {
+    spots,
+    own: pooled.own,
+    weight: Math.min(pooled.weight, caps.max_effective_samples_per_region),
   };
 }
 

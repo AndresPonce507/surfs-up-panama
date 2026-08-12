@@ -73,6 +73,15 @@ export const TAU_FLOOR = 2;
 export const TAU_PARENT_LEVEL_PRIOR = TAU_SPOT_PRIOR;
 
 /**
+ * How many spots of one break type must pass the correction gates before that
+ * family stops being carried by its region and starts pooling among itself
+ * (06 section 5.3, adr-pooling-hierarchy-activation decision 3). Data-driven
+ * per group: no code change and no configuration flip is involved in a family
+ * coming into existence, only one more spot earning its way through the gates.
+ */
+export const SIMILARITY_GROUP_MIN_GATED_SPOTS = 3;
+
+/**
  * A region's maximum weight in its basin's mean, 06 section 8 (`n_eff cap per
  * region (parent levels)`, research 09 section 17.5 item 2), so one hyperactive
  * region can never silently become the prior every other region inherits.

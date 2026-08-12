@@ -25,19 +25,44 @@ import {
 } from "../../src/learning/hierarchy";
 import {
   PARENT_MAX_EFFECTIVE_SAMPLES_PER_REGION,
+  SIMILARITY_GROUP_MIN_GATED_SPOTS,
   TAU_FLOOR,
 } from "../../src/learning/constants";
 import { shrinkTowardParent } from "../../src/learning/shrink";
 
 const PROPERTY_RUNS = 50;
 
-/** One spot's own evidence, with every sample from a different reporter unless a test says otherwise. */
-function evidence(spotId: string, b: number, n: number): SpotEvidence {
-  return { spotId, b, n, samplesPerReporter: Array.from({ length: n }, () => 1) };
+/**
+ * One spot's own evidence: every sample from a different reporter, and nothing
+ * proven at the gates, unless a test says otherwise.
+ */
+function evidence(
+  spotId: string,
+  b: number,
+  n: number,
+  gated = false,
+): SpotEvidence {
+  return {
+    spotId,
+    b,
+    n,
+    samplesPerReporter: Array.from({ length: n }, () => 1),
+    gated,
+  };
 }
 
 function seed(spotId: string, coast: string, regionId: string): SpotSeed {
   return { spot_id: spotId, region_id: regionId, coast, break_type: "beach" };
+}
+
+/** One coast, one region, so the only level that can move a spot is its break-type family. */
+function familySeed(spotId: string, breakType: string): SpotSeed {
+  return {
+    spot_id: spotId,
+    region_id: "pa-pacific",
+    coast: "pacific",
+    break_type: breakType,
+  };
 }
 
 // ---------- the wall ----------
@@ -183,12 +208,14 @@ describe("hierarchy: one person can never become their region's prior (09 sectio
       b: 1,
       n: 40,
       samplesPerReporter: [36, 1, 1, 1, 1],
+      gated: false,
     };
     const spread: SpotEvidence = {
       spotId: "spread-spot",
       b: 0,
       n: 10,
       samplesPerReporter: [2, 2, 2, 2, 2],
+      gated: false,
     };
     const seeds = [
       seed("dominated-spot", "pacific", "one-region"),
@@ -219,6 +246,70 @@ describe("hierarchy: one person can never become their region's prior (09 sectio
 
   it("counts every morning when no reporter cap is configured, which is the shipped launch state", () => {
     assert.equal(SHIPPED_POOLING_CAPS.max_effective_samples_per_reporter, Number.POSITIVE_INFINITY);
+  });
+});
+
+// ---------- the similarity family (06 section 5.3) ----------
+
+describe("hierarchy: a break-type family forms at three proven spots and not one earlier", () => {
+  it("keeps a family's spots on their region until the threshold, then pools them among themselves", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 0, max: 4 }),
+        fc.double({ min: -1.2, max: -0.4, noNaN: true, noDefaultInfinity: true }),
+        fc.double({ min: 0.4, max: 1.2, noNaN: true, noDefaultInfinity: true }),
+        (proven, beachEstimate, reefEstimate) => {
+          const mornings = 12;
+          const beaches = Array.from({ length: 5 }, (_, index) =>
+            evidence(`beach-${index}`, beachEstimate, mornings, index < proven),
+          );
+          const reefs = Array.from({ length: 3 }, (_, index) =>
+            evidence(`reef-${index}`, reefEstimate, mornings, true),
+          );
+          const seeds = [
+            ...beaches.map((spot) => familySeed(spot.spotId, "beach")),
+            ...reefs.map((spot) => familySeed(spot.spotId, "reef")),
+          ];
+
+          const parents = parentEstimateBySpot(
+            [...beaches, ...reefs],
+            seeds,
+            SHIPPED_POOLING_CAPS,
+          );
+          // The last beach spot is never among the proven ones, so it is always
+          // the newcomer the family either carries or does not.
+          const newcomerParent = parents.get("beach-4")!;
+          const regionWide =
+            (beaches.length * mornings * beachEstimate +
+              reefs.length * mornings * reefEstimate) /
+            ((beaches.length + reefs.length) * mornings);
+
+          if (proven < SIMILARITY_GROUP_MIN_GATED_SPOTS) {
+            assert.ok(
+              Math.abs(newcomerParent - regionWide) <= 1e-12,
+              `with only ${proven} proven beach spots the region-wide estimate ${regionWide} must carry the newcomer, not ${newcomerParent}`,
+            );
+            return;
+          }
+
+          const family = shrunkTowardBasin(
+            beachEstimate,
+            beaches.length * mornings,
+            regionWide,
+          );
+          assert.ok(
+            Math.abs(newcomerParent - family) <= 1e-12,
+            `with ${proven} proven beach spots the family's own estimate ${family} must carry the newcomer, not ${newcomerParent}`,
+          );
+          assert.ok(
+            Math.abs(newcomerParent - beachEstimate) <
+              Math.abs(regionWide - beachEstimate),
+            "an active family must pull its newcomer nearer what the family reads than the region-wide mean does",
+          );
+        },
+      ),
+      { numRuns: PROPERTY_RUNS },
+    );
   });
 });
 
