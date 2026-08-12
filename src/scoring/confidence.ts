@@ -34,13 +34,41 @@ export type ConfidenceResult = {
     | null;
 };
 
+/**
+ * A member the models can actually see. Same predicate `blend()` applies, on
+ * purpose, because the two functions read the SAME member list and must not
+ * disagree about which members exist.
+ *
+ * Research 09 section 8.3, Finding 2, measured live: some models return
+ * `H = 0, T = 0` simultaneously, which is the signature of a land-masked grid
+ * cell and not a flat ocean, and the API does not flag it. Its engineering
+ * consequence is stated as a hard requirement: "any spot-score pipeline MUST
+ * treat `H == 0 && T == 0` as missing, not as flat."
+ *
+ * `blend()` already honoured that. This function did not, and it consumes the
+ * same list, so one fake zero drove every spread term far past the
+ * disagreement threshold: measured on three real Venao members plus one fake
+ * zero, `{0.127, 0.419, 0.071}` became `{5.503, 8.892, 27.040}` and the level
+ * dropped from medium to low. The surface would have announced that the models
+ * disagree about everything while three real models agreed well, which is
+ * exactly the "confidently wrong" failure the research names.
+ *
+ * This is NOT a widening of the parse-time `land_masked` rule, which stays at
+ * the three-field signature section 8.3 documents and the captured data
+ * confirms (240 of 240 zero rows also carry `dir == 0`).
+ */
+function usableMembers(members: MemberRow[]): MemberRow[] {
+  return members.filter((member) => member.swell.h_m >= 0 && member.swell.t_s > 0);
+}
+
 export function confidence(
-  members: MemberRow[],
+  declaredMembers: MemberRow[],
   spread: SpreadInput,
   track: { mae: number; mae_ref: number } | null,
   last_report_age_h: number | null,
   missing: ('wind' | 'tide')[],
 ): ConfidenceResult {
+  const members = usableMembers(declaredMembers);
   const c_spread = spread.kind === 'climatology'
     ? spread.pct <= 20 ? 1 : spread.pct < 80 ? 0.7 : 0.35
     : absoluteSpread(members);
