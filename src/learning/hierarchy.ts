@@ -39,7 +39,10 @@
 import {
   PARENT_MAX_EFFECTIVE_SAMPLES_PER_REGION,
   SIMILARITY_GROUP_MIN_GATED_SPOTS,
+  TAU_ESTIMATION_MIN_GATED_SPOTS,
+  TAU_FLOOR,
   TAU_PARENT_LEVEL_PRIOR,
+  TAU_SPOT_PRIOR,
 } from "./constants";
 import { weightedMean } from "./estimate";
 import { shrinkTowardParent } from "./shrink";
@@ -94,6 +97,63 @@ export type SpotEvidence = {
    */
   readonly gated: boolean;
 };
+
+/** One spot that has passed the gates, as the pooling-strength estimator reads it. */
+export type ProvenEstimate = {
+  /** The spot's own raw estimate at this key. */
+  readonly b: number;
+  /** The spot's own morning count at this key. */
+  readonly n: number;
+  /**
+   * The GATE's standard error for this key -- se_sample already floored at the
+   * physical noise floor, the same number the correction file publishes
+   * (06 section 7). Deliberately not the unfloored se_sample: the floored form
+   * is the one a reader can recompute by hand from the stored files, and it
+   * cannot be driven to zero by coordinated agreement, which would otherwise
+   * inflate the between-spot variance and buy a loud minority less pooling
+   * than it earned.
+   */
+  readonly se: number;
+};
+
+/**
+ * The pooling strength at the spot level.
+ *
+ * Below the switchover the hand-set prior stands. At or above it, method of
+ * moments over the spots that have proven themselves (06 section 5.3):
+ *
+ *   sigma_between^2 = var(b_own) - mean(se^2)
+ *   sigma_within^2  = mean(se^2 * n)
+ *   tau             = sigma_within^2 / sigma_between^2, floored at TAU_FLOOR
+ *
+ * sigma_within is the SINGLE-SAMPLE noise, which is what `se^2 * n` estimates
+ * and what the prior of 6 was derived from; borrowing SIGMA_EFF's 0.48 here
+ * instead would silently change the meaning of tau.
+ *
+ * Spots that agree with each other leave `var(b_own)` no larger than the noise
+ * already explains, so sigma_between^2 comes out at or below zero: between-spot
+ * variance is not identifiable from that data and the prior stands, rather than
+ * a division by something near zero putting an infinity into a stored file.
+ */
+export function spotTauFrom(proven: readonly ProvenEstimate[]): number {
+  if (proven.length < TAU_ESTIMATION_MIN_GATED_SPOTS) return TAU_SPOT_PRIOR;
+  const betweenVariance =
+    varianceOf(proven.map((spot) => spot.b)) -
+    meanOf(proven.map((spot) => spot.se ** 2));
+  if (betweenVariance <= 0) return TAU_SPOT_PRIOR;
+  const withinVariance = meanOf(proven.map((spot) => spot.se ** 2 * spot.n));
+  return Math.max(withinVariance / betweenVariance, TAU_FLOOR);
+}
+
+function meanOf(values: readonly number[]): number {
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+/** Population variance: these are all the proven spots there are, not a sample of them. */
+function varianceOf(values: readonly number[]): number {
+  const mean = meanOf(values);
+  return meanOf(values.map((value) => (value - mean) ** 2));
+}
 
 /** A spot with no seed row sits in one unnamed basin and one unnamed region, which is the launch shape. */
 const UNSEEDED = "";

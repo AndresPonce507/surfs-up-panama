@@ -73,6 +73,16 @@ export const TAU_FLOOR = 2;
 export const TAU_PARENT_LEVEL_PRIOR = TAU_SPOT_PRIOR;
 
 /**
+ * How many spots must pass the correction gates before tau stops being a
+ * hand-set prior and is estimated from the data instead (06 section 5.3's
+ * stated switchover, adr-pooling-hierarchy-activation decision 5). Research 09
+ * section 17.4 says never hand-set tau; with one region and a handful of gated
+ * spots sigma_between is unidentifiable, so the rule's spirit is kept with a
+ * floor and this switchover rather than its letter.
+ */
+export const TAU_ESTIMATION_MIN_GATED_SPOTS = 8;
+
+/**
  * How many spots of one break type must pass the correction gates before that
  * family stops being carried by its region and starts pooling among itself
  * (06 section 5.3, adr-pooling-hierarchy-activation decision 3). Data-driven

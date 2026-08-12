@@ -20,13 +20,16 @@ import { describe, it } from "vitest";
 import {
   parentEstimateBySpot,
   SHIPPED_POOLING_CAPS,
+  spotTauFrom,
   type SpotEvidence,
   type SpotSeed,
 } from "../../src/learning/hierarchy";
 import {
   PARENT_MAX_EFFECTIVE_SAMPLES_PER_REGION,
   SIMILARITY_GROUP_MIN_GATED_SPOTS,
+  TAU_ESTIMATION_MIN_GATED_SPOTS,
   TAU_FLOOR,
+  TAU_SPOT_PRIOR,
 } from "../../src/learning/constants";
 import { shrinkTowardParent } from "../../src/learning/shrink";
 
@@ -313,6 +316,160 @@ describe("hierarchy: a break-type family forms at three proven spots and not one
   });
 });
 
+// ---------- the pooling strength itself (06 section 5.3's switchover) ----------
+
+/**
+ * Proven spots spread evenly around a centre, far enough apart that the
+ * between-spot variance is comfortably larger than the noise. Built rather
+ * than drawn freely so the estimator is genuinely in force: a freely generated
+ * set collapses to identical estimates often enough that most runs would land
+ * on the unidentifiable branch and prove nothing about the arithmetic.
+ */
+function provenSpotsSpread(
+  count: number,
+  step: number,
+  se: number,
+  mornings: number,
+) {
+  return Array.from({ length: count }, (_, index) => ({
+    b: (index - (count - 1) / 2) * step,
+    n: mornings,
+    se,
+  }));
+}
+
+/** Spots past the switchover that all read the same difference: nothing between them to measure. */
+const agreeingSpots = fc
+  .record({
+    count: fc.integer({ min: TAU_ESTIMATION_MIN_GATED_SPOTS, max: 16 }),
+    b: fc.double({ min: -2, max: 2, noNaN: true, noDefaultInfinity: true }),
+    n: fc.integer({ min: 10, max: 90 }),
+    se: fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true }),
+  })
+  .map((world) =>
+    Array.from({ length: world.count }, () => ({
+      b: world.b,
+      n: world.n,
+      se: world.se,
+    })),
+  );
+
+const spreadSpots = fc.record({
+  count: fc.integer({ min: TAU_ESTIMATION_MIN_GATED_SPOTS, max: 16 }),
+  step: fc.double({ min: 0.1, max: 0.5, noNaN: true, noDefaultInfinity: true }),
+  se: fc.double({ min: 0.01, max: 0.05, noNaN: true, noDefaultInfinity: true }),
+  mornings: fc.integer({ min: 10, max: 90 }),
+});
+
+describe("hierarchy: tau is hand-set until the data can identify it, and floored forever after", () => {
+  it("leaves the hand-set prior standing below the switchover, however the proven spots look", () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.record({
+            b: fc.double({ min: -3, max: 3, noNaN: true, noDefaultInfinity: true }),
+            n: fc.integer({ min: 1, max: 90 }),
+            se: fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true }),
+          }),
+          { minLength: 0, maxLength: TAU_ESTIMATION_MIN_GATED_SPOTS - 1 },
+        ),
+        (proven) => {
+          assert.equal(
+            spotTauFrom(proven),
+            TAU_SPOT_PRIOR,
+            `${proven.length} proven spots cannot identify a between-spot variance, so the hand-set prior must stand`,
+          );
+        },
+      ),
+      { numRuns: PROPERTY_RUNS },
+    );
+  });
+
+  it("says exactly what the method of moments says, in the units it was derived in", () => {
+    // Four spots reading zero and four reading 0.6, each on 25 mornings with a
+    // standard error of 0.1. By hand, and checkable against nothing but this
+    // comment:
+    //   sigma_within^2 = mean(se^2 * n)          = 0.01 * 25          = 0.25
+    //   var(b_own)     = population variance     = 0.3^2             = 0.09
+    //   sigma_between^2 = var(b_own) - mean(se^2) = 0.09 - 0.01       = 0.08
+    //   tau             = 0.25 / 0.08                                = 3.125
+    // sigma_within is the SINGLE-SAMPLE noise, which se^2 * n estimates.
+    // Borrowing SIGMA_EFF's 0.48 m here instead would give 2.88, and this is
+    // the only test in the suite that can tell those two apart.
+    const proven = [
+      ...Array.from({ length: 4 }, () => ({ b: 0, n: 25, se: 0.1 })),
+      ...Array.from({ length: 4 }, () => ({ b: 0.6, n: 25, se: 0.1 })),
+    ];
+
+    assert.ok(
+      Math.abs(spotTauFrom(proven) - 3.125) < 1e-9,
+      `the estimator said ${spotTauFrom(proven)} where the method of moments says 0.25 / 0.08 = 3.125`,
+    );
+  });
+
+  it("never returns a pooling strength below the permanent floor, or one that is not a number", () => {
+    fc.assert(
+      fc.property(
+        fc.oneof(
+          fc.array(
+            fc.record({
+              b: fc.double({ min: -3, max: 3, noNaN: true, noDefaultInfinity: true }),
+              n: fc.integer({ min: 1, max: 90 }),
+              se: fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true }),
+            }),
+            { minLength: 0, maxLength: 20 },
+          ),
+          // Spots that AGREE, which is the branch where between-spot variance
+          // is not identifiable at all. Drawn deliberately rather than left to
+          // chance: a free generator lands on it too rarely to be evidence,
+          // and it is the branch where a division by something at or below
+          // zero would put an infinity into a stored correction file.
+          agreeingSpots,
+        ),
+        (proven) => {
+          const tau = spotTauFrom(proven);
+          assert.ok(
+            Number.isFinite(tau),
+            `the pooling strength came out ${tau}, which would put an infinity or a NaN straight into a stored correction file`,
+          );
+          assert.ok(
+            tau >= TAU_FLOOR,
+            `the pooling strength came out ${tau}, below the permanent floor of ${TAU_FLOOR}`,
+          );
+        },
+      ),
+      { numRuns: PROPERTY_RUNS },
+    );
+  });
+
+  it("pools less the more the proven spots disagree, which is how pooling steps aside on its own", () => {
+    fc.assert(
+      fc.property(
+        spreadSpots,
+        fc.double({ min: 1.5, max: 6, noNaN: true, noDefaultInfinity: true }),
+        (world, widenBy) => {
+          const asIs = spotTauFrom(
+            provenSpotsSpread(world.count, world.step, world.se, world.mornings),
+          );
+          const widened = spotTauFrom(
+            provenSpotsSpread(
+              world.count,
+              world.step * widenBy,
+              world.se,
+              world.mornings,
+            ),
+          );
+          assert.ok(
+            widened <= asIs + 1e-12,
+            `spreading the proven spots ${widenBy} times further apart raised the pooling strength from ${asIs} to ${widened}; genuinely different spots must be pooled less, never more`,
+          );
+        },
+      ),
+      { numRuns: PROPERTY_RUNS },
+    );
+  });
+});
+
 // ---------- cold start (research 09 section 5.4) ----------
 
 /**
@@ -334,8 +491,8 @@ describe("hierarchy: cold start is the n = 0 limit of the same equation, never a
     fc.assert(
       fc.property(anyEstimate, anyEstimate, tauAtOrAboveTheFloor, (raw, parent, tau) => {
         assert.equal(
-          shrinkTowardParent(raw, 0, tau, parent),
-          parent,
+          withoutSignedZero(shrinkTowardParent(raw, 0, tau, parent)),
+          withoutSignedZero(parent),
           "a spot with zero mornings must inherit its parents' estimate exactly, with no trace of a raw value it never earned",
         );
       }),
@@ -370,6 +527,19 @@ describe("hierarchy: cold start is the n = 0 limit of the same equation, never a
     );
   });
 });
+
+/**
+ * Collapses IEEE's two zeroes into one before comparing.
+ *
+ * `assert.equal` on numbers is SameValue, which reports -0 and 0 as different;
+ * every other reading of these values -- `===`, JSON, arithmetic, a surfer
+ * looking at a wave height -- says they are the same number. At a parent of -0
+ * the shrink returns `0 * raw + 1 * -0`, and IEEE addition makes that +0. That
+ * is correct arithmetic, so the equality is what needed fixing, not the claim.
+ */
+function withoutSignedZero(value: number): number {
+  return value + 0;
+}
 
 /** b_hat = (n/(n+tau)) * own + (tau/(n+tau)) * parent, restated here rather than imported, so the law has its own oracle. */
 function shrunkTowardBasin(own: number, n: number, basin: number): number {
