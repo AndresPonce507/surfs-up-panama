@@ -137,15 +137,38 @@ describe('the scheduled notify job', () => {
     expect(actions).not.toEqual(expect.arrayContaining(['s3:PutObject', 's3:DeleteObject']));
   });
 
-  it('reads the published surface it scores against, and nothing else in the bucket', () => {
+  it('holds no bucket grant at all, because no document says where the send job reads its scores', () => {
     const statements = policyStatementsFor(functionNames.notify);
-    const rendered = JSON.stringify(statements);
-    expect(actionSet(statements)).toEqual(expect.arrayContaining(['s3:GetObject']));
-    expect(rendered).toContain(siteBucketName);
-    expect(rendered).toContain('pub/v1/*');
-    // The prediction log and the raw archive are not the send job's business.
-    expect(rendered).not.toContain('predictions/*');
-    expect(rendered).not.toContain('raw/*');
+    const actions = actionSet(statements);
+    // FLAGGED, NOT RESOLVED. 07-write-path.md section 8.2 says the send rule
+    // compares "the current bundle score" but names no source, and the section
+    // 8.6 sequence diagram gives notify exactly two edges: query subs from the
+    // table, and POST to the push service. No S3 read appears anywhere. The
+    // pure planner takes `scores` as a declared input precisely because the
+    // source is the composition root's business, and that root is the
+    // unlanded send adapter.
+    //
+    // So this lane grants nothing on a guess. Whoever lands the sender adds the
+    // grant their ACTUAL read path needs, and this assertion is what makes them
+    // do it deliberately instead of inheriting a speculative wildcard.
+    expect(actions).not.toEqual(expect.arrayContaining(['s3:GetObject']));
+    expect(JSON.stringify(statements)).not.toContain(siteBucketName);
+  });
+
+  it('stays out of the breaker at RUNTIME too, not only in the IAM policy', () => {
+    // The breaker reads its target list from the WRITE_FUNCTIONS environment
+    // variable (infra/lambda-src/breaker.mjs) rather than deriving names by
+    // prefix. A ninth function leaking into that JSON would put a scheduled job
+    // in the breaker's blast radius with no IAM grant to perform it, which
+    // fails at runtime inside the breaker rather than in any synth assertion.
+    const [, breaker] = resourcesOfType('AWS::Lambda::Function')
+      .find(([, resource]) => resource.Properties?.FunctionName === functionNames.breaker) ?? [];
+    const variables = (breaker?.Properties?.Environment as Properties | undefined)?.Variables as Properties;
+    const writeFunctions = JSON.parse(String(variables.WRITE_FUNCTIONS)) as Record<string, number>;
+    expect(Object.keys(writeFunctions).sort()).toEqual([
+      functionNames.mint, functionNames['photo-presign'], functionNames.push, functionNames.report,
+    ].sort());
+    expect(Object.keys(writeFunctions)).not.toContain(functionNames.notify);
   });
 
   it('sits outside the circuit breaker: no breaker alarm names it and it is not in the breaker blast radius', () => {

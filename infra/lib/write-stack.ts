@@ -262,14 +262,15 @@ export class WriteStack extends Stack {
       actions: ['dynamodb:DescribeTable', 'dynamodb:Query', 'dynamodb:UpdateItem', 'dynamodb:DeleteItem'],
       resources: [writeStore.tableArn],
     }));
-    // Read-only on the published surface it scores against: the spot index
-    // supplies each spot's own timezone (nothing Panama-shaped) and the
-    // published bundle supplies this morning's scores. Never the prediction
-    // log, never the raw archive, and never a write.
-    notifyFn.addToRolePolicy(new iam.PolicyStatement({
-      actions: ['s3:GetObject'],
-      resources: [siteBucket.arnForObjects('pub/v1/*')],
-    }));
+    // NO BUCKET GRANT, DELIBERATELY, AND FLAGGED. The send rule compares "the
+    // current bundle score" (07-write-path.md 8.2) but no document says where
+    // the job reads it: section 8.6's sequence gives notify exactly two edges,
+    // query the subs and POST to the push service, with no S3 read anywhere.
+    // planNotifications takes `scores` as a declared input precisely because
+    // the source is the composition root's business, and that root is the
+    // unlanded send adapter. Granting a bucket read on a guess would be the
+    // one over-grant in an otherwise exact policy, so this lane grants none
+    // and the sender's author adds the read path they actually use.
     notifyFn.addToRolePolicy(new iam.PolicyStatement({
       actions: ['ssm:GetParameter'],
       resources: [`arn:aws:ssm:${projectRegion}:${projectAccountId}:parameter${vapidPrivateKeyParameterName}`],
