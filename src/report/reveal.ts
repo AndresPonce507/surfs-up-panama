@@ -43,6 +43,16 @@ export const RECEIVED_MESSAGE = 'Gracias. Recibimos tu reporte.';
 export const COMPARED_MESSAGE = 'Gracias. Así nos fue:';
 
 /**
+ * Section 10's no-snapshot sentence, verbatim. It is said only when the write
+ * path actually found no call for that spot and hour (`no_snapshot`), never as
+ * a catch-all: a receipt that says it compared but arrives unreadable gets the
+ * plain arrival instead, because claiming we had nothing forecast would be a
+ * second, different lie.
+ */
+export const NO_CALL_MESSAGE =
+  'Gracias. Esa hora no la teníamos pronosticada, así que no hay comparación.';
+
+/**
  * An exact hit. Section 10's template only parameterises the two directions
  * ("nos pasamos" / "nos quedamos cortos"), so a difference of zero has no
  * settled sentence -- OPEN COPY ITEM. Plain, and it claims nothing beyond the
@@ -87,8 +97,12 @@ export function decideArrivalUi(
   observed: ReportAnswers | undefined,
 ): ArrivalPresentation {
   const comparison = comparisonFrom(receipt, observed);
-  if (comparison === undefined) return { heading: RECEIVED_HEADING, message: RECEIVED_MESSAGE };
-  return { heading: RECEIVED_HEADING, message: COMPARED_MESSAGE, comparison };
+  if (comparison !== undefined) return { heading: RECEIVED_HEADING, message: COMPARED_MESSAGE, comparison };
+  // The count is deliberately dropped here: with nothing to compare, a number
+  // on the screen is a number the surfer has to interpret against a comparison
+  // that does not exist.
+  if (receipt.outcome === 'no_snapshot') return { heading: RECEIVED_HEADING, message: NO_CALL_MESSAGE };
+  return { heading: RECEIVED_HEADING, message: RECEIVED_MESSAGE };
 }
 
 /** Every part present and in the shared vocabulary, or no card at all. */

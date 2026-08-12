@@ -24,7 +24,7 @@ import { describe, it } from 'vitest';
 
 import type { Fetcher } from '../../src/report/mint';
 import type { ReportAnswers } from '../../src/report/report-record';
-import { RECEIVED_MESSAGE, decideArrivalUi } from '../../src/report/reveal';
+import { RECEIVED_HEADING, RECEIVED_MESSAGE, decideArrivalUi } from '../../src/report/reveal';
 import { sendSavedReport, type ReportReceipt } from '../../src/report/submit';
 
 const REPORT_URL = 'https://report-id.lambda-url.us-east-1.on.aws/';
@@ -126,6 +126,36 @@ describe('reading the comparison off what the receipt carries, never off its out
 
     const withoutAnswers = decideArrivalUi({ ...whole, outcome: 'compared' }, undefined);
     assert.equal(withoutAnswers.comparison, undefined, 'with no readable answers there is no "Tú viste" half, so there is no card');
+  });
+});
+
+describe('telling the truth when no call can be found', () => {
+  it('says the hour was never forecast, keeps reading as arrived, and shows no number at all', () => {
+    // The server sends a counter even with nothing to compare (07-write-path.md
+    // section 4.2), so this is the receipt that can most easily invent a number.
+    const view = decideArrivalUi({
+      report_id: 'report-1',
+      outcome: 'no_snapshot',
+      predicted: null,
+      counter: { n_reports: 8, threshold: 30 },
+    }, observed);
+
+    assert.equal(
+      view.message,
+      'Gracias. Esa hora no la teníamos pronosticada, así que no hay comparación.',
+      'the no-call sentence is settled copy, verbatim (application-architecture.md section 10)',
+    );
+    assert.equal(view.comparison, undefined, 'nothing to compare means no card, not an empty one');
+    assert.equal(view.heading, RECEIVED_HEADING, 'the report still arrived, and the screen must still say so');
+    assert.ok(
+      !/\d/.test(`${view.heading} ${view.message}`),
+      'a screen with nothing to compare must carry no digit at all -- not even the count the receipt was carrying',
+    );
+
+    // A receipt that says it compared but arrives unreadable is a different
+    // truth: we must not claim we had no forecast for that hour.
+    const unreadable = decideArrivalUi({ report_id: 'report-1', outcome: 'compared', predicted: null }, observed);
+    assert.equal(unreadable.message, RECEIVED_MESSAGE, 'only a real missing call earns the missing-call sentence');
   });
 });
 
