@@ -7,8 +7,8 @@
   "review": "NOT RUN: no reviewer was dispatched in this lane. The step evidence is the two-way falsification recorded in red-green.json.",
   "evidence": {
     "contract": "A run sends at most its declared cap, pooled across spots, and announces the remainder out loud instead of truncating in silence.",
-    "falsification": "Removing the cap slice and, separately, dropping the cap event each failed only the new property, with a different and correct assertion message for each half. Both were restored and verified with an empty src diff.",
-    "gates": "Focused planner properties 5/5, typecheck, and acceptance for this feature 14 passed / 4 failed, unchanged from baseline.",
+    "falsification": "Three isolating breaks, one per clause: removing the cap slice, dropping the cap event, and letting writes alone escape the cap. Each failed only the new property and each landed on its own assertion message, so no clause is carried by an earlier assertion firing first. All restored and verified with an empty src diff.",
+    "gates": "Focused planner properties 5/5, typecheck, and acceptance for this feature 14 passed / 4 failed, unchanged from baseline. npx astro build exits 0, 105 pages, page-weight gate under every ceiling.",
     "scope": "Law and evidence only. src/push/plan-notifications.ts was not modified: the rule landed in 83a335f under 01-06.",
     "flagged": "npm test carries 5 pre-existing failures in report-island and staleness, and npm run build refuses, both because data/published-surface.json is surf_date 2026-08-11 while Panama is on 2026-08-12. None of those files import anything under src/push. Not touched, out of this lane's scope."
   }
