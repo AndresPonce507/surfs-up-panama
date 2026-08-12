@@ -3327,6 +3327,227 @@ Then(
   },
 );
 
+// ------------------------------ slice-05: the built surface, every beach --
+
+type MapProfiles = {
+  readonly approved_count: number;
+  readonly refused: readonly { readonly spot_id: string; readonly reason: string }[];
+  readonly roles: Readonly<Record<string, string>>;
+};
+
+const mapProfiles = JSON.parse(readFileSync(
+  join(projectRoot, 'tests/acceptance/f-see-what-killed-it/fixtures/slice-05-map-profiles.json'),
+  'utf8',
+)) as MapProfiles;
+
+type OfflineMapReading = MapReading & {
+  readonly frameWidth: number;
+  readonly frameHeight: number;
+  readonly frameText: string;
+  readonly imageLoaded: boolean;
+  readonly ctaWidth: number;
+  readonly ctaHeight: number;
+  readonly pageOverflows: boolean;
+  readonly technicalText: string[];
+};
+
+async function readOfflineMap(page: Page): Promise<OfflineMapReading> {
+  const base = await readStaticMap(page);
+  const extra = await page.evaluate(() => {
+    const figure = document.querySelector('[data-field="static-map"]');
+    const frame = figure?.querySelector('.img-frame') ?? null;
+    const rect = frame?.getBoundingClientRect();
+    const image = figure?.querySelector('img') as HTMLImageElement | null;
+    const cta = document.querySelector('a.cta')?.getBoundingClientRect();
+    const text = (figure as HTMLElement | null)?.innerText ?? '';
+    return {
+      frameWidth: rect?.width ?? 0,
+      frameHeight: rect?.height ?? 0,
+      // What a reader can actually see inside the reserved box. A broken image
+      // renders its alt text here; an empty string means the box says nothing.
+      frameText: `${image?.getAttribute('alt') ?? ''} ${text}`.trim(),
+      imageLoaded: image !== null && image.naturalWidth > 0,
+      ctaWidth: cta?.width ?? 0,
+      ctaHeight: cta?.height ?? 0,
+      pageOverflows: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      technicalText: [...document.querySelectorAll('body *')]
+        .map((el) => (el as HTMLElement).innerText ?? '')
+        .filter((value) => /https?:\/\/|\.webp\b|undefined|NaN|\[object|Error:/u.test(value))
+        .slice(0, 4),
+    };
+  });
+  return { ...base, ...extra };
+}
+
+type Slice05BuiltWorld = Slice01World & {
+  killedItMapSweep?: ReadonlyMap<string, MapReading>;
+  killedItMapRequests?: readonly string[];
+  killedItOfflineMap?: OfflineMapReading;
+};
+
+When(
+  'el surfista recorre todas las playas y mira el mapa de cada una',
+  { timeout: 900_000 },
+  async function (this: PipelineWorld) {
+    const world = world01(this);
+    const active = await ensureHarness();
+    const page = await ensurePage(world, 390, 'claro', 'normal');
+    const requests: string[] = [];
+    page.on('request', (request) => requests.push(request.url()));
+
+    const sweep = new Map<string, MapReading>();
+    for (const spot_id of loadLaunchSpotIds()) {
+      const response = await page.goto(`${active.url}/spots/${spot_id}/`, { waitUntil: 'load' });
+      assert.equal(response?.status(), 200, `test fixture error: /spots/${spot_id}/ did not serve`);
+      sweep.set(spot_id, await readStaticMap(page));
+    }
+    (world as Slice05BuiltWorld).killedItMapSweep = sweep;
+    (world as Slice05BuiltWorld).killedItMapRequests = requests;
+  },
+);
+
+Then(
+  'cada playa con mapa muestra el suyo, con su propia orientación y su propio crédito, y las que no tienen fuente no muestran ninguno',
+  function (this: PipelineWorld) {
+    const sweep = (world01(this) as Slice05BuiltWorld).killedItMapSweep;
+    assert.ok(sweep, 'test fixture error: the beaches were never walked');
+    const manifest = trackedMapManifest();
+    const findings: string[] = [];
+    const seenPaths = new Map<string, string>();
+
+    for (const [spot_id, reading] of sweep) {
+      const row = manifest.spots[spot_id];
+      if (row === undefined) {
+        if (reading.figures !== 0) findings.push(`${spot_id} muestra un mapa que nadie acreditó`);
+        continue;
+      }
+      if (reading.figures !== 1) {
+        findings.push(`${spot_id} muestra ${reading.figures} mapas`);
+        continue;
+      }
+      if (reading.src !== row.path) findings.push(`${spot_id} sirve ${reading.src} y su ficha acredita ${row.path}`);
+      if (reading.caption !== row.caption) findings.push(`${spot_id} muestra un crédito que no es el suyo`);
+      if (reading.loading !== 'lazy') findings.push(`${spot_id} no carga su mapa tarde`);
+      const owner = seenPaths.get(reading.src ?? '');
+      if (owner !== undefined && row.path !== manifest.spots[owner]?.path) {
+        findings.push(`${spot_id} y ${owner} comparten la misma dirección de mapa`);
+      }
+      seenPaths.set(reading.src ?? '', spot_id);
+    }
+
+    for (const refused of mapProfiles.refused) {
+      const reading = sweep.get(refused.spot_id);
+      if (reading === undefined) {
+        findings.push(`${refused.spot_id} no se pudo abrir`);
+        continue;
+      }
+      if (reading.figures !== 0) findings.push(`${refused.spot_id} recibió un mapa sin fuente que lo respalde`);
+    }
+    if (Object.keys(manifest.spots).length !== mapProfiles.approved_count) {
+      findings.push(`el listado acredita ${Object.keys(manifest.spots).length} mapas y se esperaban ${mapProfiles.approved_count}`);
+    }
+
+    assertBehavior(
+      findings,
+      'darle a cada playa aprobada su propio diagrama, servido desde la dirección que su propia fila acredita y con el crédito de esa misma fila, y no darle ninguno a la playa cuya orientación ninguna fuente declara.',
+    );
+  },
+);
+
+Then(
+  'ninguna playa pide un mosaico, una biblioteca de mapas ni nada fuera del sitio',
+  function (this: PipelineWorld) {
+    const requests = (world01(this) as Slice05BuiltWorld).killedItMapRequests;
+    assert.ok(requests, 'test fixture error: no requests were recorded');
+    const origin = requiredHarness().url;
+    const findings: string[] = [];
+
+    for (const url of requests) {
+      if (!url.startsWith(origin)) findings.push(`la página pidió algo fuera del sitio: ${url}`);
+      if (/tile|mapbox|maplibre|leaflet|openstreetmap\.org|arcgis|google.*maps/iu.test(url)) {
+        findings.push(`la página pidió un mosaico o una biblioteca de mapas: ${url}`);
+      }
+    }
+    if (requests.length === 0) findings.push('no se registró ni un pedido, así que no hay nada que comprobar');
+
+    assertBehavior(
+      findings,
+      'servir todo el mapa desde el propio sitio, como un archivo ya dibujado: ni un mosaico, ni un token, ni una biblioteca, ni un pedido a un tercero.',
+    );
+  },
+);
+
+When(
+  'el surfista abre la playa del nombre más largo sin poder bajar su mapa, a 390 px, con tema {string} y movimiento {string}',
+  { timeout: 600_000 },
+  async function (this: PipelineWorld, theme: string, movement: string) {
+    const world = world01(this);
+    const active = await ensureHarness();
+    const page = await ensurePage(world, 390, theme, movement);
+    // No signal for this one file, and only this one: everything else about the
+    // already-cached document still works, which is exactly the offline case the
+    // charter describes.
+    await page.route('**/maps/**', (route) => route.abort());
+    const spot_id = mapProfiles.roles.longest_name!;
+    const response = await page.goto(`${active.url}/spots/${spot_id}/`, { waitUntil: 'load' });
+    assert.equal(response?.status(), 200, `test fixture error: /spots/${spot_id}/ did not serve`);
+    world.killedItOpened = 'nombre-mas-largo';
+    world.killedItTheme = theme;
+    world.killedItMovement = movement;
+    (world as Slice05BuiltWorld).killedItOfflineMap = await readOfflineMap(page);
+    // The @ui-* tags on this scenario have to mean something: the same seven
+    // checks run against the DEGRADED figure, where the readable thing is the
+    // alt text on the sunken frame rather than the image.
+    world.killedItReading = await readCallouts(page);
+    world.killedItMapVisual = await auditMapQuality(page);
+  },
+);
+
+Then(
+  'el recuadro del mapa conserva su tamaño y su texto sigue explicando qué debía estar ahí',
+  function (this: PipelineWorld) {
+    const offline = (world01(this) as Slice05BuiltWorld).killedItOfflineMap;
+    assert.ok(offline, 'test fixture error: the offline map was never read');
+    const findings: string[] = [];
+
+    if (offline.imageLoaded) findings.push('test fixture error: la imagen sí cargó, no hay degradación que comprobar');
+    if (offline.figures !== 1) findings.push(`sin señal la playa muestra ${offline.figures} recuadros de mapa`);
+    if (offline.frameWidth < 100 || offline.frameHeight < 40) {
+      findings.push(`el recuadro se encogió a ${Math.round(offline.frameWidth)} por ${Math.round(offline.frameHeight)} px`);
+    }
+    if (offline.frameText.length < 20) findings.push(`el recuadro no dice qué debía estar ahí: "${offline.frameText}"`);
+    if (offline.spinners > 0) findings.push('sin señal el mapa muestra una rueda girando');
+    if (offline.caption === null || offline.caption.length === 0) findings.push('sin señal el crédito desapareció');
+
+    assertBehavior(
+      findings,
+      'dejar el mismo recuadro reservado, del mismo tamaño, con su texto alternativo legible y su crédito, cuando la imagen no llega: sin rueda, sin salto y sin desaparecer.',
+    );
+  },
+);
+
+Then(
+  'la página no desborda, no muestra un error técnico y el botón de reportar sigue a la mano',
+  function (this: PipelineWorld) {
+    const offline = (world01(this) as Slice05BuiltWorld).killedItOfflineMap;
+    assert.ok(offline, 'test fixture error: the offline map was never read');
+    const findings: string[] = [];
+
+    if (offline.pageOverflows) findings.push('la página desborda a 390 px con el mapa caído');
+    if (offline.technicalText.length > 0) {
+      findings.push(`la página muestra texto técnico: ${offline.technicalText.join(' | ')}`);
+    }
+    if (offline.ctaWidth < 44 || offline.ctaHeight < 44) {
+      findings.push(`el botón de reportar quedó en ${Math.round(offline.ctaWidth)} por ${Math.round(offline.ctaHeight)} px`);
+    }
+
+    assertBehavior(
+      findings,
+      'sostener la página completa cuando el mapa no llega: sin desbordar a 390 px, sin una dirección cruda ni un error en pantalla, y con el botón de reportar todavía alcanzable con el pulgar.',
+    );
+  },
+);
+
 // ---------------------------------------------------------------- cleanup --
 
 After({ tags: '@feature-f-see-what-killed-it', timeout: 30_000 }, async function (this: PipelineWorld) {

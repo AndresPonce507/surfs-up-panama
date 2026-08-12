@@ -256,3 +256,23 @@ Feature: La playa dice qué fue lo que la tumbó
     Then el mapa vive solo en la ficha de la playa, y la lista, mañana, el reporte y el ayer siguen sin mapa
     And el mapa no le suma peso al documento ni código al teléfono, y la página sigue bajo su techo
     And la construcción se niega cuando el listado acredita una imagen que ya no está
+
+  @slice-05 @driving_port @real-io @adapter-integration @covers-R18 @covers-R20 @covers-R30
+  Scenario: El surfista encuentra su break sin abrir un mapa pesado
+    Given una mañana publicada donde cada playa trae el punto débil que salió del cálculo
+    When el surfista recorre todas las playas y mira el mapa de cada una
+    Then cada playa con mapa muestra el suyo, con su propia orientación y su propio crédito, y las que no tienen fuente no muestran ninguno
+    And ninguna playa pide un mosaico, una biblioteca de mapas ni nada fuera del sitio
+
+  @slice-05 @driving_port @real-io @adapter-integration @negative @error @ui-u1 @ui-u2 @ui-u3 @ui-u4 @ui-u5 @ui-u6 @ui-u7 @covers-R19 @covers-R25 @covers-R21 @covers-R22 @covers-R23 @covers-R24 @covers-R26 @covers-R27
+  Scenario Outline: Sin señal el mapa deja un cuadro tranquilo que todavía se explica
+    Given una mañana publicada donde cada playa trae el punto débil que salió del cálculo
+    When el surfista abre la playa del nombre más largo sin poder bajar su mapa, a 390 px, con tema "<tema>" y movimiento "<movimiento>"
+    Then el recuadro del mapa conserva su tamaño y su texto sigue explicando qué debía estar ahí
+    And la página no desborda, no muestra un error técnico y el botón de reportar sigue a la mano
+    And el mapa cumple las siete comprobaciones visuales sobre el fondo real
+
+    Examples:
+      | tema   | movimiento |
+      | claro  | normal     |
+      | oscuro | reducido   |
