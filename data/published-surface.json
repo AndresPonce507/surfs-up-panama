@@ -2,13 +2,237 @@
   "schema": "static-surface/v1",
   "current": {
     "schema": "published-surface-update/v1",
-    "surf_date": "2026-08-11",
-    "published_at": "2026-08-11T05:09:43.000Z",
+    "surf_date": "2026-08-12",
+    "published_at": "2026-08-12T12:25:36.000Z",
     "build_kind": "hourly",
     "calls": [
       {
         "spot_id": "playa-cambutal",
+        "score_q": 70,
+        "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 12:00.",
+        "conf_level": "low",
+        "size_band": "waist_chest",
+        "size_range_m": [
+          0.7,
+          1.1
+        ],
+        "weakest_link": "wind",
+        "weakest_link_subscore": 0.6791716065370474,
+        "counterfactual_score_q": 85,
+        "confidence_reason": {
+          "dominant": "missing_data",
+          "spread_terms": {
+            "height": 0.7753906250000001,
+            "period": 1.1089329194769224,
+            "direction": 0.04000000000000001
+          },
+          "track_state": "unverified"
+        },
+        "wind_state": "choppy",
+        "best_window": {
+          "start": "06:00",
+          "end": "12:00"
+        }
+      },
+      {
+        "spot_id": "playa-los-destiladeros",
+        "score_q": 65,
+        "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 13:00.",
+        "conf_level": "low",
+        "size_band": "waist_chest",
+        "size_range_m": [
+          0.7,
+          1.1
+        ],
+        "weakest_link": "size",
+        "weakest_link_subscore": 0.592100707505026,
+        "counterfactual_score_q": 84,
+        "confidence_reason": {
+          "dominant": "missing_data",
+          "spread_terms": {
+            "height": 1.2868489892984543,
+            "period": 0.32865763385243907,
+            "direction": 0.1877777777777778
+          },
+          "track_state": "unverified"
+        },
+        "wind_state": "choppy",
+        "best_window": {
+          "start": "06:00",
+          "end": "13:00"
+        }
+      },
+      {
+        "spot_id": "playa-venao",
+        "score_q": 64,
+        "call_es": "Cintura a pecho, viento limpio, mejor de 06:00 a 16:00.",
+        "conf_level": "low",
+        "size_band": "waist_chest",
+        "size_range_m": [
+          0.7,
+          1.1
+        ],
+        "weakest_link": "size",
+        "weakest_link_subscore": 0.4897006334790649,
+        "counterfactual_score_q": 92,
+        "confidence_reason": {
+          "dominant": "missing_data",
+          "spread_terms": {
+            "height": 0.6934093868187732,
+            "period": 0.8235822271833818,
+            "direction": 0.05444444444444445
+          },
+          "track_state": "unverified"
+        },
+        "wind_state": "clean",
+        "best_window": {
+          "start": "06:00",
+          "end": "16:00"
+        }
+      },
+      {
+        "spot_id": "playa-guanico",
+        "score_q": 63,
+        "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 12:00.",
+        "conf_level": "low",
+        "size_band": "waist_chest",
+        "size_range_m": [
+          0.7,
+          1.1
+        ],
+        "weakest_link": "wind",
+        "weakest_link_subscore": 0.6287727231331606,
+        "counterfactual_score_q": 80,
+        "confidence_reason": {
+          "dominant": "missing_data",
+          "spread_terms": {
+            "height": 1.7919638443612738,
+            "period": 1.0062080000000004,
+            "direction": 0.4444444444444444
+          },
+          "track_state": "unverified"
+        },
+        "wind_state": "choppy",
+        "best_window": {
+          "start": "06:00",
+          "end": "12:00"
+        }
+      },
+      {
+        "spot_id": "santa-catalina-la-punta",
+        "score_q": 59,
+        "call_es": "Rodilla a cintura, viento limpio, mejor de 06:00 a 13:00.",
+        "conf_level": "low",
+        "size_band": "knee_waist",
+        "size_range_m": [
+          0.4,
+          0.7
+        ],
+        "weakest_link": "size",
+        "weakest_link_subscore": 0.4207406529165626,
+        "counterfactual_score_q": 90,
+        "confidence_reason": {
+          "dominant": "missing_data",
+          "spread_terms": {
+            "height": 1.4048,
+            "period": 0.3255959246443674,
+            "direction": 0.07111111111111111
+          },
+          "track_state": "unverified"
+        },
+        "wind_state": "clean",
+        "best_window": {
+          "start": "06:00",
+          "end": "13:00"
+        }
+      },
+      {
+        "spot_id": "punta-brava",
         "score_q": 57,
+        "call_es": "Rodilla a cintura, viento limpio, mejor de 06:00 a 13:00.",
+        "conf_level": "low",
+        "size_band": "knee_waist",
+        "size_range_m": [
+          0.4,
+          0.7
+        ],
+        "weakest_link": "size",
+        "weakest_link_subscore": 0.3963051025798785,
+        "counterfactual_score_q": 90,
+        "confidence_reason": {
+          "dominant": "missing_data",
+          "spread_terms": {
+            "height": 1.656286534169412,
+            "period": 0.3242574001509494,
+            "direction": 0.07111111111111111
+          },
+          "track_state": "unverified"
+        },
+        "wind_state": "clean",
+        "best_window": {
+          "start": "06:00",
+          "end": "13:00"
+        }
+      },
+      {
+        "spot_id": "playa-reina",
+        "score_q": 56,
+        "call_es": "Rodilla a cintura, viento limpio, mejor de 06:00 a 13:00.",
+        "conf_level": "low",
+        "size_band": "knee_waist",
+        "size_range_m": [
+          0.4,
+          0.7
+        ],
+        "weakest_link": "size",
+        "weakest_link_subscore": 0.4093544589353859,
+        "counterfactual_score_q": 88,
+        "confidence_reason": {
+          "dominant": "missing_data",
+          "spread_terms": {
+            "height": 1.7885795771591537,
+            "period": 0.28354297626394515,
+            "direction": 0.04000000000000001
+          },
+          "track_state": "unverified"
+        },
+        "wind_state": "clean",
+        "best_window": {
+          "start": "06:00",
+          "end": "13:00"
+        }
+      },
+      {
+        "spot_id": "las-lajas",
+        "score_q": 54,
+        "call_es": "Rodilla a cintura, viento limpio, mejor de 17:00 a 18:00.",
+        "conf_level": "low",
+        "size_band": "knee_waist",
+        "size_range_m": [
+          0.4,
+          0.7
+        ],
+        "weakest_link": "size",
+        "weakest_link_subscore": 0.29117722855827044,
+        "counterfactual_score_q": 100,
+        "confidence_reason": {
+          "dominant": "missing_data",
+          "spread_terms": {
+            "height": 3.5556899810964104,
+            "period": 3.213425605536332,
+            "direction": 1.1377777777777778
+          },
+          "track_state": "unverified"
+        },
+        "wind_state": "clean",
+        "best_window": {
+          "start": "17:00",
+          "end": "18:00"
+        }
+      },
+      {
+        "spot_id": "mariatos",
+        "score_q": 51,
         "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 09:00.",
         "conf_level": "low",
         "size_band": "waist_chest",
@@ -17,13 +241,14 @@
           1.1
         ],
         "weakest_link": "wind",
-        "weakest_link_subscore": 0.5478909903016271,
+        "weakest_link_subscore": 0.44596533077264583,
+        "counterfactual_score_q": 77,
         "confidence_reason": {
           "dominant": "missing_data",
           "spread_terms": {
-            "height": 0,
-            "period": 0,
-            "direction": 0
+            "height": 1.051862673484295,
+            "period": 0.28119470205908226,
+            "direction": 0.027777777777777776
           },
           "track_state": "unverified"
         },
@@ -34,76 +259,23 @@
         }
       },
       {
-        "spot_id": "playa-venao",
-        "score_q": 53,
-        "call_es": "Rodilla a cintura, viento limpio, mejor de 15:00 a 18:00.",
-        "conf_level": "medium",
-        "size_band": "knee_waist",
-        "size_range_m": [
-          0.4,
-          0.7
-        ],
-        "weakest_link": "size",
-        "weakest_link_subscore": 0.3379901768569197,
-        "confidence_reason": {
-          "dominant": "missing_data",
-          "spread_terms": {
-            "height": 0.004924592182209864,
-            "period": 0.013295008548360814,
-            "direction": 0
-          },
-          "track_state": "unverified"
-        },
-        "wind_state": "clean",
-        "best_window": {
-          "start": "15:00",
-          "end": "18:00"
-        }
-      },
-      {
-        "spot_id": "playa-los-destiladeros",
+        "spot_id": "playa-torio",
         "score_q": 48,
-        "call_es": "Rodilla a cintura, viento picado, mejor de 15:00 a 18:00.",
-        "conf_level": "medium",
-        "size_band": "knee_waist",
+        "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 09:00.",
+        "conf_level": "low",
+        "size_band": "waist_chest",
         "size_range_m": [
-          0.4,
-          0.7
+          0.7,
+          1.1
         ],
-        "weakest_link": "size",
-        "weakest_link_subscore": 0.34479516615517625,
+        "weakest_link": "wind",
+        "weakest_link_subscore": 0.4770308145668808,
+        "counterfactual_score_q": 69,
         "confidence_reason": {
           "dominant": "missing_data",
           "spread_terms": {
-            "height": 0.30439952437574314,
-            "period": 0.00011463209973909246,
-            "direction": 0.16000000000000003
-          },
-          "track_state": "unverified"
-        },
-        "wind_state": "choppy",
-        "best_window": {
-          "start": "15:00",
-          "end": "18:00"
-        }
-      },
-      {
-        "spot_id": "mariatos",
-        "score_q": 41,
-        "call_es": "Rodilla a cintura, viento picado, mejor de 06:00 a 06:00.",
-        "conf_level": "medium",
-        "size_band": "knee_waist",
-        "size_range_m": [
-          0.4,
-          0.7
-        ],
-        "weakest_link": "size",
-        "weakest_link_subscore": 0.3962871134809397,
-        "confidence_reason": {
-          "dominant": "missing_data",
-          "spread_terms": {
-            "height": 0.5202902445579144,
-            "period": 0.00184199377406103,
+            "height": 1.7854671280276815,
+            "period": 0.23289120223701226,
             "direction": 0.017777777777777778
           },
           "track_state": "unverified"
@@ -111,216 +283,56 @@
         "wind_state": "choppy",
         "best_window": {
           "start": "06:00",
-          "end": "06:00"
-        }
-      },
-      {
-        "spot_id": "las-lajas",
-        "score_q": 35,
-        "call_es": "Rodilla a cintura, viento picado, mejor de 09:00 a 11:00.",
-        "conf_level": "medium",
-        "size_band": "knee_waist",
-        "size_range_m": [
-          0.4,
-          0.7
-        ],
-        "weakest_link": "size",
-        "weakest_link_subscore": 0.20992443592968474,
-        "confidence_reason": {
-          "dominant": "missing_data",
-          "spread_terms": {
-            "height": 0.2304000000000002,
-            "period": 0,
-            "direction": 0.07111111111111111
-          },
-          "track_state": "unverified"
-        },
-        "wind_state": "choppy",
-        "best_window": {
-          "start": "09:00",
-          "end": "11:00"
-        }
-      },
-      {
-        "spot_id": "playa-guanico",
-        "score_q": 35,
-        "call_es": "Rodilla a cintura, viento limpio, mejor de 06:00 a 08:00.",
-        "conf_level": "low",
-        "size_band": "knee_waist",
-        "size_range_m": [
-          0.4,
-          0.7
-        ],
-        "weakest_link": "size",
-        "weakest_link_subscore": 0.12791303423959804,
-        "confidence_reason": {
-          "dominant": "missing_data",
-          "spread_terms": {
-            "height": 0,
-            "period": 0,
-            "direction": 0
-          },
-          "track_state": "unverified"
-        },
-        "wind_state": "clean",
-        "best_window": {
-          "start": "06:00",
-          "end": "08:00"
-        }
-      },
-      {
-        "spot_id": "playa-reina",
-        "score_q": 32,
-        "call_es": "Rodilla a cintura, viento picado, mejor de 06:00 a 06:00.",
-        "conf_level": "medium",
-        "size_band": "knee_waist",
-        "size_range_m": [
-          0.4,
-          0.7
-        ],
-        "weakest_link": "size",
-        "weakest_link_subscore": 0.216358001405468,
-        "confidence_reason": {
-          "dominant": "missing_data",
-          "spread_terms": {
-            "height": 0,
-            "period": 0,
-            "direction": 0
-          },
-          "track_state": "unverified"
-        },
-        "wind_state": "choppy",
-        "best_window": {
-          "start": "06:00",
-          "end": "06:00"
+          "end": "09:00"
         }
       },
       {
         "spot_id": "playa-morrillo",
-        "score_q": 24,
-        "call_es": "Rodilla a cintura, viento destrozado, mejor de 06:00 a 06:00.",
-        "conf_level": "medium",
-        "size_band": "knee_waist",
+        "score_q": 47,
+        "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 09:00.",
+        "conf_level": "low",
+        "size_band": "waist_chest",
         "size_range_m": [
-          0.4,
-          0.7
+          0.7,
+          1.1
         ],
-        "weakest_link": "size",
-        "weakest_link_subscore": 0.216358001405468,
+        "weakest_link": "wind",
+        "weakest_link_subscore": 0.46612777733634153,
+        "counterfactual_score_q": 70,
         "confidence_reason": {
           "dominant": "missing_data",
           "spread_terms": {
-            "height": 0,
-            "period": 0,
-            "direction": 0
+            "height": 1.7854671280276815,
+            "period": 0.2465544921915722,
+            "direction": 0.027777777777777776
           },
           "track_state": "unverified"
         },
-        "wind_state": "blown_out",
+        "wind_state": "choppy",
         "best_window": {
           "start": "06:00",
-          "end": "06:00"
-        }
-      },
-      {
-        "spot_id": "playa-torio",
-        "score_q": 24,
-        "call_es": "Rodilla a cintura, viento destrozado, mejor de 06:00 a 06:00.",
-        "conf_level": "medium",
-        "size_band": "knee_waist",
-        "size_range_m": [
-          0.4,
-          0.7
-        ],
-        "weakest_link": "size",
-        "weakest_link_subscore": 0.216358001405468,
-        "confidence_reason": {
-          "dominant": "missing_data",
-          "spread_terms": {
-            "height": 0,
-            "period": 0,
-            "direction": 0
-          },
-          "track_state": "unverified"
-        },
-        "wind_state": "blown_out",
-        "best_window": {
-          "start": "06:00",
-          "end": "06:00"
-        }
-      },
-      {
-        "spot_id": "punta-brava",
-        "score_q": 24,
-        "call_es": "Rodilla a cintura, viento destrozado, mejor de 07:00 a 08:00.",
-        "conf_level": "low",
-        "size_band": "knee_waist",
-        "size_range_m": [
-          0.4,
-          0.7
-        ],
-        "weakest_link": "size",
-        "weakest_link_subscore": 0.1765845708023221,
-        "confidence_reason": {
-          "dominant": "missing_data",
-          "spread_terms": {
-            "height": 0,
-            "period": 0,
-            "direction": 0
-          },
-          "track_state": "unverified"
-        },
-        "wind_state": "blown_out",
-        "best_window": {
-          "start": "07:00",
-          "end": "08:00"
-        }
-      },
-      {
-        "spot_id": "santa-catalina-la-punta",
-        "score_q": 24,
-        "call_es": "Rodilla a cintura, viento destrozado, mejor de 07:00 a 08:00.",
-        "conf_level": "low",
-        "size_band": "knee_waist",
-        "size_range_m": [
-          0.4,
-          0.7
-        ],
-        "weakest_link": "size",
-        "weakest_link_subscore": 0.1765845708023221,
-        "confidence_reason": {
-          "dominant": "missing_data",
-          "spread_terms": {
-            "height": 0,
-            "period": 0,
-            "direction": 0
-          },
-          "track_state": "unverified"
-        },
-        "wind_state": "blown_out",
-        "best_window": {
-          "start": "07:00",
-          "end": "08:00"
+          "end": "09:00"
         }
       },
       {
         "spot_id": "playa-la-barqueta",
-        "score_q": 23,
-        "call_es": "Rodilla a cintura, viento destrozado, mejor de 06:00 a 09:00.",
+        "score_q": 45,
+        "call_es": "Cintura a pecho, viento destrozado, mejor de 06:00 a 09:00.",
         "conf_level": "low",
-        "size_band": "knee_waist",
+        "size_band": "waist_chest",
         "size_range_m": [
-          0.4,
-          0.7
+          0.7,
+          1.1
         ],
         "weakest_link": "wind",
-        "weakest_link_subscore": 0.1896441231700327,
+        "weakest_link_subscore": 0.2670051853626474,
+        "counterfactual_score_q": 86,
         "confidence_reason": {
           "dominant": "missing_data",
           "spread_terms": {
-            "height": 0,
-            "period": 0,
-            "direction": 0
+            "height": 1.9591836734693886,
+            "period": 0.274782802405881,
+            "direction": 0.05444444444444445
           },
           "track_state": "unverified"
         },
@@ -331,117 +343,37 @@
         }
       },
       {
-        "spot_id": "playa-el-palmar",
-        "score_q": 7,
-        "call_es": "Tobillo a rodilla, viento picado, mejor de 10:00 a 11:00.",
-        "conf_level": "medium",
+        "spot_id": "playa-malibu",
+        "score_q": 11,
+        "call_es": "Tobillo a rodilla, viento limpio, mejor de 10:00 a 18:00.",
+        "conf_level": "low",
         "size_band": "ankle_knee",
         "size_range_m": [
           0.1,
           0.4
         ],
         "weakest_link": "size",
-        "weakest_link_subscore": 0.009349130816773911,
+        "weakest_link_subscore": 0.012638798521744144,
+        "counterfactual_score_q": 98,
         "confidence_reason": {
           "dominant": "missing_data",
           "spread_terms": {
-            "height": 0.030245746691871436,
-            "period": 0.0006229218634499933,
-            "direction": 0.1111111111111111
-          },
-          "track_state": "unverified"
-        },
-        "wind_state": "choppy",
-        "best_window": {
-          "start": "10:00",
-          "end": "11:00"
-        }
-      },
-      {
-        "spot_id": "playa-serena",
-        "score_q": 6,
-        "call_es": "Tobillo a rodilla, viento limpio, mejor de 10:00 a 11:00.",
-        "conf_level": "medium",
-        "size_band": "ankle_knee",
-        "size_range_m": [
-          0.1,
-          0.4
-        ],
-        "weakest_link": "size",
-        "weakest_link_subscore": 0.009349130816773911,
-        "confidence_reason": {
-          "dominant": "missing_data",
-          "spread_terms": {
-            "height": 0.030245746691871436,
-            "period": 0.0006229218634499933,
-            "direction": 0.1111111111111111
+            "height": 2.429834678969627,
+            "period": 1.265381096921769,
+            "direction": 1.1377777777777778
           },
           "track_state": "unverified"
         },
         "wind_state": "clean",
         "best_window": {
           "start": "10:00",
-          "end": "11:00"
-        }
-      },
-      {
-        "spot_id": "playa-teta",
-        "score_q": 6,
-        "call_es": "Tobillo a rodilla, viento limpio, mejor de 10:00 a 11:00.",
-        "conf_level": "medium",
-        "size_band": "ankle_knee",
-        "size_range_m": [
-          0.1,
-          0.4
-        ],
-        "weakest_link": "size",
-        "weakest_link_subscore": 0.009349130816773911,
-        "confidence_reason": {
-          "dominant": "missing_data",
-          "spread_terms": {
-            "height": 0.030245746691871436,
-            "period": 0.0006229218634499933,
-            "direction": 0.1111111111111111
-          },
-          "track_state": "unverified"
-        },
-        "wind_state": "clean",
-        "best_window": {
-          "start": "10:00",
-          "end": "11:00"
-        }
-      },
-      {
-        "spot_id": "san-carlos-point",
-        "score_q": 5,
-        "call_es": "Tobillo a rodilla, viento picado, mejor de 10:00 a 11:00.",
-        "conf_level": "medium",
-        "size_band": "ankle_knee",
-        "size_range_m": [
-          0.1,
-          0.4
-        ],
-        "weakest_link": "size",
-        "weakest_link_subscore": 0.009349130816773911,
-        "confidence_reason": {
-          "dominant": "missing_data",
-          "spread_terms": {
-            "height": 0.030245746691871436,
-            "period": 0.0006229218634499933,
-            "direction": 0.1111111111111111
-          },
-          "track_state": "unverified"
-        },
-        "wind_state": "choppy",
-        "best_window": {
-          "start": "10:00",
-          "end": "11:00"
+          "end": "18:00"
         }
       },
       {
         "spot_id": "punta-chame",
-        "score_q": 3,
-        "call_es": "Tobillo a rodilla, viento picado, mejor de 11:00 a 11:00.",
+        "score_q": 10,
+        "call_es": "Tobillo a rodilla, viento picado, mejor de 06:00 a 14:00.",
         "conf_level": "low",
         "size_band": "ankle_knee",
         "size_range_m": [
@@ -449,26 +381,27 @@
           0.4
         ],
         "weakest_link": "size",
-        "weakest_link_subscore": 0.0018232491426000584,
+        "weakest_link_subscore": 0.014943774783363811,
+        "counterfactual_score_q": 86,
         "confidence_reason": {
           "dominant": "missing_data",
           "spread_terms": {
-            "height": 1.1080332409972293,
-            "period": 0.3225901535879373,
-            "direction": 0.010000000000000002
+            "height": 1.2949245541838128,
+            "period": 2.443567549626309,
+            "direction": 1.5211111111111113
           },
           "track_state": "unverified"
         },
         "wind_state": "choppy",
         "best_window": {
-          "start": "11:00",
-          "end": "11:00"
+          "start": "06:00",
+          "end": "14:00"
         }
       },
       {
-        "spot_id": "playa-malibu",
-        "score_q": 1,
-        "call_es": "Tobillo a rodilla, viento sin datos, mejor de 10:00 a 13:00.",
+        "spot_id": "playa-serena",
+        "score_q": 8,
+        "call_es": "Tobillo a rodilla, viento limpio, mejor de 10:00 a 13:00.",
         "conf_level": "low",
         "size_band": "ankle_knee",
         "size_range_m": [
@@ -476,16 +409,46 @@
           0.4
         ],
         "weakest_link": "size",
-        "weakest_link_subscore": 0.009349130816773911,
+        "weakest_link_subscore": 0.007783092045334153,
+        "counterfactual_score_q": 87,
         "confidence_reason": {
           "dominant": "missing_data",
           "spread_terms": {
-            "height": 0.030245746691871436,
-            "period": 0.0006229218634499933,
-            "direction": 0.1111111111111111
+            "height": 1.2965142598460844,
+            "period": 1.218182590413897,
+            "direction": 1.067777777777778
           },
           "track_state": "unverified"
         },
+        "wind_state": "clean",
+        "best_window": {
+          "start": "10:00",
+          "end": "13:00"
+        }
+      },
+      {
+        "spot_id": "playa-teta",
+        "score_q": 8,
+        "call_es": "Tobillo a rodilla, viento limpio, mejor de 10:00 a 13:00.",
+        "conf_level": "low",
+        "size_band": "ankle_knee",
+        "size_range_m": [
+          0.1,
+          0.4
+        ],
+        "weakest_link": "size",
+        "weakest_link_subscore": 0.007783092045334153,
+        "counterfactual_score_q": 87,
+        "confidence_reason": {
+          "dominant": "missing_data",
+          "spread_terms": {
+            "height": 1.2965142598460844,
+            "period": 1.218182590413897,
+            "direction": 1.067777777777778
+          },
+          "track_state": "unverified"
+        },
+        "wind_state": "clean",
         "best_window": {
           "start": "10:00",
           "end": "13:00"
@@ -493,66 +456,348 @@
       },
       {
         "spot_id": "hawaiisito",
-        "score_q": 0,
-        "call_es": "Tobillo a rodilla, viento picado, mejor de 09:00 a 10:00.",
-        "conf_level": "medium",
+        "score_q": 7,
+        "call_es": "Tobillo a rodilla, viento picado, mejor de 15:00 a 18:00.",
+        "conf_level": "low",
         "size_band": "ankle_knee",
         "size_range_m": [
           0.1,
           0.4
         ],
-        "weakest_link": "dir",
-        "weakest_link_subscore": 1.8370323106850805e-15,
+        "weakest_link": "size",
+        "weakest_link_subscore": 0.006835200086115479,
+        "counterfactual_score_q": 82,
         "confidence_reason": {
           "dominant": "missing_data",
           "spread_terms": {
-            "height": 0.39889196675900274,
-            "period": 0,
-            "direction": 0.09
+            "height": 1.0647351742870075,
+            "period": 1.987185343288292,
+            "direction": 0.81
           },
           "track_state": "unverified"
         },
         "wind_state": "choppy",
         "best_window": {
-          "start": "09:00",
-          "end": "10:00"
+          "start": "15:00",
+          "end": "18:00"
+        }
+      },
+      {
+        "spot_id": "playa-el-palmar",
+        "score_q": 7,
+        "call_es": "Tobillo a rodilla, viento picado, mejor de 15:00 a 18:00.",
+        "conf_level": "low",
+        "size_band": "ankle_knee",
+        "size_range_m": [
+          0.1,
+          0.4
+        ],
+        "weakest_link": "size",
+        "weakest_link_subscore": 0.007783092045334153,
+        "counterfactual_score_q": 82,
+        "confidence_reason": {
+          "dominant": "missing_data",
+          "spread_terms": {
+            "height": 1.2965142598460844,
+            "period": 1.218182590413897,
+            "direction": 1.067777777777778
+          },
+          "track_state": "unverified"
+        },
+        "wind_state": "choppy",
+        "best_window": {
+          "start": "15:00",
+          "end": "18:00"
         }
       },
       {
         "spot_id": "playa-rio-mar",
-        "score_q": 0,
-        "call_es": "Tobillo a rodilla, viento picado, mejor de 09:00 a 10:00.",
-        "conf_level": "medium",
+        "score_q": 7,
+        "call_es": "Tobillo a rodilla, viento picado, mejor de 15:00 a 18:00.",
+        "conf_level": "low",
         "size_band": "ankle_knee",
         "size_range_m": [
           0.1,
           0.4
         ],
-        "weakest_link": "dir",
-        "weakest_link_subscore": 6.523402632302185e-12,
+        "weakest_link": "size",
+        "weakest_link_subscore": 0.006835200086115479,
+        "counterfactual_score_q": 82,
         "confidence_reason": {
           "dominant": "missing_data",
           "spread_terms": {
-            "height": 0.39889196675900274,
-            "period": 0,
-            "direction": 0.09
+            "height": 1.0647351742870075,
+            "period": 1.987185343288292,
+            "direction": 0.81
           },
           "track_state": "unverified"
         },
         "wind_state": "choppy",
         "best_window": {
-          "start": "09:00",
-          "end": "10:00"
+          "start": "15:00",
+          "end": "18:00"
+        }
+      },
+      {
+        "spot_id": "san-carlos-point",
+        "score_q": 7,
+        "call_es": "Tobillo a rodilla, viento picado, mejor de 15:00 a 18:00.",
+        "conf_level": "low",
+        "size_band": "ankle_knee",
+        "size_range_m": [
+          0.1,
+          0.4
+        ],
+        "weakest_link": "size",
+        "weakest_link_subscore": 0.007783092045334153,
+        "counterfactual_score_q": 82,
+        "confidence_reason": {
+          "dominant": "missing_data",
+          "spread_terms": {
+            "height": 1.2965142598460844,
+            "period": 1.218182590413897,
+            "direction": 1.067777777777778
+          },
+          "track_state": "unverified"
+        },
+        "wind_state": "choppy",
+        "best_window": {
+          "start": "15:00",
+          "end": "18:00"
         }
       }
     ],
     "days": [
       {
-        "date": "2026-08-11",
+        "date": "2026-08-12",
         "spots": [
           {
             "spot_id": "playa-cambutal",
+            "score_q": 70,
+            "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 12:00.",
+            "conf_level": "low",
+            "size_band": "waist_chest",
+            "size_range_m": [
+              0.7,
+              1.1
+            ],
+            "weakest_link": "wind",
+            "weakest_link_subscore": 0.6791716065370474,
+            "counterfactual_score_q": 85,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 0.7753906250000001,
+                "period": 1.1089329194769224,
+                "direction": 0.04000000000000001
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "choppy",
+            "best_window": {
+              "start": "06:00",
+              "end": "12:00"
+            }
+          },
+          {
+            "spot_id": "playa-los-destiladeros",
+            "score_q": 65,
+            "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 13:00.",
+            "conf_level": "low",
+            "size_band": "waist_chest",
+            "size_range_m": [
+              0.7,
+              1.1
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.592100707505026,
+            "counterfactual_score_q": 84,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 1.2868489892984543,
+                "period": 0.32865763385243907,
+                "direction": 0.1877777777777778
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "choppy",
+            "best_window": {
+              "start": "06:00",
+              "end": "13:00"
+            }
+          },
+          {
+            "spot_id": "playa-venao",
+            "score_q": 64,
+            "call_es": "Cintura a pecho, viento limpio, mejor de 06:00 a 16:00.",
+            "conf_level": "low",
+            "size_band": "waist_chest",
+            "size_range_m": [
+              0.7,
+              1.1
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.4897006334790649,
+            "counterfactual_score_q": 92,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 0.6934093868187732,
+                "period": 0.8235822271833818,
+                "direction": 0.05444444444444445
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "clean",
+            "best_window": {
+              "start": "06:00",
+              "end": "16:00"
+            }
+          },
+          {
+            "spot_id": "playa-guanico",
+            "score_q": 63,
+            "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 12:00.",
+            "conf_level": "low",
+            "size_band": "waist_chest",
+            "size_range_m": [
+              0.7,
+              1.1
+            ],
+            "weakest_link": "wind",
+            "weakest_link_subscore": 0.6287727231331606,
+            "counterfactual_score_q": 80,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 1.7919638443612738,
+                "period": 1.0062080000000004,
+                "direction": 0.4444444444444444
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "choppy",
+            "best_window": {
+              "start": "06:00",
+              "end": "12:00"
+            }
+          },
+          {
+            "spot_id": "santa-catalina-la-punta",
+            "score_q": 59,
+            "call_es": "Rodilla a cintura, viento limpio, mejor de 06:00 a 13:00.",
+            "conf_level": "low",
+            "size_band": "knee_waist",
+            "size_range_m": [
+              0.4,
+              0.7
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.4207406529165626,
+            "counterfactual_score_q": 90,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 1.4048,
+                "period": 0.3255959246443674,
+                "direction": 0.07111111111111111
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "clean",
+            "best_window": {
+              "start": "06:00",
+              "end": "13:00"
+            }
+          },
+          {
+            "spot_id": "punta-brava",
             "score_q": 57,
+            "call_es": "Rodilla a cintura, viento limpio, mejor de 06:00 a 13:00.",
+            "conf_level": "low",
+            "size_band": "knee_waist",
+            "size_range_m": [
+              0.4,
+              0.7
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.3963051025798785,
+            "counterfactual_score_q": 90,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 1.656286534169412,
+                "period": 0.3242574001509494,
+                "direction": 0.07111111111111111
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "clean",
+            "best_window": {
+              "start": "06:00",
+              "end": "13:00"
+            }
+          },
+          {
+            "spot_id": "playa-reina",
+            "score_q": 56,
+            "call_es": "Rodilla a cintura, viento limpio, mejor de 06:00 a 13:00.",
+            "conf_level": "low",
+            "size_band": "knee_waist",
+            "size_range_m": [
+              0.4,
+              0.7
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.4093544589353859,
+            "counterfactual_score_q": 88,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 1.7885795771591537,
+                "period": 0.28354297626394515,
+                "direction": 0.04000000000000001
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "clean",
+            "best_window": {
+              "start": "06:00",
+              "end": "13:00"
+            }
+          },
+          {
+            "spot_id": "las-lajas",
+            "score_q": 54,
+            "call_es": "Rodilla a cintura, viento limpio, mejor de 17:00 a 18:00.",
+            "conf_level": "low",
+            "size_band": "knee_waist",
+            "size_range_m": [
+              0.4,
+              0.7
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.29117722855827044,
+            "counterfactual_score_q": 100,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 3.5556899810964104,
+                "period": 3.213425605536332,
+                "direction": 1.1377777777777778
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "clean",
+            "best_window": {
+              "start": "17:00",
+              "end": "18:00"
+            }
+          },
+          {
+            "spot_id": "mariatos",
+            "score_q": 51,
             "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 09:00.",
             "conf_level": "low",
             "size_band": "waist_chest",
@@ -561,13 +806,14 @@
               1.1
             ],
             "weakest_link": "wind",
-            "weakest_link_subscore": 0.5478909903016271,
+            "weakest_link_subscore": 0.44596533077264583,
+            "counterfactual_score_q": 77,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 0,
-                "period": 0,
-                "direction": 0
+                "height": 1.051862673484295,
+                "period": 0.28119470205908226,
+                "direction": 0.027777777777777776
               },
               "track_state": "unverified"
             },
@@ -578,76 +824,23 @@
             }
           },
           {
-            "spot_id": "playa-venao",
-            "score_q": 53,
-            "call_es": "Rodilla a cintura, viento limpio, mejor de 15:00 a 18:00.",
-            "conf_level": "medium",
-            "size_band": "knee_waist",
-            "size_range_m": [
-              0.4,
-              0.7
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.3379901768569197,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0.004924592182209864,
-                "period": 0.013295008548360814,
-                "direction": 0
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "clean",
-            "best_window": {
-              "start": "15:00",
-              "end": "18:00"
-            }
-          },
-          {
-            "spot_id": "playa-los-destiladeros",
+            "spot_id": "playa-torio",
             "score_q": 48,
-            "call_es": "Rodilla a cintura, viento picado, mejor de 15:00 a 18:00.",
-            "conf_level": "medium",
-            "size_band": "knee_waist",
+            "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 09:00.",
+            "conf_level": "low",
+            "size_band": "waist_chest",
             "size_range_m": [
-              0.4,
-              0.7
+              0.7,
+              1.1
             ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.34479516615517625,
+            "weakest_link": "wind",
+            "weakest_link_subscore": 0.4770308145668808,
+            "counterfactual_score_q": 69,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 0.30439952437574314,
-                "period": 0.00011463209973909246,
-                "direction": 0.16000000000000003
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "choppy",
-            "best_window": {
-              "start": "15:00",
-              "end": "18:00"
-            }
-          },
-          {
-            "spot_id": "mariatos",
-            "score_q": 41,
-            "call_es": "Rodilla a cintura, viento picado, mejor de 06:00 a 06:00.",
-            "conf_level": "medium",
-            "size_band": "knee_waist",
-            "size_range_m": [
-              0.4,
-              0.7
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.3962871134809397,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0.5202902445579144,
-                "period": 0.00184199377406103,
+                "height": 1.7854671280276815,
+                "period": 0.23289120223701226,
                 "direction": 0.017777777777777778
               },
               "track_state": "unverified"
@@ -655,216 +848,56 @@
             "wind_state": "choppy",
             "best_window": {
               "start": "06:00",
-              "end": "06:00"
-            }
-          },
-          {
-            "spot_id": "las-lajas",
-            "score_q": 35,
-            "call_es": "Rodilla a cintura, viento picado, mejor de 09:00 a 11:00.",
-            "conf_level": "medium",
-            "size_band": "knee_waist",
-            "size_range_m": [
-              0.4,
-              0.7
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.20992443592968474,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0.2304000000000002,
-                "period": 0,
-                "direction": 0.07111111111111111
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "choppy",
-            "best_window": {
-              "start": "09:00",
-              "end": "11:00"
-            }
-          },
-          {
-            "spot_id": "playa-guanico",
-            "score_q": 35,
-            "call_es": "Rodilla a cintura, viento limpio, mejor de 06:00 a 08:00.",
-            "conf_level": "low",
-            "size_band": "knee_waist",
-            "size_range_m": [
-              0.4,
-              0.7
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.12791303423959804,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0,
-                "period": 0,
-                "direction": 0
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "clean",
-            "best_window": {
-              "start": "06:00",
-              "end": "08:00"
-            }
-          },
-          {
-            "spot_id": "playa-reina",
-            "score_q": 32,
-            "call_es": "Rodilla a cintura, viento picado, mejor de 06:00 a 06:00.",
-            "conf_level": "medium",
-            "size_band": "knee_waist",
-            "size_range_m": [
-              0.4,
-              0.7
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.216358001405468,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0,
-                "period": 0,
-                "direction": 0
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "choppy",
-            "best_window": {
-              "start": "06:00",
-              "end": "06:00"
+              "end": "09:00"
             }
           },
           {
             "spot_id": "playa-morrillo",
-            "score_q": 24,
-            "call_es": "Rodilla a cintura, viento destrozado, mejor de 06:00 a 06:00.",
-            "conf_level": "medium",
-            "size_band": "knee_waist",
+            "score_q": 47,
+            "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 09:00.",
+            "conf_level": "low",
+            "size_band": "waist_chest",
             "size_range_m": [
-              0.4,
-              0.7
+              0.7,
+              1.1
             ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.216358001405468,
+            "weakest_link": "wind",
+            "weakest_link_subscore": 0.46612777733634153,
+            "counterfactual_score_q": 70,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 0,
-                "period": 0,
-                "direction": 0
+                "height": 1.7854671280276815,
+                "period": 0.2465544921915722,
+                "direction": 0.027777777777777776
               },
               "track_state": "unverified"
             },
-            "wind_state": "blown_out",
+            "wind_state": "choppy",
             "best_window": {
               "start": "06:00",
-              "end": "06:00"
-            }
-          },
-          {
-            "spot_id": "playa-torio",
-            "score_q": 24,
-            "call_es": "Rodilla a cintura, viento destrozado, mejor de 06:00 a 06:00.",
-            "conf_level": "medium",
-            "size_band": "knee_waist",
-            "size_range_m": [
-              0.4,
-              0.7
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.216358001405468,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0,
-                "period": 0,
-                "direction": 0
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "blown_out",
-            "best_window": {
-              "start": "06:00",
-              "end": "06:00"
-            }
-          },
-          {
-            "spot_id": "punta-brava",
-            "score_q": 24,
-            "call_es": "Rodilla a cintura, viento destrozado, mejor de 07:00 a 08:00.",
-            "conf_level": "low",
-            "size_band": "knee_waist",
-            "size_range_m": [
-              0.4,
-              0.7
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.1765845708023221,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0,
-                "period": 0,
-                "direction": 0
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "blown_out",
-            "best_window": {
-              "start": "07:00",
-              "end": "08:00"
-            }
-          },
-          {
-            "spot_id": "santa-catalina-la-punta",
-            "score_q": 24,
-            "call_es": "Rodilla a cintura, viento destrozado, mejor de 07:00 a 08:00.",
-            "conf_level": "low",
-            "size_band": "knee_waist",
-            "size_range_m": [
-              0.4,
-              0.7
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.1765845708023221,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0,
-                "period": 0,
-                "direction": 0
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "blown_out",
-            "best_window": {
-              "start": "07:00",
-              "end": "08:00"
+              "end": "09:00"
             }
           },
           {
             "spot_id": "playa-la-barqueta",
-            "score_q": 23,
-            "call_es": "Rodilla a cintura, viento destrozado, mejor de 06:00 a 09:00.",
+            "score_q": 45,
+            "call_es": "Cintura a pecho, viento destrozado, mejor de 06:00 a 09:00.",
             "conf_level": "low",
-            "size_band": "knee_waist",
+            "size_band": "waist_chest",
             "size_range_m": [
-              0.4,
-              0.7
+              0.7,
+              1.1
             ],
             "weakest_link": "wind",
-            "weakest_link_subscore": 0.1896441231700327,
+            "weakest_link_subscore": 0.2670051853626474,
+            "counterfactual_score_q": 86,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 0,
-                "period": 0,
-                "direction": 0
+                "height": 1.9591836734693886,
+                "period": 0.274782802405881,
+                "direction": 0.05444444444444445
               },
               "track_state": "unverified"
             },
@@ -875,117 +908,37 @@
             }
           },
           {
-            "spot_id": "playa-el-palmar",
-            "score_q": 7,
-            "call_es": "Tobillo a rodilla, viento picado, mejor de 10:00 a 11:00.",
-            "conf_level": "medium",
+            "spot_id": "playa-malibu",
+            "score_q": 11,
+            "call_es": "Tobillo a rodilla, viento limpio, mejor de 10:00 a 18:00.",
+            "conf_level": "low",
             "size_band": "ankle_knee",
             "size_range_m": [
               0.1,
               0.4
             ],
             "weakest_link": "size",
-            "weakest_link_subscore": 0.009349130816773911,
+            "weakest_link_subscore": 0.012638798521744144,
+            "counterfactual_score_q": 98,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 0.030245746691871436,
-                "period": 0.0006229218634499933,
-                "direction": 0.1111111111111111
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "choppy",
-            "best_window": {
-              "start": "10:00",
-              "end": "11:00"
-            }
-          },
-          {
-            "spot_id": "playa-serena",
-            "score_q": 6,
-            "call_es": "Tobillo a rodilla, viento limpio, mejor de 10:00 a 11:00.",
-            "conf_level": "medium",
-            "size_band": "ankle_knee",
-            "size_range_m": [
-              0.1,
-              0.4
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.009349130816773911,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0.030245746691871436,
-                "period": 0.0006229218634499933,
-                "direction": 0.1111111111111111
+                "height": 2.429834678969627,
+                "period": 1.265381096921769,
+                "direction": 1.1377777777777778
               },
               "track_state": "unverified"
             },
             "wind_state": "clean",
             "best_window": {
               "start": "10:00",
-              "end": "11:00"
-            }
-          },
-          {
-            "spot_id": "playa-teta",
-            "score_q": 6,
-            "call_es": "Tobillo a rodilla, viento limpio, mejor de 10:00 a 11:00.",
-            "conf_level": "medium",
-            "size_band": "ankle_knee",
-            "size_range_m": [
-              0.1,
-              0.4
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.009349130816773911,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0.030245746691871436,
-                "period": 0.0006229218634499933,
-                "direction": 0.1111111111111111
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "clean",
-            "best_window": {
-              "start": "10:00",
-              "end": "11:00"
-            }
-          },
-          {
-            "spot_id": "san-carlos-point",
-            "score_q": 5,
-            "call_es": "Tobillo a rodilla, viento picado, mejor de 10:00 a 11:00.",
-            "conf_level": "medium",
-            "size_band": "ankle_knee",
-            "size_range_m": [
-              0.1,
-              0.4
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.009349130816773911,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0.030245746691871436,
-                "period": 0.0006229218634499933,
-                "direction": 0.1111111111111111
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "choppy",
-            "best_window": {
-              "start": "10:00",
-              "end": "11:00"
+              "end": "18:00"
             }
           },
           {
             "spot_id": "punta-chame",
-            "score_q": 3,
-            "call_es": "Tobillo a rodilla, viento picado, mejor de 11:00 a 11:00.",
+            "score_q": 10,
+            "call_es": "Tobillo a rodilla, viento picado, mejor de 06:00 a 14:00.",
             "conf_level": "low",
             "size_band": "ankle_knee",
             "size_range_m": [
@@ -993,26 +946,27 @@
               0.4
             ],
             "weakest_link": "size",
-            "weakest_link_subscore": 0.0018232491426000584,
+            "weakest_link_subscore": 0.014943774783363811,
+            "counterfactual_score_q": 86,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 1.1080332409972293,
-                "period": 0.3225901535879373,
-                "direction": 0.010000000000000002
+                "height": 1.2949245541838128,
+                "period": 2.443567549626309,
+                "direction": 1.5211111111111113
               },
               "track_state": "unverified"
             },
             "wind_state": "choppy",
             "best_window": {
-              "start": "11:00",
-              "end": "11:00"
+              "start": "06:00",
+              "end": "14:00"
             }
           },
           {
-            "spot_id": "playa-malibu",
-            "score_q": 1,
-            "call_es": "Tobillo a rodilla, viento sin datos, mejor de 10:00 a 13:00.",
+            "spot_id": "playa-serena",
+            "score_q": 8,
+            "call_es": "Tobillo a rodilla, viento limpio, mejor de 10:00 a 13:00.",
             "conf_level": "low",
             "size_band": "ankle_knee",
             "size_range_m": [
@@ -1020,16 +974,46 @@
               0.4
             ],
             "weakest_link": "size",
-            "weakest_link_subscore": 0.009349130816773911,
+            "weakest_link_subscore": 0.007783092045334153,
+            "counterfactual_score_q": 87,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 0.030245746691871436,
-                "period": 0.0006229218634499933,
-                "direction": 0.1111111111111111
+                "height": 1.2965142598460844,
+                "period": 1.218182590413897,
+                "direction": 1.067777777777778
               },
               "track_state": "unverified"
             },
+            "wind_state": "clean",
+            "best_window": {
+              "start": "10:00",
+              "end": "13:00"
+            }
+          },
+          {
+            "spot_id": "playa-teta",
+            "score_q": 8,
+            "call_es": "Tobillo a rodilla, viento limpio, mejor de 10:00 a 13:00.",
+            "conf_level": "low",
+            "size_band": "ankle_knee",
+            "size_range_m": [
+              0.1,
+              0.4
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.007783092045334153,
+            "counterfactual_score_q": 87,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 1.2965142598460844,
+                "period": 1.218182590413897,
+                "direction": 1.067777777777778
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "clean",
             "best_window": {
               "start": "10:00",
               "end": "13:00"
@@ -1037,67 +1021,125 @@
           },
           {
             "spot_id": "hawaiisito",
-            "score_q": 0,
-            "call_es": "Tobillo a rodilla, viento picado, mejor de 09:00 a 10:00.",
-            "conf_level": "medium",
+            "score_q": 7,
+            "call_es": "Tobillo a rodilla, viento picado, mejor de 15:00 a 18:00.",
+            "conf_level": "low",
             "size_band": "ankle_knee",
             "size_range_m": [
               0.1,
               0.4
             ],
-            "weakest_link": "dir",
-            "weakest_link_subscore": 1.8370323106850805e-15,
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.006835200086115479,
+            "counterfactual_score_q": 82,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 0.39889196675900274,
-                "period": 0,
-                "direction": 0.09
+                "height": 1.0647351742870075,
+                "period": 1.987185343288292,
+                "direction": 0.81
               },
               "track_state": "unverified"
             },
             "wind_state": "choppy",
             "best_window": {
-              "start": "09:00",
-              "end": "10:00"
+              "start": "15:00",
+              "end": "18:00"
+            }
+          },
+          {
+            "spot_id": "playa-el-palmar",
+            "score_q": 7,
+            "call_es": "Tobillo a rodilla, viento picado, mejor de 15:00 a 18:00.",
+            "conf_level": "low",
+            "size_band": "ankle_knee",
+            "size_range_m": [
+              0.1,
+              0.4
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.007783092045334153,
+            "counterfactual_score_q": 82,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 1.2965142598460844,
+                "period": 1.218182590413897,
+                "direction": 1.067777777777778
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "choppy",
+            "best_window": {
+              "start": "15:00",
+              "end": "18:00"
             }
           },
           {
             "spot_id": "playa-rio-mar",
-            "score_q": 0,
-            "call_es": "Tobillo a rodilla, viento picado, mejor de 09:00 a 10:00.",
-            "conf_level": "medium",
+            "score_q": 7,
+            "call_es": "Tobillo a rodilla, viento picado, mejor de 15:00 a 18:00.",
+            "conf_level": "low",
             "size_band": "ankle_knee",
             "size_range_m": [
               0.1,
               0.4
             ],
-            "weakest_link": "dir",
-            "weakest_link_subscore": 6.523402632302185e-12,
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.006835200086115479,
+            "counterfactual_score_q": 82,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 0.39889196675900274,
-                "period": 0,
-                "direction": 0.09
+                "height": 1.0647351742870075,
+                "period": 1.987185343288292,
+                "direction": 0.81
               },
               "track_state": "unverified"
             },
             "wind_state": "choppy",
             "best_window": {
-              "start": "09:00",
-              "end": "10:00"
+              "start": "15:00",
+              "end": "18:00"
+            }
+          },
+          {
+            "spot_id": "san-carlos-point",
+            "score_q": 7,
+            "call_es": "Tobillo a rodilla, viento picado, mejor de 15:00 a 18:00.",
+            "conf_level": "low",
+            "size_band": "ankle_knee",
+            "size_range_m": [
+              0.1,
+              0.4
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.007783092045334153,
+            "counterfactual_score_q": 82,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 1.2965142598460844,
+                "period": 1.218182590413897,
+                "direction": 1.067777777777778
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "choppy",
+            "best_window": {
+              "start": "15:00",
+              "end": "18:00"
             }
           }
         ]
       },
       {
-        "date": "2026-08-12",
+        "date": "2026-08-13",
         "spots": [
           {
             "spot_id": "playa-cambutal",
-            "score_q": 74,
-            "call_es": "Cintura a pecho, viento limpio, mejor de 08:00 a 11:00.",
+            "score_q": 92,
+            "call_es": "Cintura a pecho, viento limpio, mejor de 06:00 a 15:00.",
             "conf_level": "low",
             "size_band": "waist_chest",
             "size_range_m": [
@@ -1105,134 +1147,111 @@
               1.1
             ],
             "weakest_link": "size",
-            "weakest_link_subscore": 0.5696548325630559,
+            "weakest_link_subscore": 0.8971048678381153,
+            "counterfactual_score_q": 97,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 0,
-                "period": 0,
-                "direction": 0
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "clean",
-            "best_window": {
-              "start": "08:00",
-              "end": "11:00"
-            }
-          },
-          {
-            "spot_id": "playa-venao",
-            "score_q": 61,
-            "call_es": "Rodilla a cintura, viento limpio, mejor de 08:00 a 13:00.",
-            "conf_level": "medium",
-            "size_band": "knee_waist",
-            "size_range_m": [
-              0.4,
-              0.7
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.3911591868794596,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0.02194787379972569,
-                "period": 0.32348863285877716,
-                "direction": 0.04000000000000001
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "clean",
-            "best_window": {
-              "start": "08:00",
-              "end": "13:00"
-            }
-          },
-          {
-            "spot_id": "mariatos",
-            "score_q": 45,
-            "call_es": "Rodilla a cintura, viento limpio, mejor de 06:00 a 10:00.",
-            "conf_level": "medium",
-            "size_band": "knee_waist",
-            "size_range_m": [
-              0.4,
-              0.7
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.21107287668872737,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0.6400000000000001,
-                "period": 0.00017042859382775084,
-                "direction": 0.017777777777777778
+                "height": 0.3824637968657014,
+                "period": 0.5922436024598292,
+                "direction": 0.07111111111111111
               },
               "track_state": "unverified"
             },
             "wind_state": "clean",
             "best_window": {
               "start": "06:00",
-              "end": "10:00"
-            }
-          },
-          {
-            "spot_id": "playa-los-destiladeros",
-            "score_q": 44,
-            "call_es": "Rodilla a cintura, viento limpio, mejor de 07:00 a 10:00.",
-            "conf_level": "medium",
-            "size_band": "knee_waist",
-            "size_range_m": [
-              0.4,
-              0.7
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.23600160879254345,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0.2130177514792897,
-                "period": 0.5373499514002937,
-                "direction": 0.1111111111111111
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "clean",
-            "best_window": {
-              "start": "07:00",
-              "end": "10:00"
+              "end": "15:00"
             }
           },
           {
             "spot_id": "playa-guanico",
-            "score_q": 38,
-            "call_es": "Rodilla a cintura, viento limpio, mejor de 06:00 a 12:00.",
+            "score_q": 72,
+            "call_es": "Cintura a pecho, viento limpio, mejor de 06:00 a 18:00.",
             "conf_level": "low",
-            "size_band": "knee_waist",
+            "size_band": "waist_chest",
             "size_range_m": [
-              0.4,
-              0.7
+              0.7,
+              1.1
             ],
             "weakest_link": "size",
-            "weakest_link_subscore": 0.15187820419443532,
+            "weakest_link_subscore": 0.6381626101896438,
+            "counterfactual_score_q": 90,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 0,
-                "period": 0,
-                "direction": 0
+                "height": 2.0015117157974305,
+                "period": 1.011606806146031,
+                "direction": 0.32111111111111107
               },
               "track_state": "unverified"
             },
             "wind_state": "clean",
             "best_window": {
               "start": "06:00",
-              "end": "12:00"
+              "end": "18:00"
             }
           },
           {
-            "spot_id": "playa-la-barqueta",
-            "score_q": 32,
-            "call_es": "Rodilla a cintura, viento picado, mejor de 06:00 a 08:00.",
+            "spot_id": "mariatos",
+            "score_q": 61,
+            "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 09:00.",
+            "conf_level": "low",
+            "size_band": "waist_chest",
+            "size_range_m": [
+              0.7,
+              1.1
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.5748369075238617,
+            "counterfactual_score_q": 80,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 1.3624893504807496,
+                "period": 0.4139710544076243,
+                "direction": 0.027777777777777776
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "choppy",
+            "best_window": {
+              "start": "06:00",
+              "end": "09:00"
+            }
+          },
+          {
+            "spot_id": "punta-brava",
+            "score_q": 59,
+            "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 13:00.",
+            "conf_level": "low",
+            "size_band": "waist_chest",
+            "size_range_m": [
+              0.7,
+              1.1
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.47864528181486804,
+            "counterfactual_score_q": 85,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 0.9135802469135796,
+                "period": 0.49872467494763933,
+                "direction": 0.1111111111111111
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "choppy",
+            "best_window": {
+              "start": "06:00",
+              "end": "13:00"
+            }
+          },
+          {
+            "spot_id": "santa-catalina-la-punta",
+            "score_q": 58,
+            "call_es": "Rodilla a cintura, viento picado, mejor de 06:00 a 13:00.",
             "conf_level": "low",
             "size_band": "knee_waist",
             "size_range_m": [
@@ -1240,13 +1259,182 @@
               0.7
             ],
             "weakest_link": "size",
-            "weakest_link_subscore": 0.14432153565731834,
+            "weakest_link_subscore": 0.4639578656592747,
+            "counterfactual_score_q": 85,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 0,
-                "period": 0,
-                "direction": 0
+                "height": 0.9768600925596291,
+                "period": 0.4494655004859085,
+                "direction": 0.1111111111111111
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "choppy",
+            "best_window": {
+              "start": "06:00",
+              "end": "13:00"
+            }
+          },
+          {
+            "spot_id": "playa-venao",
+            "score_q": 56,
+            "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 11:00.",
+            "conf_level": "low",
+            "size_band": "waist_chest",
+            "size_range_m": [
+              0.7,
+              1.1
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.481390749490326,
+            "counterfactual_score_q": 80,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 0.5794082840236685,
+                "period": 0.47506921411145536,
+                "direction": 0.13444444444444442
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "choppy",
+            "best_window": {
+              "start": "06:00",
+              "end": "11:00"
+            }
+          },
+          {
+            "spot_id": "playa-reina",
+            "score_q": 55,
+            "call_es": "Rodilla a cintura, viento limpio, mejor de 06:00 a 13:00.",
+            "conf_level": "low",
+            "size_band": "knee_waist",
+            "size_range_m": [
+              0.4,
+              0.7
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.37505408109929733,
+            "counterfactual_score_q": 90,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 1.74893335737035,
+                "period": 0.5334701785065793,
+                "direction": 0.05444444444444445
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "clean",
+            "best_window": {
+              "start": "06:00",
+              "end": "13:00"
+            }
+          },
+          {
+            "spot_id": "playa-morrillo",
+            "score_q": 52,
+            "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 11:00.",
+            "conf_level": "low",
+            "size_band": "waist_chest",
+            "size_range_m": [
+              0.7,
+              1.1
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.4811421464360657,
+            "counterfactual_score_q": 74,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 2.08641975308642,
+                "period": 0.41253362058141274,
+                "direction": 0.027777777777777776
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "choppy",
+            "best_window": {
+              "start": "06:00",
+              "end": "11:00"
+            }
+          },
+          {
+            "spot_id": "playa-la-barqueta",
+            "score_q": 50,
+            "call_es": "Cintura a pecho, viento destrozado, mejor de 06:00 a 10:00.",
+            "conf_level": "low",
+            "size_band": "waist_chest",
+            "size_range_m": [
+              0.7,
+              1.1
+            ],
+            "weakest_link": "wind",
+            "weakest_link_subscore": 0.29961419327885164,
+            "counterfactual_score_q": 91,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 1.7759429536498406,
+                "period": 0.38266417164019956,
+                "direction": 0.09
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "blown_out",
+            "best_window": {
+              "start": "06:00",
+              "end": "10:00"
+            }
+          },
+          {
+            "spot_id": "playa-torio",
+            "score_q": 50,
+            "call_es": "Rodilla a cintura, viento picado, mejor de 06:00 a 11:00.",
+            "conf_level": "low",
+            "size_band": "knee_waist",
+            "size_range_m": [
+              0.4,
+              0.7
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.44140237761053785,
+            "counterfactual_score_q": 75,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 1.8097927433534013,
+                "period": 0.5411968831039605,
+                "direction": 0.027777777777777776
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "choppy",
+            "best_window": {
+              "start": "06:00",
+              "end": "11:00"
+            }
+          },
+          {
+            "spot_id": "playa-los-destiladeros",
+            "score_q": 48,
+            "call_es": "Cintura a pecho, viento picado, mejor de 06:00 a 08:00.",
+            "conf_level": "low",
+            "size_band": "waist_chest",
+            "size_range_m": [
+              0.7,
+              1.1
+            ],
+            "weakest_link": "wind",
+            "weakest_link_subscore": 0.46250626915091814,
+            "counterfactual_score_q": 70,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 1.9339067451335445,
+                "period": 1.8687246775615594,
+                "direction": 0.13444444444444442
               },
               "track_state": "unverified"
             },
@@ -1257,144 +1445,9 @@
             }
           },
           {
-            "spot_id": "playa-morrillo",
-            "score_q": 29,
-            "call_es": "Rodilla a cintura, viento limpio, mejor de 06:00 a 10:00.",
-            "conf_level": "medium",
-            "size_band": "knee_waist",
-            "size_range_m": [
-              0.4,
-              0.7
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.08746174397101392,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0,
-                "period": 0,
-                "direction": 0
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "clean",
-            "best_window": {
-              "start": "06:00",
-              "end": "10:00"
-            }
-          },
-          {
-            "spot_id": "playa-torio",
-            "score_q": 29,
-            "call_es": "Rodilla a cintura, viento limpio, mejor de 06:00 a 10:00.",
-            "conf_level": "medium",
-            "size_band": "knee_waist",
-            "size_range_m": [
-              0.4,
-              0.7
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.08746174397101392,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0,
-                "period": 0,
-                "direction": 0
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "clean",
-            "best_window": {
-              "start": "06:00",
-              "end": "10:00"
-            }
-          },
-          {
-            "spot_id": "punta-brava",
-            "score_q": 28,
-            "call_es": "Rodilla a cintura, viento picado, mejor de 06:00 a 06:00.",
-            "conf_level": "low",
-            "size_band": "knee_waist",
-            "size_range_m": [
-              0.4,
-              0.7
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.11200056409168192,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0,
-                "period": 0,
-                "direction": 0
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "choppy",
-            "best_window": {
-              "start": "06:00",
-              "end": "06:00"
-            }
-          },
-          {
-            "spot_id": "santa-catalina-la-punta",
-            "score_q": 28,
-            "call_es": "Rodilla a cintura, viento picado, mejor de 06:00 a 06:00.",
-            "conf_level": "low",
-            "size_band": "knee_waist",
-            "size_range_m": [
-              0.4,
-              0.7
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.11200056409168192,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0,
-                "period": 0,
-                "direction": 0
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "choppy",
-            "best_window": {
-              "start": "06:00",
-              "end": "06:00"
-            }
-          },
-          {
-            "spot_id": "playa-reina",
-            "score_q": 27,
-            "call_es": "Rodilla a cintura, viento limpio, mejor de 06:00 a 10:00.",
-            "conf_level": "medium",
-            "size_band": "knee_waist",
-            "size_range_m": [
-              0.4,
-              0.7
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.08746174397101392,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0,
-                "period": 0,
-                "direction": 0
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "clean",
-            "best_window": {
-              "start": "06:00",
-              "end": "10:00"
-            }
-          },
-          {
             "spot_id": "las-lajas",
-            "score_q": 24,
-            "call_es": "Rodilla a cintura, viento picado, mejor de 15:00 a 18:00.",
+            "score_q": 43,
+            "call_es": "Rodilla a cintura, viento picado, mejor de 06:00 a 10:00.",
             "conf_level": "low",
             "size_band": "knee_waist",
             "size_range_m": [
@@ -1402,26 +1455,27 @@
               0.7
             ],
             "weakest_link": "size",
-            "weakest_link_subscore": 0.09864151107013783,
+            "weakest_link_subscore": 0.3607412956945652,
+            "counterfactual_score_q": 72,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 0.16000000000000006,
-                "period": 2.6216292449425707,
-                "direction": 0.13444444444444442
+                "height": 2.2726765453530913,
+                "period": 2.848629984406327,
+                "direction": 0.6400000000000001
               },
               "track_state": "unverified"
             },
             "wind_state": "choppy",
             "best_window": {
-              "start": "15:00",
-              "end": "18:00"
+              "start": "06:00",
+              "end": "10:00"
             }
           },
           {
-            "spot_id": "playa-el-palmar",
-            "score_q": 3,
-            "call_es": "Tobillo a rodilla, viento destrozado, mejor de 16:00 a 18:00.",
+            "spot_id": "punta-chame",
+            "score_q": 5,
+            "call_es": "Tobillo a rodilla, viento picado, mejor de 06:00 a 14:00.",
             "conf_level": "low",
             "size_band": "ankle_knee",
             "size_range_m": [
@@ -1429,26 +1483,55 @@
               0.4
             ],
             "weakest_link": "size",
-            "weakest_link_subscore": 0.0037622499736268047,
+            "weakest_link_subscore": 0.0035755397119291623,
+            "counterfactual_score_q": 81,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 0.6399999999999997,
-                "period": 0.2863502645384282,
-                "direction": 0.1877777777777778
+                "height": 1.183673469387755,
+                "period": 0.7526972516687384,
+                "direction": 0.5877777777777778
               },
               "track_state": "unverified"
             },
-            "wind_state": "blown_out",
+            "wind_state": "choppy",
+            "best_window": {
+              "start": "06:00",
+              "end": "14:00"
+            }
+          },
+          {
+            "spot_id": "playa-malibu",
+            "score_q": 4,
+            "call_es": "Tobillo a rodilla, viento picado, mejor de 16:00 a 18:00.",
+            "conf_level": "low",
+            "size_band": "ankle_knee",
+            "size_range_m": [
+              0.1,
+              0.4
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.0016726211575560418,
+            "counterfactual_score_q": 86,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 3.118800461361015,
+                "period": 0.9060474014241685,
+                "direction": 0.5377777777777777
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "choppy",
             "best_window": {
               "start": "16:00",
               "end": "18:00"
             }
           },
           {
-            "spot_id": "playa-serena",
+            "spot_id": "hawaiisito",
             "score_q": 3,
-            "call_es": "Tobillo a rodilla, viento destrozado, mejor de 14:00 a 17:00.",
+            "call_es": "Tobillo a rodilla, viento limpio, mejor de 16:00 a 16:00.",
             "conf_level": "low",
             "size_band": "ankle_knee",
             "size_range_m": [
@@ -1456,26 +1539,111 @@
               0.4
             ],
             "weakest_link": "size",
-            "weakest_link_subscore": 0.0037622499736268047,
+            "weakest_link_subscore": 0.0008658538231217902,
+            "counterfactual_score_q": 96,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 0.6399999999999997,
-                "period": 0.2863502645384282,
-                "direction": 0.1877777777777778
+                "height": 0.9444444444444449,
+                "period": 2.028112050059555,
+                "direction": 0.6400000000000001
               },
               "track_state": "unverified"
             },
-            "wind_state": "blown_out",
+            "wind_state": "clean",
             "best_window": {
-              "start": "14:00",
-              "end": "17:00"
+              "start": "16:00",
+              "end": "16:00"
+            }
+          },
+          {
+            "spot_id": "playa-el-palmar",
+            "score_q": 3,
+            "call_es": "Tobillo a rodilla, viento limpio, mejor de 16:00 a 16:00.",
+            "conf_level": "low",
+            "size_band": "ankle_knee",
+            "size_range_m": [
+              0.1,
+              0.4
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.0008295077750971614,
+            "counterfactual_score_q": 96,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 1.6030245746691865,
+                "period": 1.1408436187482287,
+                "direction": 0.4444444444444444
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "clean",
+            "best_window": {
+              "start": "16:00",
+              "end": "16:00"
+            }
+          },
+          {
+            "spot_id": "playa-rio-mar",
+            "score_q": 3,
+            "call_es": "Tobillo a rodilla, viento limpio, mejor de 16:00 a 16:00.",
+            "conf_level": "low",
+            "size_band": "ankle_knee",
+            "size_range_m": [
+              0.1,
+              0.4
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.0008658538231217902,
+            "counterfactual_score_q": 96,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 0.9444444444444449,
+                "period": 2.028112050059555,
+                "direction": 0.6400000000000001
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "clean",
+            "best_window": {
+              "start": "16:00",
+              "end": "16:00"
+            }
+          },
+          {
+            "spot_id": "playa-serena",
+            "score_q": 3,
+            "call_es": "Tobillo a rodilla, viento limpio, mejor de 16:00 a 16:00.",
+            "conf_level": "low",
+            "size_band": "ankle_knee",
+            "size_range_m": [
+              0.1,
+              0.4
+            ],
+            "weakest_link": "size",
+            "weakest_link_subscore": 0.0008295077750971614,
+            "counterfactual_score_q": 89,
+            "confidence_reason": {
+              "dominant": "missing_data",
+              "spread_terms": {
+                "height": 1.6030245746691865,
+                "period": 1.1408436187482287,
+                "direction": 0.4444444444444444
+              },
+              "track_state": "unverified"
+            },
+            "wind_state": "clean",
+            "best_window": {
+              "start": "16:00",
+              "end": "16:00"
             }
           },
           {
             "spot_id": "playa-teta",
             "score_q": 3,
-            "call_es": "Tobillo a rodilla, viento destrozado, mejor de 14:00 a 17:00.",
+            "call_es": "Tobillo a rodilla, viento limpio, mejor de 16:00 a 16:00.",
             "conf_level": "low",
             "size_band": "ankle_knee",
             "size_range_m": [
@@ -1483,26 +1651,27 @@
               0.4
             ],
             "weakest_link": "size",
-            "weakest_link_subscore": 0.0037622499736268047,
+            "weakest_link_subscore": 0.0008295077750971614,
+            "counterfactual_score_q": 89,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 0.6399999999999997,
-                "period": 0.2863502645384282,
-                "direction": 0.1877777777777778
+                "height": 1.6030245746691865,
+                "period": 1.1408436187482287,
+                "direction": 0.4444444444444444
               },
               "track_state": "unverified"
             },
-            "wind_state": "blown_out",
+            "wind_state": "clean",
             "best_window": {
-              "start": "14:00",
-              "end": "17:00"
+              "start": "16:00",
+              "end": "16:00"
             }
           },
           {
             "spot_id": "san-carlos-point",
             "score_q": 3,
-            "call_es": "Tobillo a rodilla, viento destrozado, mejor de 14:00 a 15:00.",
+            "call_es": "Tobillo a rodilla, viento limpio, mejor de 16:00 a 16:00.",
             "conf_level": "low",
             "size_band": "ankle_knee",
             "size_range_m": [
@@ -1510,126 +1679,20 @@
               0.4
             ],
             "weakest_link": "size",
-            "weakest_link_subscore": 0.0037622499736268047,
+            "weakest_link_subscore": 0.0008295077750971614,
+            "counterfactual_score_q": 96,
             "confidence_reason": {
               "dominant": "missing_data",
               "spread_terms": {
-                "height": 0.6399999999999997,
-                "period": 0.2863502645384282,
-                "direction": 0.1877777777777778
+                "height": 1.6030245746691865,
+                "period": 1.1408436187482287,
+                "direction": 0.4444444444444444
               },
               "track_state": "unverified"
             },
-            "wind_state": "blown_out",
+            "wind_state": "clean",
             "best_window": {
-              "start": "14:00",
-              "end": "15:00"
-            }
-          },
-          {
-            "spot_id": "hawaiisito",
-            "score_q": 2,
-            "call_es": "Tobillo a rodilla, viento destrozado, mejor de 17:00 a 18:00.",
-            "conf_level": "medium",
-            "size_band": "ankle_knee",
-            "size_range_m": [
-              0.1,
-              0.4
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.0015727373178979621,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0,
-                "period": 0.48849577985894316,
-                "direction": 0.05444444444444445
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "blown_out",
-            "best_window": {
-              "start": "17:00",
-              "end": "18:00"
-            }
-          },
-          {
-            "spot_id": "playa-rio-mar",
-            "score_q": 2,
-            "call_es": "Tobillo a rodilla, viento destrozado, mejor de 17:00 a 18:00.",
-            "conf_level": "medium",
-            "size_band": "ankle_knee",
-            "size_range_m": [
-              0.1,
-              0.4
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.0015727373178979621,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0,
-                "period": 0.48849577985894316,
-                "direction": 0.05444444444444445
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "blown_out",
-            "best_window": {
-              "start": "17:00",
-              "end": "18:00"
-            }
-          },
-          {
-            "spot_id": "punta-chame",
-            "score_q": 2,
-            "call_es": "Tobillo a rodilla, viento destrozado, mejor de 09:00 a 12:00.",
-            "conf_level": "low",
-            "size_band": "ankle_knee",
-            "size_range_m": [
-              0.1,
-              0.4
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.0037622499736268047,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0.6399999999999997,
-                "period": 0.2863502645384282,
-                "direction": 0.36
-              },
-              "track_state": "unverified"
-            },
-            "wind_state": "blown_out",
-            "best_window": {
-              "start": "09:00",
-              "end": "12:00"
-            }
-          },
-          {
-            "spot_id": "playa-malibu",
-            "score_q": 0,
-            "call_es": "Tobillo a rodilla, viento sin datos, mejor de 14:00 a 16:00.",
-            "conf_level": "low",
-            "size_band": "ankle_knee",
-            "size_range_m": [
-              0.1,
-              0.4
-            ],
-            "weakest_link": "size",
-            "weakest_link_subscore": 0.0037622499736268047,
-            "confidence_reason": {
-              "dominant": "missing_data",
-              "spread_terms": {
-                "height": 0.6399999999999997,
-                "period": 0.2863502645384282,
-                "direction": 0.1877777777777778
-              },
-              "track_state": "unverified"
-            },
-            "best_window": {
-              "start": "14:00",
+              "start": "16:00",
               "end": "16:00"
             }
           }
