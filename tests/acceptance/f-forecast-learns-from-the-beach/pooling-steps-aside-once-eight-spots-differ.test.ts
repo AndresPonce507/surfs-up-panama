@@ -8,18 +8,61 @@
 // a hand-set prior WITH a floor and a stated switchover: method of moments,
 // adopted once eight spots have passed the gates, tau never below 2.
 //
-// The oracle is a CORRIDOR, computed by hand from the two declared constants
-// and the fixture's own mornings. Each stored difference must sit strictly
-// nearer its own mornings than the prior of 6 leaves it -- pooling really did
-// step aside -- and strictly further from them than the floor of 2 would
-// allow. The second half is the one that matters: without it, an
-// implementation that skipped the estimator entirely and clamped to the floor
-// at eight spots would pass, and the estimator would be decoration.
+// The oracle READS TAU OFF THE RECORD. Every stored key carries
+// `shrunk_from_global`, which is tau/(n+tau) for the tau that key was actually
+// pooled at, so the switchover can be observed directly instead of inferred
+// from how far a stored difference ended up sitting from its own mornings.
 //
 // The mornings at each spot deliberately disagree with each other. Identical
 // residuals would drive se_sample to zero, the physical noise floor would bind
 // on every key, and the estimated within-spot variance would be an artifact of
 // that floor rather than a measurement.
+//
+// AMENDED 2026-08-12 BY 04-05, cross-slice by explicit authorisation (see that
+// step's contract). This file belongs to 03-04.
+//
+// WHAT THE OLD ORACLE ASSUMED: that the fit's estimate at a spot is the mean
+// of the mornings this fixture wrote, so the distance from `ownDifference` is
+// exactly (tau / (mornings + tau)) x |own - parent| and tau can be read back
+// out of it.
+//
+// WHY IT WAS WRONG: 06 section 5.2 measures a reporter's habit against
+// `b_hat`, the key's SHRUNK estimate, not against its raw mean. So every
+// reporter at a pooled spot carries an offset equal to a shrunken share of
+// that spot's own pooling gap, which drags the spot's raw estimate toward its
+// parent BEFORE the shrink runs. The distance from `ownDifference` is
+// therefore no longer a function of tau alone, and here it comes out about 27
+// per cent larger than the arithmetic predicts. Note this is not about the
+// fixture's reporters being unbalanced: pairing each device across the two
+// parities instead of within one moves spot-0's distance from 0.152802 to
+// 0.152604, which is nothing. The feedback is structural and applies to every
+// pooled spot however its mornings are handed out.
+//
+// AND THE OLD ORACLE'S SECOND HALF NOW PASSES FOR A FALSE REASON, which is the
+// worse half of this finding and the reason the repair is a rewrite rather
+// than a new constant. It asserted the stored difference sits FURTHER from its
+// own mornings than the permanent floor allows, "or tau was clamped to its
+// floor rather than estimated". With the offset stage in, tau at eight proven
+// spots IS the floor: `shrunk_from_global` comes back as 0.142857, exactly
+// 2/(12+2), where before this stage it was 0.250371. The assertion still
+// passed only because the offset feedback inflated the distance past the
+// hand-computed floor line. A test that passes while the sentence in its own
+// failure message has become false is worth less than no test.
+//
+// The tau move itself is the design working, not a regression: taking each
+// reporter's habit out removes observer noise from the within-spot spread, so
+// eight genuinely different spots look more different against their own noise,
+// the method-of-moments sigma_between grows, tau falls and pooling steps
+// further aside. 09 section 17.4's "if spots truly differ, pooling
+// self-cancels" is the sentence being obeyed. Landing on the floor is the
+// floor doing its job.
+//
+// WHAT REPLACES THE FLOOR ASSERTION. Proving tau is MEASURED rather than
+// clamped at eight spots now needs a comparison the data drives, so the second
+// example runs the same eight spots half as far apart and asserts they pool
+// MORE. Spots that differ wildly step aside to the floor; spots that differ
+// half as much hold on hard (0.80 against 0.14). No implementation that clamps
+// to the floor at eight spots can produce both.
 
 import assert from "node:assert/strict";
 
@@ -78,13 +121,16 @@ type Spot = {
   readonly reporters: number;
 };
 
-function eightSpots(reportersAtTheLastSpot = REPORTERS): Spot[] {
+function eightSpots(reportersAtTheLastSpot = REPORTERS, spreadScale = 1): Spot[] {
   return OFFSETS_M.map((offset, index) => ({
     spotId: `spot-${index}`,
-    ownDifference: CENTRE_M + offset,
+    ownDifference: CENTRE_M + offset * spreadScale,
     reporters: index === OFFSETS_M.length - 1 ? reportersAtTheLastSpot : REPORTERS,
   }));
 }
+
+/** The same eight spots, half as far apart from each other. Their own mornings disagree just as much. */
+const HALF_AS_FAR_APART = 0.5;
 
 function seedsFor(spots: readonly Spot[]): SpotSeed[] {
   return spots.map((spot) => ({
@@ -132,7 +178,19 @@ function logsFor(spots: readonly Spot[]): { observations: string; predictions: s
   return { observations: observations.join("\n"), predictions: predictions.join("\n") };
 }
 
-type StoredHeightKey = { b: number; n: number; reporters: number; applied: boolean };
+type StoredHeightKey = {
+  b: number;
+  n: number;
+  reporters: number;
+  applied: boolean;
+  /** tau / (n + tau) for the tau this key was pooled at: the switchover, observed rather than inferred. */
+  shrunk_from_global: number;
+};
+
+/** What share of a spot's estimate its parent carries at a given pooling strength. */
+function parentShareAt(tau: number): number {
+  return tau / (MORNINGS + tau);
+}
 
 async function runOver(spots: readonly Spot[]): Promise<Map<string, StoredHeightKey>> {
   const store = new MemoryLearningStore();
@@ -159,21 +217,10 @@ async function runOver(spots: readonly Spot[]): Promise<Map<string, StoredHeight
   return keys;
 }
 
-/** The parent every spot is shrunk toward, from the fixture's own mornings. */
-function parentAcross(spots: readonly Spot[]): number {
-  return spots.reduce((sum, spot) => sum + spot.ownDifference, 0) / spots.length;
-}
-
-/** How far a stored difference sits from its own mornings at a given pooling strength. */
-function distanceFromOwnMorningsAt(tau: number, ownDifference: number, parent: number): number {
-  return (tau / (MORNINGS + tau)) * Math.abs(ownDifference - parent);
-}
-
 describe("03-04 acceptance: once eight spots have proven themselves different, pooling steps aside on its own", () => {
-  it("moves every stored difference nearer its own mornings than the prior allows, and never all the way", async () => {
+  it("pools every proven spot below the hand-set prior, and never below the permanent floor", async () => {
     const spots = eightSpots();
     const stored = await runOver(spots);
-    const parent = parentAcross(spots);
 
     for (const spot of spots) {
       const key = stored.get(spot.spotId)!;
@@ -183,25 +230,13 @@ describe("03-04 acceptance: once eight spots have proven themselves different, p
         `${spot.spotId} must pass the gates, or there are not eight proven spots and the estimator never runs`,
       );
 
-      const distance = Math.abs(key.b - spot.ownDifference);
-      const thePriorWouldLeaveIt = distanceFromOwnMorningsAt(
-        TAU_SPOT_PRIOR,
-        spot.ownDifference,
-        parent,
-      );
-      const theFloorWouldAllow = distanceFromOwnMorningsAt(
-        TAU_FLOOR,
-        spot.ownDifference,
-        parent,
-      );
-
       assert.ok(
-        distance < thePriorWouldLeaveIt - TOLERANCE,
-        `${spot.spotId}'s stored difference sits ${distance} from its own mornings, no nearer than the prior's ${thePriorWouldLeaveIt}: pooling did not step aside`,
+        key.shrunk_from_global < parentShareAt(TAU_SPOT_PRIOR) - TOLERANCE,
+        `${spot.spotId} was pooled at ${key.shrunk_from_global} of its parent, no less than the hand-set prior's ${parentShareAt(TAU_SPOT_PRIOR)}: with eight proven spots the method of moments must have taken over and pooling must have stepped aside`,
       );
       assert.ok(
-        distance > theFloorWouldAllow + TOLERANCE,
-        `${spot.spotId}'s stored difference sits ${distance} from its own mornings, at or past the ${theFloorWouldAllow} the permanent floor allows: tau was clamped to its floor rather than estimated`,
+        key.shrunk_from_global >= parentShareAt(TAU_FLOOR) - TOLERANCE,
+        `${spot.spotId} was pooled at ${key.shrunk_from_global} of its parent, below the ${parentShareAt(TAU_FLOOR)} the permanent floor allows: tau may never go under ${TAU_FLOOR}, however different the spots look`,
       );
       assert.notEqual(
         key.b,
@@ -211,10 +246,38 @@ describe("03-04 acceptance: once eight spots have proven themselves different, p
     }
   });
 
+  it("pools harder when the same eight spots differ half as much, so the estimator is measuring and not clamping", async () => {
+    // The floor assertion this replaces used to carry the whole weight of
+    // "the estimator is not decoration". It cannot any more: at this fixture's
+    // spread tau LANDS on the floor, honestly, so "strictly above the floor"
+    // is no longer a true sentence about a working implementation. What still
+    // separates a measurement from a clamp is whether tau answers the data, so
+    // here is the same fixture with the spots half as far apart -- same
+    // mornings each, same within-spot disagreement, same gates, only the
+    // between-spot spread halved. Pooling has to hold on harder. Nothing that
+    // clamps to a constant at eight proven spots can produce both numbers.
+    const wildlyDifferent = await runOver(eightSpots());
+    const halfAsDifferent = await runOver(eightSpots(REPORTERS, HALF_AS_FAR_APART));
+
+    for (const spot of eightSpots()) {
+      const apart = wildlyDifferent.get(spot.spotId)!;
+      const closer = halfAsDifferent.get(spot.spotId)!;
+      assert.equal(
+        closer.applied,
+        true,
+        `${spot.spotId} must still pass the gates when the spots are closer together, or the two runs are not comparable`,
+      );
+      assert.ok(
+        closer.shrunk_from_global > apart.shrunk_from_global + TOLERANCE,
+        `${spot.spotId} kept ${closer.shrunk_from_global} of its parent when the spots differ half as much and ${apart.shrunk_from_global} when they differ fully. Spots that are harder to tell apart must be pooled MORE, or tau is a constant wearing an estimator's name`,
+      );
+    }
+  });
+
   it("leaves the hand-set prior standing while only seven spots have proven themselves", async () => {
     const spots = eightSpots(4);
     const stored = await runOver(spots);
-    const parent = parentAcross(spots);
+    const eightProven = await runOver(eightSpots());
     const oneShort = spots[spots.length - 1]!;
 
     assert.equal(
@@ -225,15 +288,26 @@ describe("03-04 acceptance: once eight spots have proven themselves different, p
 
     for (const spot of spots) {
       const key = stored.get(spot.spotId)!;
-      const distance = Math.abs(key.b - spot.ownDifference);
-      const thePriorLeavesIt = distanceFromOwnMorningsAt(
-        TAU_SPOT_PRIOR,
-        spot.ownDifference,
-        parent,
+      // Read off the record rather than inferred from a distance. The distance
+      // from `ownDifference` stopped being a function of tau alone once the
+      // per-reporter offset began measuring habits against each key's SHRUNK
+      // estimate; the weight the record stores never stopped being one.
+      assert.ok(
+        Math.abs(key.shrunk_from_global - parentShareAt(TAU_SPOT_PRIOR)) < TOLERANCE,
+        `with only seven proven spots ${spot.spotId} must still be pooled at the hand-set prior's ${parentShareAt(TAU_SPOT_PRIOR)}, not at ${key.shrunk_from_global}`,
+      );
+
+      // And the consequence on the stored number itself, so the weight above is
+      // tied to something a reader of the file would actually see: more pooling
+      // means every spot is dragged further from its own mornings than the
+      // eight-proven run leaves it.
+      const pulledFromItsOwnMornings = Math.abs(key.b - spot.ownDifference);
+      const onceEightHaveProven = Math.abs(
+        eightProven.get(spot.spotId)!.b - spot.ownDifference,
       );
       assert.ok(
-        Math.abs(distance - thePriorLeavesIt) < TOLERANCE,
-        `with only seven proven spots ${spot.spotId} must be pooled at the hand-set prior (${thePriorLeavesIt} from its own mornings), not at ${distance}`,
+        pulledFromItsOwnMornings > onceEightHaveProven + TOLERANCE,
+        `${spot.spotId} sits ${pulledFromItsOwnMornings} from its own mornings at the prior and ${onceEightHaveProven} once eight spots have proven themselves: the prior has to pool harder than the estimate that replaces it, or the switchover changes nothing a surfer would ever read`,
       );
     }
   });
