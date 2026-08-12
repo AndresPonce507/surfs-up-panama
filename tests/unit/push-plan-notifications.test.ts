@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
-import { planNotifications } from '../../src/push/plan-notifications';
+import { planNotifications, planSendReactions } from '../../src/push/plan-notifications';
 import type { StoredSub } from '../../src/push/types';
 
 const playaVenao = {
@@ -278,6 +278,48 @@ describe('planNotifications', () => {
         },
       ),
       { numRuns: 100 },
+    );
+  });
+});
+
+/** The three answers that mean the destination itself is gone for good. */
+const GONE_FOR_GOOD_STATUSES = [404, 410, 403] as const;
+
+function attemptedSends(count: number): { endpoint_hash: string }[] {
+  return Array.from({ length: count }, (_, index) => ({ endpoint_hash: `suscriptor-${index + 1}` }));
+}
+
+describe('planSendReactions', () => {
+  it('marks the destination that answered gone, at its first failure and at every gone status', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 5 }),
+        fc.integer({ min: 0, max: 4 }),
+        fc.constantFrom(...GONE_FOR_GOOD_STATUSES),
+        (attempted, whichFailed, goneStatus) => {
+          const sends = attemptedSends(attempted);
+          const failed = sends[whichFailed % attempted]!;
+
+          // One answer, no second attempt: the marking is the reaction to the
+          // first failure, because there is no retry budget for a destination
+          // that no longer exists (07-write-path.md section 8.4).
+          const reactions = planSendReactions({
+            sends,
+            responses: [{ endpoint_hash: failed.endpoint_hash, status: goneStatus }],
+          });
+
+          assert.ok(
+            reactions && typeof reactions === 'object',
+            'the rule has to decide, so that a later run with no deletions is distinguishable from a run that never decided',
+          );
+          assert.deepEqual(
+            reactions.deletions,
+            [failed.endpoint_hash],
+            'a gone destination is marked at its first failure, and the destinations that were not answered for are left alone',
+          );
+        },
+      ),
+      { numRuns: 200 },
     );
   });
 });

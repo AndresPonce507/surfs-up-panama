@@ -142,6 +142,59 @@ function eligibleMorningNotifications(input: PlanNotificationsInput): PlannedNot
   });
 }
 
+/** What the notify adapter reports back about one attempted send. */
+export type SendResponse = {
+  endpoint_hash: string;
+  status: number;
+};
+
+/**
+ * All the pruning rule reads off an attempted send is which destination it went
+ * to. Asking for less than a full PlannedSend keeps the rule usable by any
+ * caller that knows the identity of what it tried.
+ */
+export type AttemptedSend = {
+  endpoint_hash: string;
+};
+
+export type PlanSendReactionsInput = {
+  /** The run these responses answer. Identity travels on the response, so the
+   *  rule does not read this; it stays in the declared input because the run is
+   *  what the caller has in hand. */
+  sends: readonly AttemptedSend[];
+  responses: readonly SendResponse[];
+};
+
+/** Deletions the caller must perform. This module performs none of them. */
+export type SendReactions = {
+  deletions: string[];
+  events: { kind: string }[];
+};
+
+/**
+ * The three answers that mean the destination itself is gone for good, so
+ * there is nobody left to reach by trying again.
+ */
+const GONE_FOR_GOOD_STATUSES: readonly number[] = [404, 410, 403];
+
+function isGoneForGood(response: SendResponse): boolean {
+  return GONE_FOR_GOOD_STATUSES.includes(response.status);
+}
+
+/**
+ * Decide, but do not execute, what a run of sends means for the stored
+ * subscriptions. A destination that answered gone is marked at its first
+ * failure and carries no retry budget: it no longer exists, and insisting is
+ * spending on nobody (07-write-path.md section 8.4). The actual delete belongs
+ * to the notify job, which is why this returns the deletions as a value.
+ */
+export function planSendReactions(input: PlanSendReactionsInput): SendReactions {
+  return {
+    deletions: input.responses.filter(isGoneForGood).map((response) => response.endpoint_hash),
+    events: [],
+  };
+}
+
 /**
  * Plan, but do not execute, morning Web Push sends. `now`, the surface scores,
  * subscriptions, and run cap are all supplied by the caller so this decision
