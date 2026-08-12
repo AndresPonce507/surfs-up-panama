@@ -18,12 +18,14 @@
 // depend on fields the primitive deliberately cannot see.
 
 import {
+  REPORTER_OFFSET_TAU,
   SELECTION_WEIGHT_CAP,
   CONCORDANCE_PRIOR_OBSERVATIONS,
   CONCORDANCE_TAU,
   CONCORDANCE_WEIGHT_CEILING,
   CONCORDANCE_WEIGHT_FLOOR,
 } from "./constants";
+import { shrinkTowardZero } from "./estimate";
 import type { ResidualSample } from "./residuals";
 
 /**
@@ -413,4 +415,150 @@ export function applyOverrideWeights(
     if (adjudicated === undefined || adjudicated === 1) return sample;
     return { ...sample, weight: sample.weight * adjudicated };
   });
+}
+
+/**
+ * 06 section 5.1's `mid(band_i) - u_hat[r(i)]` term, applied where the residual
+ * is finally read: `r_height = H_eff_pred - (mid - u_hat)`, which is the same
+ * number as the stored residual plus the reporter's own offset. This is the
+ * seam 01-13 shipped a constant zero into and promised would one day carry a
+ * measurement; it does now, and nothing else about how a residual is formed
+ * had to move.
+ *
+ * A reporter with no measured habit is left strictly alone rather than added
+ * to by zero, so a run in which nobody has a habit stores the bytes it always
+ * stored.
+ */
+export function withReporterOffsets(
+  samples: readonly ResidualSample[],
+  offsets: ReadonlyMap<string, number>,
+): ResidualSample[] {
+  return samples.map((sample) => {
+    const habit = offsets.get(sample.reporter_key);
+    if (habit === undefined || habit === 0) return sample;
+    return { ...sample, value: sample.value + habit };
+  });
+}
+
+/**
+ * 06 section 5.2's backfitting, three fixed passes, key means and reporter
+ * offsets alternately.
+ *
+ *   init  u_hat[r] = 0
+ *   loop:  b_hat[key] from the samples shifted by u_hat
+ *          u_raw[r]  = weighted mean over r's samples of ( b_hat[key] - r_i )
+ *          u_hat[r]  = shrink toward zero at tau_u
+ *
+ * WHICH ESTIMATOR THE PASSES ALTERNATE WITH IS A PARAMETER, not a hardcoded
+ * mean. The shipped fit hands in the whole pooling ladder -- two passes, the
+ * gates, the basin walls -- because 06 section 5.2's pseudocode puts
+ * `shrink(b_raw, n_key, tau_key, parent)` inside the loop. A test can hand in
+ * a plain weighted mean and check arithmetic by hand. `keyDifferences` returns
+ * one difference per key, in the order the keys were given.
+ *
+ * THE WEIGHTS ARE FROZEN BEFORE THIS RUNS AND DO NOT MOVE INSIDE IT. 06
+ * section 5.2 states the weights once, after the loop body, as what the
+ * weighted means are taken with -- not as a step of the loop. That reading is
+ * also the safe one: concordance inside the loop would be a feedback path,
+ * where pass 1 down-weights a habitual reporter for disagreeing, pass 2
+ * subtracts the habit so they now agree, their weight rises, and the estimate
+ * moves again. Three fixed passes with no convergence check would never show
+ * that oscillating, and the "converges in 2-3 passes" claim is about a
+ * two-way additive model with FIXED weights.
+ *
+ * u_raw is read against each sample's UNSHIFTED residual, so the measurement
+ * is of the whole habit every pass rather than of what is left of it.
+ */
+export function backfitReporterOffsets(
+  keys: readonly BackfitKey[],
+  keyDifferences: (offsets: ReadonlyMap<string, number>) => readonly number[],
+  passes: number,
+): Map<string, number> {
+  let offsets = new Map<string, number>();
+  for (let pass = 0; pass < passes; pass += 1) {
+    offsets = offsetsAgainst(keys, keyDifferences(offsets));
+  }
+  return offsets;
+}
+
+/**
+ * One key's samples, with the PLACE its mornings were reported from.
+ *
+ * The scope exists for the report count alone. A key is (spot, source, lead),
+ * so one person's single morning appears once per forecast model that covered
+ * their beach -- and those are one report, not several. Two beaches on the
+ * same morning are two. `reporter_key` and `day` cannot tell those two cases
+ * apart on their own, and a `ResidualSample` deliberately does not carry its
+ * spot (it is the key that knows, not the sample), so the caller states it.
+ * The shipped fit passes the spot id; a test may pass any label, as long as
+ * two keys share one exactly when their mornings were reported from one place.
+ */
+export type BackfitKey = {
+  readonly reportScope: string;
+  readonly samples: readonly ResidualSample[];
+};
+
+/** One pass: read every reporter's habit off how far their mornings sit from their keys' own differences. */
+function offsetsAgainst(
+  keys: readonly BackfitKey[],
+  differences: readonly number[],
+): Map<string, number> {
+  const measured = new Map<
+    string,
+    { total: number; weight: number; reports: Set<string> }
+  >();
+  keys.forEach(({ reportScope, samples }, key) => {
+    const difference = differences[key];
+    if (difference === undefined || !Number.isFinite(difference)) return;
+    samples.forEach((sample, index) => {
+      const so_far =
+        measured.get(sample.reporter_key) ?? { total: 0, weight: 0, reports: new Set<string>() };
+      so_far.total += sample.weight * (difference - sample.value);
+      so_far.weight += sample.weight;
+      so_far.reports.add(reportKeyOf(sample, reportScope, key, index));
+      measured.set(sample.reporter_key, so_far);
+    });
+  });
+
+  const offsets = new Map<string, number>();
+  for (const [reporter, habit] of measured) {
+    const raw = habit.weight === 0 ? 0 : habit.total / habit.weight;
+    offsets.set(reporter, shrinkTowardZero(raw, habit.reports.size, REPORTER_OFFSET_TAU));
+  }
+  return offsets;
+}
+
+/**
+ * n_r COUNTS REPORTS, NOT SAMPLES. 06 section 5.2's table is stated per report
+ * ("n_r (reports by one person)", "se(u_raw) ~ 0.48/sqrt(n_r)") and tau_u is
+ * derived from per-report noise. One morning pairing against two forecast
+ * models is two samples in two different keys and still one morning of
+ * evidence about the person; counting samples would under-shrink them exactly
+ * in proportion to how many models happened to cover their beach.
+ *
+ * A REPORT IS ONE PERSON, ONE MORNING, ONE BEACH. The scope is in the key
+ * because leaving it out merges a person's two beaches on one morning into a
+ * single report, which is the opposite mistake: it under-counts exactly the
+ * reporter 06 section 5.2's ">= 2 spots" rider says is the identifiable one,
+ * and the identifiability rider would then argue against itself.
+ *
+ * SAME SESSION RULE AS 04-01, deliberately: a sample whose day cannot be read
+ * is ITS OWN report, never merged with another. `sessionKeyOf` above says this
+ * for one key's samples; the same sentence has to hold here, where every key
+ * in the run is read at once, so the undated form carries the sample's
+ * position in the whole run -- key and index together -- rather than only its
+ * index within one key.
+ *
+ * The separator argument is the one `sessionKeyOf` already makes: a calendar
+ * day is ten fixed characters starting with a digit, so a dated key can never
+ * spell an undated one, which leads with a space.
+ */
+function reportKeyOf(
+  sample: ResidualSample,
+  reportScope: string,
+  key: number,
+  index: number,
+): string {
+  if (sample.day === null) return ` undated ${key} ${index}`;
+  return `${sample.day} ${sample.device_id} ${reportScope}`;
 }

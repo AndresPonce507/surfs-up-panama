@@ -31,6 +31,7 @@
 
 import type { Clock } from "../pipeline/ports";
 import {
+  BACKFIT_PASSES,
   CLAMP_MAX_ABS_HEIGHT_FRACTION,
   CLAMP_MAX_ABS_SCORE_POINTS,
   SIGMA_EFF,
@@ -63,9 +64,11 @@ import {
   applyOverrideWeights,
   applyReporterWeights,
   applySelectionWeights,
+  backfitReporterOffsets,
   collapseSessionsToMedian,
   concordanceWeightByReporter,
   winsorizeAtDayFence,
+  withReporterOffsets,
 } from "./weights";
 
 export const CORRECTIONS_PREFIX = "learned/corrections/v1/";
@@ -267,12 +270,91 @@ function everyKeyIn(
   return keys;
 }
 
-/** Turn one key\'s weighed samples into its estimate, once every weight is final. */
-function estimatesFrom(
+/**
+ * Every key's samples with their concordance, rarity and incident-override
+ * weights multiplied in, once and for good. 06 section 6 states the weights as
+ * multiplicative on samples and section 5.2 states them once, AFTER the
+ * backfitting loop body, as what its weighted means are taken with -- not as a
+ * step inside it.
+ */
+function frozenWeights(
   height: WeighedHeightSamples,
   earned: ReadonlyMap<string, number>,
   rarity: SelectionWeights,
   overrides: ReadonlyMap<string, number>,
+): WeighedHeightSamples {
+  const bySpot: WeighedHeightSamples = new Map();
+  for (const [spotId, byKey] of height) {
+    const frozenByKey = new Map<string, Map<string, ResidualSample[]>>();
+    for (const [source, byLead] of byKey) {
+      const frozenByLead = new Map<string, ResidualSample[]>();
+      for (const [lead, samples] of byLead) {
+        frozenByLead.set(lead, frozenSamplesOf(samples, spotId, earned, rarity, overrides));
+      }
+      frozenByKey.set(source, frozenByLead);
+    }
+    bySpot.set(spotId, frozenByKey);
+  }
+  return bySpot;
+}
+
+/** The weighing room's last three multipliers, in 06 section 6's order, stated once for both lanes. */
+function frozenSamplesOf(
+  samples: readonly ResidualSample[],
+  spotId: string,
+  earned: ReadonlyMap<string, number>,
+  rarity: SelectionWeights,
+  overrides: ReadonlyMap<string, number>,
+): ResidualSample[] {
+  return applyOverrideWeights(
+    applySelectionWeights(applyReporterWeights(samples, earned), spotId, rarity),
+    overrides,
+  );
+}
+
+/** Every height key this run holds, flattened once so the backfit can address them by position. */
+function flatKeysOf(
+  height: WeighedHeightSamples,
+): { spotId: string; source: string; lead: string; samples: ResidualSample[] }[] {
+  const keys: { spotId: string; source: string; lead: string; samples: ResidualSample[] }[] = [];
+  for (const [spotId, byKey] of height) {
+    for (const [source, byLead] of byKey) {
+      for (const [lead, samples] of byLead) keys.push({ spotId, source, lead, samples });
+    }
+  }
+  return keys;
+}
+
+/**
+ * One pass of the b half of the backfit: every key's SHRUNK difference, in the
+ * flattened key order, with the habits measured so far subtracted from each
+ * sample first. This is the whole pooling ladder, not a bare mean, because 06
+ * section 5.2's pseudocode puts `shrink(b_raw, n_key, tau_key, parent)` inside
+ * the loop.
+ */
+function differencesAtEachKey(
+  height: WeighedHeightSamples,
+  keys: readonly { spotId: string; source: string; lead: string }[],
+  pooling: PoolingInputs,
+  offsets: ReadonlyMap<string, number>,
+): number[] {
+  const raw = estimatesFrom(height, offsets);
+  const collapsedParents = heightParents(raw, pooling, () => NOTHING_PROVEN_YET);
+  const proven = provenSpotsAtEachKey(raw, collapsedParents);
+  const parents = heightParents(raw, pooling, proven.at);
+
+  return keys.map(({ spotId, source, lead }) => {
+    const own = raw.get(spotId)?.get(source)?.get(lead);
+    if (own === undefined) return 0;
+    const parent = parents.get(source)?.get(lead)?.get(spotId) ?? own.b;
+    return shrinkTowardParent(own.b, own.n, proven.tauAt(source, lead), parent);
+  });
+}
+
+/** Turn one key\'s frozen samples into its estimate, with each reporter's measured habit taken out first. */
+function estimatesFrom(
+  height: WeighedHeightSamples,
+  offsets: ReadonlyMap<string, number>,
 ): Map<string, Map<string, Map<string, RawEstimate>>> {
   const bySpot = new Map<string, Map<string, Map<string, RawEstimate>>>();
   for (const [spotId, byKey] of height) {
@@ -280,12 +362,7 @@ function estimatesFrom(
     for (const [source, byLead] of byKey) {
       const rawByLead = new Map<string, RawEstimate>();
       for (const [lead, samples] of byLead) {
-        const raw = estimateOf(
-          applyOverrideWeights(
-            applySelectionWeights(applyReporterWeights(samples, earned), spotId, rarity),
-            overrides,
-          ),
-        );
+        const raw = estimateOf(withReporterOffsets(samples, offsets));
         if (raw !== null) rawByLead.set(lead, raw);
       }
       if (rawByLead.size > 0) rawByKey.set(source, rawByLead);
@@ -447,7 +524,35 @@ export function buildCorrectionRecords(
   }
   const earned = concordanceWeightByReporter(everyKeyIn(weighedHeight, weighedScore));
 
-  const rawHeightBySpot = estimatesFrom(weighedHeight, earned, selection, overrides);
+  // EVERY WEIGHT IS NOW FINAL, and it stays final for the rest of this run.
+  // 06 section 5.2 states the sample weights once, after the backfitting loop
+  // body, as what its weighted means are taken with -- not as a step inside
+  // it. Freezing them here is also the only safe reading: concordance inside
+  // the loop would be a feedback path, where a pass down-weights a habitual
+  // reporter for disagreeing, the next pass subtracts the habit so they agree,
+  // their weight rises, and the estimate moves again. With three fixed passes
+  // and no convergence check that could oscillate unseen.
+  const frozenHeight = frozenWeights(weighedHeight, earned, selection, overrides);
+  const frozenScore = new Map<string, ResidualSample[]>();
+  for (const [spotId, samples] of weighedScore) {
+    frozenScore.set(spotId, frozenSamplesOf(samples, spotId, earned, selection, overrides));
+  }
+
+  // 06 section 5.2: three fixed alternating passes over the frozen samples,
+  // then the record is built once more from the offsets those passes settled
+  // on -- so what is stored is consistent with the habits that were finally
+  // measured, rather than with the previous pass's.
+  const heightKeys = flatKeysOf(frozenHeight);
+  const offsets = backfitReporterOffsets(
+    // The spot is what scopes a report: one morning at one beach is one
+    // report however many forecast models covered it, and the same morning at
+    // a second beach is a second report.
+    heightKeys.map((key) => ({ reportScope: key.spotId, samples: key.samples })),
+    (habits) => differencesAtEachKey(frozenHeight, heightKeys, pooling, habits),
+    BACKFIT_PASSES,
+  );
+
+  const rawHeightBySpot = estimatesFrom(frozenHeight, offsets);
   // Two passes, and only the second one's numbers are ever stored. The first
   // runs the ladder collapsed, so the gate can weigh each spot's own evidence
   // against its region alone; the second runs it again knowing which spots
@@ -461,13 +566,11 @@ export function buildCorrectionRecords(
   const parentsByKey = heightParents(rawHeightBySpot, pooling, proven.at);
 
   const rawScoreBySpot = new Map<string, RawEstimate>();
-  for (const [spotId, samples] of weighedScore) {
-    const raw = estimateOf(
-      applyOverrideWeights(
-        applySelectionWeights(applyReporterWeights(samples, earned), spotId, selection),
-        overrides,
-      ),
-    );
+  for (const [spotId, samples] of frozenScore) {
+    // No offset on the score lane: u_hat is a height in metres (06 section
+    // 5.1 subtracts it from mid(band) and nowhere else), and a display-point
+    // difference has no business carrying one.
+    const raw = estimateOf(samples);
     if (raw !== null) rawScoreBySpot.set(spotId, raw);
   }
   // The score delta climbs the same ladder as the height keys, in the same two

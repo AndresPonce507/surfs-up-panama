@@ -144,6 +144,25 @@ export const SELECTION_WEIGHT_CAP = 3;
 /** 06 section 6.3: the propensities are measured over the trailing ninety days, pooled across spots. */
 export const PROPENSITY_WINDOW_DAYS = 90;
 
+/**
+ * tau_u, 06 section 5.2: the per-reporter offset is shrunk toward ZERO by
+ * `n_r / (n_r + tau_u)`. Derived there from sigma_eff ~= 0.48 m against a
+ * between-reporter spread sigma_u ~= 0.25 m: 0.48^2 / 0.25^2 ~= 3.7, rounded
+ * to 4. It puts half weight on a habit at four reports and real trust at about
+ * eight spanning two or more spots, which is where se(u_raw) drops under half
+ * a band width.
+ */
+export const REPORTER_OFFSET_TAU = 4;
+
+/**
+ * 06 section 5.2: "Backfitting for a two-way additive model converges in 2-3
+ * passes; 3 is fixed." Fixed rather than run to convergence on purpose -- a
+ * nightly job with a stopping rule can take a different number of passes on
+ * two runs over nearly the same data and store two different numbers for a
+ * reason no reader could reconstruct.
+ */
+export const BACKFIT_PASSES = 3;
+
 /** G5/G6, 06 section 7: the limits a correction's reader must enforce at apply/read time. This lane only states them. */
 export const CLAMP_MAX_ABS_HEIGHT_FRACTION = 0.4;
 export const CLAMP_MAX_ABS_SCORE_POINTS = 12;
