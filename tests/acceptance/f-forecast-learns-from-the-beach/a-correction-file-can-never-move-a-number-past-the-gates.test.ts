@@ -40,9 +40,11 @@ import assert from 'node:assert/strict';
 
 import { describe, it } from 'vitest';
 
+import { leadBucketOf } from '../../../src/learning/constants';
 import {
   buildCorrectionRecords,
   currentCorrectionKey,
+  type GatedKey,
   type SpotInputs,
   type StoredCorrection,
 } from '../../../src/learning/correction-file';
@@ -69,6 +71,16 @@ const UNCORRECTED_SPOT = 'playa-cambutal';
 /** 12 h lands in lead_12_24, the bucket both the build fixture and the emitter fixture key on. */
 const LEAD_H = 12;
 const SWELL_PERIOD_S = 15.5;
+
+/**
+ * Which bucket that lead time falls in, asked of the shipped table rather
+ * than typed here. A test that spells its own bucket name keeps passing after
+ * someone moves a bucket edge, while measuring a key the build no longer reads.
+ */
+const LEAD_BUCKET = leadBucketOf(LEAD_H);
+
+/** A second build of the same civil day, three hours after the first. Both land inside 2026-08-09 in Panama. */
+const LATER_BUILD_INSTANT = '2026-08-09T15:22:00Z';
 
 /** Day-zero forecast heights. Today and tomorrow genuinely differ, so the build's clone guard cannot mask a bug. */
 const FORECAST_HEIGHT_M: Readonly<Record<string, Readonly<Record<string, number>>>> = {
@@ -138,9 +150,20 @@ const SEEDS: readonly SpotSeed[] = [
   seedFor(UNCORRECTED_SPOT, 'Playa Cambutal'),
 ];
 
-/** One hour of one spot's four declared members, as the prediction log stores them. */
-function predictionLines(spot_id: string, date: string, utcHour: string): string {
-  const height_m = FORECAST_HEIGHT_M[date]?.[spot_id] ?? 0;
+/**
+ * One hour of one spot's four declared members, as the prediction log stores
+ * them.
+ *
+ * `liftM` raises the CORRECTED spot's forecast by that many metres and leaves
+ * its neighbour alone. It exists for one purpose, used only by 02-04: to build
+ * a control universe in which the forecast itself already reads what a
+ * correction would have made it read, so the claim "a correction of x metres
+ * publishes what forecasting x metres differently publishes" can be measured
+ * against a real second build instead of against a formula restated in the
+ * test. Default 0, so every other example is untouched by it.
+ */
+function predictionLines(spot_id: string, date: string, utcHour: string, liftM: number): string {
+  const height_m = (FORECAST_HEIGHT_M[date]?.[spot_id] ?? 0) + (spot_id === CORRECTED_SPOT ? liftM : 0);
   return MEMBER_SOURCES
     .map((source, index) => JSON.stringify({
       spot_id,
@@ -164,12 +187,12 @@ function predictionLines(spot_id: string, date: string, utcHour: string): string
 /** UTC hours that all land inside their own Panama civil day; 18:00Z is the ranking hour. */
 const SCORED_UTC_HOURS = ['12', '15', RANKING_HOUR_UTC, '21'] as const;
 
-function seedPredictionLog(store: MemoryBuildStore): void {
+function seedPredictionLog(store: MemoryBuildStore, liftM: number): void {
   for (const date of [TODAY, TOMORROW]) {
     store.objects.set(
       `predictions/v1/dt=${date}/all.jsonl`,
       [CORRECTED_SPOT, UNCORRECTED_SPOT]
-        .flatMap((spot_id) => SCORED_UTC_HOURS.map((utcHour) => predictionLines(spot_id, date, utcHour)))
+        .flatMap((spot_id) => SCORED_UTC_HOURS.map((utcHour) => predictionLines(spot_id, date, utcHour, liftM)))
         .join('\n'),
     );
   }
@@ -283,6 +306,16 @@ type PublishedBuild = {
 };
 
 /**
+ * The archived PublishedCall rows one build left behind, as raw bytes. A
+ * build is keyed by its own hour, so two builds of the same morning archive
+ * side by side and neither can silently overwrite the other's record.
+ */
+function archivedBody(store: MemoryBuildStore, at: string): string | undefined {
+  const hour = new Date(at).toISOString().slice(11, 13);
+  return store.objects.get(`log/calls/v1/dt=${TODAY}/build=${hour}Z/${REGION_ID}.jsonl.gz`);
+}
+
+/**
  * One build against a store carrying the given correction files, at the given
  * instant. `store` is accepted so a test can run two builds against the SAME
  * durable universe when the claim is about what the first build left behind.
@@ -291,9 +324,10 @@ async function publishOnce(input: {
   corrections?: Readonly<Record<string, StoredCorrection>>;
   at?: string;
   store?: MemoryBuildStore;
+  forecastLiftM?: number;
 } = {}): Promise<PublishedBuild> {
   const store = input.store ?? new MemoryBuildStore();
-  if (input.store === undefined) seedPredictionLog(store);
+  if (input.store === undefined) seedPredictionLog(store, input.forecastLiftM ?? 0);
   for (const [spot_id, record] of Object.entries(input.corrections ?? {})) {
     store.objects.set(currentCorrectionKey(spot_id), JSON.stringify(record));
   }
@@ -309,8 +343,7 @@ async function publishOnce(input: {
 
   const bundleBody = store.objects.get(`pub/v1/regions/${REGION_ID}/bundle.json`);
   assert.ok(bundleBody, 'the build must publish the region bundle; the reading surface has no other input');
-  const hour = new Date(input.at ?? BUILD_INSTANT).toISOString().slice(11, 13);
-  const callsBody = store.objects.get(`log/calls/v1/dt=${TODAY}/build=${hour}Z/${REGION_ID}.jsonl.gz`);
+  const callsBody = archivedBody(store, input.at ?? BUILD_INSTANT);
   assert.ok(callsBody, 'the build must archive its PublishedCall rows; they are the only witness of why a number moved');
 
   return {
@@ -450,5 +483,158 @@ describe('02-03 acceptance: the builder consumes the file, and a correction the 
     const withoutFile = await publishOnce();
 
     assertCarriedInSilence({ withFile, withoutFile, expectedGate: 'not_significant' });
+  });
+});
+
+// ---------- 02-04 ----------
+
+/**
+ * The mornings that produce a record every rung lets through. Measured, not
+ * chosen: at 18 paired mornings from 6 people with one reported band and one
+ * shown score, the emitter writes a height key of -0.18 m and a score key of
+ * 9.0 display points, both on a standard error of the physical floor alone,
+ * and both clear their own ladder by better than double. -0.18 m means the
+ * models ran SMALL against what people saw, so a corrected member goes UP.
+ *
+ * The height move is deliberately well inside the forty percent G5 allows on
+ * a 1.2 m member (0.48 m). This step's claim is that the number MOVES by what
+ * the record ordered; whether a bigger order is bounded is 02-05's claim, and
+ * a fixture that saturated here would prove that one instead of this one.
+ */
+const MORNINGS_THAT_CLEAR_EVERY_RUNG = {
+  count: 18,
+  reporters: 6,
+  pairedMornings: 18,
+  shownScoreQ: 79,
+  forecastHeightM: 1.17,
+} as const;
+
+/** The one height key this fixture's mornings produce, at the model and lead bucket the build reads. */
+function heightKeyOf(record: StoredCorrection): GatedKey {
+  const key = record.bias.swell_h_m.per_source[MEMBER_SOURCES[0]]?.[LEAD_BUCKET];
+  assert.ok(key, `test bug: the emitter wrote no height key at ${MEMBER_SOURCES[0]} ${LEAD_BUCKET}`);
+  return key;
+}
+
+function scoreKeyOf(record: StoredCorrection): GatedKey & { units: 'display_points' } {
+  const key = record.score_delta;
+  assert.ok(key, 'test bug: the emitter wrote no score move, so there is no applied delta to measure');
+  return key;
+}
+
+/** A key's own stated evidence clears the whole ladder, and orders a move worth watching. */
+function assertKeyEarnsItsMove(key: GatedKey, what: string): void {
+  assert.ok(
+    key.n >= 10 && key.reporters >= 5 && Math.abs(key.b) > 2 * key.se && key.b !== 0,
+    `test bug: this example only watches a number move if the ${what} key's OWN evidence clears every rung and orders a non-zero move; it states ${JSON.stringify(key)}`,
+  );
+}
+
+describe('02-04 acceptance: a stored correction that passed every gate finally moves the number a surfer reads', () => {
+  it('publishes exactly what forecasting the corrected metres would have published, and moves the score by the applied delta', async () => {
+    const passing = emittedRecord(MORNINGS_THAT_CLEAR_EVERY_RUNG);
+    const heightKey = heightKeyOf(passing);
+    const scoreKey = scoreKeyOf(passing);
+    assertKeyEarnsItsMove(heightKey, 'height');
+    assertKeyEarnsItsMove(scoreKey, 'score');
+
+    // 06 section 4: residual and bias are forecast minus observed, so a
+    // corrected member is raw MINUS the stored difference. The metres the
+    // forecast has to be lifted by to arrive at the same place are therefore
+    // minus b.
+    const orderedLiftM = -heightKey.b;
+    const smallestMemberHeightM = FORECAST_HEIGHT_M[TODAY]?.[CORRECTED_SPOT] ?? 0;
+    assert.ok(
+      Math.abs(heightKey.b) < passing.clamp.max_abs_h_frac * smallestMemberHeightM,
+      `test bug: this example measures an UNBOUNDED move, so the record must order less than the ${passing.clamp.max_abs_h_frac} of ${smallestMemberHeightM} m it is allowed; it ordered ${heightKey.b} m`,
+    );
+
+    const dayZero = await publishOnce();
+    const withFile = await publishOnce({ corrections: { [CORRECTED_SPOT]: passing } });
+    // The same day, forecast from the start at the height the correction
+    // orders, and no correction file anywhere. If the learning layer is
+    // honest, a surfer cannot tell this build and the corrected one apart by
+    // the wave they are shown.
+    const asIfForecast = await publishOnce({ forecastLiftM: orderedLiftM });
+
+    const zeroCall = rankedCall(dayZero, CORRECTED_SPOT);
+    const correctedCall = rankedCall(withFile, CORRECTED_SPOT);
+    const asIfCall = rankedCall(asIfForecast, CORRECTED_SPOT);
+
+    assert.notEqual(
+      asIfCall.h_eff_m,
+      zeroCall.h_eff_m,
+      'test bug: the control build must genuinely forecast a different wave, or matching it proves nothing',
+    );
+
+    // Float noise, not slack: the two heights are the same metres reached by
+    // two different orders of operation -- lift then average, against average
+    // then lift -- so they agree to about 1e-15 rather than bit for bit.
+    assert.ok(
+      Math.abs(correctedCall.h_eff_m - asIfCall.h_eff_m) < 1e-9,
+      `a correction of ${orderedLiftM} m must publish the wave a forecast ${orderedLiftM} m different publishes: it published ${correctedCall.h_eff_m} m against ${asIfCall.h_eff_m} m`,
+    );
+    assert.ok(
+      correctedCall.h_eff_m > zeroCall.h_eff_m,
+      `the models ran small against what people saw, so the published wave must RISE off day zero: it went from ${zeroCall.h_eff_m} m to ${correctedCall.h_eff_m} m`,
+    );
+    assert.equal(
+      correctedCall.size_band,
+      asIfCall.size_band,
+      'the band a surfer actually reads must follow the corrected metres, not the raw ones',
+    );
+
+    // The score lane, isolated: the control build differs from the corrected
+    // one ONLY by the applied delta, since both publish the same wave. 06
+    // section 4's sign again -- the stored points are forecast minus observed,
+    // so a positive stored difference LOWERS the score.
+    const orderedPoints = Math.round(scoreKey.b);
+    assert.equal(
+      correctedCall.score_q,
+      asIfCall.score_q - orderedPoints,
+      `the published score must fall by the ${orderedPoints} display points the record earned, and by nothing else: the same wave scored ${asIfCall.score_q} with no file and ${correctedCall.score_q} with one`,
+    );
+
+    assert.equal(correctedCall.bias_gate, 'applied', 'a record that cleared every rung must archive that it was applied');
+    assert.equal(
+      correctedCall.bias_applied,
+      -scoreKey.b / 100,
+      'the archived bias must be MINUS the record\'s stored points over 100, so an operator can read the exact move off the row',
+    );
+
+    assert.deepEqual(
+      rankedCall(withFile, UNCORRECTED_SPOT),
+      rankedCall(dayZero, UNCORRECTED_SPOT),
+      'one spot\'s correction must move no number at the spot beside it',
+    );
+  });
+
+  it('leaves the earlier build\'s archived rows untouched and appends its own', async () => {
+    const passing = emittedRecord(MORNINGS_THAT_CLEAR_EVERY_RUNG);
+
+    const dayZero = await publishOnce();
+    const earlierArchive = archivedBody(dayZero.store, BUILD_INSTANT);
+    assert.ok(earlierArchive, 'test bug: the day-zero build must have archived something to leave untouched');
+
+    // The SAME durable universe, three hours later, with the file now on it.
+    dayZero.store.objects.set(currentCorrectionKey(CORRECTED_SPOT), JSON.stringify(passing));
+    const later = await publishOnce({ store: dayZero.store, at: LATER_BUILD_INSTANT });
+
+    assert.equal(
+      archivedBody(dayZero.store, BUILD_INSTANT),
+      earlierArchive,
+      'the morning a surfer already read must stay exactly as it was archived: a later build may add rows, never rewrite the record of an earlier call',
+    );
+    assert.notEqual(
+      archivedBody(dayZero.store, LATER_BUILD_INSTANT),
+      undefined,
+      'the later build must archive its own rows under its own build hour',
+    );
+    assert.equal(rankedCall(later, CORRECTED_SPOT).bias_gate, 'applied', 'the later build must be the one that applied the correction');
+    assert.notEqual(
+      rankedCall(later, CORRECTED_SPOT).score_q,
+      rankedCall(dayZero, CORRECTED_SPOT).score_q,
+      'test bug: the later build must genuinely have moved the number, or "the earlier rows are untouched" is a claim about two identical things',
+    );
   });
 });
