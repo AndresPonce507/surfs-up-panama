@@ -19,9 +19,15 @@ import { describe, it } from "vitest";
 import {
   collapseSessionsToMedian,
   concordanceWeightByReporter,
+  selectionWeightByMorning,
   winsorizeAtDayFence,
+  type PublishedCall,
 } from "../../src/learning/weights";
-import { CONCORDANCE_TAU, SIGMA_EFF } from "../../src/learning/constants";
+import {
+  CONCORDANCE_TAU,
+  SELECTION_WEIGHT_CAP,
+  SIGMA_EFF,
+} from "../../src/learning/constants";
 import type { ResidualSample } from "../../src/learning/residuals";
 
 const PROPERTY_RUNS = 50;
@@ -46,6 +52,7 @@ const sample = (
     ...sample,
     reporter_key: sample.device_id,
     sigmaEff: SIGMA_EFF.height.value,
+    solicited: false,
   }));
 
 /** Every sample from one device in one session: same day, same device. */
@@ -251,6 +258,7 @@ function reported(
     day,
     bandWidthM: 0.5,
     sigmaEff: HEIGHT_SIGMA_EFF,
+    solicited: false,
   };
 }
 
@@ -402,6 +410,100 @@ describe("the weighing room down-weights chronic disagreement, never bans it (06
     assert.ok(
       Math.abs(afterOneMorning - 0.6) < 1e-9,
       `one co-observed morning two sigma out was weighed at ${afterOneMorning}, not the 0.6 that counting the population mean as exactly one prior morning gives`,
+    );
+  });
+});
+
+// ---------- selection, 06 section 6.3 ----------
+
+/**
+ * A history of published calls: `deciles` says, per decile, how many mornings
+ * the site published a call for and how many of them anybody reported.
+ */
+function publishedHistory(
+  deciles: readonly { scoreQ: number; published: number; reported: number }[],
+): { calls: PublishedCall[]; reportedMornings: Set<string> } {
+  const calls: PublishedCall[] = [];
+  const reportedMornings = new Set<string>();
+  let dayNumber = 0;
+  for (const decile of deciles) {
+    for (let index = 0; index < decile.published; index += 1) {
+      dayNumber += 1;
+      const day = `2026-${String(1 + Math.floor(dayNumber / 28)).padStart(2, "0")}-${String((dayNumber % 28) + 1).padStart(2, "0")}`;
+      calls.push({ spot_id: "playa-venao", day, score_q: decile.scoreQ });
+      if (index < decile.reported) reportedMornings.add(`playa-venao ${day}`);
+    }
+  }
+  return { calls, reportedMornings };
+}
+
+describe("the weighing room counts a rarely-reported kind of morning for more (06 section 6.3)", () => {
+  it("never pays more than the cap, whatever the history looks like, including a decile nobody ever reported", () => {
+    fc.assert(
+      fc.property(
+        fc.array(
+          fc.record({
+            scoreQ: fc.integer({ min: 0, max: 100 }),
+            published: fc.integer({ min: 1, max: 30 }),
+            reported: fc.integer({ min: 0, max: 30 }),
+          }),
+          { minLength: 1, maxLength: 8 },
+        ),
+        (drawn) => {
+          // Deliberately drawn alongside whatever the generator produced: a
+          // decile the site published thirty calls for and nobody ever
+          // reported is where an uncapped inverse propensity becomes an
+          // infinity, and a free generator reaches it too rarely to be
+          // evidence.
+          const deciles = [
+            ...drawn.map((decile) => ({
+              ...decile,
+              reported: Math.min(decile.reported, decile.published),
+            })),
+            { scoreQ: 5, published: 30, reported: 0 },
+          ];
+          const history = publishedHistory(deciles);
+          const byMorning = selectionWeightByMorning(history.calls, history.reportedMornings);
+
+          for (const [morning, weight] of byMorning) {
+            assert.ok(
+              Number.isFinite(weight),
+              `${morning} was weighed at ${weight}, which is not a number a stored correction file can carry`,
+            );
+            assert.ok(
+              weight <= SELECTION_WEIGHT_CAP,
+              `${morning} was weighed at ${weight}, over the cap of ${SELECTION_WEIGHT_CAP}: a never-reported kind of day would dominate the whole fit`,
+            );
+            assert.ok(weight > 0, `${morning} was weighed at ${weight}, which is a silencing`);
+          }
+        },
+      ),
+      { numRuns: PROPERTY_RUNS },
+    );
+  });
+
+  it("never pays a kind of morning less for being reported less often", () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 1, max: 20 }),
+        fc.integer({ min: 0, max: 19 }),
+        (reportedOften, fewer) => {
+          const rarelyReported = Math.max(0, reportedOften - fewer - 1);
+          const history = publishedHistory([
+            { scoreQ: 25, published: 20, reported: rarelyReported },
+            { scoreQ: 85, published: 20, reported: reportedOften },
+          ]);
+          const byMorning = selectionWeightByMorning(history.calls, history.reportedMornings);
+          const quiet = byMorning.get(`playa-venao ${history.calls[0]!.day}`)!;
+          const popular = byMorning.get(`playa-venao ${history.calls[20]!.day}`)!;
+
+          assert.ok(
+            quiet >= popular - 1e-12,
+            `a kind of morning reported ${rarelyReported} times in twenty was weighed at ${quiet}, under the ${popular} a kind reported ${reportedOften} times gets`,
+          );
+        },
+      ),
+      { numRuns: PROPERTY_RUNS },
     );
   });
 });

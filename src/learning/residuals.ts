@@ -66,6 +66,13 @@ export type ResidualSample = {
    * live on different scales and cannot be compared without it.
    */
   readonly sigmaEff: number;
+  /**
+   * Whether the site ASKED for this morning (`trigger = push_solicited`,
+   * 07 section 1 row: the island sets it from the solicitation deep link).
+   * A solicited morning is already close to a random sample of pushed days,
+   * so 06 section 6.3 gives it w_select = 1 and no rarity bonus.
+   */
+  readonly solicited: boolean;
 };
 
 /** One height residual sample, keyed to the model and lead bucket it was measured on (06 section 5.1). */
@@ -102,6 +109,7 @@ export function formHeightResidualRows(
           day: utcDayOf(observedHourMs),
           bandWidthM: widthM,
           sigmaEff: SIGMA_EFF.height.value,
+          solicited: observation.trigger === SOLICITED_TRIGGER,
         },
       });
     }
@@ -137,6 +145,7 @@ export function formScoreResidualSamples(observations: readonly ObservationRow[]
       // no fence can be measured in it.
       bandWidthM: null,
       sigmaEff: SIGMA_EFF.score.value,
+      solicited: observation.trigger === SOLICITED_TRIGGER,
     });
   }
   return samples;
@@ -163,6 +172,9 @@ function floorUtcHourMs(observedAt: string | undefined): number | null {
   floored.setUTCMinutes(0, 0, 0);
   return floored.getTime();
 }
+
+/** 07 section 1: the one trigger value that means the site asked for this morning rather than waiting for it. */
+const SOLICITED_TRIGGER = 'push_solicited';
 
 /**
  * reporter_key, 06 section 4 and adr-identity-claim-merge's C5 resolution:

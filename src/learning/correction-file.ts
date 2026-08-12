@@ -61,6 +61,7 @@ import {
 import { shrinkTowardParent, shrinkageWeightFromParent } from "./shrink";
 import {
   applyReporterWeights,
+  applySelectionWeights,
   collapseSessionsToMedian,
   concordanceWeightByReporter,
   winsorizeAtDayFence,
@@ -106,6 +107,16 @@ export type PoolingInputs = {
   readonly seeds: readonly SpotSeed[];
   readonly caps: PoolingCaps;
 };
+
+/**
+ * How rare each published morning's kind of day turned out to be
+ * (06 section 6.3), keyed by spot and calendar day. Built in fit.ts, because
+ * it is read off a log and windowed against the run\'s own clock, and handed
+ * in here so this module stays a pure function of what it was given. Handed
+ * none, every morning weighs the same, which is the launch shape: no call log
+ * exists yet.
+ */
+export type SelectionWeights = ReadonlyMap<string, number>;
 
 const NO_POOLING_ROSTER: PoolingInputs = {
   seeds: [],
@@ -259,6 +270,7 @@ function everyKeyIn(
 function estimatesFrom(
   height: WeighedHeightSamples,
   earned: ReadonlyMap<string, number>,
+  rarity: SelectionWeights,
 ): Map<string, Map<string, Map<string, RawEstimate>>> {
   const bySpot = new Map<string, Map<string, Map<string, RawEstimate>>>();
   for (const [spotId, byKey] of height) {
@@ -266,7 +278,9 @@ function estimatesFrom(
     for (const [source, byLead] of byKey) {
       const rawByLead = new Map<string, RawEstimate>();
       for (const [lead, samples] of byLead) {
-        const raw = estimateOf(applyReporterWeights(samples, earned));
+        const raw = estimateOf(
+          applySelectionWeights(applyReporterWeights(samples, earned), spotId, rarity),
+        );
         if (raw !== null) rawByLead.set(lead, raw);
       }
       if (rawByLead.size > 0) rawByKey.set(source, rawByLead);
@@ -410,6 +424,7 @@ export function buildCorrectionRecords(
   spots: readonly SpotInputs[],
   clock: Clock,
   pooling: PoolingInputs = NO_POOLING_ROSTER,
+  selection: SelectionWeights = new Map<string, number>(),
 ): Map<string, StoredCorrection> {
   const computedAt = clock.now().toISOString();
 
@@ -426,7 +441,7 @@ export function buildCorrectionRecords(
   }
   const earned = concordanceWeightByReporter(everyKeyIn(weighedHeight, weighedScore));
 
-  const rawHeightBySpot = estimatesFrom(weighedHeight, earned);
+  const rawHeightBySpot = estimatesFrom(weighedHeight, earned, selection);
   // Two passes, and only the second one's numbers are ever stored. The first
   // runs the ladder collapsed, so the gate can weigh each spot's own evidence
   // against its region alone; the second runs it again knowing which spots
@@ -441,7 +456,9 @@ export function buildCorrectionRecords(
 
   const rawScoreBySpot = new Map<string, RawEstimate>();
   for (const [spotId, samples] of weighedScore) {
-    const raw = estimateOf(applyReporterWeights(samples, earned));
+    const raw = estimateOf(
+      applySelectionWeights(applyReporterWeights(samples, earned), spotId, selection),
+    );
     if (raw !== null) rawScoreBySpot.set(spotId, raw);
   }
   // The score delta climbs the same ladder as the height keys, in the same two

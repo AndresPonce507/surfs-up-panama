@@ -132,6 +132,18 @@ export const CONCORDANCE_WEIGHT_CEILING = 1.0;
  */
 export const CONCORDANCE_PRIOR_OBSERVATIONS = 1;
 
+/**
+ * 06 section 6.3, research 09 section 13.5a fix 2: the inverse-propensity
+ * selection weight is `min(3, P_bar / P_hat(decile))`. The cap exists because
+ * P_hat can be arbitrarily small -- zero, for a kind of morning nobody has
+ * ever reported -- and an uncapped inverse would let one such day, or one
+ * such report, dominate the whole fit.
+ */
+export const SELECTION_WEIGHT_CAP = 3;
+
+/** 06 section 6.3: the propensities are measured over the trailing ninety days, pooled across spots. */
+export const PROPENSITY_WINDOW_DAYS = 90;
+
 /** G5/G6, 06 section 7: the limits a correction's reader must enforce at apply/read time. This lane only states them. */
 export const CLAMP_MAX_ABS_HEIGHT_FRACTION = 0.4;
 export const CLAMP_MAX_ABS_SCORE_POINTS = 12;

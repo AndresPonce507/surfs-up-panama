@@ -18,6 +18,7 @@
 // depend on fields the primitive deliberately cannot see.
 
 import {
+  SELECTION_WEIGHT_CAP,
   CONCORDANCE_PRIOR_OBSERVATIONS,
   CONCORDANCE_TAU,
   CONCORDANCE_WEIGHT_CEILING,
@@ -279,5 +280,116 @@ export function applyReporterWeights(
     const earned = byReporter.get(sample.reporter_key) ?? CONCORDANCE_WEIGHT_CEILING;
     if (earned === CONCORDANCE_WEIGHT_CEILING) return sample;
     return { ...sample, weight: sample.weight * earned };
+  });
+}
+
+/** One published call as the propensity denominator reads it: which spot, which morning, how good the site said it would be. */
+export type PublishedCall = {
+  readonly spot_id: string;
+  readonly day: string;
+  readonly score_q: number;
+};
+
+/** The key a morning is looked up by: one spot, one calendar day. */
+export function morningKey(spotId: string, day: string): string {
+  return `${spotId} ${day}`;
+}
+
+/**
+ * 06 section 6.3, answering research 09 section 13.5a -- selection bias, the
+ * most serious hazard in the whole feedback loop. People post when it is good,
+ * so the labels are conditioned on the very thing the forecast is trying to
+ * predict, and a bias fitted only on good days corrects only good days and may
+ * be wrong in the opposite direction on the flat, blown-out mornings when
+ * somebody most needs to be told not to drive two hours.
+ *
+ * The fix needs no extra collection, only the prediction log this lane already
+ * has: bucket every published morning by the score decile the site showed that
+ * day, count how often each bucket gets reported at all, and weight a report
+ * by the inverse of its bucket's reporting rate.
+ *
+ *   w_select = min(3, P_bar / P_hat(decile))
+ *
+ * THE CAP IS NOT DECORATION. P_hat is zero for a kind of morning nobody has
+ * ever reported, and an uncapped inverse is an infinity: one report on the
+ * first flat day anybody ever bothered with would outweigh the whole rest of
+ * the fit. Capped, it counts for three mornings, which is a bonus and not a
+ * takeover.
+ *
+ * A MORNING NOBODY PUBLISHED A CALL FOR HAS NO WEIGHT HERE and is left alone
+ * at 1. There is no propensity to invert: the site never told anybody what to
+ * expect that day, so the report was not selected on a published score.
+ *
+ * Deliberately pooled across spots and blind to which spot a morning belongs
+ * to (06 section 6.3: "pooled across spots at launch"), because the thing
+ * being modelled is a behaviour -- people post when it looks good -- and not a
+ * property of any one beach.
+ */
+export function selectionWeightByMorning(
+  calls: readonly PublishedCall[],
+  reportedMornings: ReadonlySet<string>,
+): Map<string, number> {
+  const decileOfMorning = new Map<string, number>();
+  for (const call of calls) {
+    if (typeof call.score_q !== "number" || !Number.isFinite(call.score_q)) continue;
+    if (typeof call.spot_id !== "string" || typeof call.day !== "string") continue;
+    // A morning with more than one published call is bucketed by the last one
+    // in key order, which is the most recent build before it: what was live
+    // that morning, not what an earlier build had guessed.
+    decileOfMorning.set(morningKey(call.spot_id, call.day), decileOf(call.score_q));
+  }
+
+  const published = new Map<number, number>();
+  const reported = new Map<number, number>();
+  for (const [morning, decile] of decileOfMorning) {
+    published.set(decile, (published.get(decile) ?? 0) + 1);
+    if (reportedMornings.has(morning)) {
+      reported.set(decile, (reported.get(decile) ?? 0) + 1);
+    }
+  }
+
+  const publishedInAll = sumOf(published.values());
+  const reportedInAll = sumOf(reported.values());
+  if (publishedInAll === 0 || reportedInAll === 0) return new Map();
+  const overallRate = reportedInAll / publishedInAll;
+
+  const weights = new Map<string, number>();
+  for (const [morning, decile] of decileOfMorning) {
+    const rate = (reported.get(decile) ?? 0) / published.get(decile)!;
+    weights.set(morning, rate === 0 ? SELECTION_WEIGHT_CAP : Math.min(SELECTION_WEIGHT_CAP, overallRate / rate));
+  }
+  return weights;
+}
+
+/** The published 0-100 score's decile, 06 section 6.3. A hundred belongs to the top bucket, not an eleventh one. */
+function decileOf(scoreQ: number): number {
+  return Math.min(9, Math.max(0, Math.floor(scoreQ / 10)));
+}
+
+function sumOf(values: Iterable<number>): number {
+  let total = 0;
+  for (const value of values) total += value;
+  return total;
+}
+
+/**
+ * Each sample's weight multiplied by how rare its kind of morning is
+ * (06 section 6, all multiplicative).
+ *
+ * A morning the site ASKED for is exempt and keeps a plain 1: it is already
+ * close to a random sample of pushed days, so there is no selection to undo
+ * (09 section 13.5a fix 1). Paying it a rarity bonus on top would double-count
+ * the very correction it is evidence against.
+ */
+export function applySelectionWeights(
+  samples: readonly ResidualSample[],
+  spotId: string,
+  byMorning: ReadonlyMap<string, number>,
+): ResidualSample[] {
+  return samples.map((sample) => {
+    if (sample.solicited || sample.day === null) return sample;
+    const rarity = byMorning.get(morningKey(spotId, sample.day));
+    if (rarity === undefined || rarity === 1) return sample;
+    return { ...sample, weight: sample.weight * rarity };
   });
 }

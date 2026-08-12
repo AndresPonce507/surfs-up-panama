@@ -22,9 +22,19 @@
 
 import type { Clock } from '../pipeline/ports';
 import { buildCorrectionRecords, currentCorrectionKey } from './correction-file';
+import { PROPENSITY_WINDOW_DAYS } from './constants';
 import { SHIPPED_POOLING_CAPS, type PoolingCaps, type SpotSeed } from './hierarchy';
-import { readObservationLog, readPredictionLog, spotsReportedIn, type LearningInputStore } from './inputs';
+import {
+  readCallLog,
+  readObservationLog,
+  readPredictionLog,
+  spotsReportedIn,
+  type LearningInputStore,
+  type ObservationRow,
+  type PublishedCallRow,
+} from './inputs';
 import { selectTrustEligible, SHIPPED_TRUST_GATE, type TrustGateConfig } from './trust';
+import { morningKey, selectionWeightByMorning, type PublishedCall } from './weights';
 
 /** What the fit needs of the store: read its inputs, store what it earns. */
 export interface LearningStore extends LearningInputStore {
@@ -74,6 +84,7 @@ export type LearningFitOutcome = {
 export async function runLearningFitOnce(deps: LearningFitDeps): Promise<LearningFitOutcome> {
   const observations = await readObservationLog(deps.store);
   const predictions = await readPredictionLog(deps.store);
+  const calls = await readCallLog(deps.store);
 
   // Eligibility is applied ONCE, here, to the whole log before it is grouped
   // by spot. Two reasons. The history clause counts a reporter's earlier
@@ -90,6 +101,20 @@ export async function runLearningFitOnce(deps: LearningFitDeps): Promise<Learnin
   // display ungated. This gate excludes samples from the fit, nothing else.
   const spots = spotsReportedIn(observations);
 
+  // 06 section 6.3's propensity denominators. The window and the "did anybody
+  // report that morning" question both need things a pure function may not
+  // reach for -- the run's own clock and the whole raw log -- so they are
+  // resolved here and the finished table is handed inward.
+  //
+  // The reported set is built from the RAW log, not the eligible one: what is
+  // being modelled is a human behaviour, people post when it looks good, and a
+  // morning somebody reported was reported whether or not the fit was later
+  // willing to weigh it.
+  const selection = selectionWeightByMorning(
+    publishedCallsWithin(calls, deps.clock.now()),
+    morningsSomebodyReported(observations),
+  );
+
   const records = buildCorrectionRecords(
     spots.map((spotId) => ({
       spotId,
@@ -101,6 +126,7 @@ export async function runLearningFitOnce(deps: LearningFitDeps): Promise<Learnin
       seeds: deps.spots ?? [],
       caps: deps.poolingCaps ?? SHIPPED_POOLING_CAPS,
     },
+    selection,
   );
 
   for (const [spotId, record] of records) {
@@ -115,4 +141,35 @@ export async function runLearningFitOnce(deps: LearningFitDeps): Promise<Learnin
     corrections_written: records.size,
     events,
   };
+}
+
+/** Every published call inside 06 section 6.3's trailing window, as the propensity table reads them. */
+function publishedCallsWithin(rows: readonly PublishedCallRow[], now: Date): PublishedCall[] {
+  const oldest = new Date(now);
+  oldest.setUTCDate(oldest.getUTCDate() - PROPENSITY_WINDOW_DAYS);
+  const calls: PublishedCall[] = [];
+  for (const row of rows) {
+    const day = utcDayOf(row.valid_ts);
+    if (day === null) continue;
+    if (new Date(`${day}T00:00:00Z`).getTime() < oldest.getTime()) continue;
+    calls.push({ spot_id: row.spot_id, day, score_q: row.score_q });
+  }
+  return calls;
+}
+
+/** The (spot, morning) pairs anybody reported at all, which is the propensity numerator. */
+function morningsSomebodyReported(observations: readonly ObservationRow[]): Set<string> {
+  const reported = new Set<string>();
+  for (const observation of observations) {
+    const day = utcDayOf(observation.observed_at);
+    if (day === null || typeof observation.spot_id !== 'string') continue;
+    reported.add(morningKey(observation.spot_id, day));
+  }
+  return reported;
+}
+
+function utcDayOf(timestamp: unknown): string | null {
+  if (typeof timestamp !== 'string') return null;
+  const ms = new Date(timestamp).getTime();
+  return Number.isNaN(ms) ? null : new Date(ms).toISOString().slice(0, 10);
 }

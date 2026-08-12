@@ -35,6 +35,8 @@ export interface LearningInputStore {
 export const OBSERVATION_LOG_PREFIX = 'log/observations/v1/';
 /** predictions/v1/dt=<run-date>/src=<source>/cyc=<cycle>Z/all.jsonl.gz, one row per line. */
 export const PREDICTION_LOG_PREFIX = 'predictions/v1/';
+/** log/calls/v1/dt=<date>/build=<HH>Z/<region_id>.jsonl.gz: what the site published, one row per spot-hour. */
+export const CALL_LOG_PREFIX = 'log/calls/v1/';
 
 /**
  * One row of the nightly observation export, domain-model.md section 7.3,
@@ -54,6 +56,12 @@ export type ObservationRow = {
   predicted?: { score_q: number } | null;
   /** C5's late resolution, domain-model.md section 8: reporter_key = person_id ?? device_id. */
   person_id?: string;
+  /**
+   * 07 section 1: `organic` by default, `push_solicited` when the flow was
+   * opened from a solicitation push. Read only by 06 section 6.3's selection
+   * weight, which is the field's one declared consumer.
+   */
+  trigger?: string;
   /**
    * The two trust-gate carriers, 07 section 6, server-set and frozen at
    * receipt. They exist on every record from day one precisely so G2's
@@ -125,6 +133,33 @@ export async function readPredictionLog(store: LearningInputStore): Promise<Pred
     const body = await store.get(key);
     if (body === null) continue;
     rows.push(...(parseJsonLines(body) as PredictionRow[]));
+  }
+  return rows;
+}
+
+/**
+ * One published call, 06 section 6.3's propensity denominator and NEVER a
+ * residual: the learning lane reads this log to find out how often a kind of
+ * morning gets reported at all, not to find out whether the forecast was right.
+ */
+export type PublishedCallRow = {
+  spot_id: string;
+  valid_ts: string;
+  score_q: number;
+};
+
+/**
+ * Every published call in the log, read in key order and the same permissive
+ * way as the other two: a row this module cannot make sense of contributes no
+ * denominator rather than failing the nightly run.
+ */
+export async function readCallLog(store: LearningInputStore): Promise<PublishedCallRow[]> {
+  const keys = await store.list(CALL_LOG_PREFIX);
+  const rows: PublishedCallRow[] = [];
+  for (const key of keys) {
+    const body = await store.get(key);
+    if (body === null) continue;
+    rows.push(...(parseJsonLines(body) as PublishedCallRow[]));
   }
   return rows;
 }
