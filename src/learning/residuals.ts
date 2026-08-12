@@ -31,8 +31,20 @@ import { hEff } from '../scoring/engine';
 import { leadBucketOf, SIGMA_EFF, TOP_BAND_NOMINAL_M, TOP_BAND_VARIANCE_M2 } from './constants';
 import type { ObservationRow, PredictionRow } from './inputs';
 
-/** One weighted residual sample, still carrying who reported it so a key's distinct-reporter count can be formed later. */
-export type ResidualSample = { readonly value: number; readonly weight: number; readonly device_id: string };
+/**
+ * One weighted residual sample, still carrying who reported it so a key's
+ * distinct-reporter count can be formed later, and WHICH DAY they reported it
+ * on so the weighing room can tell one session from several (06 section 6.2
+ * step 1). `day` is the UTC calendar day of `observed_at`; it is null when the
+ * row never said when it was seen, which is the honest reading of a sample
+ * whose session cannot be identified.
+ */
+export type ResidualSample = {
+  readonly value: number;
+  readonly weight: number;
+  readonly device_id: string;
+  readonly day: string | null;
+};
 
 /** One height residual sample, keyed to the model and lead bucket it was measured on (06 section 5.1). */
 export type HeightResidualRow = { readonly source: string; readonly leadBucket: string; readonly sample: ResidualSample };
@@ -60,7 +72,12 @@ export function formHeightResidualRows(
       rows.push({
         source: prediction.source,
         leadBucket: leadBucketOf(prediction.lead_h),
-        sample: { value, weight: heightPrecisionWeight(varianceM2), device_id: deviceId },
+        sample: {
+          value,
+          weight: heightPrecisionWeight(varianceM2),
+          device_id: deviceId,
+          day: utcDayOf(observedHourMs),
+        },
       });
     }
   }
@@ -83,7 +100,13 @@ export function formScoreResidualSamples(observations: readonly ObservationRow[]
     if (typeof predicted.score_q !== 'number') continue;
     const qObs = QUALITY_OBSERVED_SCORE[quality];
     if (qObs === undefined) continue;
-    samples.push({ value: predicted.score_q - qObs, weight: scorePrecisionWeight(), device_id: deviceId });
+    const observedHourMs = floorUtcHourMs(observation.observed_at);
+    samples.push({
+      value: predicted.score_q - qObs,
+      weight: scorePrecisionWeight(),
+      device_id: deviceId,
+      day: observedHourMs === null ? null : utcDayOf(observedHourMs),
+    });
   }
   return samples;
 }
@@ -108,6 +131,11 @@ function floorUtcHourMs(observedAt: string | undefined): number | null {
   const floored = new Date(ms);
   floored.setUTCMinutes(0, 0, 0);
   return floored.getTime();
+}
+
+/** The UTC calendar day a sample was reported on, the unit 06 section 6.2's session collapse is keyed by. */
+function utcDayOf(observedMs: number): string {
+  return new Date(observedMs).toISOString().slice(0, 10);
 }
 
 function safeDateMs(iso: unknown): number | null {
