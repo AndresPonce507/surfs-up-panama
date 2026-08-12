@@ -638,3 +638,138 @@ describe('02-04 acceptance: a stored correction that passed every gate finally m
     );
   });
 });
+
+// ---------- 02-05 ----------
+
+/**
+ * A record that clears every rung and then orders a 2.0 m height move, which
+ * is more than any member in this fixture is 1.2 m tall enough to give.
+ * Measured: at a forecast 2.0 m above the reported band's midpoint the emitter
+ * writes a height key of b 2.0 m on the same physical-floor error as every
+ * other fixture here, so it clears its ladder and asks for an absurd wave.
+ */
+const MORNINGS_ORDERING_A_TWO_METRE_MOVE = {
+  count: 18,
+  reporters: 6,
+  pairedMornings: 18,
+  shownScoreQ: 79,
+  forecastHeightM: 3.35,
+} as const;
+
+/**
+ * A record that clears every rung and orders a 30 display point score move.
+ * Its forecast sits exactly on the reported band's midpoint, so its height key
+ * states a difference of zero and is refused on its own significance rung: the
+ * published wave does not move at all, and the score move is therefore the ONLY
+ * thing that can move the published score. That isolation is what makes "at
+ * most twelve points" a statement about the clamp rather than about the sum of
+ * two lanes.
+ */
+const MORNINGS_ORDERING_A_THIRTY_POINT_MOVE = {
+  count: 18,
+  reporters: 6,
+  pairedMornings: 18,
+  shownScoreQ: 100,
+  forecastHeightM: 1.35,
+} as const;
+
+/** The bytes sitting at a spot's correction key right now. The apply side may read these; it may never write them. */
+function storedBytes(published: PublishedBuild, spot_id: string): string | undefined {
+  return published.store.objects.get(currentCorrectionKey(spot_id));
+}
+
+describe('02-05 acceptance: however big the stored move, the clamps bind where the number is published', () => {
+  it('never moves the published height past forty percent of the forecast, however many metres the record orders', async () => {
+    const overreaching = emittedRecord(MORNINGS_ORDERING_A_TWO_METRE_MOVE);
+    const heightKey = heightKeyOf(overreaching);
+    assertKeyEarnsItsMove(heightKey, 'height');
+
+    // The tallest member of the published morning. If the order does not
+    // exceed even THAT member's own bound, no clamp binds anywhere and the
+    // example would pass without ever reaching the rule under test.
+    const tallestMemberHeightM = (FORECAST_HEIGHT_M[TODAY]?.[CORRECTED_SPOT] ?? 0) + 3 * 0.02;
+    const allowedFraction = overreaching.clamp.max_abs_h_frac;
+    assert.ok(
+      Math.abs(heightKey.b) > allowedFraction * tallestMemberHeightM,
+      `test bug: this example only watches the clamp bind if the record orders more than the ${allowedFraction} of ${tallestMemberHeightM} m its tallest member allows; it ordered ${heightKey.b} m`,
+    );
+
+    const dayZero = await publishOnce();
+    const withFile = await publishOnce({ corrections: { [CORRECTED_SPOT]: overreaching } });
+
+    const forecastHeightM = rankedCall(dayZero, CORRECTED_SPOT).h_eff_m;
+    const publishedHeightM = rankedCall(withFile, CORRECTED_SPOT).h_eff_m;
+    // Every member is bounded at the same fraction of its OWN height, and the
+    // published effective height is a fixed positive multiple of the blended
+    // raw height while the period is unchanged. So the fraction that bounds
+    // each member bounds what a surfer reads.
+    const movedM = Math.abs(publishedHeightM - forecastHeightM);
+    const allowedM = allowedFraction * forecastHeightM;
+
+    assert.ok(
+      movedM <= allowedM + 1e-12,
+      `a record ordering ${heightKey.b} m must still move the published wave by at most ${allowedFraction} of the ${forecastHeightM} m forecast, which is ${allowedM} m: it moved ${movedM} m`,
+    );
+    assert.ok(
+      movedM > allowedM - 1e-9,
+      `test bug or regression: an order this far past the bound must move the wave all the way TO the bound, or the clamp is not what stopped it; it moved ${movedM} m of an allowed ${allowedM} m`,
+    );
+    assert.ok(
+      publishedHeightM < forecastHeightM,
+      `the models ran big against what people saw, so the published wave must fall: it went from ${forecastHeightM} m to ${publishedHeightM} m`,
+    );
+    assert.equal(
+      storedBytes(withFile, CORRECTED_SPOT),
+      JSON.stringify(overreaching),
+      'the clamp binds where the number is published, never by rewriting the file: the stored record must survive the build byte for byte',
+    );
+  });
+
+  it('never moves the published score past twelve display points, however many the record orders', async () => {
+    const overreaching = emittedRecord(MORNINGS_ORDERING_A_THIRTY_POINT_MOVE);
+    const scoreKey = scoreKeyOf(overreaching);
+    assertKeyEarnsItsMove(scoreKey, 'score');
+
+    const allowedPoints = overreaching.clamp.max_abs_score;
+    assert.ok(
+      Math.abs(scoreKey.b) > allowedPoints,
+      `test bug: this example only watches the clamp bind if the record orders more than the ${allowedPoints} points it is allowed; it ordered ${scoreKey.b}`,
+    );
+
+    const dayZero = await publishOnce();
+    const withFile = await publishOnce({ corrections: { [CORRECTED_SPOT]: overreaching } });
+
+    const forecastScore = rankedCall(dayZero, CORRECTED_SPOT).score_q;
+    const publishedScore = rankedCall(withFile, CORRECTED_SPOT).score_q;
+
+    assert.equal(
+      rankedCall(withFile, CORRECTED_SPOT).h_eff_m,
+      rankedCall(dayZero, CORRECTED_SPOT).h_eff_m,
+      'test bug: this fixture only isolates the score clamp if its height key moves nothing, so the published wave must be untouched',
+    );
+    assert.ok(
+      forecastScore > allowedPoints,
+      `test bug: the day-zero score must have room to fall the whole ${allowedPoints} points, or the floor at zero would stop the move instead of the clamp; it was ${forecastScore}`,
+    );
+
+    assert.ok(
+      forecastScore - publishedScore <= allowedPoints,
+      `a record ordering ${scoreKey.b} display points must still move the published score by at most ${allowedPoints}: it fell from ${forecastScore} to ${publishedScore}`,
+    );
+    assert.equal(
+      forecastScore - publishedScore,
+      allowedPoints,
+      `test bug or regression: an order this far past the limit must move the score all the way TO the limit, or the clamp is not what stopped it; it fell ${forecastScore - publishedScore} points`,
+    );
+    assert.equal(
+      rankedCall(withFile, CORRECTED_SPOT).bias_applied,
+      -allowedPoints / 100,
+      'the archived bias must be the CLAMPED move, so an operator reads what was actually applied rather than what was asked for',
+    );
+    assert.equal(
+      storedBytes(withFile, CORRECTED_SPOT),
+      JSON.stringify(overreaching),
+      'the clamp binds where the number is published, never by rewriting the file: the stored record must survive the build byte for byte',
+    );
+  });
+});
