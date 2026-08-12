@@ -150,6 +150,9 @@ export class IngestStack extends Stack {
     bucket.grantPut(fetchFn, 'raw/*');
     bucket.grantPut(fetchFn, 'predictions/*');
     bucket.grantPut(fetchFn, 'probes/*');
+    // Fetch also reads its own prediction log back (ingest.ts frozen-cycle
+    // detection: list the day's keys, then re-fetch the latest to compare).
+    bucket.grantRead(fetchFn, 'predictions/*');
     bucket.grantRead(buildFn, 'predictions/*');
     bucket.grantRead(buildFn, 'learned/corrections/*');
     for (const prefix of ['v1/*', 'site/*', 'assets/*', 'log/*', 'manifest.json']) {
