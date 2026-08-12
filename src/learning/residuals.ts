@@ -51,6 +51,21 @@ export type ResidualSample = {
    * and therefore no width, and a score residual has no band at all.
    */
   readonly bandWidthM: number | null;
+  /**
+   * WHO reported it, 06 section 4: `reporter_key = person_id ?? device_id`, the
+   * C5 resolution (adr-identity-claim-merge). Distinct from `device_id`, which
+   * stays the carrier of "one session" (06 section 6.2 step 1 is keyed on the
+   * device, deliberately): two devices belonging to one person are two
+   * sessions but one voice.
+   */
+  readonly reporter_key: string;
+  /**
+   * The single-sample physical uncertainty of the claim this sample carries
+   * (06 section 8). Concordance measures disagreement in units of sigma_eff^2,
+   * so the sample has to know its own: a height residual and a score residual
+   * live on different scales and cannot be compared without it.
+   */
+  readonly sigmaEff: number;
 };
 
 /** One height residual sample, keyed to the model and lead bucket it was measured on (06 section 5.1). */
@@ -83,8 +98,10 @@ export function formHeightResidualRows(
           value,
           weight: heightPrecisionWeight(varianceM2),
           device_id: deviceId,
+          reporter_key: reporterKeyOf(observation, deviceId),
           day: utcDayOf(observedHourMs),
           bandWidthM: widthM,
+          sigmaEff: SIGMA_EFF.height.value,
         },
       });
     }
@@ -113,11 +130,13 @@ export function formScoreResidualSamples(observations: readonly ObservationRow[]
       value: predicted.score_q - qObs,
       weight: scorePrecisionWeight(),
       device_id: deviceId,
+      reporter_key: reporterKeyOf(observation, deviceId),
       day: observedHourMs === null ? null : utcDayOf(observedHourMs),
       // A score residual is a difference between two points on the 0-100
       // ladder. It was never reported as an interval, so it has no width and
       // no fence can be measured in it.
       bandWidthM: null,
+      sigmaEff: SIGMA_EFF.score.value,
     });
   }
   return samples;
@@ -143,6 +162,19 @@ function floorUtcHourMs(observedAt: string | undefined): number | null {
   const floored = new Date(ms);
   floored.setUTCMinutes(0, 0, 0);
   return floored.getTime();
+}
+
+/**
+ * reporter_key, 06 section 4 and adr-identity-claim-merge's C5 resolution:
+ * `person_id ?? device_id`, resolved here at aggregation time rather than at
+ * capture, because a person only becomes known to the fit once their claim has
+ * been merged. A row that never named a person is its device, which is the
+ * launch shape: no claim path ships yet, so every reporter_key IS a device id
+ * today and this line changes no stored number until one does.
+ */
+function reporterKeyOf(observation: ObservationRow, deviceId: string): string {
+  const person = observation.person_id;
+  return typeof person === 'string' && person !== '' ? person : deviceId;
 }
 
 /** The UTC calendar day a sample was reported on, the unit 06 section 6.2's session collapse is keyed by. */

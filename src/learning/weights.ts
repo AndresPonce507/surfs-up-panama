@@ -17,6 +17,12 @@
 // Folding one into the other would make every reader of a weighted mean
 // depend on fields the primitive deliberately cannot see.
 
+import {
+  CONCORDANCE_PRIOR_OBSERVATIONS,
+  CONCORDANCE_TAU,
+  CONCORDANCE_WEIGHT_CEILING,
+  CONCORDANCE_WEIGHT_FLOOR,
+} from "./constants";
 import type { ResidualSample } from "./residuals";
 
 /**
@@ -163,4 +169,115 @@ function medianSampleOf(session: readonly ResidualSample[]): ResidualSample {
   if (session.length === 1) return session[0]!;
   const byValue = [...session].sort((left, right) => left.value - right.value);
   return byValue[Math.floor((byValue.length - 1) / 2)]!;
+}
+
+/**
+ * 06 section 6.2 step 3: `w_r = clip(tau_w / (tau_w + D_r), 0.2, 1.0)`, where
+ * D_r is a reporter's mean squared disagreement with the co-observed spot-day
+ * medians, in units of sigma_eff^2, shrunk toward the population mean when
+ * co-observations are few. Research 09 section 13.5c is where it comes from,
+ * and its wording settles two things 06 leaves open.
+ *
+ * FIRST, THE MEDIAN IS THE OTHER REPORTERS', NOT THE WHOLE MORNING'S. 09
+ * section 13.5c says to weigh a reporter by "how well their past reports
+ * agreed with the consensus of OTHER reporters at the same spot/time". Reading
+ * it the other way is not merely looser, it is broken: on a two-report morning
+ * the median IS one of the two reports, so one of the two would measure a
+ * disagreement of zero with themselves, and the louder half of every pair
+ * would go unmeasured.
+ *
+ * SECOND, DOWN-WEIGHT, NEVER BAN. The floor is 0.2 and the weight never
+ * reaches zero, so no amount of disagreement removes a voice; only the human
+ * incident file can do that, and it is a different input with a different
+ * audit trail. The ceiling is 1.0, so agreeing with everybody buys a full
+ * voice and never more.
+ *
+ * A REPORTER NOBODY HAS EVER REPORTED ALONGSIDE KEEPS A FULL VOICE (06 section
+ * 6.2 step 4, GDP-10). There is no measurement of them to shrink, and handing
+ * them the population's disagreement instead would be a newcomer discount:
+ * a tax on the honest early community exactly when data is scarcest, and one
+ * a Sybil attacker escapes anyway by minting a fresh identity.
+ *
+ * THIS RUNS AFTER THE DAY FENCE, so the disagreements it measures are already
+ * clipped ones. That is deliberate and it has a visible consequence: a liar's
+ * D_r is bounded by the fence, so the 0.2 floor cannot be reached by anyone
+ * whose mornings had three witnesses. The floor is for the unwatched mornings,
+ * and for a world the fixtures cannot reach.
+ *
+ * The argument is a list of KEYS -- each one spot's samples at one source and
+ * one lead bucket, already collapsed and fenced. Disagreement is only
+ * meaningful inside a key: two residuals at the same key on the same morning
+ * differ by exactly what the two people reported, while two residuals at
+ * different sources differ by two forecasts as well.
+ */
+export function concordanceWeightByReporter(
+  keys: readonly (readonly ResidualSample[])[],
+): Map<string, number> {
+  const disagreements = new Map<string, number[]>();
+  for (const key of keys) {
+    for (const [, morning] of morningsIn(key)) {
+      recordDisagreementsOn(morning, disagreements);
+    }
+  }
+
+  const measured = [...disagreements].map(
+    ([reporter, squared]) => [reporter, meanOf(squared)] as const,
+  );
+  const population = meanOf(measured.map(([, mean]) => mean));
+
+  const weights = new Map<string, number>();
+  for (const [reporter, ownMean] of measured) {
+    const seen = disagreements.get(reporter)!.length;
+    const ownShare = seen / (seen + CONCORDANCE_PRIOR_OBSERVATIONS);
+    const shrunk = ownShare * ownMean + (1 - ownShare) * population;
+    weights.set(reporter, clipToVoice(CONCORDANCE_TAU / (CONCORDANCE_TAU + shrunk)));
+  }
+  for (const key of keys) {
+    for (const sample of key) {
+      if (!weights.has(sample.reporter_key)) {
+        weights.set(sample.reporter_key, CONCORDANCE_WEIGHT_CEILING);
+      }
+    }
+  }
+  return weights;
+}
+
+/** Every reporter on this morning, scored against the middle of what everybody ELSE saw. */
+function recordDisagreementsOn(
+  morning: readonly ResidualSample[],
+  into: Map<string, number[]>,
+): void {
+  if (morning.length < 2) return;
+  morning.forEach((sample, index) => {
+    const others = morning.filter((_, other) => other !== index);
+    const consensus = medianSampleOf(others).value;
+    const offBy = (sample.value - consensus) / sample.sigmaEff;
+    const seen = into.get(sample.reporter_key) ?? [];
+    seen.push(offBy * offBy);
+    into.set(sample.reporter_key, seen);
+  });
+}
+
+function clipToVoice(weight: number): number {
+  return Math.min(
+    Math.max(weight, CONCORDANCE_WEIGHT_FLOOR),
+    CONCORDANCE_WEIGHT_CEILING,
+  );
+}
+
+function meanOf(values: readonly number[]): number {
+  if (values.length === 0) return 0;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+/** Every sample's weight multiplied by what its reporter's record has earned (06 section 6, all multiplicative). */
+export function applyReporterWeights(
+  samples: readonly ResidualSample[],
+  byReporter: ReadonlyMap<string, number>,
+): ResidualSample[] {
+  return samples.map((sample) => {
+    const earned = byReporter.get(sample.reporter_key) ?? CONCORDANCE_WEIGHT_CEILING;
+    if (earned === CONCORDANCE_WEIGHT_CEILING) return sample;
+    return { ...sample, weight: sample.weight * earned };
+  });
 }

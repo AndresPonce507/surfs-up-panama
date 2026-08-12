@@ -59,7 +59,12 @@ import {
   type SpotSeed,
 } from "./hierarchy";
 import { shrinkTowardParent, shrinkageWeightFromParent } from "./shrink";
-import { collapseSessionsToMedian, winsorizeAtDayFence } from "./weights";
+import {
+  applyReporterWeights,
+  collapseSessionsToMedian,
+  concordanceWeightByReporter,
+  winsorizeAtDayFence,
+} from "./weights";
 
 export const CORRECTIONS_PREFIX = "learned/corrections/v1/";
 
@@ -108,14 +113,23 @@ const NO_POOLING_ROSTER: PoolingInputs = {
 };
 
 /**
- * One key's evidence, weighed. The weighing room (06 section 6) runs FIRST and
- * whole, so every count this returns -- n, the distinct reporters, the n
- * inside se's physical floor -- is already the post-collapse count rather than
- * three separate places each remembering to subtract, exactly as the trust
- * gate is applied once upstream in fit.ts for the same reason.
+ * The two stages of the weighing room that a key can run on its own (06
+ * section 6.2 steps 1 and 2, in that order). The third, concordance, cannot:
+ * a reporter\'s record spans every spot and every key this run examined, so it
+ * is measured once over all of them and applied afterwards.
  */
-function estimateOf(reported: readonly ResidualSample[]): RawEstimate | null {
-  const samples = winsorizeAtDayFence(collapseSessionsToMedian(reported));
+function weighWithinKey(reported: readonly ResidualSample[]): ResidualSample[] {
+  return winsorizeAtDayFence(collapseSessionsToMedian(reported));
+}
+
+/**
+ * One key\'s evidence, once the weighing room is done with it. Every count
+ * here -- n, the distinct reporters, the n inside se\'s physical floor -- is
+ * therefore already the post-collapse count, rather than three separate places
+ * each remembering to subtract, exactly as the trust gate is applied once
+ * upstream in fit.ts for the same reason.
+ */
+function estimateOf(samples: readonly ResidualSample[]): RawEstimate | null {
   if (samples.length === 0) return null;
   const weighted: WeightedSample[] = samples.map((sample) => ({
     value: sample.value,
@@ -190,11 +204,16 @@ function gatedKeyFrom(
   };
 }
 
-/** spotId -> source -> leadBucket -> raw estimate, for every spot that produced at least one height sample. */
-function rawHeightByKeyPerSpot(
-  spots: readonly SpotInputs[],
-): Map<string, Map<string, Map<string, RawEstimate>>> {
-  const bySpot = new Map<string, Map<string, Map<string, RawEstimate>>>();
+/** spotId -> source -> leadBucket -> the samples the weighing room left, per key. */
+type WeighedHeightSamples = Map<string, Map<string, Map<string, ResidualSample[]>>>;
+
+/**
+ * Every height key\'s samples, collapsed and fenced. Stops one stage short of
+ * an estimate on purpose: concordance still has to look across every spot
+ * before any of these may be averaged.
+ */
+function weighedHeightSamplesPerSpot(spots: readonly SpotInputs[]): WeighedHeightSamples {
+  const bySpot: WeighedHeightSamples = new Map();
   for (const spot of spots) {
     const rows = formHeightResidualRows(spot.observations, spot.predictions);
     const samplesByKey = new Map<string, Map<string, ResidualSample[]>>();
@@ -207,16 +226,52 @@ function rawHeightByKeyPerSpot(
       samplesByKey.set(row.source, bySource);
     }
 
-    const rawByKey = new Map<string, Map<string, RawEstimate>>();
+    const weighedByKey = new Map<string, Map<string, ResidualSample[]>>();
     for (const [source, byLead] of samplesByKey) {
+      const weighedByLead = new Map<string, ResidualSample[]>();
+      for (const [lead, samples] of byLead) {
+        const weighed = weighWithinKey(samples);
+        if (weighed.length > 0) weighedByLead.set(lead, weighed);
+      }
+      if (weighedByLead.size > 0) weighedByKey.set(source, weighedByLead);
+    }
+    if (weighedByKey.size > 0) bySpot.set(spot.spotId, weighedByKey);
+  }
+  return bySpot;
+}
+
+/** Every key this run weighed, height and score alike, as the flat list concordance reads. */
+function everyKeyIn(
+  height: WeighedHeightSamples,
+  score: ReadonlyMap<string, ResidualSample[]>,
+): ResidualSample[][] {
+  const keys: ResidualSample[][] = [];
+  for (const byKey of height.values()) {
+    for (const byLead of byKey.values()) {
+      for (const samples of byLead.values()) keys.push(samples);
+    }
+  }
+  for (const samples of score.values()) keys.push(samples);
+  return keys;
+}
+
+/** Turn one key\'s weighed samples into its estimate, once every weight is final. */
+function estimatesFrom(
+  height: WeighedHeightSamples,
+  earned: ReadonlyMap<string, number>,
+): Map<string, Map<string, Map<string, RawEstimate>>> {
+  const bySpot = new Map<string, Map<string, Map<string, RawEstimate>>>();
+  for (const [spotId, byKey] of height) {
+    const rawByKey = new Map<string, Map<string, RawEstimate>>();
+    for (const [source, byLead] of byKey) {
       const rawByLead = new Map<string, RawEstimate>();
       for (const [lead, samples] of byLead) {
-        const raw = estimateOf(samples);
+        const raw = estimateOf(applyReporterWeights(samples, earned));
         if (raw !== null) rawByLead.set(lead, raw);
       }
       if (rawByLead.size > 0) rawByKey.set(source, rawByLead);
     }
-    if (rawByKey.size > 0) bySpot.set(spot.spotId, rawByKey);
+    if (rawByKey.size > 0) bySpot.set(spotId, rawByKey);
   }
   return bySpot;
 }
@@ -358,7 +413,20 @@ export function buildCorrectionRecords(
 ): Map<string, StoredCorrection> {
   const computedAt = clock.now().toISOString();
 
-  const rawHeightBySpot = rawHeightByKeyPerSpot(spots);
+  // The weighing room, 06 section 6.2, in its stated order and once for the
+  // whole run. Steps 1 and 2 are local to a key; step 3 is not -- a reporter\'s
+  // record is read across every spot and key this run examined, which is why
+  // the samples wait here in their weighed-but-unaveraged state until it has
+  // been measured.
+  const weighedHeight = weighedHeightSamplesPerSpot(spots);
+  const weighedScore = new Map<string, ResidualSample[]>();
+  for (const spot of spots) {
+    const weighed = weighWithinKey(formScoreResidualSamples(spot.observations));
+    if (weighed.length > 0) weighedScore.set(spot.spotId, weighed);
+  }
+  const earned = concordanceWeightByReporter(everyKeyIn(weighedHeight, weighedScore));
+
+  const rawHeightBySpot = estimatesFrom(weighedHeight, earned);
   // Two passes, and only the second one's numbers are ever stored. The first
   // runs the ladder collapsed, so the gate can weigh each spot's own evidence
   // against its region alone; the second runs it again knowing which spots
@@ -372,9 +440,9 @@ export function buildCorrectionRecords(
   const parentsByKey = heightParents(rawHeightBySpot, pooling, proven.at);
 
   const rawScoreBySpot = new Map<string, RawEstimate>();
-  for (const spot of spots) {
-    const raw = estimateOf(formScoreResidualSamples(spot.observations));
-    if (raw !== null) rawScoreBySpot.set(spot.spotId, raw);
+  for (const [spotId, samples] of weighedScore) {
+    const raw = estimateOf(applyReporterWeights(samples, earned));
+    if (raw !== null) rawScoreBySpot.set(spotId, raw);
   }
   // The score delta climbs the same ladder as the height keys, in the same two
   // passes. A basin wall that held for one and not the other would let a

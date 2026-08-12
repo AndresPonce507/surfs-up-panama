@@ -98,6 +98,40 @@ export const SIMILARITY_GROUP_MIN_GATED_SPOTS = 3;
  */
 export const PARENT_MAX_EFFECTIVE_SAMPLES_PER_REGION = 200;
 
+/**
+ * tau_w, 06 section 6.2 step 3: the concordance weight is
+ * `clip(tau_w / (tau_w + D_r), floor, ceiling)`, where D_r is a reporter's mean
+ * squared disagreement with the co-observed spot-day medians of the OTHER
+ * reporters, in units of sigma_eff^2. At D_r = tau_w a reporter keeps half a
+ * voice.
+ */
+export const CONCORDANCE_TAU = 4;
+
+/**
+ * 06 section 6.2 step 3, verbatim: `clip(..., 0.2, 1.0)`. The floor is
+ * decision 24's spirit made arithmetic -- down-weight, never ban -- and a floor
+ * of zero would be a shadow ban. The ceiling is what makes agreeing with
+ * everyone worth a full voice and never more: concordance may only ever take
+ * weight away, so no coordinated bloc can buy itself extra influence by
+ * agreeing with itself.
+ */
+export const CONCORDANCE_WEIGHT_FLOOR = 0.2;
+export const CONCORDANCE_WEIGHT_CEILING = 1.0;
+
+/**
+ * How hard D_r is shrunk toward the population mean when co-observations are
+ * few (06 section 6.2 step 3 asks for the shrink and names no strength).
+ * Read as a number of prior observations: the population mean counts as ONE
+ * morning of evidence about a reporter. At a single co-observed morning a
+ * reporter is half their own record and half the population's; by the eight
+ * mornings the design treats as real evidence they are eight ninths their own,
+ * which is the "barely bites" the shrink is for. Deliberately NOT tau_w reused:
+ * tau_w is declared for the weight formula alone, and borrowing it would put a
+ * quarter of the population's disagreement onto a reporter with eight mornings
+ * of their own record.
+ */
+export const CONCORDANCE_PRIOR_OBSERVATIONS = 1;
+
 /** G5/G6, 06 section 7: the limits a correction's reader must enforce at apply/read time. This lane only states them. */
 export const CLAMP_MAX_ABS_HEIGHT_FRACTION = 0.4;
 export const CLAMP_MAX_ABS_SCORE_POINTS = 12;

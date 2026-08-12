@@ -18,10 +18,9 @@
 // exactly what a run where they claimed the fence itself stores -- same band,
 // so the same precision weight, and after clipping the same value. That is
 // criterion 2 read literally: no further than a claim pinned at the fence
-// could move it. The same trick proves the absence below three witnesses: a
-// wild claim on a two-witness morning must store exactly what the same claim
-// stores on a morning nobody else reported, which is only true if no fence
-// touched either.
+// could move it. The absence below three witnesses is the mirror of the same
+// pair: at two device-samples those two runs must store DIFFERENT numbers,
+// because nothing is pulling the first onto the second.
 //
 // THE WILD CLAIM IS ANKLE-TO-KNEE, "it was tiny, do not bother driving out" --
 // research 09 section 13.5c's documented localism, under-reporting a spot to
@@ -59,10 +58,11 @@ const SAMPLE_SPREAD_M = 0.42;
 const WATCHED_MORNING_RESIDUAL_M = RAW_DIFFERENCE_M + SAMPLE_SPREAD_M;
 const TOLERANCE = 1e-12;
 
-/** What claiming ankle to knee on the watched morning works out to, unfenced. */
-const WILD_RESIDUAL_M =
-  CHEST_HEAD_MID_M + WATCHED_MORNING_RESIDUAL_M - ANKLE_KNEE_MID_M;
-/** The furthest the fence lets that claim reach. */
+/**
+ * The furthest the fence lets the wild claim reach. Claiming ankle to knee on
+ * the watched morning works out to WATCHED + 1.10 m unfenced, which is past
+ * this by a tenth of a metre.
+ */
 const FENCED_RESIDUAL_M = WATCHED_MORNING_RESIDUAL_M + FENCE_M;
 
 class FixedClock {
@@ -101,9 +101,7 @@ type WildClaim =
   /** Ankle to knee, on the same morning everyone else reported chest to head. */
   | "as_reported"
   /** The same tiny claim, on its own hour of that morning, sized to land exactly on the fence. */
-  | "pinned_at_the_fence"
-  /** The same tiny claim, moved to a morning nobody else reported. */
-  | "on_a_morning_of_its_own";
+  | "pinned_at_the_fence";
 
 type Fixture = {
   /** Whether a second honest reporter watched the wild morning, which is what makes it three-deep. */
@@ -189,21 +187,16 @@ function wildReport(claim: WildClaim): {
   if (claim === "as_reported") {
     return { day: dayOf(0), hour: "18", band: "ankle_knee", prediction: null };
   }
-  const [day, residual] =
-    claim === "pinned_at_the_fence"
-      ? [dayOf(0), FENCED_RESIDUAL_M]
-      : [dayOf(MORNINGS), WILD_RESIDUAL_M];
-  const hour = claim === "pinned_at_the_fence" ? "19" : "18";
   return {
-    day,
-    hour,
+    day: dayOf(0),
+    hour: "19",
     band: "ankle_knee",
     prediction: {
       spot_id: SPOT_ID,
       source: SOURCE,
-      valid_ts: `${day}T${hour}:00:00Z`,
+      valid_ts: `${dayOf(0)}T19:00:00Z`,
       lead_h: 36,
-      swell_h_m: ANKLE_KNEE_MID_M + residual,
+      swell_h_m: ANKLE_KNEE_MID_M + FENCED_RESIDUAL_M,
       swell_t_s: 10,
       land_masked: false,
     },
@@ -257,24 +250,27 @@ describe("04-02 acceptance: a wild claim on a well-watched morning is pulled to 
     );
   });
 
-  it("leaves a claim nobody else watched entirely unfenced", async () => {
-    const twoWitnesses = await storedFor({
+  it("leaves a morning only two people watched entirely unfenced", async () => {
+    // The mirror of the example above, over the SAME two claims. At three
+    // witnesses the wild claim and a claim pinned on the fence must store the
+    // same number, because the fence pulls the first onto the second. At two
+    // witnesses they must store DIFFERENT numbers, because nothing pulls
+    // anything: the only way these two runs can agree is if a fence fired on a
+    // morning that had nothing to be robust against.
+    const wild = await storedFor({ watchedByAThirdReporter: false, wildClaim: "as_reported" });
+    const pinned = await storedFor({
       watchedByAThirdReporter: false,
-      wildClaim: "as_reported",
-    });
-    const alone = await storedFor({
-      watchedByAThirdReporter: false,
-      wildClaim: "on_a_morning_of_its_own",
+      wildClaim: "pinned_at_the_fence",
     });
 
     assert.equal(
-      twoWitnesses.key.n,
-      alone.key.n,
+      wild.key.n,
+      pinned.key.n,
       "test bug: the two runs must weigh the same number of mornings",
     );
     assert.ok(
-      Math.abs(twoWitnesses.key.b - alone.key.b) < TOLERANCE,
-      `two device-samples on one morning stored ${twoWitnesses.key.b} where the same claim standing alone stored ${alone.key.b}: something robustified a morning that had nothing to be robust against`,
+      Math.abs(wild.key.b - pinned.key.b) > TOLERANCE,
+      `with only two device-samples on the morning, a claim past the fence stored ${wild.key.b}, the same number a claim pinned exactly on the fence stores: a morning nobody else watched was robustified anyway`,
     );
   });
 
