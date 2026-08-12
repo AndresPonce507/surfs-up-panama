@@ -182,3 +182,31 @@ guards the refusal scenarios fail-closed and the happy-cycle delta.
    48 real ones); the per-scenario step counts above are from the JSON formatter.
 6. Nothing was committed and no git command was run (dispatch constraint); the ARM64 container
    smoke and everything under `src/`, `scripts/`, `infra/` remain DELIVER's.
+
+## Wave: DELIVER / [REF] Process waiver: DES enforcement exempt, evidence enforced by hand
+
+Applied 2026-08-12 on coordinator instruction, citing the HANDOFF §10 precedent ("Waivers,
+recorded rather than hidden", waiver 2: absent or broken DES gates are replaced by real, named
+gates with real exit codes, and no broken gate is ever reported as passing).
+
+**Defect**: the DES Stop hook on this machine anchors to a foreign worktree (cwd-based; this
+orchestrator session's cwd is `/Users/andres/psb-deliver-integration-20260812`, not this lane's
+worktree) and wedges crafter subagents dispatched with `DES-VALIDATION` markers.
+
+**Waiver**: crafter dispatches for this feature carry `<!-- DES-ENFORCEMENT : exempt -->`. The
+first 01-01 dispatch predated the instruction and went out with DES-VALIDATION markers; it was
+course-corrected in flight (absolute `--project-dir`, refusals noted plainly, evidence in the
+commit message).
+
+**What replaces the mechanical gate, per step — nothing is reported as passing that did not run**:
+
+1. Real RED and GREEN test runs with exit codes captured in the step's commit message (and/or a
+   step contract JSON in this deliver/ directory).
+2. Focused slice tags green (`npm run test:at -- --tags "@feature-weather-to-site-bridge and
+   @slice-NN"`) plus the fast gate (`node scripts/ci-local.mjs --fast`) with 0 skipped required
+   jobs, output redirected to a file and the file read.
+3. `des-log-phase` records with absolute `--project-dir` into this worktree where the shim
+   accepts them (legacy phase names if RED is rejected); tooling refusals are noted plainly in
+   the step report, never fabricated.
+4. Vera examination for visible steps (this feature's steps are non-visual with recorded
+   rationale; the slice-01 charter is examined through its CLI surface).
