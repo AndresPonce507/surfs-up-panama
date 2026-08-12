@@ -49,6 +49,23 @@ export const G1_MIN_MORNINGS = 10;
  */
 export const TAU_SPOT_PRIOR = 6;
 
+/**
+ * The pooling ladder's levels above the spot have no separately derived tau
+ * anywhere in 06 section 8; only the spot level does. Until one is estimated,
+ * the spot prior stands at every level, for the same reason one prior stands
+ * for both bias.swell_h_m and score_delta above: there is no second derivation
+ * to read. Inert at the launch shape, where one region on one coast makes a
+ * basin identical to its only region and the shrink between them the identity.
+ */
+export const TAU_PARENT_LEVEL_PRIOR = TAU_SPOT_PRIOR;
+
+/**
+ * A region's maximum weight in its basin's mean, 06 section 8 (`n_eff cap per
+ * region (parent levels)`, research 09 section 17.5 item 2), so one hyperactive
+ * region can never silently become the prior every other region inherits.
+ */
+export const PARENT_MAX_EFFECTIVE_SAMPLES_PER_REGION = 200;
+
 /** G5/G6, 06 section 7: the limits a correction's reader must enforce at apply/read time. This lane only states them. */
 export const CLAMP_MAX_ABS_HEIGHT_FRACTION = 0.4;
 export const CLAMP_MAX_ABS_SCORE_POINTS = 12;

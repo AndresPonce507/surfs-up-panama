@@ -22,6 +22,7 @@
 
 import type { Clock } from '../pipeline/ports';
 import { buildCorrectionRecords, currentCorrectionKey } from './correction-file';
+import { SHIPPED_POOLING_CAPS, type PoolingCaps, type SpotSeed } from './hierarchy';
 import { readObservationLog, readPredictionLog, spotsReportedIn, type LearningInputStore } from './inputs';
 import { selectTrustEligible, SHIPPED_TRUST_GATE, type TrustGateConfig } from './trust';
 
@@ -41,6 +42,19 @@ export interface LearningFitDeps {
    * proven no-op at launch.
    */
   trustGate?: TrustGateConfig;
+  /**
+   * The spot-seed roster this run pools by (06 section 5.3's ladder, keyed on
+   * `coast`, `region_id`, `break_type`). Passed in for the same reason the
+   * clock and the trust gate are: the seed list is human-owned data on disk
+   * and nothing in the core reaches for it. Omitted, every examined spot pools
+   * with every other -- the collapsed launch shape, unchanged since 01-12.
+   */
+  spots?: readonly SpotSeed[];
+  /**
+   * The influence caps of 09 section 17.5. Omitted, the shipped caps apply:
+   * 200 effective samples per region, no per-reporter cap.
+   */
+  poolingCaps?: PoolingCaps;
 }
 
 /**
@@ -83,6 +97,10 @@ export async function runLearningFitOnce(deps: LearningFitDeps): Promise<Learnin
       predictions,
     })),
     deps.clock,
+    {
+      seeds: deps.spots ?? [],
+      caps: deps.poolingCaps ?? SHIPPED_POOLING_CAPS,
+    },
   );
 
   for (const [spotId, record] of records) {
