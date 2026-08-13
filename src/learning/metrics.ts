@@ -1,13 +1,16 @@
 // Operator-only monthly metrics, 06-learning-layer.md section 10. Every
 // section here is a function of the rows the store actually holds -- never
-// a literal placeholder -- with two named exceptions this step deliberately
+// a literal placeholder -- with one named exception this step deliberately
 // defers, per wave-decisions.md D-2026-08-12-1:
 //
-//   - `calibration.offending_term` stays the literal null. Naming which
-//     confidence term failed the calibration check is 05-04's; this step
-//     ships the bins the naming logic will read.
 //   - `shrinkage[].flagged` stays the literal false. The alarm threshold
 //     (09 section 17.4 guardrail 2) is 05-05's; this step ships the row.
+//
+// `calibration.offending_term` is 05-04's real judgment now (06 section 10;
+// 09 section 3.6 consequence 3): the calibration check compares the 'high'
+// and 'low' confidence bins' hit rates and names 'c_spread' only on the
+// affirmative inversion (high strictly less often right than low). Naming is
+// routing, not removal -- the scoring lane owns C_spread's actual deletion.
 //
 // `cv.verdict` is 05-02's real judgment now (06 section 7 G7;
 // src/learning/cross-validation.ts), not the deferred literal 05-01 shipped:
@@ -55,7 +58,7 @@ export type MonthlyMetrics = {
   sigma_human: { value: number | null; co_observer_pairs: number };
   calibration: {
     probability: 'score_q/100 (naive)';
-    bins: Record<string, { reports: number; hits: number; hit_rate: number; brier: number }>;
+    bins: { conf_level: string; reports: number; hits: number; hit_rate: number; brier: number }[];
     offending_term: 'c_spread' | null;
   };
   shrinkage: {
@@ -394,20 +397,34 @@ function calibrationOf(observations: readonly ObservationRow[]): MonthlyMetrics[
     aggregates.set(confidence, aggregate);
   }
 
-  const bins = Object.fromEntries(
-    [...aggregates]
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([confidence, aggregate]) => [
-        confidence,
-        {
-          reports: aggregate.reports,
-          hits: aggregate.hits,
-          hit_rate: aggregate.hits / aggregate.reports,
-          brier: aggregate.squaredError / aggregate.reports,
-        },
-      ]),
-  );
-  return { probability: 'score_q/100 (naive)', bins, offending_term: null };
+  const bins = [...aggregates]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([confidence, aggregate]) => ({
+      conf_level: confidence,
+      reports: aggregate.reports,
+      hits: aggregate.hits,
+      hit_rate: aggregate.hits / aggregate.reports,
+      brier: aggregate.squaredError / aggregate.reports,
+    }));
+  return { probability: 'score_q/100 (naive)', bins, offending_term: offendingTermOf(bins) };
+}
+
+/**
+ * 09 section 3.6 consequence 3: if the high-confidence bin is not more often
+ * right than the low-confidence bin, C_spread is named for removal. Compares
+ * only the 'high' and 'low' bins the design names -- a month missing either
+ * one has no comparison to make, and absence must never manufacture a
+ * removal (a detector only ever seen firing proves nothing about its
+ * judgment). A tie (equal hit rates) is not an inversion: only a STRICTLY
+ * lower high-confidence hit rate names the term.
+ */
+function offendingTermOf(
+  bins: readonly { conf_level: string; hit_rate: number }[],
+): 'c_spread' | null {
+  const high = bins.find((bin) => bin.conf_level === 'high');
+  const low = bins.find((bin) => bin.conf_level === 'low');
+  if (high === undefined || low === undefined) return null;
+  return high.hit_rate < low.hit_rate ? 'c_spread' : null;
 }
 
 // ---------- shrinkage (09 section 17.4 guardrail 2) ----------

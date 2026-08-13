@@ -855,6 +855,34 @@
       "s": "EXECUTED",
       "d": "Staged only owned paths (src/learning/declarations.ts, the AT's skip marker, tests/unit/learning-declarations.test.ts, docs/feature/.../execution-log.json, and force-added the gitignored 05-03-contract.json), leaving gate-baseline.log untouched. Committed 69a6dad 'feat(learning): refuse shuffled CV structurally (rule three)' with trailer Step-ID: 05-03. 5 files changed, 169 insertions, 1 deletion. Wrote docs/feature/f-forecast-learns-from-the-beach/deliver/05-03-contract.json matching the 05-02-contract.json field set, validated as parseable JSON before commit.",
       "t": "2026-08-12T23:46:27Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "Loaded tdd-methodology, quality-framework, fp-principles, fp-domain-modeling skills, plus pbt-typescript on language detection (package.json/tsconfig.json). Read the AT scaffold, its support/monthly-port.ts harness, src/learning/metrics.ts (calibrationOf's deferred offending_term:null and Record-shaped bins), src/learning/evaluate.ts (the driving port), 06-learning-layer.md section 10 and the Confidence contradiction paragraph, and grepped the whole tree for conf_level/calibration/.bins usage to confirm ConfLevel is low|medium|high and that no other consumer depends on the current bins Record shape before deciding to reshape it to an array. Removed describe.skip from the AT file; confirmed exactly one describe block (two scenarios) enabled. Baseline full suite: 583 passed | 3 skipped, EXIT=0.",
+      "t": "2026-08-13T00:08:21Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "Ran the unskipped AT standalone: npx vitest run tests/acceptance/f-forecast-learns-from-the-beach/a-confidence-level-that-does-not-predict-correctness-is-named.test.ts -> EXIT=1, 2 collected, 1 failed | 1 passed. The inversion scenario failed with semantic AssertionError 'null !== c_spread' on metricAt(metrics,'calibration.offending_term') (the 05-01 deferred literal), no import or collection error -- fail-for-right-reason gate satisfied. The control scenario already passed (GUARD-ALREADY-GREEN: offending_term was always null pre-implementation, and the control asserts null).",
+      "t": "2026-08-13T00:08:24Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "Authored 3 fast-check properties in tests/unit/learning-metrics.test.ts covering what the AT's two fixed examples cannot prove alone: the offending_term equivalence law generalized over arbitrary logs including the missing-bin branch no AT fixture produces; correctness of every bin field against an independently-computed Modeling oracle (reports/hits/hit_rate/brier, same style as the file's existing mae.per_key-vs-hEff oracle); and order-independence of the bin aggregation under a full-length shuffle. Each was iterated against the still-deferred-null production code during GREEN decomposition; falsifiability mutations recorded at GREEN reproduce the equivalent pre-GREEN failure shapes for all three.",
+      "t": "2026-08-13T00:08:32Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "Implemented offendingTermOf in src/learning/metrics.ts: compares only the 'high' and 'low' bins' hit rates, names 'c_spread' on a strict inversion, null otherwise (including either bin absent). Reshaped calibration.bins from Record<string,{...}> to an array of {conf_level,reports,hits,hit_rate,brier} rows (the shape the AT oracle requires; grep confirmed no other consumer). evaluate.ts needed no edit -- it already threads buildMonthlyMetrics verbatim into its one write. Focused run (AT+unit): EXIT=0, 15 passed. Full suite: npx vitest run -> EXIT=0, 117 files passed | 1 skipped (118), 588 tests passed | 1 skipped (589) -- the 1 skip is the still-parked 05-05 AT; no other file red, the task-context pre-existing staleness family did not appear this session. npm run typecheck -> EXIT=0. Post-GREEN wiring check: git diff --name-only shows only src/learning/metrics.ts in src/ (not fixture theater). Falsifiability: 4 mutations planted and reverted, each caught by the intended test and diff-confirmed clean afterward -- (1) inverted comparison direction caught by both AT scenarios + the equivalence property; (2) removed missing-bin guard caught ONLY by the equivalence property (bins=[] manufactured c_spread), proving the unit law's necessity since neither AT fixture ever omits a bin; (3) brier forced to 0 caught by the independent-oracle property (an earlier bounds-only draft of this property would have missed it -- replaced per advisor review before commit); (4) removed the bins sort caught by the order-independence property on the first generated case. npm run build NOT run: non-visual step, UI N/A, matching 05-03's own recorded precedent.",
+      "t": "2026-08-13T00:08:39Z"
     }
   ]
 }

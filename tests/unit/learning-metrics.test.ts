@@ -235,6 +235,144 @@ describe('buildMonthlyMetrics: mae, a hand-computed degenerate fixture and the n
   });
 });
 
+// 05-04: calibration.offending_term, the confidence kill switch (09 section
+// 3.6 consequence 3). The AT (a-confidence-level-that-does-not-predict-...)
+// pins exactly two fixed months (a 30-morning inversion, and its control).
+// These three properties cover what a fixed example cannot: the general
+// equivalence law across arbitrary logs (including the "one or both bins
+// absent" branch no AT fixture ever produces, since both AT scenarios always
+// speak both high and low), the arithmetic every bin must satisfy, and
+// order-independence of the aggregation itself.
+
+const confLevelArb = fc.constantFrom('high', 'low', 'medium');
+
+/** A minimal captured report: only what calibrationOf reads (quality, predicted.score_q, predicted.conf_level). */
+const calibrationObservationArb = fc.record({
+  spot_id: fc.constant('playa-venao'),
+  quality: qualityToken,
+  predicted: fc.record({
+    score_q: fc.integer({ min: 0, max: 100 }),
+    conf_level: confLevelArb,
+  }),
+}) as unknown as fc.Arbitrary<ObservationRow>;
+
+describe('buildMonthlyMetrics: calibration.offending_term, the equivalence law', () => {
+  it('equals c_spread exactly when a high and a low bin both exist and the high hit rate is strictly lower, and null otherwise', () => {
+    fc.assert(
+      fc.property(fc.array(calibrationObservationArb, { maxLength: 20 }), (observations) => {
+        const calibration = metricsFor(observations).calibration;
+        const high = calibration.bins.find((bin) => bin.conf_level === 'high');
+        const low = calibration.bins.find((bin) => bin.conf_level === 'low');
+        const expected =
+          high !== undefined && low !== undefined && high.hit_rate < low.hit_rate ? 'c_spread' : null;
+        assert.equal(
+          calibration.offending_term,
+          expected,
+          `offending_term must equal the independently-derived comparison of the high and low bins alone (a missing bin, on either side, must never manufacture a removal): bins=${JSON.stringify(calibration.bins)}`,
+        );
+      }),
+      { numRuns: 100 },
+    );
+  });
+});
+
+describe('buildMonthlyMetrics: calibration bins, correctness against an independently computed oracle', () => {
+  it('reports reports/hits/hit_rate/brier exactly as an independently aggregated per-conf_level count and mean squared error, for any generated log', () => {
+    fc.assert(
+      fc.property(fc.array(calibrationObservationArb, { maxLength: 30 }), (observations) => {
+        // Modeling oracle (Hebert ch.3), the same shape as the mae property's
+        // independent hEff+band-midpoint reference: aggregate the standard
+        // Brier definition -- mean squared error of (score_q/100 - hit) --
+        // per conf_level, in test code, never by importing calibrationOf's
+        // own loop.
+        const expectedByLevel = new Map<string, { reports: number; hits: number; squaredError: number }>();
+        for (const observation of observations) {
+          const predicted = observation.predicted as { score_q?: number; conf_level?: string } | null | undefined;
+          const confidence = predicted?.conf_level;
+          const score = predicted?.score_q;
+          if (typeof confidence !== 'string' || typeof score !== 'number') continue;
+          const hit = observation.quality === 'good' || observation.quality === 'epic';
+          const entry = expectedByLevel.get(confidence) ?? { reports: 0, hits: 0, squaredError: 0 };
+          entry.reports += 1;
+          entry.hits += Number(hit);
+          entry.squaredError += (score / 100 - Number(hit)) ** 2;
+          expectedByLevel.set(confidence, entry);
+        }
+
+        const bins = metricsFor(observations).calibration.bins;
+        assert.equal(
+          bins.length,
+          expectedByLevel.size,
+          `one bin per confidence level actually captured, no more no fewer: bins=${JSON.stringify(bins)}`,
+        );
+        for (const bin of bins) {
+          const expected = expectedByLevel.get(bin.conf_level);
+          assert.ok(expected !== undefined, `bin ${bin.conf_level} must correspond to a confidence level actually seen`);
+          assert.equal(bin.reports, expected!.reports, `reports must match the independent count for ${bin.conf_level}`);
+          assert.equal(bin.hits, expected!.hits, `hits must match the independent count for ${bin.conf_level}`);
+          assert.ok(
+            Math.abs(bin.hit_rate - expected!.hits / expected!.reports) < 1e-9,
+            `hit_rate must equal hits/reports for ${bin.conf_level}: ${JSON.stringify(bin)}`,
+          );
+          assert.ok(
+            Math.abs(bin.brier - expected!.squaredError / expected!.reports) < 1e-9,
+            `brier must equal the independently computed mean squared error (score_q/100 - hit)^2 for ${bin.conf_level}: ${JSON.stringify(bin)}`,
+          );
+          assert.ok(
+            bin.brier >= 0 && bin.brier <= 1,
+            `brier is a proper scoring rule bounded to [0,1]: ${JSON.stringify(bin)}`,
+          );
+        }
+      }),
+      { numRuns: 100 },
+    );
+  });
+});
+
+describe('buildMonthlyMetrics: calibration bins, order-independence', () => {
+  it('reports identical bins and offending_term whichever order the observations arrive in', () => {
+    fc.assert(
+      fc.property(
+        fc.array(calibrationObservationArb, { minLength: 1, maxLength: 20 }).chain((observations) =>
+          fc.tuple(
+            fc.constant(observations),
+            fc.shuffledSubarray(observations, { minLength: observations.length, maxLength: observations.length }),
+          ),
+        ),
+        ([observations, shuffled]) => {
+          const forward = metricsFor(observations).calibration;
+          const backward = metricsFor(shuffled).calibration;
+          assert.equal(
+            forward.bins.length,
+            backward.bins.length,
+            'the same set of confidence levels must appear whichever order the observations arrive in',
+          );
+          forward.bins.forEach((bin, index) => {
+            const other = backward.bins[index]!;
+            assert.equal(bin.conf_level, other.conf_level, 'bins must land in the same conf_level order');
+            assert.equal(bin.reports, other.reports, `reports must match for ${bin.conf_level}`);
+            assert.equal(bin.hits, other.hits, `hits must match for ${bin.conf_level}`);
+            assert.ok(
+              Math.abs(bin.hit_rate - other.hit_rate) < 1e-9,
+              `hit_rate must match for ${bin.conf_level} (order must not change the value, only floating summation order)`,
+            );
+            assert.ok(
+              Math.abs(bin.brier - other.brier) < 1e-9,
+              `brier must match for ${bin.conf_level} up to floating-point summation order`,
+            );
+          });
+          assert.equal(
+            forward.offending_term,
+            backward.offending_term,
+            'offending_term must not depend on report order',
+          );
+        },
+      ),
+      { numRuns: 50 },
+    );
+  });
+});
+
 describe('buildMonthlyMetrics: shrinkage, one row per gated spot read off the correction\'s own fields', () => {
   it('reports the fullest applied key\'s shrink weight, n and reporters, exactly as the stored correction carries them', () => {
     fc.assert(
