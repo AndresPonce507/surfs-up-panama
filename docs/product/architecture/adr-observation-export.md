@@ -48,6 +48,28 @@ One line per accepted report in `log/observations/v1/`, fields flattened to `dom
 - **Distinct reporters** are counted by consumers as distinct `reporter_key = person_id ?? device_id` over rows (the C5 precedent already in `src/learning/residuals.ts`); every row carries `device_id` for exactly this.
 - The reveal counter `n_reports` (`SPOT#/COUNTER` item) is a **different number by design**: a live, display-only, best-effort counter that can undercount on crashes and leads the log by up to a day. The scorecard and the learning fit must count from the log, never from the counter. A test asserting counter == rows would flake; `≤` is the honest assertion (07 "unobservable" note).
 
+## Decision 5 — Abuse-signal buckets are local-day, and carry their own UTC window
+
+07 §7.4 groups `distinct_devices` and `median_credential_age_days` per (spot, **local** day). Decision 3 names the file by **received-UTC** day. Panama is UTC-5, so a UTC-day file spans local 19:00 of the previous day to 19:00 of the named day, and **no local day is ever complete inside a single file**. That is a structural fact, not a tuning choice, so it is decided here rather than left to the implementation:
+
+- Buckets keep §7.4's `(spot, local day)` grouping.
+- Every bucket additionally carries the **UTC window it was actually computed over** and an explicit `complete: false` when the file's UTC boundary clipped it.
+- A consumer that wants a true local day **must merge two adjacent files**. That is a real consequence and is flagged rather than hidden.
+
+Rejected: grouping by UTC day (silently redefines §7.4's signal). Rejected: emitting clipped buckets unmarked — a median over a partial day that presents as whole is the project's one forbidden move, claiming more certainty than the data earns.
+
+## Decision 6 — A partial stored `predicted` block exports as `null`
+
+If `receipt.predicted` exists but is missing any of the five `PredictedCall` keys, the row's `predicted` is `null`, and the observation itself still exports.
+
+Unreachable with today's writer (`receipt()` spreads a whole `PredictedCall`), so this governs only corrupt or future-schema data. It satisfies R10's never-crash rule, keeps the observation, and declines to report a call that cannot be reported honestly. R2 forbids narrowing a real call; this is not narrowing but refusing a call that was never whole. Recorded as a decision because an undocumented edge case in an immutable-log producer gets re-litigated later with nobody remembering why.
+
+## Decision 7 — The schedule ships DISABLED; a human enables it after night one
+
+The CDK declares `state: 'DISABLED'` on the export schedule.
+
+The handler is real and tested, so this is NOT notify's reason (an unlanded stub). It is the write-once property: the first production run seals that night's keys permanently, and a re-run finds them present and skips, so a bug in night one is **unfixable in place**. An unattended 00:30Z cron with zero prior production observation is an irreversible action, and this project flags those for a human rather than taking them automatically. Enabling is a one-word CDK change plus a redeploy, and the deploy note carries it.
+
 ## Consumer-contract mismatches found (flagged, not silently resolved)
 
 | # | Docs say | Reality | This lane does |
