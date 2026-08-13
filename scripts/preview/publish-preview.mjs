@@ -20,7 +20,7 @@
 // already applied by hand to `manana/`.
 //
 // Publication is additive: this script only PUTs keys present in dist/ and
-// their directory aliases. It never lists or deletes bucket keys, so raw
+// their extensionless and directory aliases. It never lists or deletes bucket keys, so raw
 // captures, prediction logs, and hourly publisher artifacts stay outside its
 // blast radius. HTML is uploaded with no-cache, so no routine whole-
 // distribution invalidation is needed.
@@ -64,6 +64,11 @@ function contentTypeFor(path) {
 export function directoryAliasFor(key) {
   if (!key.endsWith('.html') || key === 'index.html') return undefined;
   return `${key.slice(0, -'.html'.length)}/`;
+}
+
+function extensionlessAliasFor(key) {
+  if (!key.endsWith('.html') || key === 'index.html') return undefined;
+  return key.slice(0, -'.html'.length);
 }
 
 async function walk(dir) {
@@ -114,6 +119,7 @@ export async function publishBuild({ target, distDir, origin }, invoke = /** @ty
   await assertPublicationArtifactOrigin(distDir, origin);
 
   let canonical = 0;
+  let extensionlessAliases = 0;
   let directoryAliases = 0;
 
   for (const file of files) {
@@ -123,9 +129,16 @@ export async function publishBuild({ target, distDir, origin }, invoke = /** @ty
     await put(target, key, file, type, invoke);
     canonical += 1;
 
-    // `spots/playa-venao.html` also lands at the literal key
-    // `spots/playa-venao/`, so the directory-form link resolves. `index.html`
-    // is already served by the distribution's DefaultRootObject.
+    // The S3 REST origin does no route rewrite. Keep both clean static keys
+    // beside the emitted document, so a shared `/spots/.../reportar` link and
+    // the site's canonical `/spots/.../reportar/` link serve the same page.
+    // `index.html` is already served by the distribution's DefaultRootObject.
+    const extensionlessAlias = extensionlessAliasFor(key);
+    if (extensionlessAlias !== undefined) {
+      await put(target, extensionlessAlias, file, type, invoke);
+      extensionlessAliases += 1;
+    }
+
     const directoryAlias = directoryAliasFor(key);
     if (directoryAlias !== undefined) {
       await put(target, directoryAlias, file, type, invoke);
@@ -133,14 +146,14 @@ export async function publishBuild({ target, distDir, origin }, invoke = /** @ty
     }
   }
 
-  return { canonical, directoryAliases };
+  return { canonical, extensionlessAliases, directoryAliases };
 }
 
 async function main() {
   const plan = publicationPlan(process.argv.slice(2));
-  const { canonical, directoryAliases } = await publishBuild(plan);
+  const { canonical, extensionlessAliases, directoryAliases } = await publishBuild(plan);
   console.log(
-    `Published ${canonical} objects and ${directoryAliases} directory aliases to ${plan.target.name}.`,
+    `Published ${canonical} objects, ${extensionlessAliases} extensionless aliases, and ${directoryAliases} directory aliases to ${plan.target.name}.`,
   );
   console.log(plan.origin);
 }

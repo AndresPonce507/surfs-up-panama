@@ -72,7 +72,7 @@ describe('publication origin seam', () => {
     expect(calls).toEqual([]);
   });
 
-  it('publishes canonical objects plus directory aliases without destructive or invalidation operations', async () => {
+  it('publishes canonical objects plus both clean-URL aliases without destructive or invalidation operations', async () => {
     const artifact = await builtArtifact(PUBLICATION_TARGETS.production.origin);
     const plan = publicationPlan(['--target', 'production', '--dist', artifact], {
       PUBLIC_SITE_ORIGIN: PUBLICATION_TARGETS.production.origin,
@@ -82,8 +82,8 @@ describe('publication origin seam', () => {
       calls.push([command, arguments_]);
     });
 
-    expect(result).toMatchObject({ canonical: 4, directoryAliases: 1 });
-    expect(calls).toHaveLength(5);
+    expect(result).toMatchObject({ canonical: 4, extensionlessAliases: 1, directoryAliases: 1 });
+    expect(calls).toHaveLength(6);
     expect(calls.every(([command, arguments_]) => command === 'aws' && arguments_[0] === 's3api' && arguments_[1] === 'put-object')).toBe(true);
     expect(calls.every(([, arguments_]) => arguments_.includes(PUBLICATION_TARGETS.production.bucket))).toBe(true);
     expect(calls.map(([, arguments_]) => arguments_[arguments_.indexOf('--key') + 1])).toEqual([
@@ -91,8 +91,31 @@ describe('publication origin seam', () => {
       '_astro/entry.js',
       'index.html',
       'manana.html',
+      'manana',
       'manana/',
     ]);
     expect(calls.flatMap(([, arguments_]) => arguments_).join(' ')).not.toMatch(/delete|sync|cloudfront|create-invalidation/i);
+  });
+
+  it('publishes the report route at its extensionless static key as well as its canonical and trailing-slash keys', async () => {
+    const artifact = await builtArtifact(PUBLICATION_TARGETS.production.origin);
+    const reportDirectory = join(artifact, 'spots', 'playa-venao');
+    await mkdir(reportDirectory, { recursive: true });
+    await writeFile(join(reportDirectory, 'reportar.html'), '<html><head></head><body>report</body></html>');
+
+    const plan = publicationPlan(['--target', 'production', '--dist', artifact], {
+      PUBLIC_SITE_ORIGIN: PUBLICATION_TARGETS.production.origin,
+    });
+    const calls: Array<[string, string[]]> = [];
+    await publishBuild(plan, async (command, arguments_) => {
+      calls.push([command, arguments_]);
+    });
+
+    const keys = calls.map(([, arguments_]) => arguments_[arguments_.indexOf('--key') + 1]);
+    expect(keys).toEqual(expect.arrayContaining([
+      'spots/playa-venao/reportar.html',
+      'spots/playa-venao/reportar',
+      'spots/playa-venao/reportar/',
+    ]));
   });
 });
