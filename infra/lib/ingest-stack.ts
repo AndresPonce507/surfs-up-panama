@@ -17,15 +17,25 @@ import {
   CYCLE_FROZEN_EVENT,
   INGEST_SUCCESS_EVENT,
   PROVIDER_ERROR_EVENT,
+  PUBLISH_SUCCESS_EVENT,
 } from '../../src/pipeline/lambda/log-events.js';
 
-// The two Lambda composition roots this stack deploys. Real pipeline code
+// The three Lambda composition roots this stack deploys. Real pipeline code
 // (src/pipeline/ingest.ts, src/pipeline/build.ts), wired to real adapters at
-// these two files only -- see their own top comments for the honesty
-// contract (ingest.success / build.success are never logged unless the run
-// actually did the work).
+// these files only -- see their own top comments for the honesty contract
+// (ingest.success / build.success / publish.success are never logged unless
+// the run actually did the work).
 const fetchHandlerEntry = fileURLToPath(new URL('../../src/pipeline/lambda/fetch-handler.ts', import.meta.url));
 const buildHandlerEntry = fileURLToPath(new URL('../../src/pipeline/lambda/build-handler.ts', import.meta.url));
+
+// The Publisher ships as a container image carrying the repository and its
+// installed dependencies (adr-weather-to-site-bridge.md decision), never a
+// zip bundle: `npm run build` needs the project tree and its real
+// node_modules (vite plugins, a platform-specific esbuild binary), which
+// esbuild cannot bundle. The build context is the repository root, exactly
+// where infra/lambda-images/publisher/Dockerfile's own header says it must
+// be -- never this infra/lib/ subdirectory.
+const repositoryRoot = fileURLToPath(new URL('../../', import.meta.url));
 
 // loadLaunchSpotSeeds() / loadLaunchSpotCoordinates() both `readFileSync`
 // these two git-owned data files at runtime (src/pipeline/lambda/
@@ -66,7 +76,11 @@ export const lambdaReservedConcurrency = 2;
 
 export const lambdaTimeoutSeconds = {
   fetch: 60,
-  build: 120,
+  // Build now waits synchronously for the Publisher's whole answer: its own
+  // ~2 min of work plus the Publisher's reviewed 300 s bound (guardrail
+  // declaration `timeout-build`, adr-weather-to-site-bridge.md
+  // "Consequences"; moved 120 -> 420 in the same commit as this seam).
+  build: 420,
   report: 5,
   mint: 5,
   push: 5,
@@ -77,6 +91,16 @@ export const lambdaTimeoutSeconds = {
   'notify-export': 120,
   breaker: 10,
 } as const;
+
+// The Publisher's own hard bound, reserved concurrency and package. Not a
+// `guardrailDeclarations` `timeout-*` row on purpose: `infra/bin/app.ts`
+// synthesizes one placeholder function per such row at the single global
+// `lambda-reserved-concurrency`, which would misdeclare the Publisher as
+// running two cycles at once when it really runs exactly one. The
+// Publisher's bound is proven where the ADR and the deployment-plan
+// scenarios ask for it: in the real IngestStack declaration below.
+const publisherTimeoutSeconds = 300;
+const publisherReservedConcurrency = 1;
 
 // The real scheduled-ingest stack: EventBridge Scheduler (hourly at :17 for
 // fetch, :22 for build) into the fetch and build Lambdas, with metric
@@ -104,6 +128,11 @@ export class IngestStack extends Stack {
     });
     const buildLogs = new logs.LogGroup(this, 'BuildLogs', {
       logGroupName: `/aws/lambda/${functionNames.build}`,
+      retention: logs.RetentionDays.TWO_WEEKS, // guardrail 3
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+    const publishLogs = new logs.LogGroup(this, 'PublishLogs', {
+      logGroupName: `/aws/lambda/${functionNames.publish}`,
       retention: logs.RetentionDays.TWO_WEEKS, // guardrail 3
       removalPolicy: RemovalPolicy.DESTROY,
     });
@@ -136,13 +165,36 @@ export class IngestStack extends Stack {
       },
     });
 
+    // The bounded Publisher (adr-weather-to-site-bridge.md decision): a
+    // container-image function beside Build, same stack, same processor
+    // family. Its only path in is Build's synchronous invoke below -- no
+    // schedule, no S3 event, no queue anywhere.
+    const publishFn = new lambda.DockerImageFunction(this, 'Publish', {
+      functionName: functionNames.publish,
+      code: lambda.DockerImageCode.fromImageAsset(repositoryRoot, {
+        file: 'infra/lambda-images/publisher/Dockerfile',
+      }),
+      architecture: lambda.Architecture.ARM_64,
+      memorySize: 1536, // headroom for one Astro build inside the writable /tmp render copy
+      timeout: Duration.seconds(publisherTimeoutSeconds),
+      reservedConcurrentExecutions: publisherReservedConcurrency,
+      logGroup: publishLogs,
+      environment: {
+        BUCKET_NAME: bucket.bucketName,
+        PUBLIC_SITE_ORIGIN: Fn.importValue(siteOriginExportName),
+      },
+    });
+
     // Duplicate EventBridge delivery must be a no-op and must not double-bill
     // (research 08 section 10.5): runIngestOnce's S3 conditional PUT
     // (If-None-Match: *) and runBuildOnce's putCallIfAbsent already make a
     // retried invocation idempotent, so a Lambda-level retry would only ever
-    // repeat work, never recover anything.
+    // repeat work, never recover anything. The Publisher's writes are
+    // PUT-only and additive, so a retried invocation would only ever repeat
+    // work too -- the next hourly cycle already self-heals a failed one.
     fetchFn.configureAsyncInvoke({ retryAttempts: 0 });
     buildFn.configureAsyncInvoke({ retryAttempts: 0 });
+    publishFn.configureAsyncInvoke({ retryAttempts: 0 });
 
     // Least privilege, and never a delete: fetch writes raw archive and the
     // prediction log only; build reads everything and writes the published
@@ -159,6 +211,56 @@ export class IngestStack extends Stack {
     for (const prefix of ['v1/*', 'site/*', 'assets/*', 'log/*', 'manifest.json']) {
       bucket.grantPut(buildFn, prefix);
     }
+
+    // Build is the only thing that may start the Publisher (ADR: "one
+    // invocation per hourly Build cycle. No schedule of its own, no S3
+    // event, no queue, no new trigger type of any kind").
+    publishFn.grantInvoke(buildFn);
+
+    // The Publisher's own least privilege: read-only on the region bundle it
+    // was handed and the durable archive of the previous surface, put-only
+    // on everything it publishes. Deliberately NOT bucket.grantRead(): that
+    // helper expands to s3:GetObject*, s3:GetBucket* AND s3:List*
+    // (aws-cdk-lib/aws-s3/lib/perms.js), and the charter forbids any List
+    // action on this function -- it walks the pages it just rendered and
+    // puts each one, it never asks the store what is already there. The
+    // bundle Build hands over is `pub/v1/regions/${REGION_ID}/bundle.json`;
+    // S3Store's key mapping strips the `pub/` root, so the physical prefix
+    // this grant needs is `v1/*`.
+    publishFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:GetObject'],
+      resources: [
+        bucket.arnForObjects('v1/*'),
+        bucket.arnForObjects('site/published-surface.json'),
+      ],
+    }));
+    // grantPut is the safe helper here: it grants only s3:PutObject* and
+    // s3:Abort*, never List or Delete. It covers both the durable archive
+    // write-back and every published route key the render emits -- an
+    // open-ended, content-driven set (spot pages, category pages, static
+    // assets) that cannot be safely enumerated as a fixed prefix list
+    // without becoming exactly the kind of drift this project treats as its
+    // worst shipped bug.
+    bucket.grantPut(publishFn);
+    // "Nothing existing widens" (ADR consequences): the unscoped grant above
+    // must not let the Publisher overwrite data it never writes and does not
+    // own -- Fetch's raw archive and prediction log, its probes, member
+    // photos, or the learned corrections Build reads. An explicit Deny is
+    // the narrowing tool (IAM evaluates an explicit Deny before any Allow),
+    // never s3:DeleteObject* here: that string would fail the "nothing the
+    // publisher is allowed to do can erase anything" guardrail, which scans
+    // every statement's Action regardless of Effect.
+    publishFn.addToRolePolicy(new iam.PolicyStatement({
+      effect: iam.Effect.DENY,
+      actions: ['s3:PutObject*'],
+      resources: [
+        bucket.arnForObjects('raw/*'),
+        bucket.arnForObjects('predictions/*'),
+        bucket.arnForObjects('probes/*'),
+        bucket.arnForObjects('photos/*'),
+        bucket.arnForObjects('learned/*'),
+      ],
+    }));
 
     // The metric filters are the first link of the dead-man chain: the fetch
     // Lambda emits `ingest.success`, the filter increments IngestSuccess, and
@@ -201,6 +303,19 @@ export class IngestStack extends Stack {
       filterPattern: logs.FilterPattern.stringValue('$.event', '=', BUILD_SUCCESS_EVENT),
       metricNamespace,
       metricName: 'BuildSuccess',
+      metricValue: '1',
+    });
+    // PublishSuccess is what the retargeted staleness dead-man watches
+    // (observability-stack.ts, decision recorded 2026-08-13 in
+    // feature-delta.md): `publish.success` is only ever logged after every
+    // PUT completed, so it implies the whole chain -- Build succeeded AND
+    // the Publisher finished. BuildSuccessFilter above survives unchanged as
+    // a diagnostic-only metric; nothing alarms on it any more.
+    new logs.MetricFilter(this, 'PublishSuccessFilter', {
+      logGroup: publishLogs,
+      filterPattern: logs.FilterPattern.stringValue('$.event', '=', PUBLISH_SUCCESS_EVENT),
+      metricNamespace,
+      metricName: 'PublishSuccess',
       metricValue: '1',
     });
 

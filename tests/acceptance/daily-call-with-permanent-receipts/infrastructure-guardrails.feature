@@ -61,7 +61,7 @@ Feature: The protection check preserves yesterday's archive and the site's spend
       | Lambda capacity | missing Lambda reserved concurrency | 2 | missing |
       | Lambda timeouts | fetch timeout | 60 seconds | 61 seconds |
       | Lambda timeouts | missing fetch timeout | 60 seconds | missing |
-      | Lambda timeouts | build timeout | 120 seconds | 121 seconds |
+      | Lambda timeouts | build timeout | 420 seconds | 421 seconds |
       | Lambda timeouts | report timeout | 5 seconds | 6 seconds |
       | Lambda timeouts | mint timeout | 5 seconds | 6 seconds |
       | Lambda timeouts | push timeout | 5 seconds | 6 seconds |

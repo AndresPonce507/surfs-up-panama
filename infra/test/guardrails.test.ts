@@ -475,7 +475,11 @@ const WRITE_URL_FUNCTION_NAMES: readonly string[] = [
 
 const declaredRealTimeouts: Readonly<Record<string, number>> = {
   [functionNames.fetch]: 60,
-  [functionNames.build]: 120,
+  // 420 = Build's own ~2 min plus the whole 300 s the Publisher may now take:
+  // Build waits synchronously for the Publisher's answer
+  // (adr-weather-to-site-bridge.md "Consequences"; moved 120 -> 420 in the
+  // same commit as the Publisher's declaration below).
+  [functionNames.build]: 420,
   [functionNames.report]: 5,
   [functionNames.mint]: 5,
   [functionNames.push]: 5,
@@ -486,7 +490,30 @@ const declaredRealTimeouts: Readonly<Record<string, number>> = {
   [functionNames['photo-presign']]: 5,
   [functionNames.resize]: 60,
   [functionNames.breaker]: 10,
+  // The bounded Publisher (weather-to-site-bridge slice-02): a tenth
+  // function, container-image packaged, reserved concurrency 1, timeout 300 s
+  // (adr-weather-to-site-bridge.md "Bounded means, concretely").
+  [functionNames.publish]: 300,
 };
+
+// Every function's timeout stayed inside the shared 120 s ceiling until this
+// slice. Build and the Publisher now carry their own reviewed, wider bounds
+// (the synchronous publish wait); every other function keeps the original
+// ceiling. A per-function map, not a single deleted assertion -- the
+// guardrail still bounds every function, just not identically.
+const DEFAULT_TIMEOUT_CEILING_SECONDS = 120;
+const declaredRealTimeoutCeilings: Readonly<Record<string, number>> = {
+  [functionNames.build]: 420,
+  [functionNames.publish]: 300,
+};
+// A SECOND, independent bound: the per-function ceiling above pins each
+// function to its own declared value, which would silently pass if Build's
+// AND its ceiling were both raised together in a later change. This project-
+// wide reviewed ceiling is deliberately its own constant, not derived from
+// declaredRealTimeoutCeilings, so it still catches that case. 420 s is the
+// reviewed reason named by the ADR: Build's own ~2 min plus the whole 300 s
+// the Publisher may take (adr-weather-to-site-bridge.md "Consequences").
+const REVIEWED_TIMEOUT_CEILING_SECONDS = 420;
 
 const declaredRealReservedConcurrency: Readonly<Record<string, number>> = {
   [functionNames.fetch]: 2,
@@ -498,6 +525,9 @@ const declaredRealReservedConcurrency: Readonly<Record<string, number>> = {
   [functionNames['photo-presign']]: writeReservedConcurrency['photo-presign'],
   [functionNames.resize]: 2,
   [functionNames.breaker]: 2,
+  // One cycle at a time: two publishers racing would upload two different
+  // renders of the same hour over each other (adr-weather-to-site-bridge.md).
+  [functionNames.publish]: 1,
 };
 
 function allRealResources(type: string): SynthesizedResource[] {
@@ -514,7 +544,7 @@ describe('real stack guardrails: Lambda cost caps (guardrails 1 and 2)', () => {
       reserved: numberProperty(properties, 'ReservedConcurrentExecutions'),
     }));
 
-  it('deploys exactly the nine declared functions, no strays', () => {
+  it('deploys exactly the ten declared functions, no strays', () => {
     expect(functions.map(({ name }) => name).sort())
       .toEqual(Object.keys(declaredRealTimeouts).sort());
   });
@@ -522,7 +552,10 @@ describe('real stack guardrails: Lambda cost caps (guardrails 1 and 2)', () => {
   it('gives every real function its declared timeout, never the 900 s default', () => {
     for (const fn of functions) {
       expect(fn.timeout, `${fn.name} timeout`).toBe(declaredRealTimeouts[fn.name]);
-      expect(fn.timeout, `${fn.name} exceeds the 120 s ceiling`).toBeLessThanOrEqual(120);
+      expect(fn.timeout, `${fn.name} exceeds its per-function ceiling`)
+        .toBeLessThanOrEqual(declaredRealTimeoutCeilings[fn.name] ?? DEFAULT_TIMEOUT_CEILING_SECONDS);
+      expect(fn.timeout, `${fn.name} exceeds the reviewed project-wide ceiling`)
+        .toBeLessThanOrEqual(REVIEWED_TIMEOUT_CEILING_SECONDS);
     }
   });
 
@@ -533,7 +566,7 @@ describe('real stack guardrails: Lambda cost caps (guardrails 1 and 2)', () => {
     }
   });
 
-  it('keeps the account-wide reservation sum at the documented 14, so quota >= 114 is the deploy precondition', () => {
+  it('keeps the account-wide reservation sum at the documented 15, so quota >= 115 is the deploy precondition', () => {
     const sum = functions.reduce((total, fn) => total + fn.reserved, 0);
     expect(sum).toBe(reservedConcurrencySum);
   });

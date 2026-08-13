@@ -90,7 +90,7 @@ const SAFEGUARD_WITNESSES = {
   'missing Lambda reserved concurrency': ['Lambda capacity', 'lambda-reserved-concurrency', '2', 'missing'],
   'fetch timeout': ['Lambda timeouts', 'timeout-fetch', '60 seconds', '61 seconds'],
   'missing fetch timeout': ['Lambda timeouts', 'timeout-fetch', '60 seconds', 'missing'],
-  'build timeout': ['Lambda timeouts', 'timeout-build', '120 seconds', '121 seconds'],
+  'build timeout': ['Lambda timeouts', 'timeout-build', '420 seconds', '421 seconds'],
   'report timeout': ['Lambda timeouts', 'timeout-report', '5 seconds', '6 seconds'],
   'mint timeout': ['Lambda timeouts', 'timeout-mint', '5 seconds', '6 seconds'],
   'push timeout': ['Lambda timeouts', 'timeout-push', '5 seconds', '6 seconds'],
@@ -120,7 +120,7 @@ const REAL_INFRA_LIFECYCLE_RULES = [
 const REAL_INFRA_LAMBDA_GUARDRAIL_VALUES = [
   'Lambda reserved concurrency: 2',
   'fetch timeout: 60 seconds',
-  'build timeout: 120 seconds',
+  'build timeout: 420 seconds',
   'report timeout: 5 seconds',
   'mint timeout: 5 seconds',
   'push timeout: 5 seconds',
