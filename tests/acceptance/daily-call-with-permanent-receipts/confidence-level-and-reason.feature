@@ -27,6 +27,13 @@ Feature: Cada fila trae su nivel de confianza y la razón a un toque
     And ninguna razón reclama ni sugiere una confirmación desde la playa
     And ninguna razón abre vacía ni con texto crudo de datos
 
+  @slice-07 @driving_port @real-io @adapter-integration @ui-u1 @covers-R33
+  Scenario: El surfista compara dos razones de confianza sin perder la primera
+    Given una mañana publicada con spots de confianza alta, media y baja para hoy y mañana
+    When el surfista abre "la home" buscando la confianza, a 390 px, con tema "claro" y movimiento "normal"
+    And el surfista abre dos razones de confianza para compararlas
+    Then las dos razones de confianza siguen abiertas para compararlas
+
   @slice-07 @driving_port @real-io @adapter-integration @ui-u1 @ui-u2 @ui-u3 @ui-u4 @ui-u6 @covers-R33
   Scenario Outline: Con la confianza sumada, las filas del teléfono siguen limpias en tema <tema> y movimiento <movimiento>
     Given una mañana publicada con spots de confianza alta, media y baja para hoy y mañana, con un destino de nombre largo

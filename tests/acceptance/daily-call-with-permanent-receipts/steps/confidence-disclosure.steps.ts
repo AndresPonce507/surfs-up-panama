@@ -64,6 +64,7 @@ type Slice07World = PipelineWorld & {
   slice07Browser?: Browser;
   slice07Page?: Page;
   slice07Observed?: ObservedRow[];
+  slice07ComparisonOpenStates?: readonly boolean[];
 };
 
 function slice07World(world: PipelineWorld): Slice07World {
@@ -306,15 +307,28 @@ When('el surfista toca la razón de confianza de cada fila', async function (thi
     if ((await summary.count()) > 0) {
       await summary.click();
       reasonText = (await reasonDiv.textContent()) ?? '';
-      // Every disclosure on the page shares name="confidence" (an exclusive
-      // HTML5 group), so it auto-closes when the NEXT row opens. Closing it
-      // here too keeps this row's own dropdown from covering the next
-      // row's tap target while this loop is still reading it.
+      // Close each row after recording it so its reason does not cover the
+      // next row's tap target while this loop continues. The disclosures
+      // themselves remain independent for surfers comparing two spots.
       await summary.click();
     }
     observed.push({ summaryTextBeforeOpen: summaryText, reasonTextAfterOpen: reasonText.trim() });
   }
   world.slice07Observed = observed;
+});
+
+When('el surfista abre dos razones de confianza para compararlas', async function (this: PipelineWorld) {
+  const world = slice07World(this);
+  const page = requiredPage(world);
+  const details = page.locator('ol.ranked > li details.confidence');
+  const count = await details.count();
+  assert.ok(count >= 2, 'test fixture error: comparar razones requiere al menos dos filas publicadas');
+
+  await details.nth(0).locator('summary').click();
+  await details.nth(1).locator('summary').click();
+  world.slice07ComparisonOpenStates = await Promise.all(
+    [details.nth(0), details.nth(1)].map((row) => row.evaluate((element) => element.hasAttribute('open'))),
+  );
 });
 
 // ---------- Then ----------
@@ -385,6 +399,18 @@ Then('ninguna razón abre vacía ni con texto crudo de datos', function (this: P
     if (hasTechnicalLeak(row.reasonTextAfterOpen)) findings.push(`una razón expone datos crudos: "${row.reasonTextAfterOpen}"`);
   }
   assertBehavior(findings, 'nunca imprimir campos internos o texto vacío dentro del <details> de confianza.');
+});
+
+Then('las dos razones de confianza siguen abiertas para compararlas', function (this: PipelineWorld) {
+  const states = slice07World(this).slice07ComparisonOpenStates;
+  assert.ok(states, 'test fixture error: abre dos razones de confianza antes de comprobarlas');
+  const findings = states
+    .map((isOpen, index) => isOpen ? null : `la razón ${index + 1} se cerró al abrir la otra`)
+    .filter((finding): finding is string => finding !== null);
+  assertBehavior(
+    findings,
+    'dejar que cada <details class="confidence"> conserve su propio estado abierto, sin atributo name compartido.',
+  );
 });
 
 Then(

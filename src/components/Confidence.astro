@@ -20,9 +20,9 @@
 // not to be relitigated): the reason is derived from `level` alone so no
 // caller can accidentally pass in a reason that overstates certainty.
 //
-// `name="confidence"` makes every disclosure on the page an exclusive HTML5
-// details group: opening one auto-closes any other already open, natively,
-// no JS.
+// Each disclosure keeps an independent native <details> state. A surfer can
+// leave two reasons open to compare spots side by side, still with no
+// JavaScript shipped.
 //
 // Product decision (Andres, via coordinator, superseding the bare-word cut):
 // the visible trigger reads the full "Confianza alta/media/baja", not a
@@ -54,7 +54,7 @@ const dots: Readonly<Record<ConfidenceLevel, string>> = {
 };
 ---
 
-<details class="confidence" name="confidence" data-level={level}>
+<details class="confidence" data-level={level}>
   <summary><span class="conf"><span class="dots" aria-hidden="true">{dots[level]}</span> Confianza {word}</span></summary>
   <div>{reason}</div>
 </details>
