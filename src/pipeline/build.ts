@@ -285,7 +285,14 @@ async function predictionRows(deps: BuildDeps, dates: readonly string[]): Promis
 }
 
 function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: PredictionRow[], dates: readonly string[], hour: string, stored: StoredCorrection | null): CallRow[] {
-  const validHours = [...new Set(rows.filter((row) => row.spot_id === spot.spot_id).map((row) => row.valid_ts))].sort();
+  const spotRows = rows.filter((row) => row.spot_id === spot.spot_id);
+  const validHours = [...new Set(spotRows.map((row) => row.valid_ts))].sort();
+  // Prediction receipts are append-only, so some already-stored rows carry
+  // ranges calculated before the per-local-day rule was enforced at ingest.
+  // Derive this scoring input from the logged tide observations the build
+  // actually reads, per 05-scoring-engine.md section 3.5, rather than let a
+  // stale denormalized field change a newly published call.
+  const tideRanges = tideRangesByLocalDay(spotRows, spot.timezone);
   // The stored record's own verdict has no power here: applyCorrection re-runs
   // the whole gate ladder from the record's stated evidence at read time, so a
   // forged or a stale file moves nothing (06-learning-layer.md section 7).
@@ -319,9 +326,10 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
     const wind: WindObs | null = representative.wind_speed_kt === null || representative.wind_dir_deg === null
       ? null
       : { speed_kt: representative.wind_speed_kt, dir_deg: representative.wind_dir_deg };
-    const tide: TideObs | null = representative.tide_m === null || representative.tide_day_low_m === null || representative.tide_day_high_m === null
+    const tideRange = tideRanges.get(regionalCivilDate(new Date(validTs), spot.timezone));
+    const tide: TideObs | null = representative.tide_m === null || tideRange === undefined
       ? null
-      : { height_m: representative.tide_m, day_low_m: representative.tide_day_low_m, day_high_m: representative.tide_day_high_m };
+      : { height_m: representative.tide_m, day_low_m: tideRange.low, day_high_m: tideRange.high };
     const effectiveHeight = hEff(blended.swell.h_m, blended.swell.t_s);
     const score = combine({
       dir: sDir(blended.swell.dir_deg, correction.params),
@@ -372,6 +380,21 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
     // bug to paper over with a non-null assertion.
     best_window: windowsByCivilDate.get(civilDatePrefix(draft.valid_ts)) ?? null,
   }));
+}
+
+type TideRange = { readonly low: number; readonly high: number };
+
+function tideRangesByLocalDay(rows: readonly PredictionRow[], timezone: string): ReadonlyMap<string, TideRange> {
+  const ranges = new Map<string, TideRange>();
+  for (const row of rows) {
+    if (row.tide_m === null) continue;
+    const day = regionalCivilDate(new Date(row.valid_ts), timezone);
+    const previous = ranges.get(day);
+    ranges.set(day, previous === undefined
+      ? { low: row.tide_m, high: row.tide_m }
+      : { low: Math.min(previous.low, row.tide_m), high: Math.max(previous.high, row.tide_m) });
+  }
+  return ranges;
 }
 
 /**
