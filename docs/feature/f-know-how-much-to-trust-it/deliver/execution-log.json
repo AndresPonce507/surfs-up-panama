@@ -78,6 +78,27 @@
       "s": "EXECUTED",
       "d": "CORRECTION, supersedes the earlier 01-03 COMMIT event on this same date: the source-blind Vera verdict is INDETERMINATE, not PASS. The examiner revised her own charter row after first writing PASS, and the earlier event captured the stale row. Slice-01 is NOT sealed. She confirmed every charter negative clean over 80 disclosures (contrast 6.92:1 light / 8.69:1 dark, 44x44px targets, zero overflow, zero digits) but could not render a verdict on 2 in-scope oracle rows because today's live surface holds no example of either: the full-agreement phrasing, and the single-model 'no hay con que comparar' case. Resolution in flight: a controlled fixture surface carrying one full-agreement spot and one single-model spot, then a source-blind re-examination. Production behaviour is not changed and the charter is not weakened.",
       "t": "2026-08-13T10:52:19Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: source-blind Vera PASS 2026-08-13 on the second walk, against a controlled fixture surface built to exercise the two oracle rows the live data had no example of. Every oracle bullet observed and every negative held: full agreement 'Los modelos coinciden en el tamano, el periodo y la direccion' at Playa Venao level medium both days; single-model 'no hay con que comparar' at rank-1 both days, refusing to claim agreement; 40/40 carry the no-beach-report sentence; zero digits, percentages, meters, model identifiers; zero overflow at 390px; 44x44px targets; contrast 6.92:1 light and 8.69:1 dark, hero gradient computed by hand at worst stop 7.34:1, clears AA. Fixture built by isolated mkdtemp copy with symlinked node_modules; the installed data/published-surface.json was asserted byte-identical to HEAD after the build and no production source was modified. DEFECT FOUND by this walk, fix in flight: the single-model sentence hardcodes 'Hoy' and renders on the Manana page.",
+      "t": "2026-08-13T11:29:59Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: JIT DISTILL contract committed at 07016de, red for the right reason. 4 of 5 scenarios failed with 'src/scoring/confidence.ts no declara todavia la constante CONFIDENCE_FACTORS con spread en true, asi que no hubo nada que apagar'; the 5th passed correctly because it describes today's behaviour with every term on.",
+      "t": "2026-08-13T11:29:59Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: slice-03 implemented at 56ad4d3. 5 scenarios / 123 steps green; vitest 623/623; tsc exit 0; build exit 0 with dist inspected; ci:local --fast 11 passed / 0 failed / 0 skipped exit 0. Two falsifiability probes reverted clean: removing the zero-signal guard read 'high' where it must read low; disabling the flag-off early return made 4 of 5 fail with the three variables named again across all 40 published rows.",
+      "t": "2026-08-13T11:29:59Z"
     }
   ]
 }
