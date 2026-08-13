@@ -121,7 +121,7 @@ export async function runIngestOnce(deps: IngestDeps): Promise<IngestOutcome> {
       if (attribution.unchanged) {
         events.push({ type: 'cycle_unchanged', detail: `${spot.spot_id}/${attribution.member.source}` });
       } else {
-        addMemberRows(recordsByKey, attribution.member, spot.spot_id, deps.clock.now(), wind, tide);
+        addMemberRows(recordsByKey, attribution.member, spot.spot_id, spot.timezone, deps.clock.now(), wind, tide);
       }
     }
   }
@@ -245,18 +245,18 @@ function addMemberRows(
   recordsByKey: Map<string, PredictionRow[]>,
   member: MemberSeries,
   spotId: string,
+  timezone: string,
   fetchedAt: Date,
   wind: readonly WindHour[],
   tide: readonly TideHour[],
 ): void {
   const key = predictionKey(member);
   const rows = recordsByKey.get(key) ?? [];
-  const tideValues = tide.flatMap((hour) => hour.tide_m === null ? [] : [hour.tide_m]);
-  const tideDayLow = tideValues.length === 0 ? null : Math.min(...tideValues);
-  const tideDayHigh = tideValues.length === 0 ? null : Math.max(...tideValues);
+  const tideRanges = tideRangesByLocalDay(tide, timezone);
   for (const hour of canonicalHours(member.hours)) {
     const windAtHour = wind.find((candidate) => candidate.valid_ts === hour.valid_ts)?.wind ?? null;
     const tideAtHour = tide.find((candidate) => candidate.valid_ts === hour.valid_ts)?.tide_m ?? null;
+    const tideRange = tideRanges.get(localCivilDate(hour.valid_ts, timezone));
     rows.push({
       spot_id: spotId,
       source: member.source,
@@ -273,12 +273,38 @@ function addMemberRows(
       wind_speed_kt: windAtHour?.speed_kt ?? null,
       wind_dir_deg: windAtHour?.dir_deg ?? null,
       tide_m: tideAtHour,
-      tide_day_low_m: tideDayLow,
-      tide_day_high_m: tideDayHigh,
+      tide_day_low_m: tideRange?.low ?? null,
+      tide_day_high_m: tideRange?.high ?? null,
       land_masked: hour.land_masked,
     });
   }
   recordsByKey.set(key, rows);
+}
+
+type TideRange = { readonly low: number; readonly high: number };
+
+function tideRangesByLocalDay(tide: readonly TideHour[], timezone: string): ReadonlyMap<string, TideRange> {
+  const ranges = new Map<string, TideRange>();
+  for (const hour of tide) {
+    if (hour.tide_m === null) continue;
+    const day = localCivilDate(hour.valid_ts, timezone);
+    const previous = ranges.get(day);
+    ranges.set(day, previous === undefined
+      ? { low: hour.tide_m, high: hour.tide_m }
+      : { low: Math.min(previous.low, hour.tide_m), high: Math.max(previous.high, hour.tide_m) });
+  }
+  return ranges;
+}
+
+function localCivilDate(validTs: string, timezone: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(validTs));
+  const part = (type: Intl.DateTimeFormatPartTypes): string => parts.find((candidate) => candidate.type === type)?.value ?? '';
+  return `${part('year')}-${part('month')}-${part('day')}`;
 }
 
 /**
