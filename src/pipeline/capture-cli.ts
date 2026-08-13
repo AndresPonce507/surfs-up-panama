@@ -7,10 +7,8 @@
 // environmental realism; deterministic InMemory-style tests are the fast
 // inner loop, this is the slow truth-checking outer step).
 //
-// Tide is not fetched: no per-spot tide station reference exists in the spot
-// seed schema yet (04-ingest-pipeline.md §11, "DELIVER BLOCKER"), so this is
-// recorded honestly in the provenance file rather than silently doing
-// nothing.
+// Tide stays dark until an accepted exact-spot NOAA CO-OPS station profile is
+// shipped. The candidate stations are not a coastal default or a fallback.
 //
 // Usage: npm run pipeline:capture -- [--out <dir>]
 // Default --out: data/predictions-capture (committed).
@@ -65,7 +63,7 @@ export async function runCapture(argv: readonly string[], overrides: CaptureOver
         },
         tide: {
           fetched: false,
-          reason: 'no per-spot tide station reference exists in the spot seed schema yet (04-ingest-pipeline.md section 11, DELIVER BLOCKER); reusing one station for every spot would misattribute a real number to spots hundreds of km away',
+          reason: 'no accepted exact-spot NOAA CO-OPS station profile is shipped; Balboa 9812501 and Cristobal 9817583 remain candidates, and no tide value may be attributed by coast or proximity',
         },
         cycle_attribution: 'simplified candidate-cycle rule only (04-ingest-pipeline.md section 5 steps 1-2); no change-detection probe, since this is a first standalone capture with no prior cycle to compare against',
         events: outcome.events,

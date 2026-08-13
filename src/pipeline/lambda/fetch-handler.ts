@@ -1,7 +1,8 @@
 // Lambda composition root for the hourly Fetch run (EventBridge Scheduler
 // `surfs-up-panama-hourly` at :17 -> this handler, infra/lib/ingest-stack.ts).
 // Wires the real, already-proven pipeline (src/pipeline/ingest.ts) to real
-// adapters: Open-Meteo over the network for wave/wind/tide, S3 for the raw
+// adapters: Open-Meteo/NOAA wave-wind sources and, only after a reviewed
+// exact-spot profile exists, NOAA CO-OPS tide predictions; S3 for the raw
 // archive and the prediction log. No forecasting logic lives here -- this
 // file only wires and logs.
 //
