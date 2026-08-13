@@ -379,6 +379,20 @@
       "s": "EXECUTED",
       "d": "PASS. mountPushSettings now reads the service-worker PushManager subscription, writes only an inert avisosState data value, and never reads a remembered flag. Focused unit passed 9/9, exit 0, captured in /private/tmp/psb-push-slice01-recovery/green-01-22-unit-rerun.log. The return-visit acceptance scenario remained green before and after the change because it does not expose an active state before a server acknowledgement.",
       "t": "2026-08-13T14:46:00Z"
+    },
+    {
+      "sid": "01-27",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS. Recovery validation on current origin/main ran every U1 through U7 scenario filter: each passed 2 scenarios and 40 steps, exit 0, in /private/tmp/psb-push-slice01-recovery/green-01-27-u1.log through green-01-27-u7.log. npm run test:ui also passed after a fresh static build, exit 0, in green-01-27-test-ui.log. The original claimed branch's immutable commit cd01c95 supplies the associated source-blind examination and UI-check records; no deploy-only avisos state was fabricated.",
+      "t": "2026-08-13T14:48:00Z"
+    },
+    {
+      "sid": "01-27",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-13T14:48:01Z"
     }
   ]
 }
