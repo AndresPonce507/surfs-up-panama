@@ -411,27 +411,14 @@ Then('a blank new report starts', { timeout: 60_000 }, async function (this: obj
   await assertBlankReport(scenarioState(this));
 });
 
-Then(
-  'the phone holds two saved reports with two different identities',
-  { timeout: 60_000 },
-  async function (this: object) {
-    const state = scenarioState(this);
-    const reports = await queuedReports(state);
-    assert.equal(
-      reports.length,
-      2,
-      `WHAT: the phone holds ${reports.length} saved report(s) after two separate reports. WHY: `
-        + 'every visit to the report screen is a new report with its own identity '
-        + `(application-architecture.md section 8 L3). HOW: commit each report as its own record.${failureContext(state)}`,
-    );
-    const identities = new Set(reports.map((entry) => String(reportOf(entry)['report_id'])));
-    assert.equal(
-      identities.size,
-      2,
-      `WHAT: two saved reports share one identity. WHY: the identity is minted fresh per report and is the dedup key (domain-model.md section 7.4). HOW: mint a new ULID per commit.${failureContext(state)}`,
-    );
-  },
-);
+// The on-phone cardinality oracle that used to live here ("the phone holds two
+// saved reports with two different identities") was replaced on 2026-08-13 by
+// "the two reports that left the phone carry two different identities"
+// (steps/report-flush.steps.ts). Reason, recorded in deliver/wave-decisions.md:
+// R26's page-open flush sends the first report and discards it on its matching
+// receipt, so two saved rows can no longer coexist on a phone that has signal.
+// R4's actual promise -- every visit starts blank with a FRESH report_id -- is
+// unchanged and is now observed on the wire, where both identities are visible.
 
 Then(
   'the screen says plainly that the report cannot be saved on this phone',
