@@ -17,7 +17,7 @@
 // fixture server, same trick as scripts/smoke-build-lambda-arm64.mjs). What
 // is fake: that HTTP server standing in for S3, and the AWS credentials.
 // The smoke does NOT invoke the image's own CMD/entrypoint bootstrap
-// (publish-handler.bootstrap.mjs) -- like smoke-build-lambda-arm64.mjs, it
+// (publish-handler-bootstrap.mjs) -- like smoke-build-lambda-arm64.mjs, it
 // overrides the entrypoint to prove the composition root directly. A
 // second, cheap check below confirms the generated bootstrap module at
 // least loads and exports a handler function; it does not invoke it.
@@ -90,11 +90,11 @@ function assertImageSize(actualBytes) {
 async function assertBootstrapLoads() {
   const result = spawnSync('docker', [
     'run', '--rm', '--platform', 'linux/arm64', '--entrypoint', '/var/lang/bin/node',
-    imageTag, '-e', "import('/var/task/publish-handler.bootstrap.mjs').then(m => { if (typeof m.handler !== 'function') throw new Error('bootstrap exports no handler function'); console.log('bootstrap handler typeof: function'); })",
+    imageTag, '-e', "import('/var/task/publish-handler-bootstrap.mjs').then(m => { if (typeof m.handler !== 'function') throw new Error('bootstrap exports no handler function'); console.log('bootstrap handler typeof: function'); })",
   ], { encoding: 'utf8' });
   process.stdout.write(result.stdout);
   process.stderr.write(result.stderr);
-  if (result.status !== 0) throw new Error('ARM64 publish smoke refused: the image CMD target (publish-handler.bootstrap.mjs) failed to load.');
+  if (result.status !== 0) throw new Error('ARM64 publish smoke refused: the image CMD target (publish-handler-bootstrap.mjs) failed to load.');
 }
 
 async function smokeInLambdaRuntime() {
