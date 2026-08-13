@@ -26,6 +26,23 @@ Before({ tags: '@requires_external' }, function (this: object) {
   states.set(this, { origin: null, browser: null, context: null, page: null, sentText: '', clockOffsetMs: 0, queuedReport: null, handlerResults: [], handlerCredential: null, handlerMode: 'standard' });
 });
 
+// Scoped to THIS feature: other features also tag @requires_external (the
+// push follow-up scenarios) and own their prerequisites themselves; this gate
+// must never decide for them.
+Before({ tags: '@requires_external and @feature-f-tell-us-what-you-saw-cold' }, function (this: object) {
+  // Slice-03 to Slice-05 arrival, refusal and quota evidence is true only
+  // against the real write handler at an explicitly supplied origin
+  // (docs/architecture/atdd-infrastructure-policy.md "Report journey";
+  // distill/red-classification.md: no default local route, mock or fake).
+  // Until an owner supplies one -- deploy the guarded write stack, or run
+  // `npx tsx scripts/report-acceptance-host.ts` (the locally run PRODUCTION
+  // handler composed with its real local store) and export the variables it
+  // prints -- these scenarios are prerequisite-blocked, not product failures,
+  // and skip the same way @blocked-on-real-reports and @indeterminate do.
+  if (!process.env.REPORT_ACCEPTANCE_ORIGIN?.trim()) return 'skipped';
+  return undefined;
+});
+
 Before({ tags: '@indeterminate' }, function () {
   // Real compared/no-call artifacts are launch-environment evidence. Until an
   // owner supplies one, this is neither a product failure nor a fake test.
@@ -68,16 +85,27 @@ async function realPage(world: object): Promise<Page> {
     colorScheme: 'light',
   });
   if (state.clockOffsetMs !== 0) {
-    await context.addInitScript((offsetMs) => {
-      const NativeDate = Date;
-      class ShiftedDate extends NativeDate {
-        constructor() {
-          super(NativeDate.now() + offsetMs);
+    // Passed as a STRING, not a function reference, for the reason world.ts
+    // documents at its storage-refusal init script: tsx/esbuild compiles a
+    // named inner binding (the class expression here) into a `__name(...)`
+    // helper call, and `addInitScript(fn)` serialises only the function body,
+    // so the injected script threw `ReferenceError: __name is not defined`
+    // and aborted before Object.defineProperty ever ran. The clock was never
+    // shifted, the handler honestly accepted the report, and the wrong-clock
+    // scenarios failed while the product's 15-minute skew refusal sat unused.
+    await context.addInitScript(
+      `(() => {
+        const offsetMs = ${state.clockOffsetMs};
+        const NativeDate = Date;
+        class ShiftedDate extends NativeDate {
+          constructor() {
+            super(NativeDate.now() + offsetMs);
+          }
+          static now() { return NativeDate.now() + offsetMs; }
         }
-        static override now(): number { return NativeDate.now() + offsetMs; }
-      }
-      Object.defineProperty(window, 'Date', { value: ShiftedDate });
-    }, state.clockOffsetMs);
+        Object.defineProperty(window, 'Date', { value: ShiftedDate });
+      })();`,
+    );
   }
   const page = await context.newPage();
   state.origin = origin;
@@ -196,32 +224,44 @@ function assertVisible(text: string, alternatives: readonly string[], outcome: s
   );
 }
 
+type VisibleStateInspection = {
+  scrollWidth: number;
+  clientWidth: number;
+  targets: { label: string; width: number; height: number }[];
+  minimumContrast: number;
+};
+
 async function assertVisibleStateQuality(world: object): Promise<void> {
   const page = await realPage(world);
-  const inspect = async () => page.evaluate(() => {
-    const rgb = (value: string): [number, number, number] | null => {
-      const match = value.match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  // Evaluated from a STRING for the same tsx/esbuild `__name` reason as the
+  // clock init script above: the compiled inner helper bindings (rgb,
+  // luminance, contrast) reference a `__name` helper that does not exist in
+  // the page global, so the function form threw ReferenceError inside
+  // page.evaluate on every quality inspection.
+  const inspect = async (): Promise<VisibleStateInspection> => page.evaluate(`(() => {
+    const rgb = (value) => {
+      const match = value.match(/^rgba?\\((\\d+),\\s*(\\d+),\\s*(\\d+)/);
       return match ? [Number(match[1]), Number(match[2]), Number(match[3])] : null;
     };
-    const luminance = ([red, green, blue]: [number, number, number]) => [red, green, blue]
+    const luminance = ([red, green, blue]) => [red, green, blue]
       .map((part) => {
         const channel = part / 255;
         return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
       })
-      .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index]!, 0);
-    const contrast = (foreground: [number, number, number], background: [number, number, number]) => {
+      .reduce((sum, channel, index) => sum + channel * [0.2126, 0.7152, 0.0722][index], 0);
+    const contrast = (foreground, background) => {
       const values = [luminance(foreground), luminance(background)].sort((a, b) => b - a);
-      return (values[0]! + 0.05) / (values[1]! + 0.05);
+      return (values[0] + 0.05) / (values[1] + 0.05);
     };
-    const textRatios = Array.from(document.querySelectorAll<HTMLElement>('body, body *')).flatMap((element) => {
-      if (!element.innerText.trim()) return [];
+    const textRatios = Array.from(document.querySelectorAll('body, body *')).flatMap((element) => {
+      if (!element.innerText || !element.innerText.trim()) return [];
       const foreground = rgb(getComputedStyle(element).color);
-      let backdrop: [number, number, number] | null = null;
-      for (let ancestor: HTMLElement | null = element; ancestor; ancestor = ancestor.parentElement) {
+      let backdrop = null;
+      for (let ancestor = element; ancestor; ancestor = ancestor.parentElement) {
         const style = getComputedStyle(ancestor);
         if (style.backgroundImage !== 'none') continue;
         const candidate = rgb(style.backgroundColor);
-        if (candidate && !/^rgba?\(0,\s*0,\s*0,\s*0\)$/.test(style.backgroundColor)) {
+        if (candidate && !/^rgba?\\(0,\\s*0,\\s*0,\\s*0\\)$/.test(style.backgroundColor)) {
           backdrop = candidate;
           break;
         }
@@ -229,20 +269,20 @@ async function assertVisibleStateQuality(world: object): Promise<void> {
       return foreground && backdrop ? [contrast(foreground, backdrop)] : [];
     });
     return {
-    scrollWidth: document.documentElement.scrollWidth,
-    clientWidth: document.documentElement.clientWidth,
-    targets: Array.from(document.querySelectorAll<HTMLElement>('button, a, input, select, textarea'))
-      .filter((element) => {
-        const box = element.getBoundingClientRect();
-        return box.width > 0 && box.height > 0;
-      })
-      .map((element) => {
-        const box = element.getBoundingClientRect();
-        return { label: (element.textContent || element.getAttribute('aria-label') || element.tagName).trim(), width: box.width, height: box.height };
-      }),
+      scrollWidth: document.documentElement.scrollWidth,
+      clientWidth: document.documentElement.clientWidth,
+      targets: Array.from(document.querySelectorAll('button, a, input, select, textarea'))
+        .filter((element) => {
+          const box = element.getBoundingClientRect();
+          return box.width > 0 && box.height > 0;
+        })
+        .map((element) => {
+          const box = element.getBoundingClientRect();
+          return { label: (element.textContent || element.getAttribute('aria-label') || element.tagName).trim(), width: box.width, height: box.height };
+        }),
       minimumContrast: textRatios.length ? Math.min(...textRatios) : 0,
     };
-  });
+  })()`) as Promise<VisibleStateInspection>;
   const light = await inspect();
   assert.ok(light.scrollWidth <= light.clientWidth, `WHAT: the visible report state scrolls sideways at 390 px (${light.scrollWidth}px). HOW: keep the state inside the phone width.`);
   assert.ok(light.minimumContrast >= 4.5, `WHAT: visible report text is below WCAG AA against its rendered light backdrop (${light.minimumContrast.toFixed(2)}:1). HOW: use a readable foreground/background pair.`);
@@ -250,10 +290,10 @@ async function assertVisibleStateQuality(world: object): Promise<void> {
     assert.ok(target.width >= 44 && target.height >= 44, `WHAT: ${JSON.stringify(target.label)} is ${target.width}×${target.height}px. HOW: visible report actions need 44 px targets.`);
   }
   await page.emulateMedia({ colorScheme: 'dark', reducedMotion: 'reduce' });
-  const dark = { ...(await inspect()), moving: await page.evaluate(() => Array.from(document.querySelectorAll<HTMLElement>('body, body *')).filter((element) => {
+  const dark = { ...(await inspect()), moving: await page.evaluate(`Array.from(document.querySelectorAll('body, body *')).filter((element) => {
       const style = getComputedStyle(element);
       return style.animationName !== 'none' && style.animationDuration !== '0s';
-    }).length) };
+    }).length`) as number };
   assert.ok(dark.scrollWidth <= dark.clientWidth, `WHAT: the visible report state scrolls sideways in dark theme at 390 px (${dark.scrollWidth}px). HOW: keep the state inside the phone width.`);
   assert.ok(dark.minimumContrast >= 4.5, `WHAT: visible report text is below WCAG AA against its rendered dark backdrop (${dark.minimumContrast.toFixed(2)}:1). HOW: use a readable foreground/background pair.`);
   assert.equal(dark.moving, 0, 'WHAT: the visible report state still animates with reduced motion requested. HOW: disable its animation in that preference.');

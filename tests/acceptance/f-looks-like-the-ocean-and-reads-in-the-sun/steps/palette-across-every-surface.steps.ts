@@ -12,6 +12,8 @@ import { join, relative } from 'node:path';
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { tmpdir } from 'node:os';
 
+import { previousCivilDate } from '../../../../src/publish/static-surface';
+
 type SurfaceWorld = object;
 type Mode = 'normal' | 'wrong-card-palette' | 'raw-unknown-page' | 'forecast-before-report';
 type Palette = { bodyBackground: string; bg: string; ink: string; surface: string };
@@ -79,14 +81,76 @@ function credentialFreeEnvironment(): NodeJS.ProcessEnv {
   return environment;
 }
 
+// These scenarios test the palette claim, not the calendar. The live
+// data/published-surface.json is whatever the pipeline last published: an
+// ingestion outage (real case: no dawn receipt was published for 2026-08-11)
+// or a stale current day would fail every scenario for a calendar reason with
+// no palette meaning. So the isolated copy pins its own surface the way the
+// product resolves days — the Panama civil date (verifyCurrentCivilDay's own
+// formula) and previousCivilDate, the midnight rule the ayer page uses — and
+// guarantees the prior-day dawn receipt exists by cloning the newest real one.
+// Fixture data in a throwaway copy, same discipline as the daily-call
+// controlled fixtures; nothing here touches the published product surface.
+function normalizeSurfaceDates(root: string): void {
+  type DawnReceipt = { surf_date: string; published_at: string; build_kind: string };
+  const surfacePath = join(root, 'data/published-surface.json');
+  const surface = JSON.parse(readFileSync(surfacePath, 'utf8')) as {
+    current: { surf_date: string; published_at: string; days: { date: string }[] };
+    dawn_receipts: DawnReceipt[];
+  };
+  const panamaToday = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/Panama', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
+  const dayShift = Math.round((Date.parse(`${panamaToday}T12:00:00Z`) - Date.parse(`${surface.current.surf_date}T12:00:00Z`)) / 86_400_000);
+  const shiftDate = (date: string): string => {
+    const atNoonUtc = new Date(`${date}T12:00:00Z`);
+    atNoonUtc.setUTCDate(atNoonUtc.getUTCDate() + dayShift);
+    return atNoonUtc.toISOString().slice(0, 10);
+  };
+  const shiftStamp = (stamp: string): string => `${shiftDate(stamp.slice(0, 10))}${stamp.slice(10)}`;
+  if (dayShift !== 0) {
+    surface.current.surf_date = shiftDate(surface.current.surf_date);
+    surface.current.published_at = shiftStamp(surface.current.published_at);
+    for (const day of surface.current.days) day.date = shiftDate(day.date);
+    for (const receipt of surface.dawn_receipts) {
+      receipt.surf_date = shiftDate(receipt.surf_date);
+      receipt.published_at = shiftStamp(receipt.published_at);
+    }
+  }
+  const priorDate = previousCivilDate(surface.current.surf_date);
+  if (!surface.dawn_receipts.some((receipt) => receipt.surf_date === priorDate && receipt.build_kind === 'dawn')) {
+    const newest = surface.dawn_receipts
+      .filter((receipt) => receipt.build_kind === 'dawn')
+      .sort((a, b) => a.surf_date.localeCompare(b.surf_date))
+      .at(-1);
+    assert.ok(newest, 'test fixture error: no hay ningún recibo de amanecer del que sintetizar el de ayer');
+    surface.dawn_receipts.push({
+      ...structuredClone(newest),
+      surf_date: priorDate,
+      published_at: `${priorDate}${newest.published_at.slice(10)}`,
+    });
+    surface.dawn_receipts.sort((a, b) => a.surf_date.localeCompare(b.surf_date));
+  }
+  writeFileSync(surfacePath, `${JSON.stringify(surface, null, 2)}\n`);
+}
+
 function isolatedRoot(mode: Mode): string {
   const root = mkdtempSync(join(tmpdir(), 'surfs-up-slice-03-'));
   for (const file of ['astro.config.mjs', 'package.json', 'package-lock.json', 'tsconfig.json']) copyFileSync(join(projectRoot, file), join(root, file));
   for (const directory of ['data', 'public', 'scripts', 'src']) cpSync(join(projectRoot, directory), join(root, directory), { recursive: true });
   symlinkSync(join(projectRoot, 'node_modules'), join(root, 'node_modules'), 'dir');
+  normalizeSurfaceDates(root);
   if (mode === 'wrong-card-palette') {
-    const components = join(root, 'src/styles/components.css');
-    writeFileSync(components, `${readFileSync(components, 'utf8')}\nsection[data-day] { background: #220000; }\n`);
+    // The wrong colour goes into SpotDetail's own style block, which is only
+    // inlined on spot pages (~6 KB against a 14 KB ceiling). Appending it to
+    // src/styles/components.css inflated EVERY page and pushed the heaviest
+    // /reportado document (longest slug) 3 bytes over its 4,096 B gz ceiling,
+    // so the page-weight gate refused the build before the palette audit
+    // could observe anything.
+    const detail = join(root, 'src/components/SpotDetail.astro');
+    const source = readFileSync(detail, 'utf8');
+    assert.ok(source.includes('<style is:global>'), 'test fixture error: SpotDetail.astro ya no trae su bloque de estilos global');
+    writeFileSync(detail, source.replace('<style is:global>', '<style is:global>\n  section[data-day] { background: #220000; }\n'));
   }
   if (mode === 'raw-unknown-page') {
     writeFileSync(join(root, 'src/pages/404.astro'), `---\nimport Base from '../layouts/Base.astro';\n---\n<Base locale="es" title="Error" currentPath="/404/">\n  <h1>AccessDenied</h1>\n</Base>\n`);
