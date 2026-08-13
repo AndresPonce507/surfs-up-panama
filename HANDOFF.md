@@ -90,6 +90,21 @@ This section supersedes the legacy notes below. They are retained only as histor
   403/404/410 deletes the stale subscription. Physical Android and installed-iPhone PWA smoke is
   still required after deployment.
 
+## Notify deployment correction (2026-08-13)
+
+- The enabled hourly Notify job was found crashing at every `:25` run with
+  `Cannot find module 'notify'`. Its CDK `fromAsset(projectRoot)` staging identity collided with
+  the report/mint bundle, so AWS received `report-mint.mjs` while the configured handler was
+  `notify.handler`.
+- `f30100f` adds a unique serializable bundle discriminator and a regression test that inspects
+  the actual staged ZIP for `notify.mjs`. It passed the focused red/green proof, 113 infrastructure
+  tests, typecheck, fast CI (**11/0/0**) and gitleaks; `SurfsUpPanamaWrite` was redeployed at
+  2026-08-13 23:31Z. A read-only download of the deployed ZIP confirmed `notify.mjs` and the real
+  Notify composition are present.
+- Real Push delivery still needs the VAPID SecureString and an Android/iPhone smoke. `andres-cli`
+  is intentionally denied `ssm:GetParameter`, so it cannot attest to that secret's presence or
+  value.
+
 ## Offline report replay correction (2026-08-13)
 
 - `997f2c9` removed the returned-signal queue replay without a recorded decision. The regression is
