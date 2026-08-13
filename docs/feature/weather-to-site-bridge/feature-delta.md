@@ -26,6 +26,11 @@ Publisher still performs no list operation. The role therefore gets exactly one 
 statement, conditioned to `v1/*` and `site/published-surface.json`, solely to distinguish missing
 declared inputs from denied reads. It receives no broad inventory permission and no Delete action.
 
+The next live invoke proved Lambda replaces the image user's HOME with a read-only sandbox path.
+The image now pins Astro's configuration root to `/tmp/.config` and disables Astro telemetry. The
+real render remains mandatory; this removes only a global configuration write and telemetry call
+that are outside the forecast publication contract.
+
 ## Wave: DISCUSS / [REF] Slice Plan
 
 | Slice | Value statement | Status | Annotation | Justification |

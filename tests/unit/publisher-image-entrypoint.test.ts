@@ -20,4 +20,9 @@ describe('Publisher Lambda image entrypoint', () => {
     expect(exportName).toBe('handler');
     expect(dockerfile).toContain('> /var/task/publish-handler-bootstrap.mjs');
   });
+
+  it('keeps Astro telemetry configuration in Lambda writable storage', () => {
+    expect(dockerfile).toContain('ENV XDG_CONFIG_HOME=/tmp/.config');
+    expect(dockerfile).toContain('ASTRO_TELEMETRY_DISABLED=1');
+  });
 });

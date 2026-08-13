@@ -56,11 +56,14 @@ RUN printf '%s\n' \
 # The account is written straight into /etc/passwd because this base image is
 # minimal and carries no useradd (verified: exit 127, "command not found").
 # Installing shadow-utils just to add one line would grow the deployed image
-# for nothing. HOME is /tmp because that is the only writable path at runtime
-# and some tools insist on writing to HOME.
+# for nothing. Lambda may replace HOME with its sandbox account at startup,
+# so Astro's config path is explicitly pinned to /tmp and telemetry is off:
+# this offline renderer must never try to write a global setting or phone home.
 RUN printf 'publisher:x:1001:1001::/tmp:/sbin/nologin\n' >> /etc/passwd \
   && printf 'publisher:x:1001:\n' >> /etc/group \
   && chown -R 1001:1001 /var/task
+ENV XDG_CONFIG_HOME=/tmp/.config \
+    ASTRO_TELEMETRY_DISABLED=1
 USER publisher
 
 # The Lambda Node runtime splits the handler at its first dot. Keep the
