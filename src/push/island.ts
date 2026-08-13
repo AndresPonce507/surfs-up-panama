@@ -15,9 +15,14 @@
 // pre-rendered control stays hidden -- never a tap that cannot lead anywhere.
 
 import { pushCopy } from './copy';
+import { createCredentialProvider } from '../report/mint';
+import { readStoredPushStatus, subscribeBrowserToSpot, type PushBrowserConfig } from './push-client';
 
 type PushRegistrationPort = {
-  pushManager?: { getSubscription?: () => Promise<unknown> };
+  pushManager?: {
+    getSubscription?: () => Promise<unknown>;
+    subscribe?: (options: { userVisibleOnly: boolean; applicationServerKey: Uint8Array }) => Promise<unknown>;
+  };
 };
 
 export type PushCapableWindow = {
@@ -27,7 +32,12 @@ export type PushCapableWindow = {
     serviceWorker?: { getRegistration?: () => Promise<PushRegistrationPort | undefined> };
   };
   Notification?: { requestPermission: () => Promise<NotificationPermission> };
-  localStorage?: { getItem: (key: string) => string | null };
+  localStorage?: {
+    getItem: (key: string) => string | null;
+    setItem?: (key: string, value: string) => void;
+    removeItem?: (key: string) => void;
+  };
+  fetch?: (url: string, init: RequestInit) => Promise<Response>;
 };
 
 export type PermissionOutcome = 'granted' | 'refused';
@@ -74,6 +84,85 @@ async function readRealSubscription(windowPort: PushCapableWindow): Promise<unkn
   }
 }
 
+async function loadPushConfig(fetcher: PushCapableWindow['fetch']): Promise<PushBrowserConfig | null> {
+  if (fetcher === undefined) return null;
+  try {
+    const response = await fetcher('/push-config.json', { cache: 'no-store' });
+    const body = await response.json().catch(() => undefined) as Partial<PushBrowserConfig> | undefined;
+    return response.ok && typeof body?.push_url === 'string' && typeof body.mint_url === 'string' && typeof body.vapid_public_key === 'string'
+      ? { push_url: body.push_url, mint_url: body.mint_url, vapid_public_key: body.vapid_public_key }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function credentialFor(windowPort: PushCapableWindow, config: PushBrowserConfig): () => Promise<string> {
+  if (windowPort.fetch === undefined) return async () => { throw new Error('push fetch is unavailable'); };
+  const storage = windowPort.localStorage;
+  return createCredentialProvider(windowPort.fetch, undefined, {
+    async read() {
+      try {
+        const raw = storage?.getItem('psb-report-credential');
+        if (raw === null || raw === undefined) return undefined;
+        const value = JSON.parse(raw) as { deviceId?: unknown; credential?: unknown };
+        return typeof value.deviceId === 'string' && typeof value.credential === 'string'
+          ? { deviceId: value.deviceId, credential: value.credential }
+          : undefined;
+      } catch {
+        return undefined;
+      }
+    },
+    async write(value) {
+      // The established report flow writes the same mirror. A browser that
+      // refuses local storage still gets an honest failed subscribe, never a
+      // client-only active state.
+      if (storage === undefined || storage.setItem === undefined) throw new Error('credential storage unavailable');
+      storage.setItem('psb-report-credential', JSON.stringify(value));
+    },
+    async clear() {
+      if (storage?.removeItem !== undefined) storage.removeItem('psb-report-credential');
+    },
+  }, config.mint_url).get;
+}
+
+function setAvisosState(control: HTMLElement, active: boolean): void {
+  control.dataset.avisosState = active ? 'activo' : 'inactivo';
+}
+
+function showAvisosMessage(documentPort: Pick<Document, 'querySelector'>, text: string): void {
+  const message = documentPort.querySelector<HTMLElement>('[data-field="avisos-message"]');
+  if (message !== null) {
+    message.textContent = text;
+    message.hidden = false;
+  }
+}
+
+async function reconcileStoredSubscription(
+  control: HTMLElement,
+  windowPort: PushCapableWindow,
+): Promise<void> {
+  const subscription = await readRealSubscription(windowPort);
+  if (subscription === null || subscription === undefined || typeof subscription !== 'object') {
+    setAvisosState(control, false);
+    return;
+  }
+  const config = await loadPushConfig(windowPort.fetch);
+  const registration = await windowPort.navigator.serviceWorker?.getRegistration?.();
+  if (config === null || registration?.pushManager === undefined || typeof registration.pushManager.getSubscription !== 'function' || windowPort.fetch === undefined) {
+    setAvisosState(control, false);
+    return;
+  }
+  const status = await readStoredPushStatus({
+    config,
+    spotId: control.dataset.spotId ?? '',
+    subscription: subscription as { endpoint: string; toJSON(): unknown },
+    credential: credentialFor(windowPort, config),
+    fetcher: windowPort.fetch,
+  });
+  setAvisosState(control, status.kind === 'subscribed');
+}
+
 /**
  * Handles one tap on the avisos action: requests the real permission and,
  * when it is not granted, says the refusal in words. Returns the outcome so
@@ -89,11 +178,7 @@ async function handleAvisosActivateTap(
   const permission = await requestPermission();
   const outcome = describePermissionOutcome(permission);
   if (outcome === 'granted') return outcome;
-  const message = documentPort.querySelector<HTMLElement>('[data-field="avisos-message"]');
-  if (message !== null) {
-    message.textContent = pushCopy.refused;
-    message.hidden = false;
-  }
+  showAvisosMessage(documentPort, pushCopy.refused);
   return outcome;
 }
 
@@ -121,23 +206,52 @@ export function mountPushSettings(
   if (control === null) return undefined;
   control.hidden = false;
 
-  const subscriptionRead = readRealSubscription(windowPort).then((subscription) => {
-    control.dataset.avisosState = deriveAvisosState(subscription);
-  });
+  const subscriptionRead = reconcileStoredSubscription(control, windowPort);
 
   const activate = documentPort.querySelector<HTMLButtonElement>('[data-field="avisos-activate"]');
   const notificationApi = windowPort.Notification;
   if (activate === null || notificationApi === undefined) return subscriptionRead;
 
   let permissionAlreadyAsked = false;
+  let permissionGranted = false;
+  let requestInFlight = false;
   activate.addEventListener('click', () => {
-    if (permissionAlreadyAsked) return undefined;
-    permissionAlreadyAsked = true;
-    return handleAvisosActivateTap(documentPort, () => notificationApi.requestPermission()).then(
-      (outcome) => {
-        if (outcome === 'refused') activate.disabled = true;
-      },
-    );
+    if (requestInFlight) return undefined;
+    requestInFlight = true;
+    activate.disabled = true;
+    return (async () => {
+      if (!permissionAlreadyAsked) {
+        permissionAlreadyAsked = true;
+        const outcome = await handleAvisosActivateTap(documentPort, () => notificationApi.requestPermission());
+        permissionGranted = outcome === 'granted';
+        if (!permissionGranted) return;
+      }
+      if (!permissionGranted) return;
+      const config = await loadPushConfig(windowPort.fetch);
+      const registration = await windowPort.navigator.serviceWorker?.getRegistration?.();
+      const spotId = control.dataset.spotId;
+      const language = control.lang === 'en' ? 'en' : 'es';
+      if (config === null || registration?.pushManager === undefined || typeof registration.pushManager.getSubscription !== 'function'
+        || typeof registration.pushManager.subscribe !== 'function' || spotId === undefined || windowPort.fetch === undefined) return;
+      const result = await subscribeBrowserToSpot({
+        config,
+        spotId,
+        lang: language,
+        credential: credentialFor(windowPort, config),
+        registration: registration as unknown as { pushManager: { getSubscription(): Promise<{ endpoint: string; toJSON(): unknown } | null>; subscribe(options: { userVisibleOnly: boolean; applicationServerKey: Uint8Array }): Promise<{ endpoint: string; toJSON(): unknown }> } },
+        fetcher: windowPort.fetch,
+      });
+      if (result.kind === 'subscribed') {
+        setAvisosState(control, true);
+        showAvisosMessage(documentPort, pushCopy.ready);
+        return;
+      }
+      setAvisosState(control, false);
+      showAvisosMessage(documentPort, pushCopy.retry);
+    })().finally(() => {
+      requestInFlight = false;
+      activate.disabled = !permissionGranted;
+    });
   });
 
   return subscriptionRead;

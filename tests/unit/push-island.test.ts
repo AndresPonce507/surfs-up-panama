@@ -293,6 +293,10 @@ describe('mountPushSettings on-load subscription read', () => {
     const onBrowser = browserWithSubscription({ endpoint: 'https://push.example/abc' }, null);
     await mountPushSettings(controlDocument(onControl), onBrowser.windowPort);
     assert.equal(onBrowser.reads.subscription, 1, 'each capable return visit needs its own real subscription read');
-    assert.equal(onControl.dataset.avisosState, 'activo', 'a real subscription object must be the only active-state source');
+    assert.equal(
+      onControl.dataset.avisosState,
+      'inactivo',
+      'a real browser subscription without the deployed credential-bound status confirmation must never claim it is active',
+    );
   });
 });

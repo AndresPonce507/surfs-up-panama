@@ -6,16 +6,16 @@
 // at deploy time the applied quota is at or under 102, controls 0.2 and 0.6
 // do not exist, and this stack must be rolled back (section 7.2 item 0.15).
 //
-// Report and mint are real F-TELL-US-WHAT-YOU-SAW-COLD handlers. Push and
-// photo-presign remain honest 501 placeholders until their owners land. The
-// stack also makes the cost ceiling real: reserved concurrency, breakers, the
+// Report, mint, and push are real handlers. Photo-presign remains an honest
+// 501 placeholder until its owner lands. The stack also makes the cost ceiling real: reserved concurrency, breakers, the
 // provisioned fail-closed table, and the exact resources the $18 budget line
 // trips.
 
-import { AssetHashType, CfnOutput, Duration, RemovalPolicy, Fn, Stack } from 'aws-cdk-lib';
+import { AssetHashType, CfnOutput, CfnParameter, Duration, RemovalPolicy, Fn, Stack } from 'aws-cdk-lib';
 import type { StackProps } from 'aws-cdk-lib';
 import * as cloudwatch from 'aws-cdk-lib/aws-cloudwatch';
 import * as cloudwatchActions from 'aws-cdk-lib/aws-cloudwatch-actions';
+import { AwsCustomResource, AwsCustomResourcePolicy, PhysicalResourceId } from 'aws-cdk-lib/custom-resources';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
@@ -51,6 +51,7 @@ import {
   vapidPrivateKeyParameterName,
   writeReservedConcurrency,
 } from './write-declarations.js';
+import { loadLaunchSpotSeeds } from '../../src/data/launch-spots.js';
 
 const lambdaSourceDirectory = fileURLToPath(new URL('../lambda-src', import.meta.url));
 const projectRoot = fileURLToPath(new URL('../..', import.meta.url));
@@ -73,6 +74,18 @@ export class WriteStack extends Stack {
       removalPolicy: RemovalPolicy.RETAIN,
     });
     const siteBucket = s3.Bucket.fromBucketName(this, 'SiteBucket', siteBucketName);
+    const vapidPublicKey = new CfnParameter(this, 'VapidPublicKey', {
+      type: 'String',
+      minLength: 80,
+      maxLength: 120,
+      description: 'Public VAPID key. It is public browser configuration, not a secret.',
+    });
+    const pushSpots = JSON.stringify(loadLaunchSpotSeeds().map((spot) => ({
+      spot_id: spot.spot_id,
+      slug: spot.spot_id,
+      name: spot.name,
+      timezone: spot.timezone,
+    })));
 
     // Guardrail 6: exact site origin, never '*'. The origin is the site
     // distribution's hostname, which only exists after the site stack
@@ -119,6 +132,52 @@ export class WriteStack extends Stack {
       },
     });
 
+    const pushCode = lambda.Code.fromAsset(projectRoot, {
+      assetHashType: AssetHashType.OUTPUT,
+      bundling: {
+        image: lambda.Runtime.NODEJS_22_X.bundlingImage,
+        local: {
+          tryBundle(outputDirectory: string): boolean {
+            buildSync({
+              entryPoints: [resolve(projectRoot, 'src/push/aws-lambda-adapter.ts')],
+              outfile: resolve(outputDirectory, 'push.mjs'),
+              bundle: true,
+              format: 'esm',
+              platform: 'node',
+              target: 'node22',
+              sourcemap: false,
+              legalComments: 'none',
+              external: ['@aws-sdk/*'],
+            });
+            return true;
+          },
+        },
+      },
+    });
+
+    const notifyCode = lambda.Code.fromAsset(projectRoot, {
+      assetHashType: AssetHashType.OUTPUT,
+      bundling: {
+        image: lambda.Runtime.NODEJS_22_X.bundlingImage,
+        local: {
+          tryBundle(outputDirectory: string): boolean {
+            buildSync({
+              entryPoints: [resolve(projectRoot, 'src/push/notify-lambda-adapter.ts')],
+              outfile: resolve(outputDirectory, 'notify.mjs'),
+              bundle: true,
+              format: 'esm',
+              platform: 'node',
+              target: 'node22',
+              sourcemap: false,
+              legalComments: 'none',
+              external: ['@aws-sdk/*'],
+            });
+            return true;
+          },
+        },
+      },
+    });
+
     const writeFunctions = writeFunctionShortNames.map((shortName) => {
       const functionName = functionNames[shortName];
       const logGroup = new logs.LogGroup(this, `${shortName}-logs`, {
@@ -130,13 +189,13 @@ export class WriteStack extends Stack {
         functionName,
         runtime: lambda.Runtime.NODEJS_22_X,
         architecture: lambda.Architecture.ARM_64,
-        handler: shortName === 'report' || shortName === 'mint' ? 'report-mint.handler' : 'index.handler',
-        code: shortName === 'report' || shortName === 'mint' ? reportMintCode : notImplemented,
+        handler: shortName === 'report' || shortName === 'mint' ? 'report-mint.handler' : shortName === 'push' ? 'push.handler' : 'index.handler',
+        code: shortName === 'report' || shortName === 'mint' ? reportMintCode : shortName === 'push' ? pushCode : notImplemented,
         memorySize: 128, // 07-write-path 7.2 control 0.3
         timeout: Duration.seconds(lambdaTimeoutSeconds[shortName]), // guardrail 2
         reservedConcurrentExecutions: writeReservedConcurrency[shortName], // control 0.2
         logGroup,
-        ...(shortName === 'report' || shortName === 'mint' ? {
+        ...(shortName === 'report' || shortName === 'mint' || shortName === 'push' ? {
           environment: {
             WRITE_PATH: `/api/${shortName}`,
             WRITE_STORE_TABLE: writeStore.tableName,
@@ -162,7 +221,8 @@ export class WriteStack extends Stack {
 
     const reportFn = writeFunctions.find(({ shortName }) => shortName === 'report')?.fn;
     const mintFn = writeFunctions.find(({ shortName }) => shortName === 'mint')?.fn;
-    if (reportFn === undefined || mintFn === undefined) throw new Error('write stack refused: report and mint functions are required');
+    const pushFn = writeFunctions.find(({ shortName }) => shortName === 'push')?.fn;
+    if (reportFn === undefined || mintFn === undefined || pushFn === undefined) throw new Error('write stack refused: report, mint, and push functions are required');
     const reportUrl = writeFunctions.find(({ shortName }) => shortName === 'report')?.functionUrl;
     const mintUrl = writeFunctions.find(({ shortName }) => shortName === 'mint')?.functionUrl;
     if (reportUrl === undefined || mintUrl === undefined) throw new Error('write stack refused: report and mint Function URLs are required');
@@ -173,6 +233,54 @@ export class WriteStack extends Stack {
     new CfnOutput(this, 'MintFunctionUrl', {
       value: mintUrl.url,
       description: 'Public mint Function URL for the static-site build',
+    });
+    const pushUrl = writeFunctions.find(({ shortName }) => shortName === 'push')?.functionUrl;
+    if (pushUrl === undefined) throw new Error('write stack refused: push Function URL is required');
+    new CfnOutput(this, 'PushFunctionUrl', {
+      value: pushUrl.url,
+      description: 'Public push Function URL for the static-site build',
+    });
+    // This small public document lets the static island discover the deployed
+    // Function URLs and VAPID public key without creating an Ingest <-> Write
+    // stack cycle. It is same-origin, contains no secret, and is no-store so a
+    // rotated public key cannot linger in a browser cache.
+    new AwsCustomResource(this, 'PushBrowserConfig', {
+      installLatestAwsSdk: false,
+      onCreate: {
+        service: 'S3',
+        action: 'putObject',
+        parameters: {
+          Bucket: siteBucketName,
+          Key: 'push-config.json',
+          ContentType: 'application/json',
+          CacheControl: 'no-store',
+          Body: Fn.join('', [
+            '{"push_url":"', pushUrl.url,
+            '","mint_url":"', mintUrl.url,
+            '","vapid_public_key":"', vapidPublicKey.valueAsString,
+            '"}',
+          ]),
+        },
+        physicalResourceId: PhysicalResourceId.of('surfs-up-panama-push-browser-config'),
+      },
+      onUpdate: {
+        service: 'S3',
+        action: 'putObject',
+        parameters: {
+          Bucket: siteBucketName,
+          Key: 'push-config.json',
+          ContentType: 'application/json',
+          CacheControl: 'no-store',
+          Body: Fn.join('', [
+            '{"push_url":"', pushUrl.url,
+            '","mint_url":"', mintUrl.url,
+            '","vapid_public_key":"', vapidPublicKey.valueAsString,
+            '"}',
+          ]),
+        },
+        physicalResourceId: PhysicalResourceId.of('surfs-up-panama-push-browser-config'),
+      },
+      policy: AwsCustomResourcePolicy.fromSdkCalls({ resources: [siteBucket.arnForObjects('push-config.json')] }),
     });
 
     // The report capability is exact by operation and resource. It can read
@@ -211,6 +319,26 @@ export class WriteStack extends Stack {
       actions: ['dynamodb:DescribeTable', 'dynamodb:GetItem', 'dynamodb:PutItem'],
       resources: [writeStore.tableArn],
     }));
+
+    // Push owns a credential-bound subscription row and its device-day quota,
+    // reads only the published spot ids, and cannot touch reports or call logs.
+    pushFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['dynamodb:DescribeTable', 'dynamodb:GetItem', 'dynamodb:DeleteItem', 'dynamodb:TransactWriteItems'],
+      resources: [writeStore.tableArn],
+    }));
+    pushFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:GetObject'],
+      resources: [siteBucket.arnForObjects('pub/v1/meta/spot-index.json')],
+    }));
+    pushFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:ListBucket'],
+      resources: [siteBucket.bucketArn],
+      conditions: { StringLike: { 's3:prefix': ['pub/v1/*'] } },
+    }));
+    pushFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['ssm:GetParameter'],
+      resources: [`arn:aws:ssm:${projectRegion}:${projectAccountId}:parameter/surfsuppanama/prod/credential-hmac-key`],
+    }));
     mintFn.addToRolePolicy(new iam.PolicyStatement({
       actions: ['ssm:GetParameter'],
       resources: [`arn:aws:ssm:${projectRegion}:${projectAccountId}:parameter/surfsuppanama/prod/credential-hmac-key`],
@@ -232,14 +360,9 @@ export class WriteStack extends Stack {
     // store it queries is declared here; putting it next to fetch/build would
     // buy a cross-stack table reference and perturb the mandated deploy order.
     //
-    // THE SCHEDULE SHIPS DISABLED, ON PURPOSE. The send adapter (VAPID ES256
-    // JWT per push-service origin, aes128gcm payload encryption, the HTTP POST
-    // itself) has not landed; the pure decisions it will consult have
-    // (src/push/plan-notifications.ts). An ENABLED hourly schedule in front of
-    // a handler that cannot send would be a job that pretends to run 720 times
-    // a month. Copy never runs ahead of the data, and neither does a cron.
-    // Flip `state` to ENABLED in the same change that lands the real handler,
-    // once the VAPID SecureString below is provisioned.
+    // The real sender owns VAPID signing, RFC 8291 encryption and the POST to
+    // browser push services. Enabling it in the same change prevents a cron
+    // from pretending to deliver while a placeholder still sits behind it.
     const notifyLogs = new logs.LogGroup(this, 'NotifyLogs', {
       logGroupName: `/aws/lambda/${functionNames.notify}`,
       retention: logs.RetentionDays.TWO_WEEKS, // guardrail 3
@@ -249,15 +372,8 @@ export class WriteStack extends Stack {
       functionName: functionNames.notify,
       runtime: lambda.Runtime.NODEJS_22_X,
       architecture: lambda.Architecture.ARM_64,
-      handler: 'index.handler',
-      // Loud rather than silent: if this is ever invoked before the send
-      // adapter lands, it fails and says why instead of quietly doing nothing.
-      code: lambda.Code.fromInline(
-        'exports.handler = async () => {'
-        + " throw new Error('not_implemented: the notify send adapter (VAPID"
-        + " signing and the Web Push POST) has not landed; this schedule is"
-        + " DISABLED until it does'); };",
-      ),
+      handler: 'notify.handler',
+      code: notifyCode,
       memorySize: notifyMemorySizeMb, // 07-write-path 8.5 costs the fan-out at 0.25 GB
       timeout: Duration.seconds(lambdaTimeoutSeconds.notify), // guardrail 2
       reservedConcurrentExecutions: notifyReservedConcurrency,
@@ -269,6 +385,9 @@ export class WriteStack extends Stack {
         // SecureString a human provisions out of band; nothing in this
         // repository ever holds VAPID private key material.
         VAPID_PRIVATE_KEY_PARAMETER: vapidPrivateKeyParameterName,
+        VAPID_PUBLIC_KEY: vapidPublicKey.valueAsString,
+        PUBLIC_SITE_ORIGIN: siteOrigin,
+        PUSH_SPOTS_JSON: pushSpots,
       },
     });
     // Duplicate EventBridge delivery must not double-send. The 1/spot/
@@ -285,15 +404,17 @@ export class WriteStack extends Stack {
       actions: ['dynamodb:DescribeTable', 'dynamodb:Query', 'dynamodb:UpdateItem', 'dynamodb:DeleteItem'],
       resources: [writeStore.tableArn],
     }));
-    // NO BUCKET GRANT, DELIBERATELY, AND FLAGGED. The send rule compares "the
-    // current bundle score" (07-write-path.md 8.2) but no document says where
-    // the job reads it: section 8.6's sequence gives notify exactly two edges,
-    // query the subs and POST to the push service, with no S3 read anywhere.
-    // planNotifications takes `scores` as a declared input precisely because
-    // the source is the composition root's business, and that root is the
-    // unlanded send adapter. Granting a bucket read on a guess would be the
-    // one over-grant in an otherwise exact policy, so this lane grants none
-    // and the sender's author adds the read path they actually use.
+    // The sender reads one current published bundle, never a report or call
+    // log, and cannot mutate the site bucket.
+    notifyFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:GetObject'],
+      resources: [siteBucket.arnForObjects('pub/v1/regions/pa-pacific/bundle.json')],
+    }));
+    notifyFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:ListBucket'],
+      resources: [siteBucket.bucketArn],
+      conditions: { StringLike: { 's3:prefix': ['pub/v1/regions/pa-pacific/*'] } },
+    }));
     notifyFn.addToRolePolicy(new iam.PolicyStatement({
       actions: ['ssm:GetParameter'],
       resources: [`arn:aws:ssm:${projectRegion}:${projectAccountId}:parameter${vapidPrivateKeyParameterName}`],
@@ -311,7 +432,7 @@ export class WriteStack extends Stack {
       description: 'Hourly push send fan-out at :25, three minutes after the build',
       scheduleExpression: 'cron(25 * * * ? *)',
       scheduleExpressionTimezone: 'UTC',
-      state: 'DISABLED', // until the VAPID send adapter lands; see the note above
+      state: 'ENABLED',
       flexibleTimeWindow: { mode: 'OFF' },
       target: {
         arn: notifyFn.functionArn,

@@ -46,6 +46,7 @@
     "@cucumber/cucumber": "^13.2.1",
     "@playwright/test": "^1.62.1",
     "@types/node": "^26.2.0",
+    "@types/web-push": "^3.6.4",
     "astro": "^7.2.0",
     "aws-cdk": "^2.1135.1",
     "aws-cdk-lib": "^2.263.0",
@@ -55,5 +56,8 @@
     "tsx": "^4.23.11",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
+  },
+  "dependencies": {
+    "web-push": "^3.6.7"
   }
 }

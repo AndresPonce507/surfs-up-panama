@@ -85,7 +85,7 @@ flowchart LR
 | `export` | none (scheduled 00:30 UTC) | 1 | 120 s | 512 MB | AP13 observation export + abuse signals (§7.4) |
 | `breaker` | none (SNS-invoked) | 1 | 10 s | 128 MB | `PutFunctionConcurrency(0)` on the alarmed function; EventBridge one-shot restores after 6 h |
 
-CORS on each URL: `AllowOrigins` = the exact site origin (IaC config value, never `*`), `AllowMethods: POST`, `AllowHeaders: content-type, x-surf-credential`, `MaxAge 86400`. CORS is browser-only discipline, not a defence (research 15 §4) — it stops casual embedding, nothing else. Reserved-concurrency total across all lanes ≈ 16 of the ≥ 900 available at the default quota; the §5.0 precondition check covers the reduced-quota case.
+CORS on each URL: `AllowOrigins` = the exact site origin (IaC config value, never `*`), `AllowMethods: POST`, `AllowHeaders: cache-control, content-type, x-surf-credential`, `MaxAge 86400`. CORS is browser-only discipline, not a defence (research 15 §4) — it stops casual embedding, nothing else. Reserved-concurrency total across all lanes ≈ 16 of the ≥ 900 available at the default quota; the §5.0 precondition check covers the reduced-quota case.
 
 No GET endpoints exist anywhere on the write path. The reveal is the POST response and nothing else (`adr-report-flow-leak-isolation.md` decision 2 — honored server-side: there is no URL from which a reveal can be fetched, prefetched, or cached). No share endpoint exists: decision 30's WhatsApp card is client-only composition.
 
@@ -345,6 +345,7 @@ Consumers: Andres's incident review, and the learning lane's `reporter-weights.j
 | Subscribe | `{"action":"subscribe","spot_id":"playa-venao","subscription":{"endpoint":"https://…","keys":{"p256dh":"…","auth":"…"}},"lang":"es","threshold_score":70}` ≤ 2 KB, credential required. `threshold_score` optional, default 70, range 0–100. Upsert on the settled identity `(spot_id, endpoint_hash)`; `endpoint_hash = sha256(endpoint)` hex-truncated 128-bit |
 | 200 | `{"status":"subscribed"}` — the island shows "listo" only after this ack (P6: no false green) |
 | Unsubscribe | `{"action":"unsubscribe","spot_id":"…","endpoint":"https://…"}` → delete item → `{"status":"unsubscribed"}`. Idempotent |
+| Status | `{"action":"status","spot_id":"…","endpoint":"https://…"}` → `{"status":"subscribed","threshold_score":67}` only when the credential-derived device owns the matching settled row, otherwise `{"status":"inactive"}`. This POST-only return visit is the stored-subscription proof; no subscription read API exists. |
 | 400 | `endpoint_not_allowed` — endpoint host not on the push-service allowlist (§8.4), or not HTTPS. Body names the host, why (SSRF/relay abuse), and how (subscribe from a supported browser) |
 | 401 / 429 | As §4.3. **Subscribe is interactive, not queued**: the island treats 429 like 5xx per P6 — stays "not subscribed", offers retry. No offline queue for subscriptions |
 
