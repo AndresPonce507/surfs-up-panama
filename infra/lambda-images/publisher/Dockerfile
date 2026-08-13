@@ -42,4 +42,25 @@ RUN printf '%s\n' \
   "export const handler = target.handler;" \
   > /var/task/publish-handler.bootstrap.mjs
 
+# Run as a non-root user. Lambda's own base images ship root-only (verified:
+# the image carries no account with uid >= 1000), and the microVM is the real
+# isolation boundary, so this is defence in depth rather than the only wall --
+# but "root because the base image was" is not a reason, and the SAST gate
+# rightly refuses an image that never says who it runs as.
+#
+# /var/task is handed to this user because the render writes inside the tree it
+# runs from: astro and vite place caches next to node_modules, and the handler's
+# writable copy is seeded from here. Owning it keeps the non-root path behaving
+# like the root path did instead of failing somewhere deep in a build. /tmp is
+# 1777 in the base image, so the writable render copy needs no help.
+# The account is written straight into /etc/passwd because this base image is
+# minimal and carries no useradd (verified: exit 127, "command not found").
+# Installing shadow-utils just to add one line would grow the deployed image
+# for nothing. HOME is /tmp because that is the only writable path at runtime
+# and some tools insist on writing to HOME.
+RUN printf 'publisher:x:1001:1001::/tmp:/sbin/nologin\n' >> /etc/passwd \
+  && printf 'publisher:x:1001:\n' >> /etc/group \
+  && chown -R 1001:1001 /var/task
+USER publisher
+
 CMD ["publish-handler.bootstrap.handler"]
