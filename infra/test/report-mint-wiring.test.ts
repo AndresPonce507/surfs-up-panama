@@ -8,7 +8,7 @@ import { resolve } from 'node:path';
 import { Template } from 'aws-cdk-lib/assertions';
 import { describe, expect, it } from 'vitest';
 
-import { writeStack } from '../bin/app.js';
+import { app, writeStack } from '../bin/app.js';
 import { functionNames, projectAccountId, projectRegion, siteBucketName } from '../lib/physical-names.js';
 import { createCredentialProvider, type Fetcher } from '../../src/report/mint.js';
 import { sendSavedReport } from '../../src/report/submit.js';
@@ -22,6 +22,7 @@ type TemplateJson = Readonly<{
 
 const template = Template.fromStack(writeStack).toJSON() as TemplateJson;
 const resources = Object.entries(template.Resources ?? {});
+const cloudAssembly = app.synth();
 
 function functions() {
   return resources.filter(([, resource]) => resource.Type === 'AWS::Lambda::Function');
@@ -70,6 +71,14 @@ describe('write Lambda composition', () => {
     expect(JSON.stringify(push?.Code)).toContain('S3Bucket');
     expect(JSON.stringify(presign?.Code)).toContain('not_implemented');
     expect(existsSync(resolve(import.meta.dirname, '../lambda-src/report-mint.mjs'))).toBe(false);
+  });
+
+  it('stages the Push handler under the exact module name Lambda loads', () => {
+    const push = functions().find(([, resource]) => resource.Properties?.FunctionName === functionNames.push)?.[1].Properties;
+    const code = push?.Code as Properties;
+    const s3Key = String(code.S3Key);
+    const assetDirectory = resolve(cloudAssembly.directory, `asset.${s3Key.slice(0, -'.zip'.length)}`);
+    expect(existsSync(resolve(assetDirectory, 'push.mjs'))).toBe(true);
   });
 
   it('allows the credential header and only the 24-hour CORS contract on all four write URLs', () => {

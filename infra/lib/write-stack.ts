@@ -136,6 +136,10 @@ export class WriteStack extends Stack {
       assetHashType: AssetHashType.OUTPUT,
       bundling: {
         image: lambda.Runtime.NODEJS_22_X.bundlingImage,
+        // The local bundling closure's entry point is not serializable into
+        // AssetStaging's identity. Keep Push distinct from report/mint and
+        // Notify so its ZIP contains push.mjs for the configured handler.
+        environment: { SURFS_UP_PANAMA_BUNDLE: 'push' },
         local: {
           tryBundle(outputDirectory: string): boolean {
             buildSync({
