@@ -133,7 +133,7 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
   const date = regionalCivilDate(now, spots[0]?.timezone ?? 'America/Panama');
   const hour = now.toISOString().slice(11, 13);
   const dates = [date, followingCivilDate(date)] as const;
-  const rows = await predictionRows(deps, dates);
+  const rows = await predictionRows(deps, capturePartitionDates(date));
   // Read before scoring, once per build, at each spot's own key. A correction
   // is an OPTIONAL build input: a spot with no file, an unreadable file or an
   // unreachable store all arrive here as null and publish the day-zero
@@ -150,10 +150,18 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
   const build_id = `b_${date}T${hour}Z`;
   const callsKey = `log/calls/v1/dt=${date}/build=${hour}Z/${deps.region_id}.jsonl.gz`;
   const callsBody = calls.map((call) => JSON.stringify({ ...call, build_id })).join('\n');
-  await deps.store.putCallIfAbsent(callsKey, callsBody);
   const rankedCallsByDay = dates.map((civilDate) => calls.filter((call) => call.valid_ts.startsWith(civilDate) && call.valid_ts.endsWith('T18:00Z')).sort((left, right) => right.score_q - left.score_q || left.spot_id.localeCompare(right.spot_id)));
   if (rankedCallsByDay.some((day) => day.length !== spots.length)) return { published: false, reason: 'missing complete today or tomorrow ranking' };
   if (sameRankedCalls(rankedCallsByDay[0]!, rankedCallsByDay[1]!)) return { published: false, reason: 'tomorrow ranking duplicates today' };
+  // The receipt is written only once every refusal gate is behind us. A
+  // PublishedCall log entry is the record of a call that WAS published; a
+  // build that goes on to refuse published nothing, so a receipt for it would
+  // be a receipt for a call no surfer was ever shown. The acceptance contract
+  // states this directly ("a refused publish must leave the call log
+  // untouched"), and until the build could reach these two gates with rows in
+  // hand it was never observable: every refusal used to happen at the
+  // zero-members check above, before this write.
+  await deps.store.putCallIfAbsent(callsKey, callsBody);
   const rankedCalls = rankedCallsByDay[0]!;
   const publishedAt = now.toISOString();
   const days: readonly [BundleDay, BundleDay] = [
@@ -215,6 +223,54 @@ function coordinatesFor(deps: BuildDeps) {
   );
 }
 
+/**
+ * How many run-date partitions BEFORE today the build will read.
+ *
+ * Two, because a captured cycle carries roughly two days of forecast hours and
+ * the fetch skips an upstream cycle that has not genuinely changed, so on a
+ * slow upstream day the newest run covering this morning can already be a day
+ * or more old. This is a bounded lookback, not a guarantee: the ingest
+ * retention path (`retainPriorAttribution`) pins an unchanged series back to
+ * its ORIGINAL run_ts, so a long enough freeze upstream can still outrun any
+ * fixed window. Flagged, not fixed here.
+ */
+const CAPTURE_LOOKBACK_DAYS = 2;
+
+/**
+ * The archive partitions worth reading for a build on `civilDate`.
+ *
+ * `dt=` is the MODEL RUN date, never the forecast date
+ * (adr-prediction-log-format.md decision 1; ingest.ts builds the key from
+ * `member.run_ts`). One captured cycle holds rows whose `valid_ts` spans
+ * roughly the next two days, so the run that forecasts THIS morning was
+ * typically filed yesterday.
+ *
+ * Reading only the forecast dates is the defect this replaces: at the Panama
+ * civil-date rollover on 2026-08-13 the build looked for `dt=2026-08-13/` and
+ * `dt=2026-08-14/`, which no cycle had ever written, and refused with "no
+ * usable wave members" every hour while a usable `dt=2026-08-12/` capture sat
+ * in the bucket. The fetch was healthy throughout; the site simply could not
+ * publish.
+ *
+ * This widens only WHERE the build looks, never WHICH hours it scores.
+ * `callsForSpot` still keeps an hour only when its `valid_ts` falls on today
+ * or tomorrow, so an older partition can supply today's forecast and can never
+ * leak an expired forecast hour onto the surface. A build with genuinely no
+ * rows for today still refuses.
+ *
+ * The following date stays in the list. It is unreachable from the write path
+ * (ingest refuses a cycle stamped ahead of now) but several fixtures file
+ * tomorrow's rows under it, and dropping it would change what those tests
+ * read for no gain here.
+ */
+function capturePartitionDates(civilDate: string): readonly string[] {
+  const partitions = [followingCivilDate(civilDate), civilDate];
+  for (let daysBack = 1; daysBack <= CAPTURE_LOOKBACK_DAYS; daysBack += 1) {
+    partitions.push(precedingCivilDate(civilDate, daysBack));
+  }
+  return partitions;
+}
+
 async function predictionRows(deps: BuildDeps, dates: readonly string[]): Promise<PredictionRow[]> {
   const keys = (await Promise.all(dates.map((date) => deps.store.listPredictions(`predictions/v1/dt=${date}/`)))).flat();
   const rows: PredictionRow[] = [];
@@ -236,7 +292,7 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
   const correction = applyCorrection(spot, stored);
   const drafts: DraftCallRow[] = validHours.flatMap((validTs) => {
     if (!dates.some((date) => validTs.startsWith(date))) return [];
-    const bySource = new Map(rows.filter((row) => row.spot_id === spot.spot_id && row.valid_ts === validTs).map((row) => [row.source, row]));
+    const bySource = freshestBySource(rows.filter((row) => row.spot_id === spot.spot_id && row.valid_ts === validTs));
     const declared = DECLARED_MEMBER_SOURCES.map((source): DeclaredMember => {
       const row = bySource.get(source);
       if (row === undefined || row.land_masked) return { source, exclusion: row?.land_masked ? 'land_masked' : 'unavailable' };
@@ -316,6 +372,48 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
     // bug to paper over with a non-null assertion.
     best_window: windowsByCivilDate.get(civilDatePrefix(draft.valid_ts)) ?? null,
   }));
+}
+
+/**
+ * Each model's freshest opinion on ONE forecast hour, keyed by source.
+ *
+ * domain-model.md section 6: "the builder uses the latest run per source with
+ * run_ts <= build time (freshest opinion wins; older runs stay in the
+ * prediction log for the lead-time skill curve)". This file's header has
+ * claimed that rule since it was scaffolded; nothing implemented it. The
+ * previous expression built a Map straight from the row list, so when two
+ * partitions covered the same (spot, valid_ts, source) the winner was whatever
+ * key sorted last, not whatever run was newest. That was invisible while only
+ * one partition was ever read, and became load-bearing the moment the build
+ * started reading prior capture dates.
+ *
+ * `run_ts` is compared as an instant, not as text: the archive has carried
+ * more than one ISO spelling and a lexical compare would rank them by their
+ * formatting. A row whose run_ts will not parse can never win, because an
+ * unusable stamp is not evidence of freshness.
+ *
+ * Ties keep the row already held, which is the first in listed partition
+ * order. Two rows can only tie by carrying the identical run_ts, meaning one
+ * cycle filed twice, so either is the same opinion; the rule is stated here so
+ * the outcome is deterministic rather than incidental.
+ *
+ * The `run_ts <= build time` half of that sentence is NOT enforced here. See
+ * tests/unit/build-reads-prior-capture-partition.test.ts for the reproduction
+ * and why closing it is its own change.
+ */
+function freshestBySource(hourRows: readonly PredictionRow[]): Map<string, PredictionRow> {
+  const freshest = new Map<string, PredictionRow>();
+  for (const row of hourRows) {
+    const held = freshest.get(row.source);
+    if (held === undefined || runInstant(row) > runInstant(held)) freshest.set(row.source, row);
+  }
+  return freshest;
+}
+
+/** A run stamp as a comparable instant; an unparseable stamp sorts oldest. */
+function runInstant(row: PredictionRow): number {
+  const parsed = Date.parse(row.run_ts);
+  return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
 }
 
 function bundleDay(date: string, calls: readonly CallRow[]): BundleDay {
@@ -436,6 +534,8 @@ function spanishCall(call: CallRow): string {
 }
 
 function followingCivilDate(civilDate: string): string { const date = new Date(`${civilDate}T12:00:00Z`); date.setUTCDate(date.getUTCDate() + 1); return date.toISOString().slice(0, 10); }
+/** Noon anchoring, like followingCivilDate: a whole-day step can never land on a different date through an offset. */
+function precedingCivilDate(civilDate: string, days: number): string { const date = new Date(`${civilDate}T12:00:00Z`); date.setUTCDate(date.getUTCDate() - days); return date.toISOString().slice(0, 10); }
 function regionalCivilDate(instant: Date, timezone: string): string { const fields = new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(instant); const part = (type: Intl.DateTimeFormatPartTypes) => fields.find((field) => field.type === type)?.value ?? ''; return `${part('year')}-${part('month')}-${part('day')}`; }
 function sameRankedCalls(left: readonly CallRow[], right: readonly CallRow[]): boolean { return left.length === right.length && left.every((call, index) => { const other = right[index]; return other !== undefined && call.spot_id === other.spot_id && call.score_q === other.score_q && call.size_band === other.size_band && call.wind_state === other.wind_state && call.best_window?.start === other.best_window?.start && call.best_window?.end === other.best_window?.end; }); }
 
