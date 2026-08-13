@@ -696,20 +696,49 @@ const hasMap = (mapManifest.spots as Record<string, unknown>)[spotId] !== undefi
   .sd-track :global(.scorecard) { margin-bottom: 0; }
   .sd-below :global(section.avisos-control) { margin-bottom: 0; }
 
+  /* ---- the action deck: ONE primary voice per page ----
+     The report CTA in the tray is this page's single solid-green primary.
+     Everything else steps down: WhatsApp keeps a solid fill because sending
+     the call to the group IS the product's share action, and Copiar and the
+     avisos activation drop to outlined secondaries. Before this, four
+     identical full-width green slabs stacked at the page foot and nothing
+     ranked above anything (user-reported: "ugly as fuck"). Contrast holds
+     without new tokens: --go on --surface is 5.92:1 day / ~8:1 dark, and
+     every label is 17px+ semibold. */
   .spot-share h2 {
-    margin: 0;
-    color: var(--ink-2);
-    font-size: 11px;
-    font-weight: 750;
-    letter-spacing: .14em;
-    text-transform: uppercase;
+    margin: 0 0 var(--sp-1);
+    color: var(--ink);
+    font-size: var(--text-title2);
+    font-weight: 700;
+    line-height: var(--leading-snug);
   }
   .spot-share :global(.share-controls) { margin-top: var(--sp-3); }
-  .spot-share :global(.copy-control) { margin-top: var(--sp-3); }
+  .spot-share :global(.copy-control) { margin-top: var(--sp-2); }
+  .spot-share :global(.share-whatsapp) {
+    border-radius: var(--r-m);
+    font-weight: 700;
+    box-shadow: var(--shadow-1);
+  }
+  .spot-share :global(.copy-call),
+  .sd-below :global(.avisos-action) {
+    background: var(--surface);
+    border: 1.5px solid var(--go);
+    border-radius: var(--r-m);
+    color: var(--go);
+    font-weight: 700;
+  }
+  .sd-below :global(.avisos-action) { justify-content: center; }
+  /* the copy confirmation line keeps its quiet voice under the button */
+  .spot-share :global([data-copy-notice]:not([hidden])) {
+    margin: var(--sp-2) 0 0;
+    color: var(--ink-2);
+    font-size: var(--text-meta);
+  }
   @media (min-width: 720px) {
     .spot-share {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      /* WhatsApp is the louder half of the pair on purpose */
+      grid-template-columns: 1.4fr 1fr;
       gap: var(--sp-3);
       align-items: start;
     }
@@ -832,17 +861,20 @@ const hasMap = (mapManifest.spots as Record<string, unknown>)[spotId] !== undefi
        only). */
     .sd-below {
       grid-template-columns: 1fr 1fr;
+      /* auto then 1fr: the short track record owns only its own height, so
+         the share card docks right under it instead of drifting to the tall
+         map's midline */
+      grid-template-rows: auto 1fr;
       grid-template-areas:
         'map track'
-        'share share'
+        'map share'
         'avisos avisos';
       gap: var(--sp-5);
       align-items: start;
     }
     .sd-below:not(:has(.sd-map)) {
       grid-template-areas:
-        'track track'
-        'share share'
+        'track share'
         'avisos avisos';
     }
     .sd-map { grid-area: map; }
