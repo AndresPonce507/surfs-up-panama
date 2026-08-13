@@ -65,8 +65,20 @@ installed dependencies, and it runs the exact existing release pipeline. Per inv
    invalidation: short-TTL freshness is the recorded design.
 5. **Honesty**: `publish.success` is logged only after every PUT completed, derived by a pure
    function in the `src/pipeline/lambda/log-events.ts` pattern; every refusal logs
-   `publish.refused` with its reason. A `PublishSuccess` metric filter and a publish dead-man
-   alarm mirror the existing Build pattern.
+   `publish.refused` with its reason. A `PublishSuccess` metric filter mirrors the existing
+   Build pattern.
+
+   **Amended 2026-08-13.** This clause originally also required "a publish dead-man alarm mirror
+   the existing Build pattern". That is withdrawn: the design already sits at 10 of the 10
+   CloudWatch alarms `system-architecture.md` §12 budgets as a perpetual free tier, so an
+   eleventh alarm would cross a project-wide cost ceiling that outranks this feature-scoped ADR.
+   Instead, **the existing staleness dead-man is retargeted from `BuildSuccess` to
+   `PublishSuccess`**, which strictly dominates it as a staleness detector: `publish.success` is
+   logged only after a successful build AND every completed PUT, so it implies the whole chain.
+   Differential paging between "build failed" and "built but never published" is given up; both
+   stay diagnosable from the `build.refused` / `publish.refused` /
+   `health.publish.handoff_failed` log lines. Rationale and the deploy-ordering consequence are
+   recorded in the feature-delta's alarm-ceiling decision section.
 
 **Bounded means, concretely:**
 
