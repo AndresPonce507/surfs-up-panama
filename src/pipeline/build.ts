@@ -397,6 +397,15 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
  * cycle filed twice, so either is the same opinion; the rule is stated here so
  * the outcome is deterministic rather than incidental.
  *
+ * That tie is routine since 2026-08-13, not exotic: a cycle whose forecast
+ * window rolled forward files a second object covering an overlapping hour
+ * (adr-prediction-log-format.md decision 6). "The same opinion" stays literally
+ * true of the FORECAST, because ingest refuses to archive a restated hour whose
+ * wave numbers disagree. The joined wind and tide columns may differ between
+ * the two, being contemporaneous observations from providers on their own
+ * cycles; either is a real reading of that hour, and which one is taken is
+ * decided here deterministically rather than by chance.
+ *
  * The `run_ts <= build time` half of that sentence is NOT enforced here. See
  * tests/unit/build-reads-prior-capture-partition.test.ts for the reproduction
  * and why closing it is its own change.

@@ -76,7 +76,11 @@ describe('runCapture (one-time real-data snapshot composition root)', () => {
     });
 
     const written = gunzipSync(await readFile(
-      join(out, 'predictions/v1/dt=2026-08-09/src=ncep_gfswave016/cyc=06Z/all.jsonl.gz'),
+      // The partition names the forecast window this cycle had published when
+      // the capture ran, so a window that rolls forward under an unchanged
+      // cycle files its new hours instead of colliding with them
+      // (adr-prediction-log-format.md decision 6).
+      join(out, 'predictions/v1/dt=2026-08-09/src=ncep_gfswave016/cyc=06Z/all-window-1f80b4df4d072b78.jsonl.gz'),
     )).toString('utf8');
     expect(written).toContain('"spot_id":"playa-venao"');
 
