@@ -50,6 +50,24 @@ describe('Fetch Lambda IAM permissions', () => {
   });
 });
 
+// The Publisher reads the prior durable surface before it can render a new
+// public site. S3 deliberately masks an absent object as AccessDenied unless
+// the reader may list its exact prefix, so the first production publication
+// needs this narrow bucket-level permission as well as GetObject.
+describe('Publisher missing-state IAM permission', () => {
+  it('grants only the two prefixes needed to distinguish an absent bundle or durable surface from a denied read', () => {
+    const statements = policyStatementsFor(functionNames.publish);
+    const scopedList = statements.find((statement) => {
+      const actions = actionSet([statement]);
+      return actions.includes('s3:ListBucket');
+    });
+
+    expect(scopedList).toBeDefined();
+    expect(JSON.stringify(scopedList?.Condition ?? {})).toContain('v1/*');
+    expect(JSON.stringify(scopedList?.Condition ?? {})).toContain('site/published-surface.json');
+  });
+});
+
 // Same S3 failure family, write side: without ListBucket on the site bucket,
 // a missing pub/v1/meta/spot-index.json read surfaces as AccessDenied instead
 // of NoSuchKey and 502s every report. Proven falsifiable by removing the

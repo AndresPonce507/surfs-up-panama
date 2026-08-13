@@ -91,7 +91,9 @@ installed dependencies, and it runs the exact existing release pipeline. Per inv
   inside each document) and self-heals on the next hourly cycle.
 - Reserved concurrency 1, hard timeout 300 s, memory sized for one Astro build.
 - PUT-only S3 permissions: read on the region bundle prefix, read+put on
-  `site/published-surface.json`, put on the published route keys. No List, no Delete, anywhere.
+  `site/published-surface.json`, put on the published route keys, and one bucket-level
+  `ListBucket` permission scoped to those two read paths so S3 can distinguish a missing first-run
+  object from a denied read. Publisher never lists objects and has no Delete permission.
 
 ## Alternatives considered
 

@@ -100,6 +100,14 @@ This section supersedes the legacy notes below. They are retained only as histor
   page remains honest; Build records its own completed bundle without falsely describing stale
   public pages as a failed verification.
 
+## Publisher first-run state permission correction (2026-08-13)
+
+- Publisher still never issues an object-list operation and can never delete anything. It now has
+  one `s3:ListBucket` permission, scoped only to `v1/*` and
+  `site/published-surface.json`, because S3 otherwise masks a genuinely absent first-run durable
+  state object as `AccessDenied` rather than `NoSuchKey`. This is absence detection for its two
+  declared reads, not an inventory capability.
+
 ## Integration gate state (verified 2026-08-13 afternoon)
 
 - The Push live vertical passed the exact fast integration gate: **11 passed / 0 failed / 0

@@ -225,10 +225,10 @@ export class IngestStack extends Stack {
     // The Publisher's own least privilege: read-only on the region bundle it
     // was handed and the durable archive of the previous surface, put-only
     // on everything it publishes. Deliberately NOT bucket.grantRead(): that
-    // helper expands to s3:GetObject*, s3:GetBucket* AND s3:List*
-    // (aws-cdk-lib/aws-s3/lib/perms.js), and the charter forbids any List
-    // action on this function -- it walks the pages it just rendered and
-    // puts each one, it never asks the store what is already there. The
+    // helper expands to s3:GetObject*, s3:GetBucket* AND s3:List*.
+    // Publisher never lists objects, but S3 masks a genuinely missing state
+    // object as AccessDenied unless its exact key/prefix is list-authorized.
+    // The
     // bundle Build hands over is `pub/v1/regions/${REGION_ID}/bundle.json`;
     // S3Store's key mapping strips the `pub/` root, so the physical prefix
     // this grant needs is `v1/*`.
@@ -238,6 +238,18 @@ export class IngestStack extends Stack {
         bucket.arnForObjects('v1/*'),
         bucket.arnForObjects('site/published-surface.json'),
       ],
+    }));
+    // This permission changes missing-object semantics only. It is scoped to
+    // the two keys Publisher reads and grants neither object listing work nor
+    // access to any raw, prediction, photo or learning prefix.
+    publishFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:ListBucket'],
+      resources: [bucket.bucketArn],
+      conditions: {
+        StringLike: {
+          's3:prefix': ['v1/*', 'site/published-surface.json'],
+        },
+      },
     }));
     // grantPut is the safe helper here: it grants only s3:PutObject* and
     // s3:Abort*, never List or Delete. It covers both the durable archive
