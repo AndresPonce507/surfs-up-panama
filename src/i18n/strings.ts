@@ -21,6 +21,7 @@ export function otherLocale(locale: Locale): Locale {
 
 interface HomeStrings {
   readonly header: string;
+  readonly headerTomorrow: string;
   readonly tabToday: string;
   readonly tabTomorrow: string;
   readonly updatedPrefix: string;
@@ -82,6 +83,9 @@ export const strings: Record<Locale, UiStrings> = {
   es: {
     home: {
       header: '¿Dónde se surfea hoy?', // verbatim
+      // Not verbatim: mirrors the settled `header` above with the day swapped.
+      // Pending the copy register review the top comment describes.
+      headerTomorrow: '¿Dónde se surfea mañana?',
       tabToday: 'Hoy', // verbatim
       tabTomorrow: 'Mañana', // verbatim
       updatedPrefix: 'Actualizado', // verbatim
@@ -121,6 +125,9 @@ export const strings: Record<Locale, UiStrings> = {
   en: {
     home: {
       header: "Where's it working today?", // verbatim
+      // Not verbatim: mirrors `header` with the day swapped; pending the same
+      // copy register review.
+      headerTomorrow: "Where's it working tomorrow?",
       tabToday: 'Today', // verbatim
       tabTomorrow: 'Tomorrow', // verbatim
       updatedPrefix: 'Updated', // verbatim

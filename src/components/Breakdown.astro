@@ -120,6 +120,18 @@ if (compatibilityGap !== null) {
     list-style: none;
   }
 
+  /* The meter is spans inside a `.bar` grid. Grid blockifies its ITEMS, so
+     the track renders its 8px; the fill inside the track is not a grid item,
+     stayed `display: inline`, and an inline box ignores width and height --
+     every scored factor painted a 0x0 fill beside its number, on every spot
+     page, in both themes. Computed-style checks could not see it (the
+     background resolved fine; only the box was empty), so the fix is pinned
+     by a rendered-box test:
+     tests/e2e/daily-call-with-permanent-receipts/breakdown-fill-paints.spec.ts */
+  .breakdown .bar .fill {
+    display: block;
+  }
+
   .breakdown .bar {
     color: var(--ink);
     line-height: var(--leading-snug);
