@@ -40,7 +40,7 @@ RUN printf '%s\n' \
   "register();" \
   "const target = await import('./src/pipeline/lambda/publish-handler.ts');" \
   "export const handler = target.handler;" \
-  > /var/task/publish-handler.bootstrap.mjs
+  > /var/task/publish-handler-bootstrap.mjs
 
 # Run as a non-root user. Lambda's own base images ship root-only (verified:
 # the image carries no account with uid >= 1000), and the microVM is the real
@@ -63,4 +63,7 @@ RUN printf 'publisher:x:1001:1001::/tmp:/sbin/nologin\n' >> /etc/passwd \
   && chown -R 1001:1001 /var/task
 USER publisher
 
-CMD ["publish-handler.bootstrap.handler"]
+# The Lambda Node runtime splits the handler at its first dot. Keep the
+# module filename dot-free: `publish-handler.bootstrap.handler` is parsed as
+# module `publish-handler`, then fails before the bootstrap can load.
+CMD ["publish-handler-bootstrap.handler"]
