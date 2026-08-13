@@ -122,7 +122,7 @@ async function acceptedReportResponse(
   return { status: seen.includes(200) ? 200 : (seen.at(-1) ?? 0), seen };
 }
 
-async function waitForDrainedQueue(state: ReportFlowScenario, timeoutMilliseconds = 5_000): Promise<number> {
+async function waitForDrainedQueue(state: ReportFlowScenario, timeoutMilliseconds = 15_000): Promise<number> {
   const deadline = Date.now() + timeoutMilliseconds;
   let remaining = (await queuedReports(state)).length;
   while (remaining > 0 && Date.now() < deadline) {
@@ -140,13 +140,32 @@ async function noticeText(state: ReportFlowScenario): Promise<string> {
   return ((await notice.textContent()) ?? '').trim();
 }
 
+/**
+ * The acknowledgement, waited for rather than sampled. Same reasoning as the
+ * send window above: the notice paints at the end of the flush chain, so
+ * reading it the instant the step begins turns machine load into a false
+ * "the screen said nothing". A flush that genuinely never acknowledges still
+ * fails, just at the deadline.
+ */
+async function acknowledgementText(state: ReportFlowScenario, timeoutMilliseconds = 20_000): Promise<string> {
+  const deadline = Date.now() + timeoutMilliseconds;
+  let text = await noticeText(state);
+  while (text.length === 0 && Date.now() < deadline) {
+    await new Promise<void>((resolvePause) => { setTimeout(resolvePause, 50); });
+    text = await noticeText(state);
+  }
+  return text;
+}
+
 // ---------------------------------------------------------------------------
 // The deciding rule, as one negative oracle.
 // ---------------------------------------------------------------------------
 
 Then(
   'the earlier report goes through and leaves no reveal on the form screen',
-  { timeout: 60_000 },
+  // Worst case is the send window plus the accepted-answer window plus the
+  // queue drain, so the step bound must exceed their sum.
+  { timeout: 120_000 },
   async function (this: object) {
     const state = scenarioState(this);
     const page = await phonePage(state);
@@ -154,14 +173,21 @@ Then(
     // Vacuity guard first. This negative is only worth anything if the flush
     // actually fired: a screen that shows no reveal because it never sent
     // anything would satisfy every assertion below and prove nothing.
-    const sent = await observedWriteResponse(state, '/api/report', 5_000);
+    // Generous on purpose. The flush is a whole chain on a cold page load --
+    // open IndexedDB, probe it, mint in the background, then send -- and the
+    // full-feature run does it on a machine that is also building sites and
+    // driving other browsers. A short window here failed as "sent nothing" on
+    // a flow that had passed seconds earlier in a focused run, which would
+    // read as a product defect and is not one. The bound still has to exist:
+    // a flush that never fires must fail, not hang.
+    const sent = await observedWriteResponse(state, '/api/report', 25_000);
     assert.ok(
       sent,
       'WHAT: opening the report screen sent nothing, so there is no flush to judge. WHY: R26 keeps '
         + 'the page-open flush trigger; a queued report sends itself once, and only once. HOW: send '
         + `the waiting report when the report screen opens.${failureContext(state)}`,
     );
-    const accepted = await acceptedReportResponse(state);
+    const accepted = await acceptedReportResponse(state, 25_000);
     assert.equal(
       accepted.status,
       200,
@@ -223,10 +249,10 @@ Then(
 
 Then(
   'the acknowledgement carries no number, no size, no wind, no quality word and no comparison',
-  { timeout: 60_000 },
+  { timeout: 120_000 },
   async function (this: object) {
     const state = scenarioState(this);
-    const acknowledgement = await noticeText(state);
+    const acknowledgement = await acknowledgementText(state);
     assert.ok(
       acknowledgement.length > 0,
       'WHAT: the flush left the screen silent. WHY: a report that sent itself must say so, or the '
@@ -263,10 +289,10 @@ Then(
 
 Then(
   'the screen says plainly that the earlier report already went through',
-  { timeout: 60_000 },
+  { timeout: 120_000 },
   async function (this: object) {
     const state = scenarioState(this);
-    const acknowledgement = await noticeText(state);
+    const acknowledgement = await acknowledgementText(state);
     assert.ok(
       acknowledgement.length > 0,
       'WHAT: the screen says nothing about the report it just sent. WHY: the surfer left a report '
@@ -326,10 +352,10 @@ Then('the surfer sees that the earlier report arrived', { timeout: 60_000 }, asy
 
 Then(
   'the two reports that left the phone carry two different identities',
-  { timeout: 60_000 },
+  { timeout: 120_000 },
   async function (this: object) {
     const state = scenarioState(this);
-    const deadline = Date.now() + 5_000;
+    const deadline = Date.now() + 25_000;
     let identities = new Set(sentReportIdentities(state));
     while (identities.size < 2 && Date.now() < deadline) {
       await new Promise<void>((resolvePause) => { setTimeout(resolvePause, 25); });

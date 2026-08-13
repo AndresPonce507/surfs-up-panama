@@ -35,15 +35,24 @@ import { describe, it } from 'vitest';
 
 import { builtDocument, builtSite } from '../common/built-site';
 import { region } from '../../src/data/region';
+import { WIND_STATE_TOKENS } from '../../src/data/report-vocab';
+import { sizeBands } from '../../src/data/size-bands';
 import { paths } from '../../src/i18n/routes';
 import type { CommitOutcome, QueueOutcome, Refused } from '../../src/report/queue';
+import type { ReportAnswers } from '../../src/report/report-record';
+import { decideArrivalUi } from '../../src/report/reveal';
+import type { ReportReceipt, SubmissionOutcome } from '../../src/report/submit';
 import {
   CONFIRMED_HEADING,
+  FLUSH_ACKNOWLEDGED_MESSAGE,
+  FLUSH_RECEIPT_LINK_LABEL,
   NOTHING_QUEUED_HEADING,
   NOTHING_QUEUED_MESSAGE,
   QUEUED_CONFIRMATION_MESSAGE,
+  SEND_REFUSED_MESSAGE,
   STORAGE_REFUSED_MESSAGE,
   decideCommitUi,
+  decideFlushUi,
   decideProbeUi,
   decideRevealUi,
   parseAnswers,
@@ -132,6 +141,136 @@ describe('reading the three answers off the form', () => {
       undefined,
       'a tampered or stale value that is not a canonical token must never reach composeReportRecord '
         + '(domain-model.md section 10: a committed record has no edit command)',
+    );
+  });
+});
+
+describe('deciding what the form screen does once a report waiting from a prior visit finishes flushing (R4/R26 reconciliation)', () => {
+  const WAITING_REPORT_ID = 'waiting-report-id';
+
+  it('acknowledges the flush neutrally and points to the receipt by exactly the settled link, when the receipt matches what was sent', () => {
+    const outcome: SubmissionOutcome = {
+      kind: 'received',
+      receipt: { report_id: WAITING_REPORT_ID, outcome: 'no_snapshot', predicted: null },
+    };
+
+    assert.deepEqual(decideFlushUi(outcome, WAITING_REPORT_ID, links), {
+      kind: 'acknowledged',
+      message: FLUSH_ACKNOWLEDGED_MESSAGE,
+      receiptHref: links.historyUrl,
+      receiptLabel: FLUSH_RECEIPT_LINK_LABEL,
+    });
+  });
+
+  it('falls back to the plain send-refused notice, never the acknowledgement, when the receipt that arrives does not match the report that was sent', () => {
+    const outcome: SubmissionOutcome = {
+      kind: 'received',
+      receipt: { report_id: 'a-different-report-id', outcome: 'no_snapshot', predicted: null },
+    };
+
+    assert.deepEqual(
+      decideFlushUi(outcome, WAITING_REPORT_ID, links),
+      { kind: 'notice', message: SEND_REFUSED_MESSAGE },
+      'a receipt for a different report must never be read as this flush\'s own acknowledgement -- mirrors submitReport\'s own mismatch guard',
+    );
+  });
+
+  it('shows the refusal\'s own message, never the acknowledgement, when the flush send itself refuses', () => {
+    const outcome: SubmissionOutcome = {
+      kind: 'refused',
+      message: 'No pudimos confirmar el reporte ahora.',
+      persistence: 'may_arrive_later',
+      credentialInvalid: false,
+    };
+
+    assert.deepEqual(decideFlushUi(outcome, WAITING_REPORT_ID, links), { kind: 'notice', message: outcome.message });
+  });
+
+  // The anti-anchoring property, the falsifiable core of the whole R4/R26
+  // change: a receipt that carries a whole comparison must never let any of
+  // it -- not a number, not a word from the compared band or wind, not a line
+  // decideArrivalUi would render -- reach the acknowledgement or its link. The
+  // reveal lines the property checks against are derived from decideArrivalUi
+  // itself, never re-typed by hand, so this test cannot drift from the real
+  // reveal copy: if reveal.ts's wording changes, this property keeps checking
+  // against whatever it changed to.
+  const observed: ReportAnswers = { size_band: 'waist_chest', wind: 'choppy', quality: 'good' };
+
+  const arbitraryReceiptWithFullComparison: fc.Arbitrary<ReportReceipt> = fc.record({
+    scoreQ: fc.integer({ min: 0, max: 100 }),
+    sizeBandToken: fc.constantFrom(...sizeBands.map((band) => band.value)),
+    windToken: fc.constantFrom(...WIND_STATE_TOKENS),
+    rangeLowDecimetres: fc.integer({ min: 0, max: 50 }),
+    rangeSpanDecimetres: fc.integer({ min: 0, max: 50 }),
+    scorePoints: fc.integer({ min: -100, max: 100 }),
+    nReports: fc.integer({ min: 1, max: 5_000 }),
+    threshold: fc.integer({ min: 1, max: 5_000 }),
+  }).map(
+    (sample): ReportReceipt => ({
+      report_id: WAITING_REPORT_ID,
+      outcome: 'compared',
+      predicted: {
+        score_q: sample.scoreQ,
+        size_band: sample.sizeBandToken,
+        size_range_m: [sample.rangeLowDecimetres / 10, (sample.rangeLowDecimetres + sample.rangeSpanDecimetres) / 10],
+        wind_state: sample.windToken,
+        conf_level: 'medium',
+      },
+      delta: { score_points: sample.scorePoints, size_bands: 1 },
+      counter: { n_reports: sample.nReports, threshold: sample.threshold },
+    }),
+  );
+
+  // The reference an arbitrary receipt's acknowledged decision is compared
+  // against: the same acknowledgement a receipt with nothing to compare
+  // produces. Byte-identical to that, for every generated comparison, is the
+  // property that the receipt's own numbers never reach the screen.
+  const referenceDecision = decideFlushUi(
+    { kind: 'received', receipt: { report_id: WAITING_REPORT_ID, outcome: 'no_snapshot', predicted: null } },
+    WAITING_REPORT_ID,
+    links,
+  );
+
+  it('never lets a receipt\'s own comparison reach the flush acknowledgement or its link, whatever that comparison says', () => {
+    fc.assert(
+      fc.property(arbitraryReceiptWithFullComparison, (receipt) => {
+        const comparison = decideArrivalUi(receipt, observed).comparison;
+        assert.ok(
+          comparison !== undefined,
+          'vacuity guard: the generated receipt must carry a whole comparison, or this property tests nothing',
+        );
+        if (comparison === undefined) return;
+
+        const decision = decideFlushUi({ kind: 'received', receipt }, WAITING_REPORT_ID, links);
+        assert.equal(decision.kind, 'acknowledged');
+        if (decision.kind !== 'acknowledged') return;
+
+        assert.ok(
+          !/\d/.test(decision.message),
+          `WHAT: the flush acknowledgement carries a digit: ${JSON.stringify(decision.message)}`,
+        );
+        assert.ok(
+          !/\d/.test(decision.receiptLabel),
+          `WHAT: the receipt link label carries a digit: ${JSON.stringify(decision.receiptLabel)}`,
+        );
+
+        for (const line of [comparison.said, comparison.saw, comparison.difference, comparison.count]) {
+          assert.ok(
+            !decision.message.includes(line),
+            `WHAT: the flush acknowledgement repeats a reveal line decideArrivalUi produced: ${JSON.stringify(line)}`,
+          );
+          assert.ok(
+            !decision.receiptLabel.includes(line),
+            `WHAT: the receipt link label repeats a reveal line decideArrivalUi produced: ${JSON.stringify(line)}`,
+          );
+        }
+
+        assert.deepEqual(
+          decision,
+          referenceDecision,
+          'the acknowledged decision must be byte-identical no matter what the receipt\'s own comparison says',
+        );
+      }),
     );
   });
 });

@@ -397,8 +397,28 @@ When('the surfer waits without changing the clock', async function (this: object
 // which also proves the send really happened, is
 // steps/report-flush.steps.ts.
 Then('the report that was waiting goes through with the form still blank', async function (this: object) {
-  const state = stateOf(this);
   const page = await realPage(this);
+
+  // Vacuity guard, mirroring the local twin. This oracle is only worth
+  // something if the flush actually fired: a screen showing no reveal because
+  // it never sent anything would satisfy every assertion below. The
+  // acknowledgement and its link are the visible proof the send completed, and
+  // the drained durable row is the proof it will not send itself twice. Awaited
+  // rather than read off a fixed 500 ms snapshot, because a slow real handler
+  // would otherwise let the wording assertions pass before the flush lands.
+  await page.locator('[data-storage-notice] a').first().waitFor({ state: 'visible', timeout: 15_000 });
+  const deadline = Date.now() + 5_000;
+  let remaining = (await browserQueuedReports(this)).length;
+  while (remaining > 0 && Date.now() < deadline) {
+    await page.waitForTimeout(50);
+    remaining = (await browserQueuedReports(this)).length;
+  }
+  assert.equal(
+    remaining,
+    0,
+    `WHAT: ${remaining} acknowledged report(s) stayed in the durable queue after the flush. WHY: a report that went through must not send itself twice. HOW: discard it on its matching receipt.`,
+  );
+
   assert.match(
     new URL(page.url()).pathname,
     new RegExp(`^/spots/${SPOT}/reportar/?$`),
@@ -414,7 +434,7 @@ Then('the report that was waiting goes through with the form still blank', async
     0,
     'WHAT: the form screen opened with answers already picked after the flush. WHY: every visit is a blank report with a fresh identity (R4).',
   );
-  const text = state.sentText || await pageText(this);
+  const text = await pageText(this);
   for (const wording of ['Reporte recibido', 'Recibimos', 'llegó', 'Así nos fue', 'Dijimos', 'Tú viste', 'punto']) {
     assert.ok(
       !text.toLocaleLowerCase('es').includes(wording.toLocaleLowerCase('es')),

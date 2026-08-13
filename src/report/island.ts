@@ -56,6 +56,27 @@ import { strings, type Locale } from '../i18n/strings';
 export const QUEUED_CONFIRMATION_MESSAGE =
   'Guardado. Cuando vuelva la señal lo mandamos y te decimos cómo nos fue.';
 
+/**
+ * The R4/R26 reconciliation (docs/feature/f-tell-us-what-you-saw-cold/deliver/
+ * wave-decisions.md, decided 2026-08-13): a report that sends itself when the
+ * report screen opens is acknowledged in place, never revealed above the
+ * fresh blank form -- naming the size, wind or quality it carried would
+ * anchor the new capture to our own prior answer, the exact bias the
+ * RESOLVED anchoring section of docs/DISCUSS-decisions.md removes. Plain
+ * Panama Spanish, no numbers, never reads as an error. OPEN COPY ITEM,
+ * pending the same product sign-off pass as Pre-requisite 8a: wording is not
+ * yet settled copy.
+ */
+export const FLUSH_ACKNOWLEDGED_MESSAGE = 'Ya mandamos el reporte que tenías guardado.';
+
+/**
+ * The one explicit link to the flushed report's own receipt -- echoes the
+ * settled queued line's own promise ("... y te decimos cómo nos fue."). OPEN
+ * COPY ITEM, same sign-off pass as Pre-requisite 8a: wording is not yet
+ * settled copy.
+ */
+export const FLUSH_RECEIPT_LINK_LABEL = 'Ver cómo nos fue';
+
 /** Plain Spanish, no technical vocabulary. Wording itself is not yet settled copy. */
 export const STORAGE_REFUSED_MESSAGE =
   'No podemos guardar tu reporte en este teléfono ahora mismo.';
@@ -156,6 +177,36 @@ export function decideCommitUi(outcome: CommitOutcome, links: ConfirmationLinks)
     message: QUEUED_CONFIRMATION_MESSAGE,
     nav: { href: links.backHref, label: links.backLabel, emphasis: 'quiet' },
     historyUrl: links.historyUrl,
+  };
+}
+
+export type FlushUiDecision =
+  | { readonly kind: 'acknowledged'; readonly message: string; readonly receiptHref: string; readonly receiptLabel: string }
+  | { readonly kind: 'notice'; readonly message: string };
+
+/**
+ * The R4/R26 reconciliation itself: what the form screen does once a report
+ * that was waiting when the page opened finishes sending. A function of the
+ * outcome's identity and kind only -- it must never read receipt.predicted,
+ * receipt.delta, receipt.counter or the surfer's own observed answers, since
+ * showing any of them above a fresh blank form is exactly the anchoring the
+ * RESOLVED anchoring section of docs/DISCUSS-decisions.md forbids. A receipt
+ * whose identity does not match what was sent gets the same plain refusal
+ * submitReport already gives a mismatched receipt; a refusal keeps its own
+ * message.
+ */
+export function decideFlushUi(
+  outcome: SubmissionOutcome,
+  expectedReportId: string,
+  links: ConfirmationLinks,
+): FlushUiDecision {
+  if (outcome.kind === 'refused') return { kind: 'notice', message: outcome.message };
+  if (outcome.receipt.report_id !== expectedReportId) return { kind: 'notice', message: SEND_REFUSED_MESSAGE };
+  return {
+    kind: 'acknowledged',
+    message: FLUSH_ACKNOWLEDGED_MESSAGE,
+    receiptHref: links.historyUrl,
+    receiptLabel: FLUSH_RECEIPT_LINK_LABEL,
   };
 }
 
@@ -362,6 +413,30 @@ function applyReceivedUi(
     ...decideArrivalUi(receipt, observed),
     nav: { href: links.backHref, label: links.backLabel, emphasis: 'quiet' },
   });
+}
+
+/**
+ * Renders a flush decision into the existing notice surface -- never the
+ * confirmation container, never the address, never the form. An
+ * 'acknowledged' decision reuses buildNavElement's own hairline `nav` pattern
+ * so no new CSS is needed; the anchor's href is the real reportado address
+ * (an honest degrade with JS disabled), but a tap on it prevents the
+ * navigation and calls `reveal` instead, so the comparison the receipt
+ * carries only ever renders on an explicit choice, never inline above a
+ * fresh blank form.
+ */
+function applyFlushUi(decision: FlushUiDecision, elements: IslandElements, reveal: () => void): void {
+  if (decision.kind === 'notice') {
+    showNotice(elements.notice, decision.message);
+    return;
+  }
+  const nav = buildNavElement({ href: decision.receiptHref, label: decision.receiptLabel, emphasis: 'quiet' });
+  nav.querySelector('a')?.addEventListener('click', (event) => {
+    event.preventDefault();
+    reveal();
+  });
+  elements.notice.replaceChildren(paragraph(decision.message), nav);
+  elements.notice.hidden = false;
 }
 
 /**
@@ -600,11 +675,14 @@ async function flushWaitingReport(
   });
   if (waiting === undefined) return;
   const submission = await sendQueuedReport(queue, credential, reportEndpoint, waiting.report_id, waiting.bytes);
-  if (submission.kind === 'received' && submission.receipt.report_id === waiting.report_id) {
+  // The reveal a tap on the acknowledgement's link triggers -- reachable only
+  // through applyFlushUi's 'acknowledged' branch, which decideFlushUi only
+  // ever produces when submission is 'received' with a matching identity.
+  const revealFlushedReport = (): void => {
+    if (submission.kind !== 'received') return;
     applyReceivedUi(submission.receipt, savedAnswers(waiting.bytes), links, elements);
-    return;
-  }
-  if (submission.kind === 'refused') showNotice(elements.notice, submission.message);
+  };
+  applyFlushUi(decideFlushUi(submission, waiting.report_id, links), elements, revealFlushedReport);
 }
 
 /**
