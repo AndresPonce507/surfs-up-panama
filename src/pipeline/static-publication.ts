@@ -48,9 +48,15 @@ export function serializeSpotIndex(
   return JSON.stringify(index);
 }
 
-function geohash4(lat: number, lon: number): string {
+/**
+ * The one tile hash. Exported, not copied, because it now has two callers: the
+ * published spot index above, and the nightly observation export's partitioning
+ * (src/export/observation-objects.ts). Two implementations that drifted would
+ * fork the partitioning of an append-only log, which could never be re-tiled.
+ */
+export function geohash4(lat: number, lon: number): string {
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
-    throw new Error(`spot index refused: WHAT coordinates ${String(lat)}, ${String(lon)} are outside Earth bounds; WHY a report tile must identify a real location; HOW restore finite seed coordinates before publishing.`);
+    throw new Error(`spot tile refused: WHAT coordinates ${String(lat)}, ${String(lon)} are outside Earth bounds; WHY both the published spot index and the nightly observation export tile a spot from this one hash, so neither could identify a real location; HOW restore finite seed coordinates in data/spots/pa-pacific.yaml before publishing.`);
   }
   let minLatitude = -90;
   let maxLatitude = 90;
