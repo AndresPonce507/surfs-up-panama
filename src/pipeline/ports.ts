@@ -61,9 +61,13 @@ export type SourceResult<T> =
   | { ok: false; reason: SourceFailure };
 
 /** HTTP succeeded and yielded bytes. The ingest core archives these bytes
- * before it invokes the provider-specific parser. */
+ * before it invokes the provider-specific parser. `provider` names who
+ * actually produced the bytes (roadmap 04-03, W4 amendment condition 2:
+ * types-only widening, no port method changes meaning), so the raw archive
+ * can file each capture under its real vendor instead of a name the source
+ * loop used to hardcode. */
 export type ReceivedSourcePayload =
-  | { ok: true; verbatim: string }
+  | { ok: true; verbatim: string; provider: string }
   | { ok: false; reason: SourceFailure };
 
 /** One normalized hour of one wave member. land_masked per domain-model section 17. */

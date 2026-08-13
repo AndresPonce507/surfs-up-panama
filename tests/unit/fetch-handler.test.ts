@@ -55,7 +55,7 @@ class InMemoryIngestStore implements IngestStore {
 
 class WorkingSource implements ForecastSource {
   fetchWavePayload(spot_id: string): Promise<ReceivedSourcePayload> {
-    return Promise.resolve({ ok: true as const, verbatim: JSON.stringify({ spot_id }) });
+    return Promise.resolve({ ok: true as const, verbatim: JSON.stringify({ spot_id }), provider: 'open-meteo-marine' });
   }
 
   parseWaveMembers(): SourceResult<MemberSeries[]> {
@@ -68,7 +68,7 @@ class WorkingSource implements ForecastSource {
   }
 
   fetchWindPayload(): Promise<ReceivedSourcePayload> {
-    return Promise.resolve({ ok: true as const, verbatim: '{}' });
+    return Promise.resolve({ ok: true as const, verbatim: '{}', provider: 'open-meteo-wind' });
   }
   parseWind(): SourceResult<WindHour[]> { return { ok: true, data: [] }; }
 
@@ -198,7 +198,7 @@ describe('runFetch (Lambda Fetch composition root)', () => {
       return archive(record);
     };
     const source: ForecastSource = {
-      async fetchWavePayload() { return { ok: true, verbatim: '{not-json' }; },
+      async fetchWavePayload() { return { ok: true, verbatim: '{not-json', provider: 'open-meteo-marine' }; },
       parseWaveMembers() { timeline.push('parse'); return { ok: false, reason: 'malformed' }; },
       async fetchWindPayload() { return { ok: false, reason: 'dark' }; },
       parseWind() { return { ok: false, reason: 'dark' }; },

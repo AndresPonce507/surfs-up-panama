@@ -1,0 +1,296 @@
+{
+  "roadmap": {
+    "project_id": "f-know-how-much-to-trust-it",
+    "created_at": "2026-08-12T00:00:00Z",
+    "total_steps": 3,
+    "quality_contract_version": 1
+  },
+  "phases": [
+    {
+      "id": "01",
+      "name": "Slice-01: the reason names which thing the models split on",
+      "description": "Render-time composition from the already-published spread_terms, not a bundle-side composer: summaries() carries confidence_reason onto the day summary and the Spanish sentence is composed at the reader boundary via modelAgreement(). No producer change and no republish: src/pipeline/build.ts is untouched because the producer already publishes spread_terms on all 60 calls, and law L9 holds because combine() can read nothing new. ROADMAP NOTE FOR THE REST OF THE FEATURE: phases for slice-03 and slice-04 are appended just-in-time after each slice's own JIT DISTILL; slice-02 and slice-05 are blocked (see the Slice Plan in docs/feature/f-know-how-much-to-trust-it/feature-delta.md) and get no steps in this roadmap.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "01-01",
+          "name": "Reason carried to the surface and composed per variable at render time",
+          "criteria": [
+            "summaries() in src/data/forecast.ts carries confidence_reason from SurfaceCall onto the day summary explicitly; the field never silently drops the way this repo's worst shipped bug (optional conf_level on zero of 60 rows) did.",
+            "The per-variable Spanish sentence is composed at render time from the published confidence_reason.spread_terms via modelAgreement() in src/scoring/confidence.ts with DISAGREEMENT_THRESHOLD = 0.5, pinned to research 09 section 7.5's own worked Venao oracle (height 0.239, period 0.832, direction 0.090 reads as agreement on el tamaño and la dirección, split on el período) held as a test in tests/unit/model-agreement.test.ts, so the threshold cannot drift from the sentence the research wrote.",
+            "All-zero spread_terms with level low read not_comparable and the reason says 'no hay con qué comparar', never claiming agreement; all-zero terms with level medium or high read as genuine agreement, because a single member caps c_spread at 0.4 so any level above low proves two or more members participated (D4).",
+            "No composed reason carries a number, a percentage, a model identifier, JSON or English, and every reason keeps the settled no-beach-report sentence: the level is agreement between models, never verified accuracy.",
+            "Every composed reason fits the ≤280-characters-per-language bound (wave decision W1 in feature-delta.md; measured worst case of the shipped composer is 246). The old 160 bound is superseded and must not be reasserted anywhere.",
+            "src/pipeline/build.ts is untouched and nothing confidence returns is readable by combine() (law L9): this is a render-time reading of already-published data, touching no score, no ranking, no sub-score."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/cuanto-puedo-confiar.feature",
+          "scenario_name": "En <dia>, la razón nombra en cuál cosa coinciden los modelos y en cuál no",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Carriage and render-time composition, asserted through DOM text reads and unit oracles; the human judgement of the rendered surface at 390 px in both themes is deferred to the charter-gated step 01-03, this repo's established pattern for slice-internal steps whose output the visible step examines.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "tests/acceptance/f-know-how-much-to-trust-it/cuanto-puedo-confiar.feature",
+            "tests/acceptance/f-know-how-much-to-trust-it/fixtures/slice-01-agreement-variants.json",
+            "tests/acceptance/f-know-how-much-to-trust-it/steps/cuanto-puedo-confiar.steps.ts",
+            "src/components/Confidence.astro",
+            "src/components/RankedList.astro",
+            "src/data/forecast.ts",
+            "src/scoring/confidence.ts",
+            "tests/unit/confidence-reason-copy.test.ts",
+            "tests/unit/model-agreement.test.ts"
+          ],
+          "implementation_notes": "EXECUTED PRE-DES 2026-08-11 at commits 193955b (acceptance contract) and c785456 (implementation). Do NOT re-implement. Evidence: acceptance run 2026-08-12, 5 scenarios / 107 steps passed. DESIGN RATIONALE: the adopted design composes at render time from the already-published spread_terms; the earlier bundle-side composer design was rejected. Two dropped links are reconnected and nothing else moves: (1) summaries() in src/data/forecast.ts now copies confidence_reason (it copied six fields and dropped this one); (2) the sentence stops being keyed on the level alone. RankedList.astro calls modelAgreement(summary.confidence_reason.spread_terms, summary.conf_level) and Confidence.astro renders confidenceReasonEs(level, agreement); agreement is a REQUIRED parameter, with { kind: 'unknown' } as the explicit degrade constructed only at call sites that genuinely predate confidence_reason, because this repo's worst shipped bug was an optional field silently rendering nothing while every test stayed green. D1: qualitative words, no number added to the surface. D2: render-time only, beside the call, never folded into it. D3: DISAGREEMENT_THRESHOLD 0.5 is forced into (0.239, 0.832] by section 7.5's own worked sentence and means the spread grew to about 71% of its own calibration constant; the Venao oracle is a test, not a comment. D4: not_comparable fires only when terms are all zero AND level is low; the cross-tab on the real 60 calls confirms both branches fire (15 zero+low, 9 zero+medium). The Spanish factor nouns live in SPREAD_VARIABLE_ES beside the composer and are asserted equal to src/publish/factor-vocab.ts in the unit test, because the arrow points core -> publish and never back. SCENARIO COVERAGE: this step's Outline expands to two executed scenarios, Hoy on la home and Mañana. This step also implements the composer branch the negative single-opinion scenario reads (D4); that scenario is anchored at 01-02, whose member-filter fix is what keeps it honest against real member lists. EXEMPT FROM PARADIGM: step executed pre-DES; the unit oracles shipped at the recorded commits (model-agreement.test.ts holds the section 7.5 worked example and the vocabulary-equality guard; confidence-reason-copy.test.ts holds the copy guards)."
+        },
+        {
+          "id": "01-02",
+          "name": "Land-masked members excluded from the confidence spread",
+          "criteria": [
+            "confidence() consumes only members passing the same usable-member predicate blend() already applies, member.swell.h_m >= 0 && member.swell.t_s > 0 (usableMembers in src/scoring/confidence.ts), so the two consumers of one member list stop disagreeing about which members exist: one rule, both consumers.",
+            "A land-masked fake-zero member no longer inflates the spread: the measured Venao case (three real members plus one fake zero) keeps spread_terms {0.127, 0.419, 0.071} and level medium, instead of {5.503, 8.892, 27.040} and level low announcing a disagreement that never happened.",
+            "The parse-level land-mask rule is NOT widened: the three-field signature (H=0, T=0, and in the real capture dir=0 on 240 of 240 rows) stays where it is; the fix is consumer-side member filtering only.",
+            "With the exclusion in place the negative scenario stays honest end to end: a beach that only one real model can see reads 'no hay con qué comparar' and never claims agreement, while the beach with genuine multi-member agreement still reads that the models coincide; the unit guard in tests/unit/model-agreement.test.ts pins the exclusion falsifiably."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/cuanto-puedo-confiar.feature",
+          "scenario_name": "Con una sola opinión disponible, la razón dice que no hay con qué comparar",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A unit-level guard inside the scoring core whose observable is member filtering and the spread numbers it protects; the rendered surface those numbers reach is examined at the charter-gated step 01-03, this repo's established pattern.",
+          "ui_checks": {},
+          "deps": [
+            "01-01"
+          ],
+          "files_to_modify": [
+            "src/scoring/confidence.ts",
+            "tests/unit/model-agreement.test.ts"
+          ],
+          "implementation_notes": "EXECUTED PRE-DES 2026-08-11 at commit cad3180. Do NOT re-implement. Evidence: acceptance run 2026-08-12, 5 scenarios / 107 steps passed. DESIGN RATIONALE (D5): research 09 section 8.3 Finding 2 demands H==0 && T==0 be treated as missing, not flat. The parse layer flags it and blend() independently refuses it with t_s > 0, but confidence() had no such guard while consuming the same member list. Measured on this branch before the fix, one fake zero reaching confidence() drove every variable far past the disagreement threshold and flipped level medium to low while three real models agreed well: 'confidently wrong' one layer above where the research caught it, and exactly the failure that would make 01-01's sentence lie. The fix adopts blend()'s exact usable-member predicate rather than widening the parse rule, because section 8.3 states the signature as all three fields zero, the real capture agrees, and the existing parse test is named after the three-field rule. SCENARIO ANCHORING: this step carries the negative single-opinion scenario as its acceptance anchor because the exclusion is what guarantees a beach whose other models are land-masked reads as a single opinion instead of as fabricated total disagreement (at Playa Cambutal, ncep_gfswave025 is fully masked, 144 of 144 rows); the composer branch the scenario reads (not_comparable, D4) shipped in 01-01, so the two steps split mechanism and copy while the scenario is covered exactly once. EXEMPT FROM PARADIGM: step executed pre-DES; the unit guard shipped in tests/unit/model-agreement.test.ts at the recorded commit."
+        },
+        {
+          "id": "01-03",
+          "name": "The longest reason keeps phone rows clean, light and dark",
+          "criteria": [
+            "Both Examples of the Outline pass at 390 px: tema claro with movimiento normal, and tema oscuro with movimiento reducido; no row overflows the 390 px width or clips its text as the reason lengthens, including the long-named destination the fixture plants.",
+            "The tap that opens the reason measures at least 44 by 44 px and carries no motion; nothing animates under movimiento reducido.",
+            "The open reason's text has sufficient contrast against the real card backdrop in both themes, never measured against white.",
+            "The longest rendered reason stays within the ≤280-characters-per-language bound (W1) and wraps rather than clips; no check reasserts the superseded 160 bound.",
+            "Gate evidence is captured by redirecting output to a file and reading $? on its own line, never through a pipeline."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/cuanto-puedo-confiar.feature",
+          "scenario_name": "Con la razón más larga, las filas del teléfono siguen limpias en tema <tema> y movimiento <movimiento>",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-know-how-much-to-trust-it/la-razon-nombra-en-cual-cosa-los-modelos-no-se-ponen-de-acuerdo.md",
+          "u8_observation": "La razón de cada fila nombra en cuál cosa los modelos no se ponen de acuerdo, el tamaño, el período o la dirección, en español de a pie y nunca con una frase genérica, nunca promete acuerdo cuando solo un modelo alcanza a ver el spot sino que dice que no hay con qué comparar, siempre sigue diciendo que todavía nadie reportó desde la playa, y las filas se quedan limpias a 390 px.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-know-how-much-to-trust-it and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-know-how-much-to-trust-it and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-know-how-much-to-trust-it and @slice-01 and @ui-u3"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-know-how-much-to-trust-it and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-know-how-much-to-trust-it and @slice-01"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-know-how-much-to-trust-it and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-know-how-much-to-trust-it and @slice-01 and @ui-u7"
+            ]
+          },
+          "deps": [
+            "01-01",
+            "01-02"
+          ],
+          "files_to_modify": [
+            "docs/product/expectations/f-know-how-much-to-trust-it/la-razon-nombra-en-cual-cosa-los-modelos-no-se-ponen-de-acuerdo.md"
+          ],
+          "implementation_notes": "EXECUTED PRE-DES 2026-08-11 at commits 193955b (UI outline and expectation charter) and c785456 (the rendered surface the outline judges). Do NOT re-implement. Evidence: acceptance run 2026-08-12, 5 scenarios / 107 steps passed. THE CHARTER-GATED USER-VISIBLE STEP of the slice: no production file beyond 01-01's surface was needed, because the UI Outline judges what c785456 shipped through the already-mounted Confidence.astro and RankedList.astro. The Outline expands to two executed scenarios (claro/normal and oscuro/reducido). U5 MAPPING: the .feature carries no @ui-u5 tag, so the U5 key runs the slice-wide tag set; U5 (designed states) is exercised by the negative single-opinion scenario inside that slice-wide run, which drives the not_comparable designed state alongside the compared and full-agreement states of the same published morning. CHARTER STATE: the charter exists at charter_path with expectation ID EXP-f-know-how-much-to-trust-it-1 and already carries a Vera PASS recorded 2026-08-11 in its session log (40 disclosures opened across Hoy and Mañana, both themes, 390 px, all expected observations held, all negatives clean); DES sealing may still require its own fresh source-blind record, which is the in-progress half of the slice per feature-delta.md's Slice Plan annotation. W1 REMINDER: the longest rendered reason is bounded at ≤280 characters per language (measured worst case 246), so the row must wrap, never clip or line-clamp, and no check may reassert the superseded 160 bound. EXEMPT FROM PARADIGM: measured visual verification over a built artifact; E2E verifies wiring and appearance, not invariants."
+        }
+      ]
+    },
+    {
+      "id": "04",
+      "name": "Slice-04: the confidence story survives its only vendor",
+      "description": "A second, independent wave source (raw NOAA gfswave GRIB2 via the public grib_filter, US public domain) behind the registry seam adr-openmeteo-vs-raw-grib2.md promised: a registry change plus one adapter, the pipeline unchanged. The registry is a composite ForecastSource with priority order, so a healthy primary means the fallback is never consulted (the same physical model must never feed the member table twice), and a dark primary falls through to the fallback's honest contribution: the log records whichever vendor actually delivered, under the same series id (ncep_gfswave016 rows are the same series to every consumer regardless of vendor), and a fully dark morning shrinks to nothing rather than fabricating a member. src/pipeline/build.ts is untouched: DECLARED_MEMBER_SOURCES already names the series. Scope for the pipeline paths this phase touches is the W4 amendment recorded 2026-08-13 in feature-delta.md. Slice classification: non-visual (pre-adoption classification table; no new rendered state exists, levels and reasons change only as member data changes through states slice-01 proved), so no charter walk is owed; the acceptance contract examines prediction-log rows, raw-archive provenance and the published surface directly. Appended at slice-04's JIT DISTILL per this roadmap's own note; contract committed red-first, evidence in the execution log.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "04-01",
+          "name": "The acceptance contract: five scenarios against real same-cycle captures of both vendors",
+          "criteria": [
+            "tests/acceptance/f-know-how-much-to-trust-it/la-confianza-sobrevive-a-su-unico-proveedor.feature carries file-level @feature-f-know-how-much-to-trust-it and @slice-04 on EVERY scenario (tags do not inherit).",
+            "The fixtures are real captured responses of BOTH vendors stating the same 2026-08-13 00Z cycle, receipts with sha256 beside the bytes: 17 NOAA grib_filter responses f000..f048 for the Playa Venao window, and the Open-Meteo four-model response for the same spot and cycle. At 18Z the primary interpolates ncep_gfswave016 to 0.48 m where the raw grid's nearest ocean cell says 0.76 m; that real difference is the never-rewrites premise.",
+            "While the seam does not exist, every scenario RUNS and fails on the missing behaviour with the reason in the message (computed dynamic import), never on a static import error, and tsc --noEmit stays green.",
+            "The steps observe only through the store universe, the outcome events, and the test's own fetch stubs; no adapter internals are reached into."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/la-confianza-sobrevive-a-su-unico-proveedor.feature",
+          "scenario_name": "all five @slice-04 scenarios",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "The contract itself: pipeline rows, raw-archive keys, outcome events and published-surface fields, asserted through the ports. No rendered state is introduced anywhere in the slice.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "tests/acceptance/f-know-how-much-to-trust-it/la-confianza-sobrevive-a-su-unico-proveedor.feature",
+            "tests/acceptance/f-know-how-much-to-trust-it/steps/la-confianza-sobrevive.steps.ts",
+            "tests/acceptance/f-know-how-much-to-trust-it/fixtures/noaa-gfswave-20260813/",
+            "tests/acceptance/f-know-how-much-to-trust-it/fixtures/open-meteo-marine-playa-venao-20260813.json"
+          ],
+          "implementation_notes": "EXECUTED 2026-08-13, red for the right reason: 5 scenarios / 5 failed, exit 1, every failure reading 'el registro de fuentes todavia no existe en src/pipeline/adapters/'. The RED_ACCEPTANCE event carries the evidence. DELIVER makes these pass and is not allowed to edit them."
+        },
+        {
+          "id": "04-02",
+          "name": "The NOAA gfswave adapter, re-fitted to the current port",
+          "criteria": [
+            "src/pipeline/adapters/noaa-gfswave-source.ts exports NoaaGfswaveForecastSource implements ForecastSource with constructor (spotsById: ReadonlyMap<string, SpotCoordinate>, clock: Clock, fetchImpl?: typeof fetch), mirroring the OpenMeteoForecastSource convention: dependencies passed in, nothing ambient.",
+            "fetchWavePayload selects the newest gfswave cycle (00/06/12/18Z, 5h latency, per the house CYCLE_REGISTRY convention) and fetches the 3-hourly grib_filter subsets f000..f048 for the spot's +/-2 degree window with bounds rounded to one decimal; the returned string verbatim is a JSON capture envelope carrying every sub-response base64'd with its sha256 and URL. Any sub-request failing means ok:false 'error': a partially sighted member never masquerades as the full opinion. The composed URLs are asserted byte-equal against the committed capture receipt in the unit test.",
+            "parseWaveMembers accepts only its own envelope (anything else is malformed), verifies each part's sha256, decodes the concatenated GRIB2 messages (HTSGW/PERPW/DIRPW, simple packing, bitmap land mask, mined from the prior art on build/f2-trust), and emits source 'ncep_gfswave016' with house minute-precision timestamps: run_ts and valid_ts shaped like 2026-08-13T00:00Z, matching the ranking filter's endsWith('T18:00Z') and the Open-Meteo attribution format exactly.",
+            "The spot's exact 0.16-degree cell is preferred; when the grid masks it as land the adapter reads the nearest ocean cell by real distance in metres within two cells, deterministically, and with no ocean cell in that radius the hours stay land_masked (a stated absence, never the most favourable reading). The unit test pins the real Venao case from the committed capture: exact cell masked, nearest ocean cell one step east, 0.76 m / 14.43 s at f018.",
+            "fetchWindPayload and fetchTidePayload report dark: wind and tide stay with their own providers.",
+            "Every unit test shows a real failing run before its passing run, exit codes captured to files."
+          ],
+          "test_file": "tests/unit/noaa-gfswave-source.test.ts",
+          "scenario_name": "",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "An anti-corruption adapter behind a types-only port; its observable is normalized member data and envelope integrity, examined by unit oracles over the real captured bytes and by the slice acceptance contract.",
+          "ui_checks": {},
+          "deps": [
+            "04-01"
+          ],
+          "files_to_modify": [
+            "src/pipeline/adapters/noaa-gfswave-source.ts",
+            "tests/unit/noaa-gfswave-source.test.ts"
+          ],
+          "implementation_notes": "Prior art: noaa-gfswave-grib2.ts (304 lines) and its unit test on build/f2-trust, written against an older port shape (fetchWaveMembers returning Uint8Array verbatim). The GRIB2 section decoding is sound and mined; the port fit, the envelope, the multi-f-hour fetch, the timestamp normalization and the nearest-ocean-cell selection are new. W4's warning applies: re-fit, do not re-import wholesale."
+        },
+        {
+          "id": "04-03",
+          "name": "The source registry, and the raw archive stops lying about who produced the bytes",
+          "criteria": [
+            "src/pipeline/adapters/source-registry.ts exports registryForecastSource(entries: readonly RegistryEntry[]): ForecastSource with RegistryEntry = { id, source }; order is priority. A later entry's fetchWavePayload runs only when every earlier entry failed to deliver, so the acceptance stub counts ZERO fallback calls under a healthy primary; parseWaveMembers routes to the entry whose parser accepts the payload; when no entry delivers, the failure surfaces and ingest's existing wave_source_unavailable path runs unchanged. Wind and tide delegate through the same priority fold.",
+            "The ok arm of ReceivedSourcePayload in src/pipeline/ports.ts carries the provider name (types-only widening per W4 condition 2), each adapter declares its own ('open-meteo-marine', 'open-meteo-wind', 'noaa-gfswave'), and runIngestOnce files each raw capture under the provider that actually produced the bytes instead of the hardcoded names: raw/noaa-gfswave/ objects appear exactly when NOAA delivered, and never under raw/open-meteo-marine/.",
+            "No other ingest behaviour moves: write-once, the record-grain rewrite refusal, cycle attribution retention and the frozen-cycle guard are untouched, proven by the full unit suite staying green and by the never-rewrites acceptance scenario: the fallback restating the primary's archived cycle with different numbers is refused with health.archive.rewrite_refused and the archive keeps the primary's values.",
+            "All five @slice-04 acceptance scenarios pass; the focused slice run and the fast gate are captured to files with their real exit codes and 0 skipped.",
+            "Every step shows a real failing run before its passing run, exit codes captured to files."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/la-confianza-sobrevive-a-su-unico-proveedor.feature",
+          "scenario_name": "all five @slice-04 scenarios",
+          "slice_id": "slice-04",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A composite over the same types-only port plus provenance attribution in the source loop; observables are archive keys, log rows and outcome events, all asserted by the acceptance contract through the store universe.",
+          "ui_checks": {},
+          "deps": [
+            "04-02"
+          ],
+          "files_to_modify": [
+            "src/pipeline/adapters/source-registry.ts",
+            "src/pipeline/ports.ts",
+            "src/pipeline/ingest.ts",
+            "src/pipeline/adapters/open-meteo-source.ts",
+            "tests/unit/source-registry.test.ts"
+          ],
+          "implementation_notes": "The W4 amendment governs every pipeline path here: ports.ts types-only, ingest.ts source-loop-and-attribution only, and build.ts remains untouched. Recovery addendum 2026-08-13 wires one tested productionForecastSource factory into both capture-cli.ts and lambda/fetch-handler.ts, so the NOAA adapter is not only acceptance-composed. The factory keeps Open-Meteo first and invokes NOAA only when it cannot deliver. Fetch retains its S3 conditional-PUT startup probe but does not make Open-Meteo's clock-skew probe a prerequisite, because a dark primary must be allowed to fall through to the independent source. This is code only. The human-run SurfsUpPanamaIngest deploy remains required before the live Lambda can use the registry."
+        }
+      ]
+    }
+  ],
+  "implementation_scope": {
+    "source_directories": [
+      "src/scoring/",
+      "src/data/",
+      "src/components/",
+      "src/pipeline/adapters/",
+      "src/pipeline/ports.ts",
+      "src/pipeline/ingest.ts",
+      "src/pipeline/raw-archive.ts",
+      "src/pipeline/capture-cli.ts",
+      "src/pipeline/lambda/fetch-handler.ts"
+    ],
+    "test_directories": [
+      "tests/unit/",
+      "tests/acceptance/f-know-how-much-to-trust-it/"
+    ],
+    "scope_amendment": "W4 executed 2026-08-13: the six src/pipeline paths above enter scope for slice-04 only, under the conditions recorded in feature-delta.md ('W4 scope amendment for slice-04'). src/pipeline/** was previously excluded wholesale; the exclusion list below now names the pipeline files that remain out of scope.",
+    "excluded_patterns": [
+      "src/pipeline/build.ts",
+      "src/pipeline/static-publication.ts",
+      "src/pipeline/run-build-cli.ts",
+      "src/pipeline/lambda/build-handler.ts",
+      "src/pipeline/lambda/bundled-launch-seed-paths.ts",
+      "src/pipeline/lambda/log-events.ts",
+      "src/publish/**",
+      "src/i18n/**",
+      "src/share/**",
+      "src/report/**",
+      "src/pages/**",
+      "src/layouts/**",
+      "infra/**",
+      "public/**",
+      "scripts/**",
+      "vitest.config.ts",
+      "docs/feature/f-see-what-killed-it/**",
+      "docs/feature/daily-call-with-permanent-receipts/**"
+    ]
+  },
+  "validation": {
+    "status": "approved",
+    "reviewer": "nw-acceptance-designer-reviewer (haiku), verdict APPROVED 2026-08-12",
+    "approved_at": "2026-08-12T17:05:00Z"
+  }
+}

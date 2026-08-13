@@ -756,7 +756,7 @@ describe('real stack guardrails: ingest scheduling and the dead-man signal chain
     const buildPackage = await import(pathToFileURL(resolve(buildAsset, 'index.mjs')).href) as typeof import('../../src/pipeline/lambda/build-handler.js');
     const source: ForecastSource = {
       async fetchWavePayload(spot_id) {
-        return { ok: true, verbatim: JSON.stringify({ spot_id }) };
+        return { ok: true, verbatim: JSON.stringify({ spot_id }), provider: 'open-meteo-marine' };
       },
       parseWaveMembers() {
         return { ok: true, data: [{
@@ -771,7 +771,7 @@ describe('real stack guardrails: ingest scheduling and the dead-man signal chain
           }] };
       },
       async fetchWindPayload() {
-        return { ok: true, verbatim: '{}' };
+        return { ok: true, verbatim: '{}', provider: 'open-meteo-wind' };
       },
       parseWind() { return { ok: true, data: [] }; },
       async fetchTidePayload() {

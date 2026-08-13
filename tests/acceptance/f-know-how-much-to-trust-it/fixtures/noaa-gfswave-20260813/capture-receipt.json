@@ -1,0 +1,113 @@
+{
+  "capture_kind": "reproducible-public-provider-response",
+  "provider": "NOAA NCEP NOMADS grib_filter",
+  "retrieved_at": "2026-08-13T12:44:00Z",
+  "model_run": "2026-08-13T00:00Z gfswave global.0p16",
+  "subregion": "leftlon 277.8, rightlon 281.8, toplat 9.4, bottomlat 5.4 (Playa Venao +/- 2 degrees)",
+  "note": "Real captured responses, one per 3-hourly forecast step f000..f048. US public domain. The exact nearest 0.16-degree cell to Playa Venao is land-masked in this grid; the nearest ocean cell one step east carries the real swell (verified 0.76 m / 14.43 s / 195 deg at f018).",
+  "reproduction": "curl --fail --silent --show-error --location --output <body_file> <url>",
+  "requests": [
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f000.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f000.20260813.grib2",
+      "byte_count": 2630,
+      "sha256": "71bec4256676e994e0ff7c514fdfcec59b51cbc7cfdd06ee0f6c6688c8ef4072"
+    },
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f003.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f003.20260813.grib2",
+      "byte_count": 2630,
+      "sha256": "ac6da7c25a364936fdbfe7d467a5354137e40d1689fa83bb5735116d716a2fca"
+    },
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f006.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f006.20260813.grib2",
+      "byte_count": 2577,
+      "sha256": "535832ede25a975f6e4e17edd9490cb4aa49eec56e9456823b535805f8c893b8"
+    },
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f009.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f009.20260813.grib2",
+      "byte_count": 2630,
+      "sha256": "6dfa9f318627b968ebd0f79dbccdae300c35a0e896ee0f7a68636155e8c659ea"
+    },
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f012.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f012.20260813.grib2",
+      "byte_count": 2630,
+      "sha256": "ea862cdd404ef1c11ab221791d94912f9ed13a45a290d211b1746fb96c166613"
+    },
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f015.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f015.20260813.grib2",
+      "byte_count": 2630,
+      "sha256": "ca1d1024686e6a6b66cf56767d7035e62bd7d124ac7fdc9e627a903f1fed4bb4"
+    },
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f018.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f018.20260813.grib2",
+      "byte_count": 2630,
+      "sha256": "4345f27c357ded284c2c9f36547fdb116af312c469a104c6d0c5f985ef386e17"
+    },
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f021.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f021.20260813.grib2",
+      "byte_count": 2577,
+      "sha256": "bb9da991e5c7993bc74fbb7b4476cf5eff55e8f3d6b49d8f5f87280632053739"
+    },
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f024.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f024.20260813.grib2",
+      "byte_count": 2577,
+      "sha256": "53fa97060ae2ba5662554fe8229bbdf6676dc694edb80b28445c735869639f32"
+    },
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f027.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f027.20260813.grib2",
+      "byte_count": 2577,
+      "sha256": "a7223cf6d68fc84471d79a46720f53334de5f05fd63ddbc76290fc82a44892b4"
+    },
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f030.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f030.20260813.grib2",
+      "byte_count": 2630,
+      "sha256": "98c29b15fe0930441f8fb4b79ab6ed0bc2a3ff4b5ce33a4cff0c37f281c7a3aa"
+    },
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f033.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f033.20260813.grib2",
+      "byte_count": 2630,
+      "sha256": "334983908ee55c4e8eb6b77cda00081571139b2a1df37924b43bb548f74e3e0a"
+    },
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f036.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f036.20260813.grib2",
+      "byte_count": 2630,
+      "sha256": "0b106790801e02f6d7bea23a7d138a2b8703bfd59ec430c44f8881b9087e197b"
+    },
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f039.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f039.20260813.grib2",
+      "byte_count": 2630,
+      "sha256": "a01dbabf539d5804b9bcf17e7c1fac0c2640efd91dd3c709a4bfd0f3ee5bba60"
+    },
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f042.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f042.20260813.grib2",
+      "byte_count": 2577,
+      "sha256": "9949c32d34274a69c7afd504a3b8cb767701e38de229c2f114e97975b3ef2663"
+    },
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f045.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f045.20260813.grib2",
+      "byte_count": 2577,
+      "sha256": "5adfdc6e001d7356febb950d982cf28f226191cf4130b3f1bfa542959907abad"
+    },
+    {
+      "url": "https://nomads.ncep.noaa.gov/cgi-bin/filter_gfswave.pl?file=gfswave.t00z.global.0p16.f048.grib2&all_lev=on&var_HTSGW=on&var_PERPW=on&var_DIRPW=on&subregion=&leftlon=277.8&rightlon=281.8&toplat=9.4&bottomlat=5.4&dir=%2Fgfs.20260813%2F00%2Fwave%2Fgridded",
+      "body_file": "gfswave.t00z.global.0p16.f048.20260813.grib2",
+      "byte_count": 2577,
+      "sha256": "8972846613494ea88cb76d6a5fd856745ee841501562a8cafea60d4f4c3f5055"
+    }
+  ]
+}

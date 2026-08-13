@@ -50,7 +50,7 @@ export class OpenMeteoForecastSource implements ForecastSource {
 
   async fetchWavePayload(spot_id: string): Promise<ReceivedSourcePayload> {
     const spot = this.requireSpot(spot_id);
-    return this.get(marineUrl(spot, this.forecastDays));
+    return this.get(marineUrl(spot, this.forecastDays), 'open-meteo-marine');
   }
 
   parseWaveMembers(verbatim: string): SourceResult<MemberSeries[]> {
@@ -66,7 +66,7 @@ export class OpenMeteoForecastSource implements ForecastSource {
 
   async fetchWindPayload(spot_id: string): Promise<ReceivedSourcePayload> {
     const spot = this.requireSpot(spot_id);
-    return this.get(windUrl(spot, this.forecastDays));
+    return this.get(windUrl(spot, this.forecastDays), 'open-meteo-wind');
   }
 
   parseWind(verbatim: string): SourceResult<WindHour[]> {
@@ -87,7 +87,7 @@ export class OpenMeteoForecastSource implements ForecastSource {
   async probeClockSkew(): Promise<void> {
     const firstSpot = this.spotsById.values().next().value as SpotCoordinate | undefined;
     if (firstSpot === undefined) throw new Error('clock-skew probe has no spot coordinate');
-    const response = await this.get(marineUrl(firstSpot, 1));
+    const response = await this.get(marineUrl(firstSpot, 1), 'open-meteo-marine');
     if (!response.ok) throw new Error('clock-skew probe provider request failed');
     const providerTime = this.lastProviderDate === null ? Number.NaN : Date.parse(this.lastProviderDate);
     if (!Number.isFinite(providerTime) || Math.abs(providerTime - this.clock.now().getTime()) > 60_000) {
@@ -99,7 +99,7 @@ export class OpenMeteoForecastSource implements ForecastSource {
     return { ok: false, reason: 'dark' };
   }
 
-  private async get(url: string): Promise<ReceivedSourcePayload> {
+  private async get(url: string, provider: string): Promise<ReceivedSourcePayload> {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -107,7 +107,7 @@ export class OpenMeteoForecastSource implements ForecastSource {
         const response = await this.fetchImpl(url, { signal: controller.signal });
         if (response.ok) {
           this.lastProviderDate = response.headers.get('date');
-          return { ok: true, verbatim: await response.text() };
+          return { ok: true, verbatim: await response.text(), provider };
         }
         if (response.status < 500) return { ok: false, reason: 'error' };
       } catch {

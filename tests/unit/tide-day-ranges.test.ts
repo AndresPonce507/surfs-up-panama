@@ -41,7 +41,7 @@ class MemoryStore implements IngestStore {
 
 class TwoPanamaDaysSource implements ForecastSource {
   async fetchWavePayload(): Promise<ReceivedSourcePayload> {
-    return { ok: true, verbatim: '{}' };
+    return { ok: true, verbatim: '{}', provider: 'test-wave' };
   }
 
   parseWaveMembers(): SourceResult<MemberSeries[]> {
@@ -74,7 +74,7 @@ class TwoPanamaDaysSource implements ForecastSource {
   }
 
   async fetchTidePayload(): Promise<ReceivedSourcePayload> {
-    return { ok: true, verbatim: '{}' };
+    return { ok: true, verbatim: '{}', provider: 'test-tide' };
   }
 
   parseTide(): SourceResult<TideHour[]> {

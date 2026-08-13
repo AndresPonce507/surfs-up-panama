@@ -1,0 +1,15 @@
+{
+  "capture_kind": "reproducible-public-provider-response",
+  "provider": "Open-Meteo Marine API",
+  "retrieved_at": "2026-08-13T12:49:00Z",
+  "request": {
+    "method": "GET",
+    "url": "https://marine-api.open-meteo.com/v1/marine?latitude=7.4320526&longitude=-80.1928532&hourly=swell_wave_height%2Cswell_wave_period%2Cswell_wave_direction&models=ncep_gfswave016%2Cncep_gfswave025%2Cmeteofrance_wave%2Cdwd_gwam&timezone=UTC&forecast_days=2"
+  },
+  "response": {
+    "body_file": "open-meteo-marine-playa-venao-20260813.json",
+    "byte_count": 4833,
+    "sha256": "a4eaf70772274e4f024943c35dafd0ba256426eae3dbfe5145a51e3fe4e234d6"
+  },
+  "note": "Same civil day as the NOAA capture so both vendors state the same 00Z cycle: at 2026-08-13T18:00Z Open-Meteo interpolates ncep_gfswave016 at Playa Venao to 0.48 m while the raw grid nearest ocean cell says 0.76 m. That difference is the honest premise of the never-rewrites scenario."
+}

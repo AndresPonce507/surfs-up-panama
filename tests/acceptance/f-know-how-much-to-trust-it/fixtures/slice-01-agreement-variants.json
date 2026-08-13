@@ -1,0 +1,31 @@
+{
+  "note": "Spread-term variants injected into an ISOLATED copy of the published surface. The two split rows use research 09 section 7.5's own worked Playa Venao numbers and a mirrored size split, so the fixture cannot drift away from the document that pins the threshold.",
+  "difference_cycle": [
+    {
+      "label": "split-on-period (research 09 section 7.5 worked Venao numbers)",
+      "conf_level": "medium",
+      "spread_terms": { "height": 0.239, "period": 0.832, "direction": 0.09 }
+    },
+    {
+      "label": "split-on-size",
+      "conf_level": "medium",
+      "spread_terms": { "height": 1.108, "period": 0.03, "direction": 0.018 }
+    },
+    {
+      "label": "everything-agrees (non-zero but under threshold)",
+      "conf_level": "high",
+      "spread_terms": { "height": 0.05, "period": 0.013, "direction": 0.018 }
+    }
+  ],
+  "single_opinion": {
+    "label": "zero terms with a low level: one model only, nothing to compare",
+    "conf_level": "low",
+    "spread_terms": { "height": 0, "period": 0, "direction": 0 }
+  },
+  "real_agreement": {
+    "label": "zero terms with a level above low: two or more models genuinely agreed",
+    "conf_level": "medium",
+    "spread_terms": { "height": 0, "period": 0, "direction": 0 }
+  },
+  "long_name_spot_id": "santa-catalina-la-punta"
+}

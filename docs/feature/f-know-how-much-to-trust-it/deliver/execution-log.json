@@ -1,0 +1,146 @@
+{
+  "schema_version": "3.0",
+  "feature_id": "f-know-how-much-to-trust-it",
+  "events": [
+    {
+      "sid": "01-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-12T16:58:54Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "COMMIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: work pre-committed at 338cac2 (contract at 90e19f4) before the DES workspace existed; instrumented verification re-execution; working tree clean",
+      "t": "2026-08-12T16:59:02Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-12T17:14:49Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: falsifiability probe 2026-08-13, confidence_reason carriage removed from summaries(); 2 scenarios failed, exit 1; all 20 reasons collapsed to the generic 'Los modelos coinciden solo en parte'; reverted, git diff clean",
+      "t": "2026-08-13T10:31:08Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: post-rebase re-run 2026-08-13, 2 scenarios / 44 steps passed, exit 0",
+      "t": "2026-08-13T10:31:08Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: falsifiability probe 2026-08-13, usableMembers filter removed; 3 tests failed, exit 1; spread terms exploded to {5.503, 8.892, 27.040} vs {0.127, 0.419, 0.071} exactly as feature-delta D5 documents; reverted, git diff clean",
+      "t": "2026-08-13T10:31:08Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: post-rebase re-run 2026-08-13, tests/unit/model-agreement.test.ts 14 passed, exit 0",
+      "t": "2026-08-13T10:31:08Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: falsifiability probe 2026-08-13, summary min-height dropped from var(--tap) to 20px; 2 scenarios failed, exit 1; measured touch targets fell to 29px height on all 20 rows; reverted, git diff clean",
+      "t": "2026-08-13T10:31:08Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: post-rebase re-run 2026-08-13, 2 scenarios / 44 steps passed, exit 0",
+      "t": "2026-08-13T10:31:08Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: source-blind Vera verdict PASS 2026-08-13, recorded in the charter Session log (docs/product/expectations/f-know-how-much-to-trust-it/la-razon-nombra-en-cual-cosa-los-modelos-no-se-ponen-de-acuerdo.md). 80 disclosures opened, 40/40 reasons name concrete variables, contrast 6.92:1 light / 8.69:1 dark, 44x44px targets, zero overflow, zero digits. Two oracle cases UNOBSERVED for lack of an example in today's data (full-agreement phrasing; single-opinion 'no hay con que comparar'), both covered falsifiably by fixture-driven scenarios. TOOLING REFUSAL recorded verbatim, des-record-examine could not be used: \"Error: charter must be the contract path /Users/andres/psb-multimodel-trust/docs/feature/f-know-how-much-to-trust-it/deliver/docs/product/expectations/f-know-how-much-to-trust-it/la-razon-nombra-en-cual-cosa-los-modelos-no-se-ponen-de-acuerdo.md, not /Users/andres/psb-multimodel-trust/docs/product/expectations/f-know-how-much-to-trust-it/la-razon-nombra-en-cual-cosa-los-modelos-no-se-ponen-de-acuerdo.md\" - the shim resolves --charter under --project-dir, but this repo keeps charters in docs/product/expectations/, so no valid argument exists.",
+      "t": "2026-08-13T10:43:36Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "CORRECTION, supersedes the earlier 01-03 COMMIT event on this same date: the source-blind Vera verdict is INDETERMINATE, not PASS. The examiner revised her own charter row after first writing PASS, and the earlier event captured the stale row. Slice-01 is NOT sealed. She confirmed every charter negative clean over 80 disclosures (contrast 6.92:1 light / 8.69:1 dark, 44x44px targets, zero overflow, zero digits) but could not render a verdict on 2 in-scope oracle rows because today's live surface holds no example of either: the full-agreement phrasing, and the single-model 'no hay con que comparar' case. Resolution in flight: a controlled fixture surface carrying one full-agreement spot and one single-model spot, then a source-blind re-examination. Production behaviour is not changed and the charter is not weakened.",
+      "t": "2026-08-13T10:52:19Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: source-blind Vera PASS 2026-08-13 on the second walk, against a controlled fixture surface built to exercise the two oracle rows the live data had no example of. Every oracle bullet observed and every negative held: full agreement 'Los modelos coinciden en el tamano, el periodo y la direccion' at Playa Venao level medium both days; single-model 'no hay con que comparar' at rank-1 both days, refusing to claim agreement; 40/40 carry the no-beach-report sentence; zero digits, percentages, meters, model identifiers; zero overflow at 390px; 44x44px targets; contrast 6.92:1 light and 8.69:1 dark, hero gradient computed by hand at worst stop 7.34:1, clears AA. Fixture built by isolated mkdtemp copy with symlinked node_modules; the installed data/published-surface.json was asserted byte-identical to HEAD after the build and no production source was modified. DEFECT FOUND by this walk, fix in flight: the single-model sentence hardcodes 'Hoy' and renders on the Manana page.",
+      "t": "2026-08-13T11:29:59Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: JIT DISTILL contract committed at 07016de, red for the right reason. 4 of 5 scenarios failed with 'src/scoring/confidence.ts no declara todavia la constante CONFIDENCE_FACTORS con spread en true, asi que no hubo nada que apagar'; the 5th passed correctly because it describes today's behaviour with every term on.",
+      "t": "2026-08-13T11:29:59Z"
+    },
+    {
+      "sid": "03-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: slice-03 implemented at 56ad4d3. 5 scenarios / 123 steps green; vitest 623/623; tsc exit 0; build exit 0 with dist inspected; ci:local --fast 11 passed / 0 failed / 0 skipped exit 0. Two falsifiability probes reverted clean: removing the zero-signal guard read 'high' where it must read low; disabling the flag-off early return made 4 of 5 fail with the three variables named again across all 40 published rows.",
+      "t": "2026-08-13T11:29:59Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: slice-04 JIT DISTILL contract red for the right reason 2026-08-13. 5 scenarios / 5 failed, exit 1 (log .ci-local-logs/slice04-red-acceptance.log): every failure reads 'el registro de fuentes todavia no existe en src/pipeline/adapters/: Cannot find module .../source-registry', never an import crash; tsc --noEmit exit 0 through the computed dynamic import. Fixtures are real same-cycle captures of both vendors (NOAA grib_filter f000..f048 + Open-Meteo marine, 2026-08-13 00Z, receipts with sha256 beside the bytes).",
+      "t": "2026-08-13T12:57:13Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: real red 2026-08-13, tests/unit/noaa-gfswave-source.test.ts written first and run against the missing module, exit 1 (.ci-local-logs/slice04-02-red-unit.log, Cannot find module noaa-gfswave-source).",
+      "t": "2026-08-13T13:25:24Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: adapter implemented 2026-08-13 by nw-functional-software-crafter under HANDOFF waiver 2 (DES-exempt dispatch). Focused 9/9 exit 0 (.ci-local-logs/slice04-02-green-unit.log, re-verified by the orchestrator in slice04-02-orchestrator-verify.log); full vitest 633/633 exit 0; tsc exit 0. Three falsifiability probes each failed for the right reason and were reverted with git diff proof: neighbor search removed -> Venao read land_masked; sha256 check skipped -> corrupted part parsed as ok with garbage data; land mask ignored -> 3 tests failed on masked-cell decode. FLAGS: nearest-ocean-cell distance measured from the spot's snapped cell center (documented; reproduces the pinned 0.76m east cell; from the raw coordinate the south 0.84m cell would be nearer); parseWaveMembers depends on the immediately preceding fetchWavePayload's spot via lastRequestedSpot, mirroring OM's lastProviderDate pattern, safe under ingest's sequential per-spot loop; pre-existing unseeded fast-check flake in tests/unit/scorecard-daily-aggregate.test.ts failed attempt 1 on a 1-ULP diff, passed clean on re-run, unrelated to this step.",
+      "t": "2026-08-13T13:25:24Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: real red 2026-08-13, tests/unit/source-registry.test.ts written first and run against the missing module, exit 1 (.ci-local-logs/slice04-03-red-unit.log). The acceptance red for the same seam is the 04-01 record (5 scenarios / 5 failed, exit 1).",
+      "t": "2026-08-13T13:44:39Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: registry + provider attribution implemented 2026-08-13 by nw-functional-software-crafter under HANDOFF waiver 2 (DES-exempt dispatch). Registry units 8/8 exit 0 (one fast-check property pinning priority order, zero-calls-past-the-winner and provider passthrough); full vitest 641 exit 0; tsc exit 0; slice-04 acceptance 5 scenarios / 135 steps exit 0 (.ci-local-logs/slice04-03-green-acceptance.log; re-verified by the orchestrator: slice04-03-orchestrator-acceptance.log exit 0); slice-01+03 focused regression 10 scenarios / 245 steps exit 0 (slice04-03-orchestrator-regression.log); ci-local --fast 11 passed / 0 failed / 0 skipped exit 0 (slice04-fast-gate.log). Two falsifiability probes red for the right reason and reverted: fallback consulted under a healthy primary -> 17 calls counted where the contract demands 0; provenance hardcoded back -> raw/noaa-gfswave/ empty. Mechanical type-conformance ripple from the required provider field recorded as a W4 addendum: daily-call support fakes (3 sites), tests/unit fetch-handler (3) capture-cli (2) ingest-window-rollforward (3), and infra/test/guardrails.test.ts (2 sites, outside the anticipated list, flagged and recorded). pgrep hygiene 0 after gates; an orphaned astro preview (PID 8120) from a prior session in this worktree was found and killed.",
+      "t": "2026-08-13T13:44:39Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: recovery addendum after current-main reconciliation. The five-scenario slice-04 contract was re-run red first, exit 1 with every failure naming the absent source registry, then green 5 scenarios / 135 steps exit 0. The production registry factory was then driven red, exit 1 because it was absent, then green: healthy Open-Meteo made one request and zero NOAA requests; two failed primary attempts caused seventeen NOAA GRIB subset requests. Slice-03 exposed the merged optional-argument collision as a semantic red, 2 of 5 scenarios failed because a factor object was read as model-run age; the compatibility dispatch restored its sealed sixth-argument factor form while preserving the later numeric model-run age, and slice-03 passed 5 scenarios / 128 steps. Focused compatibility units 20/20, full vitest 660/660, tsc exit 0, build exit 0 with dist/index.html inspected. No deploy performed; fast gate and HEAD-only gitleaks remain the final branch checks.",
+      "t": "2026-08-13T14:49:41Z"
+    }
+  ]
+}

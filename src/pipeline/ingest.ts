@@ -61,16 +61,20 @@ export async function runIngestOnce(deps: IngestDeps): Promise<IngestOutcome> {
   const archive = await loadArchive(deps.store);
   for (const spot of spots) {
     const wavePayload = await deps.source.fetchWavePayload(spot.spot_id);
+    // Provider is named by whoever actually produced the bytes (roadmap
+    // 04-03), never hardcoded here: a registry can hand back the primary's
+    // payload one call and an independent vendor's the next, and the raw
+    // archive must stay honest about which one it was (W4 amendment).
     const waveArchive = wavePayload.ok
-      ? rawArchiveRecord('open-meteo-marine', spot.spot_id, deps.clock.now(), executionId, wavePayload.verbatim)
+      ? rawArchiveRecord(wavePayload.provider, spot.spot_id, deps.clock.now(), executionId, wavePayload.verbatim)
       : null;
     const windPayload = await deps.source.fetchWindPayload(spot.spot_id);
     const windArchive = windPayload.ok
-      ? rawArchiveRecord('open-meteo-wind', spot.spot_id, deps.clock.now(), executionId, windPayload.verbatim)
+      ? rawArchiveRecord(windPayload.provider, spot.spot_id, deps.clock.now(), executionId, windPayload.verbatim)
       : null;
     const tidePayload = await deps.source.fetchTidePayload(spot.spot_id);
     const tideArchive = tidePayload.ok
-      ? rawArchiveRecord('coops', spot.spot_id, deps.clock.now(), executionId, tidePayload.verbatim)
+      ? rawArchiveRecord(tidePayload.provider, spot.spot_id, deps.clock.now(), executionId, tidePayload.verbatim)
       : null;
 
     // Every successful HTTP response becomes forensic evidence before any
