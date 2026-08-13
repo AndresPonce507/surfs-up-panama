@@ -71,6 +71,13 @@
       "s": "EXECUTED",
       "d": "sealed on build/observation-export (subject: feat(export): declare the nightly export in WriteStack with an exact role and a DISABLED first night); evidence log paths in the commit body",
       "t": "2026-08-13T12:49:11Z"
+    },
+    {
+      "sid": "validation",
+      "p": "REVIEW",
+      "s": "BLOCKED",
+      "d": "DISCREPANCY: the coordinator's untracked FINDINGS-20260813.md dated 2026-08-13 says this lane has an independent reviewer APPROVED verdict with zero critical/high findings. No committed reviewer verdict, reviewer identity, or approval timestamp is reachable from the branch, refs, notes, or durable project artefacts. Roadmap validation remains pending; do not report review approval or merge readiness from the untracked claim. Record the actual verdict with its source and timestamp before changing validation status.",
+      "t": "2026-08-13T14:42:31Z"
     }
   ]
 }

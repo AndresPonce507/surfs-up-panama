@@ -101,6 +101,7 @@
   "validation": {
     "status": "pending",
     "reviewer": "orchestrator quality gate + nw-software-crafter-reviewer adversarial pass",
-    "approved_at": ""
+    "approved_at": "",
+    "approval_blocker": "The coordinator's untracked FINDINGS-20260813.md (2026-08-13) says an independent reviewer approved this lane with zero critical/high findings, but no committed reviewer verdict, reviewer identity, or approval timestamp is reachable. Keep validation pending and do not treat the lane as review-approved until that evidence is recorded durably."
   }
 }
