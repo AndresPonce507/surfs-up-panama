@@ -88,6 +88,36 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
 // refused span renders nothing (stated absence, never an invented bar).
 const topWindow = daySpots[0]?.best_window;
 const topSpan = topWindow === undefined ? undefined : bestWindowSpan(topWindow);
+
+// The coast-at-a-glance split (Andres approved the rendered density concept
+// 2026-08-13). A row under this score is an honest "not today": at these
+// numbers every published band today reads ankle-high. The threshold is a
+// display tier, never a data change: every spot keeps its rank, row and link.
+const GLANCE_TAIL_UNDER = 20;
+
+interface RowCells {
+  readonly size: string;
+  readonly wind: string;
+  readonly span: { readonly left: number; readonly width: number };
+  readonly window: { readonly start: string; readonly end: string };
+}
+
+/** Structured cells for the glance table; undefined falls back to the call prose. */
+function cellsFor(summary: DaySummary): RowCells | undefined {
+  const size = summary.size_band === undefined ? undefined : spanishSizeBand[summary.size_band];
+  const wind = summary.wind_state === undefined ? undefined : spanishWind[summary.wind_state];
+  const window = summary.best_window;
+  const span = window === undefined ? undefined : bestWindowSpan(window);
+  if (size === undefined || wind === undefined || window === undefined || span === undefined) return undefined;
+  return { size, wind, span, window };
+}
+
+const worthCount = daySpots.filter((s) => s.score_q >= GLANCE_TAIL_UNDER).length;
+const tailCount = daySpots.length - worthCount;
+// Computed, never hand-written: the counts move with every publication.
+const glanceSub = tailCount === 0
+  ? `Los ${daySpots.length} spots del Pacífico, ordenados por el puntaje de hoy.`
+  : `${daySpots.length} spots del Pacífico, ordenados. Hoy valen la pena ${worthCount}; los otros ${tailCount} están casi planos y lo decimos.`;
 ---
 
 <Base
@@ -107,6 +137,7 @@ const topSpan = topWindow === undefined ? undefined : bestWindowSpan(topWindow);
   </div>
 
   <h1>{t.home.header}</h1>
+  <p class="dg-sub">{glanceSub}</p>
   <p class="dg-stamp"><time datetime={forecast.published_at}>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</time></p>
   <p data-stale-notice hidden style="color:var(--warn);font-size:var(--text-meta);font-weight:600"></p>
   <script is:inline>const t=document.querySelector('time[datetime]'),n=document.querySelector('[data-stale-notice]');if(t&&n&&Date.now()-Date.parse(t.dateTime)>108e5){const d=new Date(t.dateTime),h=(d.getUTCHours()+19)%24;n.hidden=!1;n.textContent=`Viejo. Lo último que vimos fue a las ${h%12||12}:${String(d.getUTCMinutes()).padStart(2,'0')} ${h<12?'a.m.':'p.m.'} No pudimos sacar datos nuevos esta mañana.`}</script>
@@ -123,21 +154,43 @@ const topSpan = topWindow === undefined ? undefined : bestWindowSpan(topWindow);
   </nav>
   <ol class="ranked" data-dg="coast">
     {
-      daySpots.map((summary, index) => (
-        <li data-dg={index === 0 ? undefined : 'reveal'}>
+      daySpots.map((summary, index) => {
+        const cells = index === 0 || (index > 0 && summary.score_q < GLANCE_TAIL_UNDER) ? undefined : cellsFor(summary);
+        const tier = index > 0 && summary.score_q < GLANCE_TAIL_UNDER ? 'tail' : undefined;
+        return (
+        <>
+        {index === 1 && (
+          <li class="dg-cols" role="presentation" aria-hidden="true">
+            <span>#</span><span>Playa</span><span>Puntaje</span><span>Olas</span><span>Viento</span><span>Mejor ventana</span><span>Confianza</span>
+          </li>
+        )}
+        <li data-dg={index === 0 ? undefined : 'reveal'} data-tier={tier} class={cells !== undefined && tier === undefined ? 'dg-row' : undefined}>
           <span>{index + 1}</span>
           <a href={paths.spot(locale, summary.spot_id)}>
             {index === 0 ? `VE A ${nameOf(summary.spot_id)}` : nameOf(summary.spot_id)}
           </a>
           <strong data-dg={index === 0 ? 'ring' : undefined} style={index === 0 ? `--dg-score:${summary.score_q}` : undefined}>{summary.score_q}</strong>
-          <div class="bars" aria-hidden="true">
-            <div class="bar">
-              <div class="track">
-                <div class="fill" style={`width: ${summary.score_q}%`}></div>
+          {tier === undefined && (
+            <div class="bars" aria-hidden="true">
+              <div class="bar">
+                <div class="track">
+                  <div class="fill" style={`width: ${summary.score_q}%`}></div>
+                </div>
               </div>
             </div>
-          </div>
-          <p>{index === 0 ? repeatableCall(summary) : summary.call[locale]}</p>
+          )}
+          {index === 0 || cells === undefined
+            ? tier === undefined && <p>{index === 0 ? repeatableCall(summary) : summary.call[locale]}</p>
+            : (
+              <>
+                <span class="dg-cell dg-size">{cells.size}</span>
+                <span class="dg-cell dg-wind">viento {cells.wind}</span>
+                <span class="dg-cell dg-win">
+                  <span class="dg-mini" aria-hidden="true"><i style={`left:${cells.span.left}%;width:${Math.max(cells.span.width, 4)}%`}></i></span>
+                  <span class="dg-win-hrs">{cells.window.start} a {cells.window.end}</span>
+                </span>
+              </>
+            )}
           {index === 0 && topSpan !== undefined && topWindow !== undefined && (
             <div class="dg-window" data-dg="window" role="img" aria-label={`Mejor ventana de ${topWindow.start} a ${topWindow.end}`}>
               <span class="dg-window-lbl">Mejor ventana</span>
@@ -145,7 +198,7 @@ const topSpan = topWindow === undefined ? undefined : bestWindowSpan(topWindow);
               <span class="dg-window-hours"><span>06:00</span><span>12:00</span><span>18:00</span></span>
             </div>
           )}
-          {summary.conf_level !== undefined && (
+          {tier === undefined && summary.conf_level !== undefined && (
             <Confidence level={summary.conf_level} agreement={agreementFor(summary)} />
           )}
           {/* The one action the big card offers, handed in by the route so this
@@ -153,7 +206,9 @@ const topSpan = topWindow === undefined ? undefined : bestWindowSpan(topWindow);
               the page can never grow a second share action. */}
           {index === 0 && <slot name="top-card-action" />}
         </li>
-      ))
+        </>
+        );
+      })
     }
   </ol>
   <footer>
@@ -338,14 +393,76 @@ const topSpan = topWindow === undefined ? undefined : bestWindowSpan(topWindow);
     font-variant-numeric: tabular-nums;
   }
 
-  /* coast rows become cards of the same product */
-  ol.ranked li + li {
+  /* the sub-line under the title, over the water */
+  .dg-sub {
+    position: relative;
+    color: var(--hero-ink-2);
+    font-size: var(--text-meta);
+    line-height: var(--leading-snug);
+    max-width: 46ch;
+  }
+
+  /* ---- the coast, one glance: header strip + one-line rows ---- */
+  ol.ranked li.dg-cols {
+    display: none; /* desktop shows it; phones carry the words in each row */
+  }
+  /* the closing action sheds the old banner band on themed documents */
+  .home-primary { background: none; padding: var(--sp-4) 0 var(--sp-6); }
+  .home-primary a { max-width: 420px; margin-inline: auto; border-radius: var(--r-m); }
+  ol.ranked li.dg-row {
+    display: grid;
+    grid-template-columns: 1.75rem minmax(0, 1fr) minmax(0, auto) max-content;
+    grid-template-areas: 'rk name name score' 'rk size wind win' 'rk conf conf conf';
+    column-gap: var(--sp-2);
+    align-items: center;
     border: 1px solid var(--hairline);
     border-radius: var(--r-m);
     background: var(--surface);
-    padding: var(--sp-3) var(--sp-4);
+    padding: var(--sp-2) var(--sp-3);
     margin-top: var(--sp-2);
   }
+  li.dg-row > span:first-child { grid-area: rk; }
+  li.dg-row > a { grid-area: name; }
+  li.dg-row > strong { grid-area: score; justify-self: end; }
+  li.dg-row > .bars { display: none; } /* phone rows: the number carries it */
+  li.dg-row > .dg-cell { font-size: var(--text-caption); color: var(--ink-2); }
+  li.dg-row > .dg-size { grid-area: size; }
+  li.dg-row > .dg-wind { grid-area: wind; }
+  li.dg-row > .dg-win { grid-area: win; justify-self: end; min-width: 0; }
+  /* phones read the hours; the comparable bar is a wide-screen tool */
+  li.dg-row > .dg-win .dg-mini { display: none; }
+  ol.ranked li.dg-row > :global(details.confidence) { grid-area: conf; margin-top: 0; }
+  .dg-mini {
+    display: inline-block;
+    position: relative;
+    width: 72px;
+    height: 6px;
+    border-radius: var(--r-full);
+    background: var(--sunken);
+    overflow: hidden;
+    vertical-align: middle;
+  }
+  .dg-mini::after { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px; background: var(--hairline); }
+  .dg-mini i { position: absolute; top: 0; bottom: 0; border-radius: var(--r-full); background: var(--accent); opacity: .85; }
+  .dg-win-hrs { font-size: var(--text-caption); color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  /* phone meta line: size · viento wind stack naturally */
+
+
+  /* the honest tail: compact one-line rows, still ranked, still linked */
+  ol.ranked li[data-tier='tail'] {
+    display: grid;
+    grid-template-columns: 1.75rem 1fr auto;
+    column-gap: var(--sp-2);
+    align-items: center;
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-s);
+    background: var(--surface);
+    padding: var(--sp-1) var(--sp-3);
+    margin-top: var(--sp-1);
+    opacity: .78;
+  }
+  ol.ranked li[data-tier='tail'] > strong { font-size: var(--text-body); color: var(--ink-2); }
+  ol.ranked li[data-tier='tail'] > a { font-weight: 600; min-height: var(--tap); }
 
   /* ============ motion, all of it opt-in ============ */
   @media (prefers-reduced-motion: no-preference) {
@@ -414,17 +531,10 @@ const topSpan = topWindow === undefined ? undefined : bestWindowSpan(topWindow);
       padding-left: var(--sp-5);
       padding-right: var(--sp-5);
     }
-    ol.ranked {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--sp-3);
-      align-items: start;
-    }
     ol.ranked li:first-child {
-      grid-column: 1 / -1;
       max-width: 640px;
       padding: var(--sp-6);
-      margin-bottom: clamp(120px, 16vh, 200px);
+      margin-bottom: clamp(90px, 12vh, 150px);
       border-radius: 24px;
     }
     ol.ranked li:first-child > strong {
@@ -432,7 +542,70 @@ const topSpan = topWindow === undefined ? undefined : bestWindowSpan(topWindow);
       min-height: 8.5rem;
       float: right;
     }
-    ol.ranked li + li { margin-top: 0; padding: var(--sp-4) var(--sp-5); }
+
+    /* one glance = one line per row. Shared 8-column template with the
+       header strip so the eye falls straight down each column: rank, name,
+       score number, meter, size, wind, window, confidence. */
+    ol.ranked li.dg-cols,
+    ol.ranked li.dg-row {
+      display: grid;
+      grid-template-columns: 2.2rem minmax(150px, 1fr) 3ch 104px 138px 118px 148px minmax(150px, auto);
+      column-gap: var(--sp-3);
+      align-items: center;
+    }
+    .dg-cols {
+      padding: var(--sp-2) var(--sp-3);
+      background: var(--sunken);
+      border: 1px solid var(--hairline);
+      border-bottom: 0;
+      border-radius: var(--r-m) var(--r-m) 0 0;
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      color: var(--ink-2);
+    }
+    /* the header names 7 things; score spans its number + meter columns */
+    .dg-cols span:nth-child(3) { grid-column: 3 / 5; }
+    ol.ranked li.dg-row {
+      grid-template-areas: none;
+      border-radius: 0;
+      margin-top: 0;
+      border-top: 0;
+      padding: var(--sp-2) var(--sp-3);
+      min-height: 52px;
+    }
+    ol.ranked li.dg-cols {
+      border-top: 0;
+      padding-top: var(--sp-2);
+      padding-bottom: var(--sp-2);
+      margin-top: var(--sp-4);
+      min-height: 0;
+    }
+    /* last glance row closes the table; :has misses fall back to square */
+    ol.ranked li.dg-row:not(:has(~ li.dg-row)) { border-radius: 0 0 var(--r-m) var(--r-m); border-bottom: 1px solid var(--hairline); }
+    li.dg-row > span:first-child { grid-area: auto; grid-column: 1; }
+    li.dg-row > a { grid-area: auto; grid-column: 2; min-height: auto; }
+    li.dg-row > strong { grid-area: auto; grid-column: 3; justify-self: end; }
+    li.dg-row > .bars { display: block; grid-area: auto; grid-column: 4; }
+    li.dg-row > .bars .track { height: 6px; }
+    li.dg-row > .dg-size { grid-area: auto; grid-column: 5; }
+    li.dg-row > .dg-size::after { content: none; }
+    li.dg-row > .dg-wind::after { content: none; }
+    li.dg-row > .dg-win .dg-mini { display: inline-block; }
+    li.dg-row > .dg-wind { grid-area: auto; grid-column: 6; }
+    li.dg-row > .dg-win { grid-area: auto; grid-column: 7; justify-self: stretch; display: grid; gap: 3px; }
+    .dg-mini { width: 100%; }
+    ol.ranked li.dg-row > :global(details.confidence) { grid-area: auto; grid-column: 8; }
+    ol.ranked li.dg-row > :global(details.confidence > summary) { min-height: auto; padding: var(--sp-1) var(--sp-2); white-space: nowrap; }
+    /* the tail joins the glance: chips, four across, still ranked and linked */
+    ol.ranked li[data-tier='tail'] {
+      display: inline-grid;
+      width: calc(25% - var(--sp-2));
+      margin: var(--sp-2) var(--sp-2) 0 0;
+      vertical-align: top;
+      border-radius: var(--r-m);
+    }
 
     @media (prefers-reduced-motion: no-preference) {
       .dg-caustic {
