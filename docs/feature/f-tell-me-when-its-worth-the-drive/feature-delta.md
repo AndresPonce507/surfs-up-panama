@@ -361,9 +361,21 @@ tooling bugs, not evidence gaps, and neither was faked:
 
 **One charter correction, owed by this lane.** The roadmap's U8 observation must appear verbatim in
 the charter (`des-record-examine` substring-checks it, and the shipped `f-works-with-no-signal`
-charter satisfies it). Ours had the observation wrapped across three lines, so it did not match. The
-first oracle bullet is now a single unwrapped line, byte-identical to the roadmap's
-`u8_observation`. Text unchanged; only the line breaks.
+charter satisfies it). Ours had every observation wrapped across lines, so none of the eight
+slice-01 visible steps matched. All eight oracle bullets are now single unwrapped lines,
+byte-identical to their roadmap `u8_observation`. Verified as a whitespace-only edit by comparing
+the whole file with runs of whitespace collapsed, before and after: identical. No wording changed.
+
+**A structural tension in the seal, recorded because it forces a visible practice.** All eight
+visible slice-01 steps share ONE charter file, and `charter_seal` is a sha256 of that whole file.
+The charter's Session log is append-only, so every new Vera row re-hashes the file and staledates
+every seal recorded before it. The two cannot both hold by construction. This lane's practice, so
+the record stays true rather than merely passing: each step's examination is recorded when it
+happens, and whenever a later row is appended the earlier steps' EXAMINE events are re-recorded
+against the new bytes with their verdicts and observations unchanged. The re-seal moves a pointer
+to the charter version; it never restates what an examiner saw. Legitimate only because the appends
+touch the Session log, never an oracle line. If an oracle line ever changes, the affected steps owe
+a fresh examination, not a re-seal.
 
 **Still open, and not this lane's to close.** The push seat in `public/sw.js` is **empty**: SIGNAL's
 service worker is live on main with `install`, `activate`, `fetch` and `message` listeners and no
@@ -376,6 +388,47 @@ payload contract. Flagged, not fixed.
 `requirement-checklist.md` rather than faked", but this feature has no `distill/` directory and no
 such file. The measurement (317 B raw / 215 B gz against the 2.0 KB gz booking) is recorded in the
 execution log instead. JIT DISTILL for slices 02-04 owes that file.
+
+### RESUME HERE — slice-01 close lane, state at 2026-08-13
+
+**Branch** `build/f2-push-slice01-close`, rebased onto `origin/main`. Safety ref
+`backup/pre-rebase-slice01-close` holds the pre-rebase tip. Worktree
+`/Users/andres/psb-push-slice01-close`.
+
+| Step | State |
+|---|---|
+| 01-01 .. 01-19 | On `origin/main` already. Landed by sibling lanes; this lane inherited them through the rebase, verified rather than replayed. |
+| 01-20 | **SEALED.** `ac4f024` (code + evidence) and `82225b8` (COMMIT phase record). |
+| 01-21 | Green and examined; see below. |
+| 01-22 | NOT STARTED. Locally provable, no server needed. Return visit must derive state from `PushManager.getSubscription()`, never a remembered flag. |
+| 01-23 .. 01-26 | NOT STARTED. **Deploy-blocked** by Pre-requisites 2, 3, 5, 6. Their own criteria forbid standing up a stand-in endpoint to make them green. |
+| 01-27 | NOT STARTED. The seven visual checks on the built page. |
+
+**What the next lane must know before touching anything:**
+
+1. **The full acceptance suite is red, and mostly not because of this feature.** A whole-suite run on
+   this base is 382 scenarios with 21 failures: four are this feature's deploy-blocked slice-01
+   scenarios, the rest are other features' unbuilt slices plus environment-dependent infra checks
+   (one needs Docker). `npm run ci:local:fast` **excludes** the `at` job on purpose, and
+   `scripts/ci-local-core.mjs` says why in its own words: this project writes acceptance tests JIT, so
+   "a DISTILL branch is red by design and stays red until its DELIVER steps land". The fast gate is
+   the per-step gate. The full gate is a merge gate.
+2. **Therefore slice-01 cannot merge to a trunk yet, and that is not a defect.** Steps 01-23..01-26
+   cannot go green without the deployed write path, and `merge:pr` runs the full gate including `at`.
+   Landing slice-01 on a trunk waits on Pre-requisites 2, 3, 5 and 6. Do not "fix" this by weakening
+   a scenario or standing up a fake endpoint; both are explicitly forbidden by the step criteria.
+3. **The push seat is still empty.** See the section above. DoD row 1 is not satisfiable until it is
+   wired, and no roadmap step in slice-01 wires it.
+4. **Recording evidence:** use `/private/tmp/.../scratchpad/examine.py` (or re-create it) because
+   `des-record-examine` is broken by the charter-path join described above. `record` writes the
+   verdict, `reseal` refreshes earlier steps' seals after a Session-log append, `check` runs the
+   library's own `visible_evidence_errors`. Always `check` before committing a visible step.
+5. **`git add -f` is mandatory for anything new under `docs/feature/`.** The shared
+   `.git/info/exclude` carries a `/docs/feature/` rule, so new `.execution-events/<step>/*.json`
+   evidence files are silently skipped by a plain `git add` and the step commits without its proof.
+6. **The lane owner re-proves everything.** Crafter reports are not evidence. Every number in the
+   execution log for 01-20 and 01-21 was re-run by the lane after the crafter returned, and in both
+   steps that re-run or the examination found something the crafter's own green did not.
 
 Unblocking note, 2026-08-12 (superseded by the rebase above): the repo-wide `publish:surface --verify` civil-day guard was refusing
 every build-dependent job on this lane (surface dated 2026-08-11, Panama civil day 2026-08-12).

@@ -295,6 +295,76 @@
       "s": "EXECUTED",
       "d": "PASS. Commit ac4f024, 10 files, 577 insertions. Sealed with: unit 3/3 exit 0; typecheck exit 0; acceptance 1 scenario / 20 steps exit 0; full unit suite 122 files / 612 tests exit 0; build exit 0; npm run ci:local:fast 11 passed / 0 failed / 0 SKIPPED exit 0, redirected to a file and read from the file, never piped; U1-U7 all PASS via des-verify-ui; source-blind Vera PASS recorded against the roadmap U8 observation with charter seal f2186107. Both falsifiability breaks failed at their own behaviour oracles and both restores were verified byte-exact by sha256. R37 measured: 317 B raw / 215 B gz against the 2.0 KB gz booking. Two DES shim defects hit and recorded in feature-delta.md, not worked around silently: charter_path is repo-root-relative but every CLI joins it to --project-dir, which breaks des-record-examine and this COMMIT gate; and completed_green_event matches d == PASS exactly. The examination was recorded through the DES library's own append_isolated_event with byte-identical shape, then verified with the library's own visible_evidence_errors, which returns no errors for 01-20.",
       "t": "2026-08-13T10:47:17Z"
+    },
+    {
+      "sid": "01-21",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS. Dispatched to nw-functional-software-crafter under the HANDOFF section 10 waiver (DES-ENFORCEMENT: exempt); the lane owner enforces the evidence. Crafter RED, then re-prosecuted by the lane. npm run test:at -- avisos-de-este-spot.feature --name 'Si el telefono no concede el permiso' exited 1 BEFORE implementation: 1 scenario failed, 23 steps (20 passed, 2 skipped, 1 failed), failing at avisos-island.steps.ts:564 with 'la pagina no dice en ninguna parte que sin permiso no puede avisar'. This is the wording oracle, not the tap precondition: 20 steps passed first, so the When genuinely tapped and reached the permission request. That distinction matters because the no-re-prompt assertion passes trivially when nothing ever asked, so a RED that stopped at islandTapped would have proven nothing.",
+      "t": "2026-08-13T11:16:35Z"
+    },
+    {
+      "sid": "01-21",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS. Crafter unit RED against a deliberately inverted describePermissionOutcome: exit 1, failing at 'the literal granted permission must read as granted', expected 'granted' got 'refused', plus two genuine failures on the tap-handling tests; the 4 pre-existing 01-20 tests stayed green. The crafter additionally mutation-tested its own null-guard (removed 'if (message === null) return;', watched the test null-deref, restored) after an internal review caught a first draft whose test never reached the branch it claimed.",
+      "t": "2026-08-13T11:16:35Z"
+    },
+    {
+      "sid": "01-21",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS, independently re-verified by the lane, not taken on the crafter's report. npx vitest run tests/unit/push-island.test.ts exit 0, 7/7. npm run typecheck exit 0. npm run test:at -- avisos-de-este-spot.feature --name 'Si el telefono no concede el permiso' exit 0: 1 scenario passed, 23 of 23 steps. LANE FALSIFIABILITY PASS, the roadmap-prescribed trap: rewrote describePermissionOutcome to branch on the literal 'denied' instead of 'not granted'. Under Playwright a permission that was never granted reads back as a dismissal ('default'), so the refusal message never rendered and the scenario failed, exit 1, at the same wording oracle. This proves the implementation genuinely handles the harness fact the roadmap warned about, the one that passes headed and fails headless. Restored and verified byte-exact by sha256. Copy authored for Pre-requisite 8, one swappable constant in src/push/copy.ts: pushCopy.refused = 'Sin el permiso del telefono no te podemos mandar avisos de este spot.' (accents as written in the file). No em dash, no English, no codes, no addresses, no technical words. Still owed: Andres's native-speaker validation before launch.",
+      "t": "2026-08-13T11:16:48Z"
+    },
+    {
+      "sid": "01-21",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-13T11:16:48Z"
+    },
+    {
+      "sid": "01-21",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS, second RED, and this one is a REGRESSION TEST FOR A REAL DEFECT THE ACCEPTANCE TEST CANNOT SEE. Source-blind examiner Vera, spying only on the public Notification.requestPermission API from the page, found the tap handler re-invoked it on EVERY tap: four taps, four calls. It looked correct only because Chromium auto-suppresses a repeat prompt once permission is explicitly 'denied'. The harness drives a DISMISSAL ('default'), not a hard denial, and in that state a real device can genuinely show a second prompt. That is criterion 2 of this step ('the control does not ask for permission a second time'), the step's U8 observation ('por mas que toque no me vuelve a pedir el permiso') and decision 23's no-nagging rule, all three. Playwright's dialog listener never sees native permission prompts, so the acceptance oracle counts zero either way and would have shipped a nagging control on green. New unit test taps four times against a counting fake resolving 'default' and asserts exactly one call: RED exit 1, 'AssertionError: a control that keeps calling requestPermission after a dismissal is exactly the nagging decision 23 forbids', 4 !== 1. Deliberately uses 'default', never 'denied', because 'denied' is the state that masks the bug.",
+      "t": "2026-08-13T11:53:44Z"
+    },
+    {
+      "sid": "01-21",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS after the defect fix, re-verified by the lane. Fix: one closure flag set SYNCHRONOUSLY before the permission request fires, so it also closes a rapid-double-tap race rather than only a post-resolution one; no later tap calls requestPermission again. On a refused outcome the control is disabled so the surfer is not left poking a control that silently does nothing, which is the U8 'purpose-built refused state' row and matches the earlier accepted behaviour recorded in the charter's 2026-08-10 session row. No new copy string was needed, so nothing new is pending sign-off. Lane verification: npx vitest run tests/unit/push-island.test.ts exit 0, 8/8; npm run typecheck exit 0; acceptance refusal scenario exit 0, 23/23 steps; acceptance R6 dead-button scenario exit 0, 20/20, so step 01-20 did not regress; npm run build exit 0. BUILT-SURFACE CHECK, not source: the disabled state genuinely goes quiet on the page, carrying the global rule button:disabled{background:var(--sunken);color:var(--ink-2)} (documented 7.91:1 day / 8.14:1 dark) plus the scoped .avisos-action:disabled border override; the refusal paragraph still ships hidden AND EMPTY, so no refusal text exists until a real refusal happens. Island 916 B raw / 483 B gz against the 2.0 KB gz booking. The crafter falsifiability-checked the disable half separately by commenting out the disable and watching the failure move cleanly to the disabled assertion, then restored byte-identical.",
+      "t": "2026-08-13T11:53:44Z"
+    },
+    {
+      "sid": "01-21",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-13T11:53:44Z"
+    },
+    {
+      "sid": "01-21",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "SECOND DEFECT, also found by the source-blind examiner and also invisible to the test suite by construction. After the no-re-ask fix the control was disabled in BEHAVIOUR but not in APPEARANCE: Vera measured computed styles on the built page and found background rgb(10,106,45) and colour rgb(255,255,255) UNCHANGED after the refusal, so the dead control still rendered in the same bold green as the live WhatsApp and Copiar buttons beside it. Her words: it still reads as an invitation to tap. ROOT CAUSE, a cascade specificity bug: the global convention in src/styles/components.css, button:disabled{background:var(--sunken);color:var(--ink-2)}, is specificity (0,1,1), while Astro's scoped .avisos-action[data-astro-cid-...]:disabled is (0,2,1), so the component's own border-only rule won and the global mute never applied. LANE PROCESS NOTE, worth keeping: the lane had already checked this and got it WRONG. Grepping the built CSS found the global rule present and concluded the button would mute. Presence in the stylesheet is not the same as winning the cascade; only a computed-style read on the real page settles it. Neither the unit layer nor the acceptance layer reads computed CSS, so nothing in the suite could have caught this.",
+      "t": "2026-08-13T12:11:57Z"
+    },
+    {
+      "sid": "01-21",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS after the cascade fix, measured in a real browser on the built page because that is the only layer where this defect exists. Fix: the component's own scoped .avisos-action:disabled rule now sets background, colour AND border to the project's existing disabled tokens (--sunken / --ink-2); no new colours, no new copy, enabled state untouched. Built output confirms the emitted rule is .avisos-action[data-astro-cid-4xvpqd4c]:disabled{background:var(--sunken);color:var(--ink-2);border-color:var(--sunken)}. MEASURED before tap: background rgb(10,106,45), colour rgb(255,255,255), disabled false. AFTER tap, day: background rgb(227,239,243), colour rgb(59,90,99), disabled true, contrast 6.33:1. After tap, dark: background rgb(18,48,57), colour rgb(157,186,194), contrast 6.79:1. Both clear WCAG AA 4.5:1. Lane re-verification: unit 8/8 exit 0, typecheck exit 0, build exit 0, refusal scenario 23/23 exit 0, R6 dead-button scenario 20/20 exit 0.",
+      "t": "2026-08-13T12:11:57Z"
+    },
+    {
+      "sid": "01-21",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-13T12:11:58Z"
     }
   ]
 }

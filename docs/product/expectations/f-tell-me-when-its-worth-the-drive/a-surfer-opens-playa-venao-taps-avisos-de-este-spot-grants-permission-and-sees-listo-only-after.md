@@ -58,22 +58,13 @@ and just look at it, the way you would notice a phone screen that looks unfinish
 
 ## Expected observations (oracle)
 - En la página de Playa Venao a 390 px aparece la línea de avisos de este spot como una acción que puedo tocar; en un teléfono que no puede pedir avisos esa acción no aparece por ninguna parte, y en ninguno de los dos casos la página dice que ya tengo avisos activos.
-- Toco la línea de avisos de Playa Venao y no doy el permiso: la pantalla me dice en español
-  sencillo que sin permiso no puede avisarme, la página sigue sin decir que tengo avisos activos, y
-  por más que toque no me vuelve a pedir el permiso.
-- Vuelvo a abrir la página de Playa Venao después de una visita anterior: aunque el teléfono se
-  acuerde de algo, la página no dice que tengo avisos activos, porque de verdad no los tengo.
-- En la página de Playa Venao a 390 px doy el permiso y toco la línea de avisos: la palabra listo
-  no aparece hasta que el servidor ya guardó la suscripción, y ni un instante antes.
-- Toco la línea de avisos y el servidor no puede guardarla: la página no me dice que tengo avisos,
-  me ofrece intentar de nuevo, y no me promete mandarla más tarde por su cuenta.
-- El servidor no reconoce el destino de mi navegador: la página me explica en español llano que
-  este navegador no puede recibir avisos, sin una sola dirección, ni código, ni palabra en inglés.
-- Con avisos activos en Playa Venao toco una sola vez para quitarlos: la página vuelve a mostrarse
-  sin avisos, y a partir de ahí no me llega ningún aviso más de ese spot.
-- U8: A 390 px, en tema claro y en tema oscuro, la línea de avisos de Playa Venao se ve terminada:
-  se lee bien sobre el fondo real, se toca cómodo con el pulgar, no descuadra la página ni la hace
-  desplazarse de lado, y con movimiento reducido activado nada se anima.
+- Toco la línea de avisos de Playa Venao y no doy el permiso: la pantalla me dice en español sencillo que sin permiso no puede avisarme, la página sigue sin decir que tengo avisos activos, y por más que toque no me vuelve a pedir el permiso.
+- Vuelvo a abrir la página de Playa Venao después de una visita anterior: aunque el teléfono se acuerde de algo, la página no dice que tengo avisos activos, porque de verdad no los tengo.
+- En la página de Playa Venao a 390 px doy el permiso y toco la línea de avisos: la palabra listo no aparece hasta que el servidor ya guardó la suscripción, y ni un instante antes.
+- Toco la línea de avisos y el servidor no puede guardarla: la página no me dice que tengo avisos, me ofrece intentar de nuevo, y no me promete mandarla más tarde por su cuenta.
+- El servidor no reconoce el destino de mi navegador: la página me explica en español llano que este navegador no puede recibir avisos, sin una sola dirección, ni código, ni palabra en inglés.
+- Con avisos activos en Playa Venao toco una sola vez para quitarlos: la página vuelve a mostrarse sin avisos, y a partir de ahí no me llega ningún aviso más de ese spot.
+- U8: A 390 px, en tema claro y en tema oscuro, la línea de avisos de Playa Venao se ve terminada: se lee bien sobre el fondo real, se toca cómodo con el pulgar, no descuadra la página ni la hace desplazarse de lado, y con movimiento reducido activado nada se anima.
 - U8: tanto el estado apagado como el estado de permiso rechazado se ven hechos a propósito para
   este control, no como una plantilla genérica ni un aviso de error del sistema; nada se ve cortado,
   desalineado, ni con pinta de relleno de plantilla en ninguno de los dos.
