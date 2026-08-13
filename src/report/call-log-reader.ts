@@ -20,13 +20,13 @@ export async function resolveReportReveal(
 ): Promise<ReportReveal> {
   const spot = index[record.spot_id];
   if (spot === undefined) return noSnapshot();
-  const observedHour = `${record.observed_at.slice(0, 13)}:00:00Z`;
+  const observedHour = `${utcHour(record.observed_at)}:00:00Z`;
   for (let offset = 0; offset <= 3; offset += 1) {
     const buildAt = new Date(Date.parse(observedHour) - (offset * 60 * 60 * 1000));
     const key = callKey(buildAt, spot.region_id);
     const content = await reader.get(key);
     if (content === null) continue;
-    const call = content.split('\n').map(parseCall).find((candidate): candidate is CallRow => candidate !== null && candidate.spot_id === record.spot_id && candidate.valid_ts === observedHour);
+    const call = content.split('\n').map(parseCall).find((candidate): candidate is CallRow => candidate !== null && candidate.spot_id === record.spot_id && utcHour(candidate.valid_ts) === utcHour(record.observed_at));
     if (call === undefined) continue;
     const observedScore = qualityAnchors[record.quality];
     const predictedBand = sizeBandIndexes.get(call.size_band as SizeBandToken);
@@ -45,6 +45,21 @@ export async function resolveReportReveal(
     };
   }
   return noSnapshot();
+}
+
+/**
+ * The hour a timestamp belongs to, as `YYYY-MM-DDTHH`.
+ *
+ * The published call log stamps its hours with minutes only
+ * (`2026-08-12T15:00Z`) because open-meteo-source.ts mints `valid_ts` straight
+ * from the provider's minute-precision hour, and build.ts reads that shape
+ * back with `call.valid_ts.endsWith('T18:00Z')`. A report's `observed_at`
+ * carries seconds. Comparing the two as raw strings never matches, so both
+ * sides are reduced to the hour they share before they are compared. Calls are
+ * strictly hourly, so the hour is their whole identity.
+ */
+function utcHour(timestamp: string): string {
+  return timestamp.slice(0, 13);
 }
 
 function callKey(buildAt: Date, regionId: string): string {
