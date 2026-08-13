@@ -836,7 +836,7 @@ describe('real stack guardrails: ingest scheduling and the dead-man signal chain
   // suite's Publisher-boundary scenarios into the fast infra gate (the
   // platform review's short-term ask), so a widening grant is caught by
   // test:infra alone, without running cucumber.
-  it('never lets the Publisher list or delete anything, in any statement, regardless of effect', () => {
+  it('never lets the Publisher delete anything and scopes its missing-object ListBucket permission to its two reads', () => {
     const statements = publisherRoleStatements();
     expect(statements.length).toBeGreaterThan(0);
     const actions = statements.flatMap((statement) => {
@@ -846,9 +846,17 @@ describe('real stack guardrails: ingest scheduling and the dead-man signal chain
     for (const action of actions) {
       expect(
         action,
-        'the Publisher walks the pages it just rendered and puts each one; it never asks the store what is there and can never erase',
-      ).not.toMatch(/list|delete/i);
+        'the Publisher can never erase anything',
+      ).not.toMatch(/delete/i);
     }
+    const listStatements = statements.filter((statement) => {
+      const action = statement['Action'];
+      const entries = Array.isArray(action) ? action.map(String) : [String(action)];
+      return entries.includes('s3:ListBucket');
+    });
+    expect(listStatements).toHaveLength(1);
+    expect(JSON.stringify(listStatements[0]?.['Condition'] ?? {})).toContain('v1/*');
+    expect(JSON.stringify(listStatements[0]?.['Condition'] ?? {})).toContain('site/published-surface.json');
   });
 
   it('denies the Publisher every surface it never writes, including the ones Build owns: v1/*, log/* and the root manifest.json', () => {

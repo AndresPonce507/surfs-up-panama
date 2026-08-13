@@ -11,8 +11,9 @@ Feature: The deployment plan proves the publisher is bounded
   And it has to say who may start it. Build, and nothing else. No timetable
   of its own, nothing watching the store for changes, no waiting line
   anywhere in any plan. Its permissions may add pages and read the bundle
-  Build wrote; they may not erase anything and may not even ask what is in
-  the store. Neither Build nor the publisher is ever quietly run twice for
+  Build wrote; they may not erase anything. Their only ListBucket permission
+  is scoped to distinguishing a missing bundle or durable surface from a
+  denied read. Neither Build nor the publisher is ever quietly run twice for
   the same hour. Build's reviewed limit covers the wait it now takes on, and
   the limit a deployer reads is the limit that deploys. Finally, a site that
   quietly stops republishing has to page a human.
@@ -42,12 +43,12 @@ Feature: The deployment plan proves the publisher is bounded
     And Build is allowed to start the publisher
 
   @slice-02 @driving_port @real-io @error
-  Scenario: The publisher may add pages and may never erase one or ask what is there
+  Scenario: The publisher may add pages, may never erase one, and scopes missing-object reads
     Given the deployment plan is drawn up with no cloud credential at all
     When the operator reads what would be deployed
     Then the plan carries a publisher
     And nothing the publisher is allowed to do can erase anything
-    And nothing the publisher is allowed to do can ask what is in the store
+    And the publisher may distinguish only its missing bundle or durable surface from a denied read
     And the publisher may read the bundle Build wrote and may write the durable archive and the published pages
 
   @slice-02 @driving_port @real-io @error

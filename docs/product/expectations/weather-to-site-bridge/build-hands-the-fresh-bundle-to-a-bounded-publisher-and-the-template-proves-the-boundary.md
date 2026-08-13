@@ -34,8 +34,9 @@ invoke failure logs an event line instead of retrying.
   reservada 1, timeout 300 s, y el origen de producción en su ambiente.
 - Ningún Schedule apunta al publicador, no existe ninguna notificación de bucket, y no hay
   ninguna cola en ninguna plantilla. El único camino de entrada es la invocación de Build.
-- Ninguna sentencia IAM del publicador contiene una acción Delete ni List sobre el bucket; las
-  escrituras son put sobre las rutas publicadas y el estado durable, y lecturas sobre el bundle.
+- Ninguna sentencia IAM del publicador contiene una acción Delete. La única acción ListBucket está
+  limitada a `v1/*` y `site/published-surface.json`, para distinguir un objeto inicial ausente de
+  una lectura denegada; las escrituras son put sobre las rutas publicadas y el estado durable.
 - El timeout declarado de Build sube a 420 s con su prueba de guardrail actualizada en el mismo
   cambio; `retryAttempts` sigue en 0 para ambas funciones.
 - Un fallo del invoke se registra como línea de evento y no se reintenta en el ciclo; el filtro
@@ -43,8 +44,8 @@ invoke failure logs an event line instead of retrying.
   existente de Build y publican al mismo tópico SNS.
 - Negative: cualquier trigger nuevo (schedule propio, evento S3, cola) es FALLA por definición
   de la decisión grabada, aunque funcione.
-- Negative: una plantilla que le dé al publicador s3:DeleteObject o s3:ListBucket es FALLA de
-  contrato PUT-only.
+- Negative: una plantilla que le dé al publicador s3:DeleteObject, o ListBucket fuera de `v1/*`
+  y `site/published-surface.json`, es FALLA de contrato.
 - Negative: desplegar cualquier stack o correr `cdk diff` durante este examen es FALLA del
   proceso del carril (sube assets); la prueba es local por diseño.
 

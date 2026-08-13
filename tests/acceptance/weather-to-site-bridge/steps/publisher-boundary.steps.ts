@@ -242,17 +242,13 @@ Then('nothing the publisher is allowed to do can erase anything', function (this
   );
 });
 
-Then('nothing the publisher is allowed to do can ask what is in the store', function (this: object) {
+Then('the publisher may distinguish only its missing bundle or durable surface from a denied read', function (this: object) {
   const scenario = slice02(this);
-  const actions = actionsOf(statementsFor(planOf(scenario), publisherIn(scenario)));
-  const listing = actions.filter((action) => /^s3:List/i.test(action));
-  assert.deepEqual(
-    listing,
-    [],
-    `WHAT: the publisher is allowed to ${JSON.stringify(listing)}. `
-      + `WHY: the publisher never lists anything -- it walks the pages it just rendered and puts each one. Listing permission it does not use is blast radius it did not earn. `
-      + `HOW: careful here -- the house helper grantRead() grants s3:GetObject*, s3:GetBucket* AND s3:List*, so it CANNOT be used for the publisher's bundle read. Add an explicit s3:GetObject statement on the bundle prefix instead, the way the write plan already writes its own scoped statement. grantPut is fine: it grants only s3:PutObject* and s3:Abort*.${statedAbsence(scenario)}`,
-  );
+  const statements = statementsFor(planOf(scenario), publisherIn(scenario));
+  const listStatements = statements.filter((statement) => actionsOf([statement]).includes('s3:ListBucket'));
+  assert.equal(listStatements.length, 1, `WHAT: Publisher has ${listStatements.length} ListBucket grants. WHY: S3 needs one narrow bucket-level permission to say an expected first-run object is absent, not denied. HOW: grant only one ListBucket statement scoped to the two read prefixes.${statedAbsence(scenario)}`);
+  const condition = JSON.stringify(listStatements[0]?.['Condition'] ?? {});
+  assert.ok(condition.includes('v1/*') && condition.includes('site/published-surface.json'), `WHAT: Publisher's ListBucket condition is ${condition}. WHY: it may distinguish absence only for its bundle and durable archive. HOW: scope s3:prefix to v1/* and site/published-surface.json.${statedAbsence(scenario)}`);
 });
 
 Then('the publisher may read the bundle Build wrote and may write the durable archive and the published pages', function (this: object) {
