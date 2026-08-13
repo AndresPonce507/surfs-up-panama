@@ -79,7 +79,6 @@ export async function sendSavedReport(
     cache: 'no-store',
     headers: {
       'content-type': 'application/json',
-      'cache-control': 'no-store',
       'x-surf-credential': credential,
     },
     body: savedBytes,

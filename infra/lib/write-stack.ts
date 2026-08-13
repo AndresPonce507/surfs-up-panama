@@ -147,7 +147,10 @@ export class WriteStack extends Stack {
         cors: {
           allowedOrigins: [siteOrigin],
           allowedMethods: [lambda.HttpMethod.POST],
-          allowedHeaders: ['content-type', 'x-surf-credential'],
+          // cache-control stays allowed for already-shipped clients that still
+          // send it as a request header; a header outside this list makes AWS
+          // answer the preflight with no CORS headers at all.
+          allowedHeaders: ['cache-control', 'content-type', 'x-surf-credential'],
           maxAge: Duration.days(1),
         },
       });
