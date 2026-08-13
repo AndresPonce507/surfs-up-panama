@@ -238,3 +238,94 @@ budget-violating pages, depending on where the gate runs) for pages that pass lo
 honest fix belongs to the page-weight gate: measure with the runtime that publishes, or set the
 ceilings with an explicit runtime-gzip margin. Until then this is a known, recorded production
 risk for the bridge's first live cycles.
+
+**Status after the 2026-08-13 rebase onto `origin/main` (36e0290): still real, still unfixed, and
+now MASKED.** Main did not move the ceilings and added no runtime margin
+(`scripts/page-weight-core.mjs` line 57 still declares `/spots/{slug}/reportado` at `4 * KB` =
+4,096 B). Main only added property laws for the gate (`tests/unit/page-weight-laws.test.ts`).
+The re-run smoke can no longer reach the page-weight gate at all, because the render now refuses
+earlier for the reason recorded in the next section, so the 4,099 B measurement could not be
+re-taken on the rebased base. It has not been retired, only hidden behind a nearer failure.
+
+## Wave: DELIVER / [REF] BLOCKER found on the rebase: the static break map manifest is not reproducible on the deploy runtime
+
+Found 2026-08-13 by this lane re-running `npm run smoke:publish-lambda-arm64` after rebasing onto
+`origin/main` (36e0290). **NEW since the branch's base — introduced on main overnight by the
+static-break-map lane. Owned by that lane and/or the maps policy, NOT fixable honestly inside this
+lane. Flagged, not routed around.**
+
+This is strictly more severe than the page-weight risk above: it does not degrade the first live
+cycles, it stops every one of them.
+
+### What happens
+
+Main changed the `build` script to put map verification first:
+
+```
+build = npm run maps:verify && npm run publish:surface -- --verify && astro build
+```
+
+The Publisher runs that real `npm run build` inside the image and, by design and by slice-01
+pre-requisite 3, may never bypass it. Inside the linux/arm64 Lambda container the very first step
+refuses, so the handler answers 204 (refused) and uploads nothing:
+
+```
+Fontconfig error: Cannot load default config file: File not found
+static map build refused: WHAT the committed map manifest is not what this policy and seed
+produce; WHY the emitted pages would credit one diagram while the manifest names another;
+HOW run npm run maps:generate and commit the result.
+```
+
+Measured both sides on 2026-08-13:
+
+| Where | `npm run maps:verify` | Result |
+|---|---|---|
+| Host (macOS, Node 26) | exit 0 | `verified 18 static break map(s), 2 refused, seed b772915cc092` |
+| Publisher image (linux/arm64, Node 22) | exit 1 | refuses on the manifest comparison, as quoted above |
+
+### Root cause, confirmed not guessed
+
+Not an encoder difference. `sharp.versions` is **byte-identical** on both sides (sharp 0.35.3,
+vips 8.18.3, webp 1.6.0, rsvg 2.62.90, freetype 2.14.3, fontconfig 2.18.1), so the WebP encoding
+path is the same on host and in the container.
+
+The difference is **fonts**. `src/publish/static-map-diagram.ts` line 122 draws exactly one glyph
+— the north marker "N" — and declares it as:
+
+```
+font-family="Helvetica,Arial,sans-serif"
+```
+
+The container has no fonts installed and no fontconfig configuration at all (`fc-list` is not even
+present; hence the `Fontconfig error` line). librsvg therefore rasterises that single glyph
+differently from the macOS host, the WebP bytes differ, the sha256 differs from the committed
+`data/maps/pa-pacific-map-manifest.json`, and `verifyStaticMaps` refuses.
+
+So the committed manifest is **host-specific**: it is only reproducible on a machine carrying the
+same font that drew it. `npm run maps:verify` is not a portable contract today, and the whole
+bridge design rests on the deploy runtime reproducing the host's build.
+
+### Why this lane does not fix it
+
+Installing some font into `infra/lambda-images/publisher/Dockerfile` would be routing around the
+finding, not fixing it: any Linux font (Liberation, DejaVu) draws a different "N" outline than
+macOS Helvetica, so the hashes still would not match the committed manifest. Making them match
+would mean regenerating the manifest on Linux, which then breaks the same gate for every human
+running `npm run build` on a Mac. The reproducibility decision belongs to the maps lane.
+
+The two honest fixes, both outside this lane:
+
+1. **Make the diagram font-free** (preferred, cheapest): replace the single "N" `<text>` with a
+   vector path. Rendering then depends on no installed font and reproduces identically on every
+   runtime. One glyph is a small price for a portable manifest.
+2. **Pin the font in-repo**: commit the exact font file, point fontconfig at it from both the host
+   and the image, and regenerate the manifest against it.
+
+### Consequence for this feature
+
+slice-01's Definition of Done #6 ("the container image runs the real render on Linux/ARM64 ...
+printing PASS evidence") is **NOT met on the rebased base**, and cannot be met by this lane alone.
+The Publisher is correct in its own terms — it refuses honestly, uploads nothing, and leaves the
+previous pages serving, which is exactly the designed behavior for a build that cannot complete —
+but the deployed bridge would refuse every hour until the maps manifest is portable. **Do not
+deploy the bridge expecting live republication until this is closed.**
