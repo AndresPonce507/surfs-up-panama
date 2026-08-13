@@ -20,6 +20,10 @@ export type PlannedSend = {
   url: string;
   tag: string;
   ttl_seconds: number;
+  /** The morning send omits this legacy discriminator. Slice-03 names its
+   *  distinct report-solicitation contract so delivery can route its deep
+   *  link without guessing from copy. */
+  kind?: 'followup';
 };
 
 /** A write the scheduled adapter performs after it delivers the planned send. */
@@ -59,6 +63,9 @@ export const MORNING_NOTIFICATION_COPY_ES = {
 const MORNING_START_HOUR = 6;
 const MORNING_END_HOUR = 9;
 const FOUR_HOURS_IN_SECONDS = 4 * 60 * 60;
+const FOLLOWUP_START_HOUR = 14;
+const FOLLOWUP_END_HOUR = 17;
+const FOLLOWUP_TITLE_ES = '¿Cómo estuvo?';
 
 function spotLocalHour(now: string, timezone: string): number {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -91,6 +98,11 @@ function isMorningAtSpot(now: string, spot: PushSpot): boolean {
   return hour >= MORNING_START_HOUR && hour < MORNING_END_HOUR;
 }
 
+function isAfternoonAtSpot(now: string, spot: PushSpot): boolean {
+  const hour = spotLocalHour(now, spot.timezone);
+  return hour >= FOLLOWUP_START_HOUR && hour < FOLLOWUP_END_HOUR;
+}
+
 function subscriberThresholdScore(subscription: StoredSub, defaultThresholdScore: number): number {
   return subscription.threshold_score ?? defaultThresholdScore;
 }
@@ -120,6 +132,20 @@ function composeSpanishMorningSend(spot: PushSpot, subscription: StoredSub, scor
   };
 }
 
+function composeSpanishFollowupSend(spot: PushSpot, subscription: StoredSub): PlannedSend {
+  return {
+    spot_id: spot.spot_id,
+    endpoint_hash: subscription.endpoint_hash,
+    lang: subscription.lang,
+    title: FOLLOWUP_TITLE_ES,
+    body: FOLLOWUP_TITLE_ES,
+    url: `/spots/${spot.slug}/reportar?t=ps`,
+    tag: spot.spot_id,
+    ttl_seconds: FOUR_HOURS_IN_SECONDS,
+    kind: 'followup',
+  };
+}
+
 type PlannedNotification = { send: PlannedSend; write: NotificationWrite };
 
 function eligibleMorningNotifications(input: PlanNotificationsInput): PlannedNotification[] {
@@ -139,6 +165,24 @@ function eligibleMorningNotifications(input: PlanNotificationsInput): PlannedNot
           last_notified_date: date,
         },
       }));
+  });
+}
+
+/**
+ * Follow-ups deliberately read only the fact of today's successful morning
+ * notice and a prior follow-up. The current score and call are not inputs to
+ * eligibility: changing conditions after the morning must not reintroduce
+ * selection bias by cancelling the question.
+ */
+function eligibleAfternoonFollowups(input: PlanNotificationsInput): PlannedSend[] {
+  return input.spots.flatMap((spot) => {
+    if (!isAfternoonAtSpot(input.now, spot)) return [];
+    const date = spotLocalDate(input.now, spot.timezone);
+    return input.subscriptions
+      .filter((subscription) => subscription.spot_id === spot.spot_id)
+      .filter((subscription) => subscription.last_notified_date === date)
+      .filter((subscription) => subscription.followup_date === null || subscription.followup_date < date)
+      .map((subscription) => composeSpanishFollowupSend(spot, subscription));
   });
 }
 
@@ -216,13 +260,19 @@ export function planSendReactions(input: PlanSendReactionsInput): SendReactions 
  * is deterministic and independent of process state.
  */
 export function planNotifications(input: PlanNotificationsInput): NotificationPlan {
-  const eligible = eligibleMorningNotifications(input);
+  const morning = eligibleMorningNotifications(input);
+  const followups = eligibleAfternoonFollowups(input);
+  const eligible = [...morning, ...followups];
   const cap = Math.max(0, input.run_cap);
   const notifications = eligible.slice(0, cap);
   const deferred = eligible.length - notifications.length;
   return {
-    sends: notifications.map((notification) => notification.send),
-    writes: notifications.map((notification) => notification.write),
+    sends: notifications.map((notification) => 'send' in notification ? notification.send : notification),
+    // Slice-03 only plans its delivery. The real send adapter still owns the
+    // successful-delivery followup_date write, which is deploy/VAPID-gated.
+    writes: notifications
+      .filter((notification): notification is PlannedNotification => 'write' in notification)
+      .map((notification) => notification.write),
     deferred,
     events: deferred === 0 ? [] : [{ kind: 'notification_run_cap_reached', deferred }],
   };
