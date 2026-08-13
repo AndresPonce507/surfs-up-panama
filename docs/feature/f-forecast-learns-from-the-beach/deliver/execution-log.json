@@ -883,6 +883,13 @@
       "s": "EXECUTED",
       "d": "Implemented offendingTermOf in src/learning/metrics.ts: compares only the 'high' and 'low' bins' hit rates, names 'c_spread' on a strict inversion, null otherwise (including either bin absent). Reshaped calibration.bins from Record<string,{...}> to an array of {conf_level,reports,hits,hit_rate,brier} rows (the shape the AT oracle requires; grep confirmed no other consumer). evaluate.ts needed no edit -- it already threads buildMonthlyMetrics verbatim into its one write. Focused run (AT+unit): EXIT=0, 15 passed. Full suite: npx vitest run -> EXIT=0, 117 files passed | 1 skipped (118), 588 tests passed | 1 skipped (589) -- the 1 skip is the still-parked 05-05 AT; no other file red, the task-context pre-existing staleness family did not appear this session. npm run typecheck -> EXIT=0. Post-GREEN wiring check: git diff --name-only shows only src/learning/metrics.ts in src/ (not fixture theater). Falsifiability: 4 mutations planted and reverted, each caught by the intended test and diff-confirmed clean afterward -- (1) inverted comparison direction caught by both AT scenarios + the equivalence property; (2) removed missing-bin guard caught ONLY by the equivalence property (bins=[] manufactured c_spread), proving the unit law's necessity since neither AT fixture ever omits a bin; (3) brier forced to 0 caught by the independent-oracle property (an earlier bounds-only draft of this property would have missed it -- replaced per advisor review before commit); (4) removed the bins sort caught by the order-independence property on the first generated case. npm run build NOT run: non-visual step, UI N/A, matching 05-03's own recorded precedent.",
       "t": "2026-08-13T00:08:39Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "Committed 5ff909c on branch build/f2-learning-slice05: feat(learning): calibration names a failing confidence term for removal. Staged only owned paths (src/learning/metrics.ts, tests/unit/learning-metrics.test.ts, the AT skip-removal, execution-log.json, and force-added the gitignored 05-04-contract.json). gate-baseline.log left untracked (not owned). Trailer Step-ID: 05-04 present. 5 files changed, 241 insertions, 20 deletions.",
+      "t": "2026-08-13T00:09:15Z"
     }
   ]
 }
