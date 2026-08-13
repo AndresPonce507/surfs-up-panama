@@ -250,11 +250,17 @@ export class IngestStack extends Stack {
     // "Nothing existing widens" (ADR consequences): the unscoped grant above
     // must not let the Publisher overwrite data it never writes and does not
     // own -- Fetch's raw archive and prediction log, its probes, member
-    // photos, or the learned corrections Build reads. An explicit Deny is
-    // the narrowing tool (IAM evaluates an explicit Deny before any Allow),
-    // never s3:DeleteObject* here: that string would fail the "nothing the
-    // publisher is allowed to do can erase anything" guardrail, which scans
-    // every statement's Action regardless of Effect.
+    // photos, the learned corrections Build reads, and (the platform
+    // review's short-term ask) the surfaces Build itself owns: the published
+    // JSON surface under v1/*, the call log under log/*, and the root
+    // manifest.json the dead-man probe reads. The Publisher's own uploads
+    // never touch any of these -- the rendered dist carries
+    // manifest.webmanifest, never manifest.json, and no v1/ or log/
+    // directory. An explicit Deny is the narrowing tool (IAM evaluates an
+    // explicit Deny before any Allow), never s3:DeleteObject* here: that
+    // string would fail the "nothing the publisher is allowed to do can
+    // erase anything" guardrail, which scans every statement's Action
+    // regardless of Effect.
     publishFn.addToRolePolicy(new iam.PolicyStatement({
       effect: iam.Effect.DENY,
       actions: ['s3:PutObject*'],
@@ -264,6 +270,9 @@ export class IngestStack extends Stack {
         bucket.arnForObjects('probes/*'),
         bucket.arnForObjects('photos/*'),
         bucket.arnForObjects('learned/*'),
+        bucket.arnForObjects('v1/*'),
+        bucket.arnForObjects('log/*'),
+        bucket.arnForObjects('manifest.json'),
       ],
     }));
 

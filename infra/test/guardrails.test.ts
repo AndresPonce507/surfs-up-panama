@@ -822,7 +822,64 @@ describe('real stack guardrails: ingest scheduling and the dead-man signal chain
     expect(rendered).not.toContain('s3:DeleteObject');
     expect(rendered).not.toContain('lambda:PutFunctionConcurrency');
   });
+
+  // The two assertions below mirror the weather-to-site-bridge acceptance
+  // suite's Publisher-boundary scenarios into the fast infra gate (the
+  // platform review's short-term ask), so a widening grant is caught by
+  // test:infra alone, without running cucumber.
+  it('never lets the Publisher list or delete anything, in any statement, regardless of effect', () => {
+    const statements = publisherRoleStatements();
+    expect(statements.length).toBeGreaterThan(0);
+    const actions = statements.flatMap((statement) => {
+      const action = statement['Action'];
+      return Array.isArray(action) ? action.map(String) : [String(action)];
+    });
+    for (const action of actions) {
+      expect(
+        action,
+        'the Publisher walks the pages it just rendered and puts each one; it never asks the store what is there and can never erase',
+      ).not.toMatch(/list|delete/i);
+    }
+  });
+
+  it('denies the Publisher every surface it never writes, including the ones Build owns: v1/*, log/* and the root manifest.json', () => {
+    const statements = publisherRoleStatements();
+    const deny = statements.find((statement) => statement['Effect'] === 'Deny');
+    if (!deny) throw new Error('expected the narrowing Deny statement on the Publisher role');
+    const resources = JSON.stringify(deny['Resource']);
+    for (const suffix of ['/raw/*', '/predictions/*', '/probes/*', '/photos/*', '/learned/*', '/v1/*', '/log/*', '/manifest.json'] as const) {
+      expect(resources, `the Publisher's Deny must cover ${suffix}`).toContain(suffix);
+    }
+  });
 });
+
+/** Every IAM statement attached to the Publisher's execution role, from both
+ * the CDK-managed DefaultPolicy resources and any policies inlined on the
+ * role itself, so nothing can dodge the no-List/no-Delete net by choosing a
+ * different attachment mechanism. */
+function publisherRoleStatements(): readonly Readonly<Record<string, unknown>>[] {
+  const publisher = synthesizedResources('AWS::Lambda::Function', realTemplates.ingest)
+    .find(({ properties }) => stringProperty(properties, 'FunctionName') === functionNames.publish);
+  if (!publisher) throw new Error('expected the Publisher function in the ingest template');
+  const role = publisher.properties['Role'] as Readonly<{ 'Fn::GetAtt'?: readonly string[] }>;
+  const roleLogicalId = role['Fn::GetAtt']?.[0];
+  if (roleLogicalId === undefined) throw new Error('expected the Publisher to reference its role by Fn::GetAtt');
+
+  type PolicyDocument = Readonly<{ Statement?: readonly Readonly<Record<string, unknown>>[] }>;
+  const statements: Readonly<Record<string, unknown>>[] = [];
+  for (const policy of synthesizedResources('AWS::IAM::Policy', realTemplates.ingest)) {
+    const roles = (policy.properties['Roles'] ?? []) as readonly Readonly<Record<string, unknown>>[];
+    if (!roles.some((reference) => reference['Ref'] === roleLogicalId)) continue;
+    statements.push(...(((policy.properties['PolicyDocument'] as PolicyDocument).Statement) ?? []));
+  }
+  const roleResource = synthesizedResources('AWS::IAM::Role', realTemplates.ingest)
+    .find(({ logicalId }) => logicalId === roleLogicalId);
+  const inlinePolicies = (roleResource?.properties['Policies'] ?? []) as readonly Readonly<Record<string, unknown>>[];
+  for (const inlinePolicy of inlinePolicies) {
+    statements.push(...(((inlinePolicy['PolicyDocument'] as PolicyDocument).Statement) ?? []));
+  }
+  return statements;
+}
 
 describe('real stack guardrails: the write path (guardrails 1, 6; 07-write-path 7.2)', () => {
   it('keeps the store PROVISIONED at exactly 25/25 so it throttles free instead of billing', () => {
