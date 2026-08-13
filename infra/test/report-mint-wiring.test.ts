@@ -45,25 +45,29 @@ function actionSet(statements: readonly Properties[]): string[] {
   }).sort();
 }
 
-describe('report/mint Lambda composition', () => {
-  it('publishes the two standalone write URLs for the static-site build handoff', () => {
+describe('write Lambda composition', () => {
+  it('publishes the three standalone write URLs for the static-site build handoff', () => {
     const outputs = Object.values(template.Outputs ?? {}) as readonly Properties[];
     const reportUrl = outputs.find((output) => output.Description === 'Public report Function URL for the static-site build')?.Value;
     const mintUrl = outputs.find((output) => output.Description === 'Public mint Function URL for the static-site build')?.Value;
+    const pushUrl = outputs.find((output) => output.Description === 'Public push Function URL for the static-site build')?.Value;
     expect(reportUrl).toBeDefined();
     expect(mintUrl).toBeDefined();
+    expect(pushUrl).toBeDefined();
     expect(JSON.stringify(reportUrl)).toContain('Fn::GetAtt');
     expect(JSON.stringify(mintUrl)).toContain('Fn::GetAtt');
+    expect(JSON.stringify(pushUrl)).toContain('Fn::GetAtt');
   });
 
-  it('bundles the shared-core adapter at synth time for report and mint while the later write URLs remain fail-closed', () => {
+  it('bundles the credential-bound push adapter at synth time while presign remains fail-closed', () => {
     const report = functions().find(([, resource]) => resource.Properties?.FunctionName === functionNames.report)?.[1].Properties;
     const mint = functions().find(([, resource]) => resource.Properties?.FunctionName === functionNames.mint)?.[1].Properties;
     const push = functions().find(([, resource]) => resource.Properties?.FunctionName === functionNames.push)?.[1].Properties;
     const presign = functions().find(([, resource]) => resource.Properties?.FunctionName === functionNames['photo-presign'])?.[1].Properties;
     expect(report?.Handler).toBe('report-mint.handler');
     expect(mint?.Handler).toBe('report-mint.handler');
-    expect(JSON.stringify(push?.Code)).toContain('not_implemented');
+    expect(push?.Handler).toBe('push.handler');
+    expect(JSON.stringify(push?.Code)).toContain('S3Bucket');
     expect(JSON.stringify(presign?.Code)).toContain('not_implemented');
     expect(existsSync(resolve(import.meta.dirname, '../lambda-src/report-mint.mjs'))).toBe(false);
   });

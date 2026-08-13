@@ -542,6 +542,10 @@ function allRealResources(type: string): SynthesizedResource[] {
 
 describe('real stack guardrails: Lambda cost caps (guardrails 1 and 2)', () => {
   const functions = allRealResources('AWS::Lambda::Function')
+    // AwsCustomResource's CDK provider is framework plumbing, not a deployed
+    // Surfs Up workload function. Only explicitly named project functions
+    // participate in the declared timeout and reserved-concurrency budget.
+    .filter(({ properties }) => typeof properties.FunctionName === 'string')
     .map(({ logicalId, properties }) => ({
       logicalId,
       name: stringProperty(properties, 'FunctionName'),
@@ -906,6 +910,7 @@ describe('real stack guardrails: the write path (guardrails 1, 6; 07-write-path 
     expect(urls).toHaveLength(WRITE_URL_FUNCTION_NAMES.length);
     const writeFunctionLogicalIds = new Set(
       synthesizedResources('AWS::Lambda::Function', realTemplates.write)
+        .filter(({ properties }) => typeof properties.FunctionName === 'string')
         .filter(({ properties }) => WRITE_URL_FUNCTION_NAMES.includes(stringProperty(properties, 'FunctionName')))
         .map(({ logicalId }) => logicalId),
     );
@@ -951,6 +956,7 @@ describe('real stack guardrails: the write path (guardrails 1, 6; 07-write-path 
     // the physical FunctionName it points at, then compare exactly.
     const functionNameByLogicalId = Object.fromEntries(
       synthesizedResources('AWS::Lambda::Function', realTemplates.write)
+        .filter(({ properties }) => typeof properties.FunctionName === 'string')
         .map(({ logicalId, properties }) => [logicalId, stringProperty(properties, 'FunctionName')]),
     );
     const resolvedNames = concurrencyStatements.flatMap((statement) => {

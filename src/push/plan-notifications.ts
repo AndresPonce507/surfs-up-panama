@@ -27,11 +27,17 @@ export type PlannedSend = {
 };
 
 /** A write the scheduled adapter performs after it delivers the planned send. */
-export type NotificationWrite = {
-  spot_id: string;
-  endpoint_hash: string;
-  last_notified_date: string;
-};
+export type NotificationWrite =
+  | {
+    spot_id: string;
+    endpoint_hash: string;
+    last_notified_date: string;
+  }
+  | {
+    spot_id: string;
+    endpoint_hash: string;
+    followup_date: string;
+  };
 
 export type NotificationPlan = {
   sends: PlannedSend[];
@@ -174,7 +180,7 @@ function eligibleMorningNotifications(input: PlanNotificationsInput): PlannedNot
  * eligibility: changing conditions after the morning must not reintroduce
  * selection bias by cancelling the question.
  */
-function eligibleAfternoonFollowups(input: PlanNotificationsInput): PlannedSend[] {
+function eligibleAfternoonFollowups(input: PlanNotificationsInput): PlannedNotification[] {
   return input.spots.flatMap((spot) => {
     if (!isAfternoonAtSpot(input.now, spot)) return [];
     const date = spotLocalDate(input.now, spot.timezone);
@@ -182,7 +188,14 @@ function eligibleAfternoonFollowups(input: PlanNotificationsInput): PlannedSend[
       .filter((subscription) => subscription.spot_id === spot.spot_id)
       .filter((subscription) => subscription.last_notified_date === date)
       .filter((subscription) => subscription.followup_date === null || subscription.followup_date < date)
-      .map((subscription) => composeSpanishFollowupSend(spot, subscription));
+      .map((subscription) => ({
+        send: composeSpanishFollowupSend(spot, subscription),
+        write: {
+          spot_id: spot.spot_id,
+          endpoint_hash: subscription.endpoint_hash,
+          followup_date: date,
+        },
+      }));
   });
 }
 
@@ -267,12 +280,11 @@ export function planNotifications(input: PlanNotificationsInput): NotificationPl
   const notifications = eligible.slice(0, cap);
   const deferred = eligible.length - notifications.length;
   return {
-    sends: notifications.map((notification) => 'send' in notification ? notification.send : notification),
-    // Slice-03 only plans its delivery. The real send adapter still owns the
-    // successful-delivery followup_date write, which is deploy/VAPID-gated.
-    writes: notifications
-      .filter((notification): notification is PlannedNotification => 'write' in notification)
-      .map((notification) => notification.write),
+    sends: notifications.map((notification) => notification.send),
+    // The adapter executes this write only after the paired network send is
+    // accepted. Keeping it in the plan makes the one-per-day law explicit for
+    // both morning notices and afternoon follow-ups without mutating input.
+    writes: notifications.map((notification) => notification.write),
     deferred,
     events: deferred === 0 ? [] : [{ kind: 'notification_run_cap_reached', deferred }],
   };

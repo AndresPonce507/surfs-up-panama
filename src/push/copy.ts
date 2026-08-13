@@ -8,4 +8,6 @@
 export const pushCopy = {
   activate: 'Avisos de este spot',
   refused: 'Sin el permiso del teléfono no te podemos mandar avisos de este spot.',
+  ready: 'Avisos listos para este spot.',
+  retry: 'No pudimos guardar los avisos ahora. Intenta de nuevo.',
 } as const;

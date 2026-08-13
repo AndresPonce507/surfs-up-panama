@@ -337,6 +337,21 @@ describe('planNotifications -- afternoon follow-up (R41)', () => {
               },
               'the follow-up carries the settled question and the solicited-report deep link',
             );
+            assert.deepEqual(
+              plan.writes,
+              [{
+                spot_id: playaVenao.spot_id,
+                endpoint_hash: subscription.endpoint_hash,
+                followup_date: '2026-08-10',
+              }],
+              'a delivered follow-up needs its own exact date write, so the next hourly run cannot ask again',
+            );
+          } else {
+            assert.deepEqual(
+              plan.writes,
+              [],
+              'an ineligible follow-up never reserves or writes a date',
+            );
           }
           assert.equal(JSON.stringify(subscription), before, 'planning does not mutate the supplied subscription state');
         },

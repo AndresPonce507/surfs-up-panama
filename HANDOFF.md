@@ -76,6 +76,20 @@ This section supersedes the legacy notes below. They are retained only as histor
 - This is code-only. The emitted-worker test and normal gates passed locally. Physical-device Push
   smoke still remains before anyone calls the device path complete.
 
+## Push live vertical decision (2026-08-13)
+
+- Browser-visible active state now requires both a real `PushManager` subscription and a
+  credential-bound `POST /api/push` status confirmation. A browser-held subscription alone is
+  not proof that this service stored it.
+- The static site reads same-origin, `no-store` `push-config.json` containing only the deployed
+  Push Function URL, Mint Function URL and public VAPID key. This prevents an Ingest/Write stack
+  cycle. The VAPID private key is never committed and must be an SSM SecureString at
+  `/surfsuppanama/prod/vapid-private-key` before the enabled Notify schedule is deployed.
+- Delivery persistence is after acceptance by the browser push service only: successful morning
+  sends stamp `last_notified_date`, successful afternoon solicitations stamp `followup_date`, and
+  403/404/410 deletes the stale subscription. Physical Android and installed-iPhone PWA smoke is
+  still required after deployment.
+
 ## Tide station assignment decision (2026-08-13)
 
 - `adr-tide-source-chain.md` is now **Accepted**. A tide station is assigned per spot only after an

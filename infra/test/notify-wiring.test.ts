@@ -93,16 +93,13 @@ describe('the scheduled notify job', () => {
     expect(target.RetryPolicy).toEqual({ MaximumRetryAttempts: 0 });
   });
 
-  it('ships the schedule DISABLED, because a cron in front of a handler that cannot send is a job pretending to run', () => {
+  it('ships an enabled schedule only with the real VAPID sender bundle', () => {
     const [, schedule] = resourcesOfType('AWS::Scheduler::Schedule')
       .find(([, resource]) => JSON.stringify(resource.Properties).includes(functionNames.notify)) ?? [];
-    expect(schedule?.Properties?.State).toBe('DISABLED');
-    // The pairing that makes the DISABLED honest rather than forgotten: the
-    // handler is still the loud placeholder. Landing the real VAPID send
-    // adapter and flipping this to ENABLED belong in the same change, and this
-    // assertion fails if either moves without the other.
+    expect(schedule?.Properties?.State).toBe('ENABLED');
     const [, notify] = notifyFunction();
-    expect(JSON.stringify(notify.Properties?.Code)).toContain('not_implemented');
+    expect(notify.Properties?.Handler).toBe('notify.handler');
+    expect(JSON.stringify(notify.Properties?.Code)).toContain('S3Bucket');
   });
 
   it('reads the VAPID private key from the one declared SecureString parameter and can never write a parameter', () => {
@@ -137,22 +134,13 @@ describe('the scheduled notify job', () => {
     expect(actions).not.toEqual(expect.arrayContaining(['s3:PutObject', 's3:DeleteObject']));
   });
 
-  it('holds no bucket grant at all, because no document says where the send job reads its scores', () => {
+  it('reads exactly the current published bundle and no other site data', () => {
     const statements = policyStatementsFor(functionNames.notify);
     const actions = actionSet(statements);
-    // FLAGGED, NOT RESOLVED. 07-write-path.md section 8.2 says the send rule
-    // compares "the current bundle score" but names no source, and the section
-    // 8.6 sequence diagram gives notify exactly two edges: query subs from the
-    // table, and POST to the push service. No S3 read appears anywhere. The
-    // pure planner takes `scores` as a declared input precisely because the
-    // source is the composition root's business, and that root is the
-    // unlanded send adapter.
-    //
-    // So this lane grants nothing on a guess. Whoever lands the sender adds the
-    // grant their ACTUAL read path needs, and this assertion is what makes them
-    // do it deliberately instead of inheriting a speculative wildcard.
-    expect(actions).not.toEqual(expect.arrayContaining(['s3:GetObject']));
-    expect(JSON.stringify(statements)).not.toContain(siteBucketName);
+    expect(actions).toEqual(expect.arrayContaining(['s3:GetObject', 's3:ListBucket']));
+    const rendered = JSON.stringify(statements);
+    expect(rendered).toContain(`${siteBucketName}/pub/v1/regions/pa-pacific/bundle.json`);
+    expect(rendered).not.toContain('log/calls');
   });
 
   it('stays out of the breaker at RUNTIME too, not only in the IAM policy', () => {
