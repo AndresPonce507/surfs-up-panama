@@ -90,6 +90,22 @@ This section supersedes the legacy notes below. They are retained only as histor
   403/404/410 deletes the stale subscription. Physical Android and installed-iPhone PWA smoke is
   still required after deployment.
 
+## Offline report replay correction (2026-08-13)
+
+- `997f2c9` removed the returned-signal queue replay without a recorded decision. The regression is
+  real. Its proposed byte-for-byte revert is not safe for production: it posts unauthenticated to
+  same-origin `/api/report`, but the static site has no such route and the direct Report Function
+  URL requires `x-surf-credential`.
+- The repair keeps the service worker as a tiny wake-up only. On activation or the browser's
+  `online` event it asks every open page to replay. The page owns the IndexedDB queue, fetches the
+  no-store public `push-config.json`, mints or reuses the anonymous credential, sends the immutable
+  bytes to its direct `report_url`, remints once after a 401, and deletes only after its matching
+  receipt. Retry backoff remains 30 seconds through one hour in that credential-owning page.
+- `push-config.json` now contains the public `report_url` alongside the existing Push URL, Mint URL
+  and public VAPID key. This keeps the required Ingest/Write stack boundary acyclic and contains no
+  secret. The worker gzip ceiling is amended from **3.3 KB to 3.4 KB**: the authenticated wake-up,
+  existing offline queue display and Push listeners measure 3,448 B gzip, inside 3,481 B.
+
 ## Bridge publication ordering correction (2026-08-13)
 
 - A fresh public-manifest probe is valid only **after** Publisher has synchronously returned its
@@ -163,9 +179,9 @@ live, verified via CloudFormation outputs today:
 - Mint: `https://fywirn4raf3hgqdtx3364ortfi0gyerv.lambda-url.us-east-1.on.aws/`
 - Report: `https://jeimgjzdfxzkcxjpnrzsdrxmhe0mzxkb.lambda-url.us-east-1.on.aws/`
 
-Remaining activation work, unchanged from the 2026-08-11 handoff: rebuild with
-`PUBLIC_REPORT_MINT_URL` / `PUBLIC_REPORT_SUBMIT_URL`, publish the static files, then a real
-browser submit/replay smoke. Do not claim the report path is live before that.
+Remaining activation work: deploy the Write stack so it publishes `report_url` into the same
+no-store configuration document, deploy the static site and Ingest publisher, then run a real
+browser submit and returned-signal replay smoke. Do not claim the report path is live before that.
 
 ## Trackers reconciled today
 

@@ -116,7 +116,7 @@ const tomorrow = summaryFor(1);
     }
   </section>
   <StaticMap locale={locale} spotId={spotId} spotName={spot.name} />
-  <TrackRecordBox spotId={spotId} />
+  <TrackRecordBox block={forecast.spot_detail?.[spotId]?.scorecard} />
   {
     shareCall !== undefined && shareHref !== undefined ? (
       <section class="spot-share" aria-label="Compartir este llamado">

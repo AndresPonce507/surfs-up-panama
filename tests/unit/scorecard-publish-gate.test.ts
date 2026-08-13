@@ -188,6 +188,7 @@ describe('scorecard block — composing the box\'s decision', () => {
           assert.equal(block.n_reporters, distinctTrustEligibleReporters);
           assert.equal(block.threshold, REPORTS_REQUIRED);
           assert.equal(block.claim_ok, false, 'the bias clause is unavailable in slice-01, so no count can ever earn a claim');
+          assert.equal(block.headline, null, 'a counter block must not invent a claim headline');
         },
       ),
     );
@@ -208,6 +209,7 @@ describe('scorecard block — composing the box\'s decision', () => {
           threshold: REPORTS_REQUIRED,
           counter: `0 / ${REPORTS_REQUIRED}`,
           claim_ok: false,
+          headline: null,
         });
       }),
     );

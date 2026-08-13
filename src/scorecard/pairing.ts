@@ -67,7 +67,7 @@ const observedScore = (quality: string): number | null =>
     : null;
 
 const predictionKey = (prediction: PredictionSnapshot): string =>
-  `${prediction.spot_id}|${prediction.valid_ts}|${prediction.source}`;
+  `${prediction.spot_id}|${floorUtcHour(prediction.valid_ts) ?? prediction.valid_ts}|${prediction.source}`;
 
 const reportPairKey = (report: SurfReport): string | null => {
   const hour = floorUtcHour(report.observed_at);

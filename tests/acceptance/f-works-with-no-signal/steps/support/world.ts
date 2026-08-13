@@ -62,14 +62,14 @@ export const VISITED_SPOT = 'playa-venao';
 export const UNVISITED_SPOT = 'punta-chame';
 
 /**
- * The write path is `POST /api/report` (07-write-path.md section 4.1). In
- * production it is a bare Lambda Function URL on another origin; the harness
- * serves the same path shape same-origin on purpose, because the router row
- * under test is "write path (POST) is network-only, never cached, never served
- * from cache" and a same-origin POST is the HARDER case for a helper: a
- * cross-origin request a helper simply ignores would prove nothing.
+ * The live browser discovers the bare Function URLs in the no-store public
+ * configuration document. The harness keeps the local endpoints same-origin,
+ * but still requires the minted credential on every report POST, so a stale
+ * `/api/report` worker replay cannot pass this production-shaped journey.
  */
 export const WRITE_PATH = '/api/report';
+export const MINT_PATH = '/api/mint';
+export const WRITE_CREDENTIAL = 'local-write-credential';
 
 /** What the live site answers a report with. Its presence proves the answer came from the site. */
 export const LIVE_ANSWER_MARK = 'live-answer-8f2c41';
@@ -233,8 +233,13 @@ function composeFirstReveal(reportId: string): string {
   });
 }
 
-function answerSend(body: string, response: http.ServerResponse, socket: Socket): void {
+function answerSend(body: string, response: http.ServerResponse, socket: Socket, credential: string | undefined): void {
   const noStore = { 'cache-control': 'no-store' } as const;
+  if (credential !== WRITE_CREDENTIAL) {
+    response.writeHead(401, { ...noStore, 'content-type': 'application/json; charset=utf-8' });
+    response.end(JSON.stringify({ error: { code: 'credential_invalid', what: 'No pudimos confirmar el reporte ahora.' } }));
+    return;
+  }
   site.writePath.received.push({ body, at: Date.now() });
 
   if (site.writePath.behaviour === 'throttled') {
@@ -282,10 +287,10 @@ function answerSend(body: string, response: http.ServerResponse, socket: Socket)
   }
 
   if (site.writePath.behaviour === 'live') {
-    // Byte-for-byte the answer slice-01 was recorded against.
-    site.writePath.stored.set(reportId, composeFirstReveal(reportId));
+    const reveal = composeFirstReveal(reportId);
+    site.writePath.stored.set(reportId, reveal);
     response.writeHead(200, { ...noStore, 'content-type': 'application/json; charset=utf-8' });
-    response.end(JSON.stringify({ outcome: 'compared', mark: LIVE_ANSWER_MARK }));
+    response.end(reveal);
     return;
   }
 
@@ -368,11 +373,24 @@ export function ensureServedSite(): Promise<{ server: http.Server; baseUrl: stri
 
       const noStore = { 'cache-control': 'no-store' } as const;
 
+      if (request.method === 'GET' && pathname === '/push-config.json') {
+        const origin = `http://${request.headers.host}`;
+        response.writeHead(200, { ...noStore, 'content-type': 'application/json; charset=utf-8' });
+        response.end(JSON.stringify({ mint_url: `${origin}${MINT_PATH}`, report_url: `${origin}${WRITE_PATH}` }));
+        return;
+      }
+      if (request.method === 'POST' && pathname === MINT_PATH) {
+        response.writeHead(200, { ...noStore, 'content-type': 'application/json; charset=utf-8' });
+        response.end(JSON.stringify({ credential: WRITE_CREDENTIAL }));
+        return;
+      }
+
       if (request.method === 'POST' && pathname === WRITE_PATH) {
         const chunks: Buffer[] = [];
         request.on('data', (chunk: Buffer) => chunks.push(chunk));
         request.on('end', () => {
-          answerSend(Buffer.concat(chunks).toString('utf8'), response, request.socket);
+          const header = request.headers['x-surf-credential'];
+          answerSend(Buffer.concat(chunks).toString('utf8'), response, request.socket, Array.isArray(header) ? header[0] : header);
         });
         return;
       }

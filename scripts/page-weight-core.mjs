@@ -69,6 +69,24 @@ const DECLARED_ROUTES = [
 ];
 
 /**
+ * The Publisher ARM64 smoke consumes these exact report-document ceilings
+ * after its real renderer uploads the pages. Keep the numbers in
+ * `DECLARED_ROUTES` above: that table is the one executable copy of the
+ * architecture route map; this is only its named export for another gate.
+ */
+export const REPORT_DOCUMENT_GZIP_BUDGETS = /** @type {Readonly<Record<'reportar' | 'reportado', Readonly<{ label: string, bytes: number }>>>} */ (
+  Object.freeze(
+    Object.fromEntries(
+      ['reportar', 'reportado'].map((kind) => {
+        const declared = DECLARED_ROUTES.find((route) => route.shape === `/spots/{slug}/${kind}`);
+        if (declared === undefined) throw new Error(`page-weight gate has no declared report document ceiling for ${kind}`);
+        return [kind, Object.freeze({ label: declared.label, bytes: declared.bytes })];
+      }),
+    ),
+  )
+);
+
+/**
  * Declared in section 4, built by later features. Printed, never silently
  * skipped: a reader has to see the edge of what was measured.
  */

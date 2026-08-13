@@ -151,7 +151,10 @@ function loadHelper(options: { fetchImpl?: FetchImpl; caches?: FakeCaches } = {}
     },
     caches,
     location: { origin: ORIGIN },
-    clients: { claim: async () => { claimCalls.push(1); } },
+    clients: {
+      claim: async () => { claimCalls.push(1); },
+      matchAll: async () => [],
+    },
     skipWaiting: async () => { skipWaitingCalls.push(1); },
     fetch: async (request: RequestInfo, init?: { signal?: AbortSignal }) => {
       const req = typeof request === 'string' ? new Request(new URL(request, ORIGIN).toString()) : (request as Request);
@@ -169,11 +172,9 @@ type Helper = ReturnType<typeof loadHelper>;
 
 async function fireLifecycle(helper: Helper, type: 'install' | 'activate'): Promise<void> {
   const handlers = helper.listeners.get(type) ?? [];
-  assert.equal(handlers.length, 1, `expected exactly one "${type}" listener`);
-  const handler = handlers[0];
-  assert.ok(handler, `expected a "${type}" listener function, found none`);
   const waits: Promise<unknown>[] = [];
-  handler({ waitUntil: (p: Promise<unknown>) => waits.push(p) });
+  assert.ok(handlers.length > 0, `expected at least one "${type}" listener`);
+  for (const handler of handlers) handler({ waitUntil: (p: Promise<unknown>) => waits.push(p) });
   await Promise.all(waits);
 }
 
@@ -296,10 +297,10 @@ describe('the offline helper (public/sw.js)', () => {
     );
   });
 
-  it('registers install, activate and fetch as three independent listeners', () => {
+  it('registers the one fetch router and both activation responsibilities', () => {
     const helper = loadHelper();
     assert.equal(helper.listeners.get('install')?.length, 1);
-    assert.equal(helper.listeners.get('activate')?.length, 1);
+    assert.equal(helper.listeners.get('activate')?.length, 2);
     assert.equal(helper.listeners.get('fetch')?.length, 1);
   });
 
