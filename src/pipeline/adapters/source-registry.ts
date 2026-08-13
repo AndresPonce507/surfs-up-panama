@@ -19,6 +19,8 @@ import type { Clock } from '../ports';
 import { NoaaGfswaveForecastSource } from './noaa-gfswave-source';
 import { OpenMeteoForecastSource } from './open-meteo-source';
 import type { SpotCoordinate } from './spot-coordinates';
+import { CoopsTideSource } from './coops-tide-source';
+import { shippedTideStationProfiles, validateAcceptedTideStationProfiles } from './tide-station-profiles';
 
 export type RegistryEntry = {
   readonly id: string;
@@ -39,22 +41,32 @@ export function productionForecastSource(
   spotsById: ReadonlyMap<string, SpotCoordinate>,
   clock: Clock,
   fetchImpl: typeof fetch = fetch,
+  stationProfiles: unknown = shippedTideStationProfiles,
 ): ForecastSource {
+  const acceptedProfiles = validateAcceptedTideStationProfiles(stationProfiles);
+  const profilesBySpotId = new Map(acceptedProfiles.map((profile) => [profile.spot_id, profile]));
+  // Do not compose even an empty tide provider at launch. Its activation is
+  // conditional on a reviewed, accepted exact-spot profile, never geography.
+  const tideDelegate = profilesBySpotId.size === 0 ? undefined : new CoopsTideSource(profilesBySpotId, clock, fetchImpl);
   return registryForecastSource([
     { id: 'open-meteo', source: new OpenMeteoForecastSource(spotsById, clock, fetchImpl) },
     { id: 'noaa-gfswave', source: new NoaaGfswaveForecastSource(spotsById, clock, fetchImpl) },
-  ]);
+  ], tideDelegate);
 }
 
-export function registryForecastSource(entries: readonly RegistryEntry[]): ForecastSource {
+export function registryForecastSource(entries: readonly RegistryEntry[], tideDelegate?: ForecastSource): ForecastSource {
   return {
     fetchWavePayload: (spotId) => foldFetch(entries, (entry) => entry.source.fetchWavePayload(spotId)),
     parseWaveMembers: (verbatim) =>
       foldParse(entries, (entry) => entry.source.parseWaveMembers(verbatim), () => ({ ok: false, reason: 'malformed' })),
     fetchWindPayload: (spotId) => foldFetch(entries, (entry) => entry.source.fetchWindPayload(spotId)),
     parseWind: (verbatim) => foldParse(entries, (entry) => entry.source.parseWind(verbatim), firstReasonOrMalformed),
-    fetchTidePayload: (spotId) => foldFetch(entries, (entry) => entry.source.fetchTidePayload(spotId)),
-    parseTide: (verbatim) => foldParse(entries, (entry) => entry.source.parseTide(verbatim), firstReasonOrMalformed),
+    fetchTidePayload: (spotId) => tideDelegate === undefined
+      ? foldFetch(entries, (entry) => entry.source.fetchTidePayload(spotId))
+      : tideDelegate.fetchTidePayload(spotId),
+    parseTide: (verbatim) => tideDelegate === undefined
+      ? foldParse(entries, (entry) => entry.source.parseTide(verbatim), firstReasonOrMalformed)
+      : tideDelegate.parseTide(verbatim),
   };
 }
 
