@@ -391,6 +391,73 @@ When('the surfer waits without changing the clock', async function (this: object
   await (await realPage(this)).waitForTimeout(1_000);
 });
 
+// The R4/R26 reconciliation, 2026-08-13 (deliver/wave-decisions.md). A report
+// that sends itself when the screen opens is acknowledged neutrally in place;
+// its result is reached by an explicit choice. The local twin of this oracle,
+// which also proves the send really happened, is
+// steps/report-flush.steps.ts.
+Then('the report that was waiting goes through with the form still blank', async function (this: object) {
+  const page = await realPage(this);
+
+  // Vacuity guard, mirroring the local twin. This oracle is only worth
+  // something if the flush actually fired: a screen showing no reveal because
+  // it never sent anything would satisfy every assertion below. The
+  // acknowledgement and its link are the visible proof the send completed, and
+  // the drained durable row is the proof it will not send itself twice. Awaited
+  // rather than read off a fixed 500 ms snapshot, because a slow real handler
+  // would otherwise let the wording assertions pass before the flush lands.
+  await page.locator('[data-storage-notice] a').first().waitFor({ state: 'visible', timeout: 15_000 });
+  const deadline = Date.now() + 5_000;
+  let remaining = (await browserQueuedReports(this)).length;
+  while (remaining > 0 && Date.now() < deadline) {
+    await page.waitForTimeout(50);
+    remaining = (await browserQueuedReports(this)).length;
+  }
+  assert.equal(
+    remaining,
+    0,
+    `WHAT: ${remaining} acknowledged report(s) stayed in the durable queue after the flush. WHY: a report that went through must not send itself twice. HOW: discard it on its matching receipt.`,
+  );
+
+  assert.match(
+    new URL(page.url()).pathname,
+    new RegExp(`^/spots/${SPOT}/reportar/?$`),
+    `WHAT: the flush moved the screen off the report form (now ${new URL(page.url()).pathname}). WHY: a surfer filing today's report must never be blocked by yesterday's delivery (R4). HOW: acknowledge the flush in place.`,
+  );
+  assert.equal(
+    await page.locator('[data-report-form]').count(),
+    1,
+    'WHAT: the flush took the report form off the screen. WHY: reopening the report screen starts a blank report (R4). HOW: leave the form standing.',
+  );
+  assert.equal(
+    await page.locator('input[type="radio"]:checked').count(),
+    0,
+    'WHAT: the form screen opened with answers already picked after the flush. WHY: every visit is a blank report with a fresh identity (R4).',
+  );
+  const text = await pageText(this);
+  for (const wording of ['Reporte recibido', 'Recibimos', 'llegó', 'Así nos fue', 'Dijimos', 'Tú viste', 'punto']) {
+    assert.ok(
+      !text.toLocaleLowerCase('es').includes(wording.toLocaleLowerCase('es')),
+      `WHAT: the form screen shows reveal wording ${JSON.stringify(wording)} after a flush. WHY: the prior report's result above a fresh blank form anchors the new capture to our own answer (docs/DISCUSS-decisions.md, RESOLVED anchoring). HOW: put the receipt behind an explicit link.`,
+    );
+  }
+  assert.ok(
+    !/\d/.test(text),
+    `WHAT: the form screen shows a number after a flush: ${JSON.stringify(text.slice(0, 300))}. WHY: our number arriving before the surfer answers cold is the anchoring leak decision 28 closes. HOW: keep the acknowledgement number-free.`,
+  );
+  assert.equal(
+    await page.locator('[data-storage-notice] a').count(),
+    1,
+    'WHAT: the acknowledgement offers no single explicit way to see how that report went. WHY: the receipt stays reachable, but only by choice. HOW: render exactly one link to it.',
+  );
+});
+
+When('the surfer opens the earlier report', async function (this: object) {
+  const page = await realPage(this);
+  await page.locator('[data-storage-notice] a').first().click({ timeout: 5_000 });
+  await page.waitForTimeout(250);
+});
+
 Then('the surfer sees that their report arrived', async function (this: object) {
   const text = await pageText(this);
   assertVisible(text, ['llegó', 'recibido', 'recibimos'], 'that their report arrived');

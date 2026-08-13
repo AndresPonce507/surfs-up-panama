@@ -45,9 +45,10 @@ Feature: Three taps and the label is locked on the phone before anything else
     Then the surfer lands on the spot page, never on an editable form
     When the surfer opens the report screen again
     Then a blank new report starts
+    And the earlier report goes through and leaves no reveal on the form screen
     When the surfer answers waist to chest, choppy wind and a good session
     And the surfer taps Mandar
-    Then the phone holds two saved reports with two different identities
+    Then the two reports that left the phone carry two different identities
 
   @slice-01 @real-io @error @covers-R6
   Scenario: A phone that cannot keep the label is told plainly before answering
