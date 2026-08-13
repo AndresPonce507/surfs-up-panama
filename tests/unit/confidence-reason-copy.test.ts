@@ -22,7 +22,21 @@ import assert from 'node:assert/strict';
 import fc from 'fast-check';
 import { describe, it } from 'vitest';
 
-import { CONFIDENCE_LEVEL_WORD_ES, confidenceReasonEs, type ConfidenceLevel } from '../../src/scoring/confidence';
+// SIGNATURE MIGRATION, slice-01 of F-KNOW-HOW-MUCH-TO-TRUST-IT, 2026-08-11.
+// `confidenceReasonEs` gained a required second argument saying how the models
+// compared per variable. Nothing this file asserts changed: every call below
+// passes `UNKNOWN_AGREEMENT`, the degrade branch for a surface that carries no
+// spread terms, and that branch returns byte-for-byte what this function
+// returned before. So these tests now pin the back-compat guarantee, which is
+// exactly what they were written to protect.
+import {
+  CONFIDENCE_LEVEL_WORD_ES,
+  confidenceReasonEs,
+  type ConfidenceLevel,
+  type ModelAgreement,
+} from '../../src/scoring/confidence';
+
+const UNKNOWN_AGREEMENT: ModelAgreement = { kind: 'unknown' };
 
 const ALL_LEVELS: readonly ConfidenceLevel[] = ['high', 'medium', 'low'];
 const level = fc.constantFrom(...ALL_LEVELS);
@@ -56,7 +70,7 @@ describe('day-one confidence reason copy (confidenceReasonEs)', () => {
   it('names model agreement and is honest that no one has reported from the beach, for every level', () => {
     fc.assert(
       fc.property(level, (lvl) => {
-        const reason = confidenceReasonEs(lvl);
+        const reason = confidenceReasonEs(lvl, UNKNOWN_AGREEMENT);
 
         assert.ok(reason.trim().length > 0, `The reason for "${lvl}" must never open empty.`);
         assert.match(
@@ -84,13 +98,13 @@ describe('day-one confidence reason copy (confidenceReasonEs)', () => {
     );
   });
 
-  it('never varies with anything but the level: same level, same reason', () => {
+  it('never varies with anything but the level, on the degrade branch: same level, same reason', () => {
     fc.assert(
       fc.property(level, (lvl) => {
         assert.equal(
-          confidenceReasonEs(lvl),
-          confidenceReasonEs(lvl),
-          'The published bundle carries no per-spot spread breakdown and no conf_value (domain-model.md section 13): the reason can only be a pure function of level.',
+          confidenceReasonEs(lvl, UNKNOWN_AGREEMENT),
+          confidenceReasonEs(lvl, UNKNOWN_AGREEMENT),
+          'With no spread terms to read, the reason can only be a pure function of level. The per-variable branch is pinned separately in tests/unit/model-agreement.test.ts.',
         );
       }),
       { numRuns: 20 },

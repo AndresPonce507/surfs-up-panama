@@ -38,15 +38,29 @@
 // No aria-label: the visible text already says the full phrase, and
 // <summary>'s native disclosure-triangle semantics already announce the
 // expand/collapse state, so adding one would double-announce both.
-import { CONFIDENCE_LEVEL_WORD_ES, confidenceReasonEs, type ConfidenceLevel } from '../scoring/confidence';
+// Slice-01 of F-KNOW-HOW-MUCH-TO-TRUST-IT widened the reason from a
+// level-keyed generic sentence to one that NAMES which variable the models
+// split on (research 09 sections 8.4 and 14.4). `agreement` is a REQUIRED
+// prop, never optional: this project's worst shipped bug was an optional field
+// that rendered nothing on nineteen of twenty pages with every test green, so
+// the type checker is made to force every call site to decide what it knows.
+// A caller with no published terms passes `{ kind: 'unknown' }` explicitly and
+// gets the older sentence back, which is a stated absence, not a silent one.
+import {
+  CONFIDENCE_LEVEL_WORD_ES,
+  confidenceReasonEs,
+  type ConfidenceLevel,
+  type ModelAgreement,
+} from '../scoring/confidence';
 
 interface Props {
   level: ConfidenceLevel;
+  agreement: ModelAgreement;
 }
 
-const { level } = Astro.props;
+const { level, agreement } = Astro.props;
 const word = CONFIDENCE_LEVEL_WORD_ES[level];
-const reason = confidenceReasonEs(level);
+const reason = confidenceReasonEs(level, agreement);
 const dots: Readonly<Record<ConfidenceLevel, string>> = {
   high: '●●●',
   medium: '●●○',

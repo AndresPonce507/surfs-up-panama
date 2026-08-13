@@ -1,0 +1,192 @@
+{
+  "roadmap": {
+    "project_id": "f-know-how-much-to-trust-it",
+    "created_at": "2026-08-12T00:00:00Z",
+    "total_steps": 3,
+    "quality_contract_version": 1
+  },
+  "phases": [
+    {
+      "id": "01",
+      "name": "Slice-01: the reason names which thing the models split on",
+      "description": "Render-time composition from the already-published spread_terms, not a bundle-side composer: summaries() carries confidence_reason onto the day summary and the Spanish sentence is composed at the reader boundary via modelAgreement(). No producer change and no republish: src/pipeline/build.ts is untouched because the producer already publishes spread_terms on all 60 calls, and law L9 holds because combine() can read nothing new. ROADMAP NOTE FOR THE REST OF THE FEATURE: phases for slice-03 and slice-04 are appended just-in-time after each slice's own JIT DISTILL; slice-02 and slice-05 are blocked (see the Slice Plan in docs/feature/f-know-how-much-to-trust-it/feature-delta.md) and get no steps in this roadmap.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "01-01",
+          "name": "Reason carried to the surface and composed per variable at render time",
+          "criteria": [
+            "summaries() in src/data/forecast.ts carries confidence_reason from SurfaceCall onto the day summary explicitly; the field never silently drops the way this repo's worst shipped bug (optional conf_level on zero of 60 rows) did.",
+            "The per-variable Spanish sentence is composed at render time from the published confidence_reason.spread_terms via modelAgreement() in src/scoring/confidence.ts with DISAGREEMENT_THRESHOLD = 0.5, pinned to research 09 section 7.5's own worked Venao oracle (height 0.239, period 0.832, direction 0.090 reads as agreement on el tamaño and la dirección, split on el período) held as a test in tests/unit/model-agreement.test.ts, so the threshold cannot drift from the sentence the research wrote.",
+            "All-zero spread_terms with level low read not_comparable and the reason says 'no hay con qué comparar', never claiming agreement; all-zero terms with level medium or high read as genuine agreement, because a single member caps c_spread at 0.4 so any level above low proves two or more members participated (D4).",
+            "No composed reason carries a number, a percentage, a model identifier, JSON or English, and every reason keeps the settled no-beach-report sentence: the level is agreement between models, never verified accuracy.",
+            "Every composed reason fits the ≤280-characters-per-language bound (wave decision W1 in feature-delta.md; measured worst case of the shipped composer is 246). The old 160 bound is superseded and must not be reasserted anywhere.",
+            "src/pipeline/build.ts is untouched and nothing confidence returns is readable by combine() (law L9): this is a render-time reading of already-published data, touching no score, no ranking, no sub-score."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/cuanto-puedo-confiar.feature",
+          "scenario_name": "En <dia>, la razón nombra en cuál cosa coinciden los modelos y en cuál no",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "Carriage and render-time composition, asserted through DOM text reads and unit oracles; the human judgement of the rendered surface at 390 px in both themes is deferred to the charter-gated step 01-03, this repo's established pattern for slice-internal steps whose output the visible step examines.",
+          "ui_checks": {},
+          "files_to_modify": [
+            "tests/acceptance/f-know-how-much-to-trust-it/cuanto-puedo-confiar.feature",
+            "tests/acceptance/f-know-how-much-to-trust-it/fixtures/slice-01-agreement-variants.json",
+            "tests/acceptance/f-know-how-much-to-trust-it/steps/cuanto-puedo-confiar.steps.ts",
+            "src/components/Confidence.astro",
+            "src/components/RankedList.astro",
+            "src/data/forecast.ts",
+            "src/scoring/confidence.ts",
+            "tests/unit/confidence-reason-copy.test.ts",
+            "tests/unit/model-agreement.test.ts"
+          ],
+          "implementation_notes": "EXECUTED PRE-DES 2026-08-11 at commits 193955b (acceptance contract) and c785456 (implementation). Do NOT re-implement. Evidence: acceptance run 2026-08-12, 5 scenarios / 107 steps passed. DESIGN RATIONALE: the adopted design composes at render time from the already-published spread_terms; the earlier bundle-side composer design was rejected. Two dropped links are reconnected and nothing else moves: (1) summaries() in src/data/forecast.ts now copies confidence_reason (it copied six fields and dropped this one); (2) the sentence stops being keyed on the level alone. RankedList.astro calls modelAgreement(summary.confidence_reason.spread_terms, summary.conf_level) and Confidence.astro renders confidenceReasonEs(level, agreement); agreement is a REQUIRED parameter, with { kind: 'unknown' } as the explicit degrade constructed only at call sites that genuinely predate confidence_reason, because this repo's worst shipped bug was an optional field silently rendering nothing while every test stayed green. D1: qualitative words, no number added to the surface. D2: render-time only, beside the call, never folded into it. D3: DISAGREEMENT_THRESHOLD 0.5 is forced into (0.239, 0.832] by section 7.5's own worked sentence and means the spread grew to about 71% of its own calibration constant; the Venao oracle is a test, not a comment. D4: not_comparable fires only when terms are all zero AND level is low; the cross-tab on the real 60 calls confirms both branches fire (15 zero+low, 9 zero+medium). The Spanish factor nouns live in SPREAD_VARIABLE_ES beside the composer and are asserted equal to src/publish/factor-vocab.ts in the unit test, because the arrow points core -> publish and never back. SCENARIO COVERAGE: this step's Outline expands to two executed scenarios, Hoy on la home and Mañana. This step also implements the composer branch the negative single-opinion scenario reads (D4); that scenario is anchored at 01-02, whose member-filter fix is what keeps it honest against real member lists. EXEMPT FROM PARADIGM: step executed pre-DES; the unit oracles shipped at the recorded commits (model-agreement.test.ts holds the section 7.5 worked example and the vocabulary-equality guard; confidence-reason-copy.test.ts holds the copy guards)."
+        },
+        {
+          "id": "01-02",
+          "name": "Land-masked members excluded from the confidence spread",
+          "criteria": [
+            "confidence() consumes only members passing the same usable-member predicate blend() already applies, member.swell.h_m >= 0 && member.swell.t_s > 0 (usableMembers in src/scoring/confidence.ts), so the two consumers of one member list stop disagreeing about which members exist: one rule, both consumers.",
+            "A land-masked fake-zero member no longer inflates the spread: the measured Venao case (three real members plus one fake zero) keeps spread_terms {0.127, 0.419, 0.071} and level medium, instead of {5.503, 8.892, 27.040} and level low announcing a disagreement that never happened.",
+            "The parse-level land-mask rule is NOT widened: the three-field signature (H=0, T=0, and in the real capture dir=0 on 240 of 240 rows) stays where it is; the fix is consumer-side member filtering only.",
+            "With the exclusion in place the negative scenario stays honest end to end: a beach that only one real model can see reads 'no hay con qué comparar' and never claims agreement, while the beach with genuine multi-member agreement still reads that the models coincide; the unit guard in tests/unit/model-agreement.test.ts pins the exclusion falsifiably."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/cuanto-puedo-confiar.feature",
+          "scenario_name": "Con una sola opinión disponible, la razón dice que no hay con qué comparar",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "",
+          "u8_observation": "",
+          "non_visual_rationale": "A unit-level guard inside the scoring core whose observable is member filtering and the spread numbers it protects; the rendered surface those numbers reach is examined at the charter-gated step 01-03, this repo's established pattern.",
+          "ui_checks": {},
+          "deps": [
+            "01-01"
+          ],
+          "files_to_modify": [
+            "src/scoring/confidence.ts",
+            "tests/unit/model-agreement.test.ts"
+          ],
+          "implementation_notes": "EXECUTED PRE-DES 2026-08-11 at commit cad3180. Do NOT re-implement. Evidence: acceptance run 2026-08-12, 5 scenarios / 107 steps passed. DESIGN RATIONALE (D5): research 09 section 8.3 Finding 2 demands H==0 && T==0 be treated as missing, not flat. The parse layer flags it and blend() independently refuses it with t_s > 0, but confidence() had no such guard while consuming the same member list. Measured on this branch before the fix, one fake zero reaching confidence() drove every variable far past the disagreement threshold and flipped level medium to low while three real models agreed well: 'confidently wrong' one layer above where the research caught it, and exactly the failure that would make 01-01's sentence lie. The fix adopts blend()'s exact usable-member predicate rather than widening the parse rule, because section 8.3 states the signature as all three fields zero, the real capture agrees, and the existing parse test is named after the three-field rule. SCENARIO ANCHORING: this step carries the negative single-opinion scenario as its acceptance anchor because the exclusion is what guarantees a beach whose other models are land-masked reads as a single opinion instead of as fabricated total disagreement (at Playa Cambutal, ncep_gfswave025 is fully masked, 144 of 144 rows); the composer branch the scenario reads (not_comparable, D4) shipped in 01-01, so the two steps split mechanism and copy while the scenario is covered exactly once. EXEMPT FROM PARADIGM: step executed pre-DES; the unit guard shipped in tests/unit/model-agreement.test.ts at the recorded commit."
+        },
+        {
+          "id": "01-03",
+          "name": "The longest reason keeps phone rows clean, light and dark",
+          "criteria": [
+            "Both Examples of the Outline pass at 390 px: tema claro with movimiento normal, and tema oscuro with movimiento reducido; no row overflows the 390 px width or clips its text as the reason lengthens, including the long-named destination the fixture plants.",
+            "The tap that opens the reason measures at least 44 by 44 px and carries no motion; nothing animates under movimiento reducido.",
+            "The open reason's text has sufficient contrast against the real card backdrop in both themes, never measured against white.",
+            "The longest rendered reason stays within the ≤280-characters-per-language bound (W1) and wraps rather than clips; no check reasserts the superseded 160 bound.",
+            "Gate evidence is captured by redirecting output to a file and reading $? on its own line, never through a pipeline."
+          ],
+          "test_file": "tests/acceptance/f-know-how-much-to-trust-it/cuanto-puedo-confiar.feature",
+          "scenario_name": "Con la razón más larga, las filas del teléfono siguen limpias en tema <tema> y movimiento <movimiento>",
+          "slice_id": "slice-01",
+          "surface_classification": "user-visible",
+          "charter_path": "docs/product/expectations/f-know-how-much-to-trust-it/la-razon-nombra-en-cual-cosa-los-modelos-no-se-ponen-de-acuerdo.md",
+          "u8_observation": "La razón de cada fila nombra en cuál cosa los modelos no se ponen de acuerdo, el tamaño, el período o la dirección, en español de a pie y nunca con una frase genérica, nunca promete acuerdo cuando solo un modelo alcanza a ver el spot sino que dice que no hay con qué comparar, siempre sigue diciendo que todavía nadie reportó desde la playa, y las filas se quedan limpias a 390 px.",
+          "non_visual_rationale": "",
+          "ui_checks": {
+            "U1": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-know-how-much-to-trust-it and @slice-01 and @ui-u1"
+            ],
+            "U2": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-know-how-much-to-trust-it and @slice-01 and @ui-u2"
+            ],
+            "U3": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-know-how-much-to-trust-it and @slice-01 and @ui-u3"
+            ],
+            "U4": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-know-how-much-to-trust-it and @slice-01 and @ui-u4"
+            ],
+            "U5": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-know-how-much-to-trust-it and @slice-01"
+            ],
+            "U6": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-know-how-much-to-trust-it and @slice-01 and @ui-u6"
+            ],
+            "U7": [
+              "npm",
+              "run",
+              "test:at",
+              "--",
+              "--tags",
+              "@feature-f-know-how-much-to-trust-it and @slice-01 and @ui-u7"
+            ]
+          },
+          "deps": [
+            "01-01",
+            "01-02"
+          ],
+          "files_to_modify": [
+            "docs/product/expectations/f-know-how-much-to-trust-it/la-razon-nombra-en-cual-cosa-los-modelos-no-se-ponen-de-acuerdo.md"
+          ],
+          "implementation_notes": "EXECUTED PRE-DES 2026-08-11 at commits 193955b (UI outline and expectation charter) and c785456 (the rendered surface the outline judges). Do NOT re-implement. Evidence: acceptance run 2026-08-12, 5 scenarios / 107 steps passed. THE CHARTER-GATED USER-VISIBLE STEP of the slice: no production file beyond 01-01's surface was needed, because the UI Outline judges what c785456 shipped through the already-mounted Confidence.astro and RankedList.astro. The Outline expands to two executed scenarios (claro/normal and oscuro/reducido). U5 MAPPING: the .feature carries no @ui-u5 tag, so the U5 key runs the slice-wide tag set; U5 (designed states) is exercised by the negative single-opinion scenario inside that slice-wide run, which drives the not_comparable designed state alongside the compared and full-agreement states of the same published morning. CHARTER STATE: the charter exists at charter_path with expectation ID EXP-f-know-how-much-to-trust-it-1 and already carries a Vera PASS recorded 2026-08-11 in its session log (40 disclosures opened across Hoy and Mañana, both themes, 390 px, all expected observations held, all negatives clean); DES sealing may still require its own fresh source-blind record, which is the in-progress half of the slice per feature-delta.md's Slice Plan annotation. W1 REMINDER: the longest rendered reason is bounded at ≤280 characters per language (measured worst case 246), so the row must wrap, never clip or line-clamp, and no check may reassert the superseded 160 bound. EXEMPT FROM PARADIGM: measured visual verification over a built artifact; E2E verifies wiring and appearance, not invariants."
+        }
+      ]
+    }
+  ],
+  "implementation_scope": {
+    "source_directories": [
+      "src/scoring/",
+      "src/data/",
+      "src/components/"
+    ],
+    "test_directories": [
+      "tests/unit/",
+      "tests/acceptance/f-know-how-much-to-trust-it/"
+    ],
+    "excluded_patterns": [
+      "src/pipeline/**",
+      "src/publish/**",
+      "src/i18n/**",
+      "src/share/**",
+      "src/report/**",
+      "src/pages/**",
+      "src/layouts/**",
+      "infra/**",
+      "public/**",
+      "scripts/**",
+      "vitest.config.ts",
+      "docs/feature/f-see-what-killed-it/**",
+      "docs/feature/daily-call-with-permanent-receipts/**"
+    ]
+  },
+  "validation": {
+    "status": "approved",
+    "reviewer": "nw-acceptance-designer-reviewer (haiku), verdict APPROVED 2026-08-12",
+    "approved_at": "2026-08-12T17:05:00Z"
+  }
+}

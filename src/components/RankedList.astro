@@ -6,7 +6,8 @@
 // section 4). Array position IS the rank; no rank field exists.
 import Base from '../layouts/Base.astro';
 import Confidence from './Confidence.astro';
-import { forecast } from '../data/forecast';
+import { forecast, type DaySummary } from '../data/forecast';
+import { CONFIDENCE_FACTORS, modelAgreement, type ModelAgreement } from '../scoring/confidence';
 import { spotById } from '../data/region';
 import { strings, type Locale } from '../i18n/strings';
 import { paths } from '../i18n/routes';
@@ -23,6 +24,21 @@ const { locale, day, announcement } = Astro.props;
 const t = strings[locale];
 const daySpots = forecast.days[day];
 const currentPath = day === 0 ? paths.home(locale) : paths.tomorrow(locale);
+
+/**
+ * How the models compared for this row. A row published before
+ * `confidence_reason` existed reads `unknown` and falls back to the older
+ * level-only sentence, which is a stated absence rather than an invented
+ * agreement. Reading the terms needs the level too, because zero terms are
+ * ambiguous: they mean perfect agreement OR a single member, and only a level
+ * above `low` proves two or more members took part.
+ */
+function agreementFor(summary: DaySummary): ModelAgreement {
+  if (summary.confidence_reason === undefined || summary.conf_level === undefined) {
+    return { kind: 'unknown' };
+  }
+  return modelAgreement(summary.confidence_reason.spread_terms, summary.conf_level, CONFIDENCE_FACTORS);
+}
 
 function nameOf(spotId: string): string {
   const spot = spotById(spotId);
@@ -99,7 +115,9 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
             </div>
           </div>
           <p>{index === 0 ? repeatableCall(summary) : summary.call[locale]}</p>
-          {summary.conf_level !== undefined && <Confidence level={summary.conf_level} />}
+          {summary.conf_level !== undefined && (
+            <Confidence level={summary.conf_level} agreement={agreementFor(summary)} />
+          )}
           {/* The one action the big card offers, handed in by the route so this
               component stays a reading surface. Only the top card takes it, so
               the page can never grow a second share action. */}
