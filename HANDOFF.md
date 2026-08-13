@@ -90,6 +90,19 @@ This section supersedes the legacy notes below. They are retained only as histor
   403/404/410 deletes the stale subscription. Physical Android and installed-iPhone PWA smoke is
   still required after deployment.
 
+## Integration gate state (verified 2026-08-13 afternoon)
+
+- The Push live vertical passed the exact fast integration gate: **11 passed / 0 failed / 0
+  skipped**, including ARM64 build and fetch smoke. The full default gate is not globally green:
+  it reports 53 acceptance failures and one E2E contrast audit, largely in existing bridge,
+  offline-queue, design and device-proof scenarios. These must stay visible; none is being
+  relabelled as a Push pass.
+- The live Fetch and Build functions are healthy and scheduled hourly at :17 and :22 UTC. Their
+  most recent observed cycle was Fetch 2026-08-13T16:17Z, followed by successful Build
+  `b_2026-08-13T16Z` at 16:22Z. The Publisher Lambda is absent from the live account, so fresh
+  builds do not yet republish the public site. Deploying the Weather bridge is the next required
+  operational step.
+
 ## Tide station assignment decision (2026-08-13)
 
 - `adr-tide-source-chain.md` is now **Accepted**. A tide station is assigned per spot only after an
