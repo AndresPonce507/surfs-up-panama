@@ -177,11 +177,76 @@ the already-published `spread_terms`, not the bundle-side per-spot composer the 
 
 | Slice | Value statement | Status | Annotation | Justification |
 |-------|-----------------|--------|------------|---------------|
-| slice-01 | A surfer taps the confidence word on any row, Hoy or Mañana, and reads which thing the models split on in surfer words: el tamaño, el período o la dirección. When only one model can see the spot, the reason says there is nothing to compare instead of promising agreement. Rows stay clean at 390 px with the longer sentence. | sealed | @walking_skeleton; SEALED 2026-08-13 after rebase onto origin/main. Evidence: focused tags 5 scenarios / 112 steps green exit 0 with 0 skipped; `ci-local --fast` 11 passed / 0 failed / 0 skipped exit 0 (redirected to a file and read, never piped); a real falsifiability probe per step, each broken then reverted with `git diff` proving the revert (01-01 carriage removed collapsed all 20 reasons to the forbidden generic sentence; 01-02 member filter removed exploded the spread to {5.503, 8.892, 27.040} exactly as D5 documents; 01-03 `min-height` dropped measured touch targets to 29 px on all 20 rows); rendered `dist/` inspected directly, 20 per-variable reasons, zero generic fallback, longest 246 chars against the ≤280 bound; source-blind Vera PASS 2026-08-13 over 80 disclosures, contrast 6.92:1 light and 8.69:1 dark. Vera could not observe two oracle cases because today's published data contains no example of either (full-agreement phrasing; the single-opinion case), and both are covered falsifiably by the fixture-driven scenarios instead. | Closes the real gap named above: `summaries()` now carries `confidence_reason`, `Confidence.astro` composes from `spread_terms` via `modelAgreement()` with `DISAGREEMENT_THRESHOLD = 0.5` pinned to research 09 §7.5's own Venao oracle (D3), single-member ambiguity resolved honestly per D4, land-masked members excluded per D5. Commits 193955b, c785456, cad3180; acceptance contract `cuanto-puedo-confiar.feature`, 5 scenarios. |
+| slice-01 | A surfer taps the confidence word on any row, Hoy or Mañana, and reads which thing the models split on in surfer words: el tamaño, el período o la dirección. When only one model can see the spot, the reason says there is nothing to compare instead of promising agreement. Rows stay clean at 390 px with the longer sentence. | in-flight | @walking_skeleton; code and gate evidence complete 2026-08-13 after rebase onto origin/main, EXAMINATION NOT YET SEALED: Vera returned INDETERMINATE, not PASS, and the seal waits on a fixture-backed re-examination (see the "Examination gap" note below this table). Evidence: focused tags 5 scenarios / 112 steps green exit 0 with 0 skipped; `ci-local --fast` 11 passed / 0 failed / 0 skipped exit 0 (redirected to a file and read, never piped); a real falsifiability probe per step, each broken then reverted with `git diff` proving the revert (01-01 carriage removed collapsed all 20 reasons to the forbidden generic sentence; 01-02 member filter removed exploded the spread to {5.503, 8.892, 27.040} exactly as D5 documents; 01-03 `min-height` dropped measured touch targets to 29 px on all 20 rows); rendered `dist/` inspected directly, 20 per-variable reasons, zero generic fallback, longest 246 chars against the ≤280 bound; source-blind Vera 2026-08-13 returned **INDETERMINATE** over 80 disclosures, with contrast measured 6.92:1 light and 8.69:1 dark and every negative clean. | Closes the real gap named above: `summaries()` now carries `confidence_reason`, `Confidence.astro` composes from `spread_terms` via `modelAgreement()` with `DISAGREEMENT_THRESHOLD = 0.5` pinned to research 09 §7.5's own Venao oracle (D3), single-member ambiguity resolved honestly per D4, land-masked members excluded per D5. Commits 193955b, c785456, cad3180; acceptance contract `cuanto-puedo-confiar.feature`, 5 scenarios. |
 | slice-02 | The tide number becomes real for every spot that can honestly reference a tide station, the tide factor rejoins the score, and "confianza alta" becomes reachable exactly where the models genuinely agree tightly, never by a lowered bar. Unmapped spots keep saying the tide is missing. | blocked | depends-on slice-01; blocked on the per-spot tide-station mapping policy | The mapping policy (which spots may honestly reference Balboa 9812501, under what stated phase-error criterion) is an open product decision owed by Andres, and `adr-tide-source-chain.md` is still Proposed, not Accepted. Building it without that decision would either misattribute one station to spots hundreds of km away (the exact move the capture's PROVENANCE refuses) or invent the policy ourselves. Not fakeable; waits. |
 | slice-03 | If the calibration check ever proves the spread term lies, removing it is a data change: a per-factor enable flag in the constants, the level renders from the surviving factors, and the reason never names a term that no longer participates. | pending | depends-on slice-01 only; non-visual | 05 §6.1's removal clause ("Participation is a per-factor enable flag in the constants file; disabling it is a data change") and the epic row's own kill-switch clause. The check itself stays with the learning lane (06 §10); this slice ships removability only, the seatbelt that must exist before anyone is tempted to keep a lying term because removing it would be rework. |
 | slice-04 | The confidence story survives its only vendor: a second, independent wave source (raw NOAA `gfswave` GRIB2, US public domain) feeds the same member table through the registry seam, the prediction log records it per source, and a dark source shrinks the member count honestly instead of blanking a row or fabricating a member. | pending | depends-on slice-01 only | `adr-openmeteo-vs-raw-grib2.md` makes a provider swap a registry change plus one adapter; `src/pipeline/ports.ts` is the seam. The grib_filter URL is live-verified working and the GRIB2 fixture already exists on `build/f2-trust`. De-risks the waived Open-Meteo ToS question structurally. |
 | slice-05 | The reason stops comparing models against nothing: once a spot's own spread history exists, "the models split worse than usual for this spot" replaces absolute thresholds, the only form research 09 says carries real signal. | blocked | depends-on slice-01; data-gated | Activation policy is settled and closed (`adr-spread-climatology-activation.md`): 30 distinct completed spot-local days of PublishedCall history. The log began accumulating 2026-08-08, so roughly 5 days exist on 2026-08-12. Shipping early would compare a day against a history that does not exist. Waits for data, not for work. |
+
+## Examination gap, 2026-08-13: why slice-01 is not sealed yet
+
+Vera examined the post-rebase build source-blind and returned **INDETERMINATE**. Read her full row
+in the charter's Session log. The verdict is correct and is **not** a defect in this code.
+
+What she confirmed, over 80 disclosure opens (20 rows x Hoy/Mañana x light/dark): all 40 reasons
+name concrete `tamaño`/`período`/`dirección` in agreement-before-disagreement order, the settled
+no-beach-report sentence is present 40 of 40, zero horizontal overflow, 44x44 px touch targets on
+every summary, zero digits, percentages, meters or model identifiers anywhere, and measured
+contrast of 6.92:1 light and 8.69:1 dark. Every charter negative came back clean.
+
+Why she could not finish: **today's live surface contains no example of two in-scope oracle rows**,
+so they were never exercised in either direction.
+
+- Oracle bullet 3, the full-agreement phrasing ("coinciden en las tres cosas"): every published row
+  today reads `low`, and no row shows three-way agreement.
+- Negative 1, the single-opinion case ("no hay con qué comparar"): no spot has single-model
+  coverage today.
+
+Resolution, in flight: build a **controlled fixture surface** for the charter walk, the way this
+repo already pins one for `daily-call-with-permanent-receipts` and `f-see-what-killed-it`, and the
+way the palette lane on `origin/main` does at 80ae5b1 (it pins its isolated copy to Panama civil
+today and clones a dawn receipt). The fixture must carry at least one full-agreement spot and one
+single-model-coverage spot, built from honest synthetic member data, so both untriggered oracle
+rows can actually be observed. Then re-run Vera source-blind against that surface.
+
+Two rules on that fixture, so it stays honest: production behaviour is **not** changed to make a
+row appear, and the charter is **not** weakened to dodge the gap. The point is to exercise the
+oracle, not to lower it.
+
+### Tooling refusals, recorded verbatim, never worked around
+
+`des-record-examine` refused both invocations tried today, in two different ways, so no examine
+record could be written by the tool and none was hand-written:
+
+1. Run from the worktree root by the examiner: `/Users/andres/psb-multimodel-trust/roadmap.json
+   does not exist`. The shim looks for `roadmap.json` at the worktree root rather than in the
+   feature's `deliver/` directory.
+2. Run with an explicit `--project-dir` pointing at `deliver/`: `Error: charter must be the contract
+   path /Users/andres/psb-multimodel-trust/docs/feature/f-know-how-much-to-trust-it/deliver/docs/product/expectations/f-know-how-much-to-trust-it/la-razon-nombra-en-cual-cosa-los-modelos-no-se-ponen-de-acuerdo.md,
+   not /Users/andres/psb-multimodel-trust/docs/product/expectations/f-know-how-much-to-trust-it/la-razon-nombra-en-cual-cosa-los-modelos-no-se-ponen-de-acuerdo.md`.
+   The shim resolves `--charter` underneath `--project-dir`, but this repo keeps charters in
+   `docs/product/expectations/`, so no valid argument exists.
+
+The verdict therefore lives in the charter's Session log and in the execution log, which is where a
+reader should look for it. Unlike `des-record-examine`, `des-log-phase` works (see W3).
+
+### Product signals, flagged not fixed
+
+Carried here as the motivating evidence for later slices, not treated as slice-01 bugs:
+
+- **The surface is honest but non-discriminating today.** All 40 rows read "Confianza baja" and 24
+  of 40 share a word-for-word identical sentence, so the ranking gives a surfer nothing to choose
+  between spots on. This is exactly the gap slice-02 (the tide that makes `alta` reachable at all)
+  and slice-05 (compare a spot against its own normal, rather than against absolute thresholds)
+  exist to close. It is a strong argument for their priority, and an equally strong argument
+  against "fixing" it by lowering the confidence bar.
+- **`<details name="confidence">` makes the rows mutually exclusive.** Opening one reason
+  auto-closes the previous one, so two spots cannot be compared side by side on a phone. Real,
+  outside slice-01's charter.
+- **The individual spot page carries no openable reason.** `/spots/<slug>/` shows "Confianza baja."
+  only inside the copy/WhatsApp share payload, with no `<details>` and no `data-level`. The charter
+  names only Hoy and Mañana, so this is out of its scope, but it is a genuine hole in the feature's
+  promise on the one page a surfer lands on from a shared link.
 
 ## Wave: DELIVER / [REF] Wave decisions
 

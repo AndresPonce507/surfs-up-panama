@@ -71,6 +71,13 @@
       "s": "EXECUTED",
       "d": "PASS: source-blind Vera verdict PASS 2026-08-13, recorded in the charter Session log (docs/product/expectations/f-know-how-much-to-trust-it/la-razon-nombra-en-cual-cosa-los-modelos-no-se-ponen-de-acuerdo.md). 80 disclosures opened, 40/40 reasons name concrete variables, contrast 6.92:1 light / 8.69:1 dark, 44x44px targets, zero overflow, zero digits. Two oracle cases UNOBSERVED for lack of an example in today's data (full-agreement phrasing; single-opinion 'no hay con que comparar'), both covered falsifiably by fixture-driven scenarios. TOOLING REFUSAL recorded verbatim, des-record-examine could not be used: \"Error: charter must be the contract path /Users/andres/psb-multimodel-trust/docs/feature/f-know-how-much-to-trust-it/deliver/docs/product/expectations/f-know-how-much-to-trust-it/la-razon-nombra-en-cual-cosa-los-modelos-no-se-ponen-de-acuerdo.md, not /Users/andres/psb-multimodel-trust/docs/product/expectations/f-know-how-much-to-trust-it/la-razon-nombra-en-cual-cosa-los-modelos-no-se-ponen-de-acuerdo.md\" - the shim resolves --charter under --project-dir, but this repo keeps charters in docs/product/expectations/, so no valid argument exists.",
       "t": "2026-08-13T10:43:36Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "CORRECTION, supersedes the earlier 01-03 COMMIT event on this same date: the source-blind Vera verdict is INDETERMINATE, not PASS. The examiner revised her own charter row after first writing PASS, and the earlier event captured the stale row. Slice-01 is NOT sealed. She confirmed every charter negative clean over 80 disclosures (contrast 6.92:1 light / 8.69:1 dark, 44x44px targets, zero overflow, zero digits) but could not render a verdict on 2 in-scope oracle rows because today's live surface holds no example of either: the full-agreement phrasing, and the single-model 'no hay con que comparar' case. Resolution in flight: a controlled fixture surface carrying one full-agreement spot and one single-model spot, then a source-blind re-examination. Production behaviour is not changed and the charter is not weakened.",
+      "t": "2026-08-13T10:52:19Z"
     }
   ]
 }
