@@ -1,5 +1,5 @@
 {
-  "captured_at": "2026-08-12T12:25:46.270Z",
+  "captured_at": "2026-08-13T05:48:33.724Z",
   "spots_requested": 20,
   "wave_endpoint": "https://marine-api.open-meteo.com/v1/marine",
   "wind_endpoint": "https://api.open-meteo.com/v1/forecast",
@@ -17,19 +17,19 @@
   "events": [
     {
       "type": "prediction_created",
-      "detail": "predictions/v1/dt=2026-08-12/src=ncep_gfswave016/cyc=06Z/all.jsonl.gz"
+      "detail": "predictions/v1/dt=2026-08-13/src=ncep_gfswave016/cyc=00Z/all.jsonl.gz"
     },
     {
       "type": "prediction_created",
-      "detail": "predictions/v1/dt=2026-08-12/src=ncep_gfswave025/cyc=06Z/all.jsonl.gz"
+      "detail": "predictions/v1/dt=2026-08-13/src=ncep_gfswave025/cyc=00Z/all.jsonl.gz"
     },
     {
       "type": "prediction_created",
-      "detail": "predictions/v1/dt=2026-08-12/src=meteofrance_wave/cyc=00Z/all.jsonl.gz"
+      "detail": "predictions/v1/dt=2026-08-12/src=meteofrance_wave/cyc=12Z/all.jsonl.gz"
     },
     {
       "type": "prediction_created",
-      "detail": "predictions/v1/dt=2026-08-12/src=dwd_gwam/cyc=00Z/all.jsonl.gz"
+      "detail": "predictions/v1/dt=2026-08-12/src=dwd_gwam/cyc=12Z/all.jsonl.gz"
     }
   ],
   "coverage": [
@@ -63,6 +63,13 @@
       "sources_present": [
         "dwd_gwam",
         "meteofrance_wave",
+        "ncep_gfswave016",
+        "ncep_gfswave025"
+      ]
+    },
+    {
+      "date": "2026-08-13",
+      "sources_present": [
         "ncep_gfswave016",
         "ncep_gfswave025"
       ]
