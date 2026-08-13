@@ -180,10 +180,10 @@ Everything else arrives after first render on the warm connection. On the fast-3
 | 1 | HTML document: 20 ranked rows, top-card `call` text, critical CSS, inline SVG glyphs, staleness + SW-registration inline JS | 14.0 KB | First render under 2 s on slow 3G, readable with JS off |
 | 2 | Full stylesheet (async, content-hashed, cached forever) | 6.0 KB | Both themes, non-critical styles |
 | 3 | Share island JS (deferred) | 1.0 KB | Copy-the-call button (decision 5) |
-| 4 | Service worker script (registered after load) | 3.0 KB | Offline + request-count discipline |
+| 4 | Service worker script (registered after load) | 3.3 KB | Offline + request-count discipline plus the accepted Push seat |
 | 5 | Web app manifest + favicon | 1.5 KB | PWA install (decision 25) |
 | 6 | App icons (192/512, fetched on install only) | 0 on this visit | A2HS |
-| | **Total, home first visit** | **25.5 KB** | **74.5 KB of headroom, deliberately unspent here** |
+| | **Total, home first visit** | **25.8 KB** | **74.2 KB of headroom, deliberately unspent here** |
 
 **Spot detail page** adds: static map WebP ~12 KB lazy (decision 20), up to 3 report photo
 thumbnails at ~8 KB each lazy and capped, push island 2 KB on tap. Worst case ~51 KB. **Report
