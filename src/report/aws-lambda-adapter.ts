@@ -62,8 +62,11 @@ async function createComposition(): Promise<LocalWriteLambda> {
     new (GetParameterCommand as Constructor)({ Name: requiredEnvironment('CREDENTIAL_HMAC_PARAMETER'), WithDecryption: true }),
     new (ssm.SSMClient as Constructor)({}),
   );
+  // Build calls this its local `pub/` artifact, but S3Store strips that local
+  // root before upload. Function URLs speak to S3 directly, so they must use
+  // the physical bucket key rather than the pipeline-local path.
   const spotRequest = requiredEnvironment('WRITE_PATH') === '/api/report'
-    ? send(new (GetObjectCommand as Constructor)({ Bucket: requiredEnvironment('SITE_BUCKET'), Key: 'pub/v1/meta/spot-index.json' }), s3Client)
+    ? send(new (GetObjectCommand as Constructor)({ Bucket: requiredEnvironment('SITE_BUCKET'), Key: 'v1/meta/spot-index.json' }), s3Client)
     : Promise.resolve(undefined);
   const tableProbe = send(new DescribeTableCommand({ TableName: requiredEnvironment('WRITE_STORE_TABLE') }), rawDynamoClient);
   const [parameter, spotObject, described] = await Promise.all([parameterRequest, spotRequest, tableProbe]);

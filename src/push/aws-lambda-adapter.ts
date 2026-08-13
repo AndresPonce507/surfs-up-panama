@@ -49,7 +49,9 @@ async function createComposition(): Promise<PushLambda> {
 
   const [parameter, spotObject, described] = await Promise.all([
     send(new GetParameterCommand({ Name: requiredEnvironment('CREDENTIAL_HMAC_PARAMETER'), WithDecryption: true }), ssmClient),
-    send(new GetObjectCommand({ Bucket: requiredEnvironment('SITE_BUCKET'), Key: 'pub/v1/meta/spot-index.json' }), s3Client),
+    // S3Store strips Build's local `pub/` root before upload; this direct S3
+    // reader therefore needs the physical bucket key.
+    send(new GetObjectCommand({ Bucket: requiredEnvironment('SITE_BUCKET'), Key: 'v1/meta/spot-index.json' }), s3Client),
     send(new DescribeTableCommand({ TableName: requiredEnvironment('WRITE_STORE_TABLE') }), rawDynamoClient),
   ]);
   requireProvisionedTable(described);

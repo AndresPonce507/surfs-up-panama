@@ -119,7 +119,11 @@ describe('write Lambda composition', () => {
     expect(actions).not.toEqual(expect.arrayContaining(['dynamodb:PutItem', 's3:PutObject', 'ssm:PutParameter', 'dynamodb:Scan']));
     const rendered = JSON.stringify(statements);
     expect(rendered).toContain(siteBucketName);
-    expect(rendered).toContain('pub/v1/meta/spot-index.json');
+    // S3Store maps the pipeline-local `pub/` root away before upload. The
+    // deployed report Lambda must read the physical bucket key, not that local
+    // convenience path, or every cold start fails with NoSuchKey.
+    expect(rendered).toContain('v1/meta/spot-index.json');
+    expect(rendered).not.toContain('pub/v1/meta/spot-index.json');
     expect(rendered).toContain('log/calls/v1/*');
     expect(rendered).toContain(`arn:aws:ssm:${projectRegion}:${projectAccountId}:parameter/surfsuppanama/prod/credential-hmac-key`);
   });
@@ -128,5 +132,13 @@ describe('write Lambda composition', () => {
     const actions = actionSet(policyStatementsFor(functionNames.mint));
     expect(actions).toEqual(expect.arrayContaining(['dynamodb:DescribeTable', 'dynamodb:GetItem', 'dynamodb:PutItem', 'ssm:GetParameter']));
     expect(actions).not.toEqual(expect.arrayContaining(['dynamodb:TransactWriteItems', 'dynamodb:UpdateItem', 's3:GetObject', 's3:PutObject']));
+  });
+
+  it('gives Push the physical spot-index object that Build really uploads', () => {
+    const rendered = JSON.stringify(policyStatementsFor(functionNames.push));
+    expect(rendered).toContain('v1/meta/spot-index.json');
+    expect(rendered).not.toContain('pub/v1/meta/spot-index.json');
+    expect(rendered).toContain('v1/*');
+    expect(rendered).not.toContain('pub/v1/*');
   });
 });

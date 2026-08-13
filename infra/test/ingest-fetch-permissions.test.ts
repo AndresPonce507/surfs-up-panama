@@ -69,7 +69,7 @@ describe('Publisher missing-state IAM permission', () => {
 });
 
 // Same S3 failure family, write side: without ListBucket on the site bucket,
-// a missing pub/v1/meta/spot-index.json read surfaces as AccessDenied instead
+// a missing v1/meta/spot-index.json read surfaces as AccessDenied instead
 // of NoSuchKey and 502s every report. Proven falsifiable by removing the
 // report-fn ListBucket statement and watching this fail.
 import { describe as describeWrite, expect as expectWrite, it as itWrite } from 'vitest';
@@ -87,8 +87,9 @@ describeWrite('report fn site-bucket list permission', () => {
       const statements = (policy.Properties as { PolicyDocument: { Statement: Array<Record<string, unknown>> } }).PolicyDocument.Statement;
       return statements.some((statement) =>
         JSON.stringify(statement.Action).includes('s3:ListBucket')
-        && JSON.stringify(statement.Condition ?? {}).includes('pub/v1/*'));
+        && JSON.stringify(statement.Condition ?? {}).includes('v1/*'));
     });
     expectWrite(hasScopedList).toBe(true);
+    expectWrite(JSON.stringify(policies)).not.toContain('pub/v1/*');
   });
 });

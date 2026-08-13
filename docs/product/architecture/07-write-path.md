@@ -143,7 +143,7 @@ Headers: `X-Surf-Credential` required, `Content-Type: application/json`. Field m
 | 1 | Body ≤ 4 KB, before JSON parse | ~0 | 413 `payload_too_large` |
 | 2 | JSON parses; schema (fields, enums, `size_band_schema` = current) | ~0 | 400 `schema_invalid` (names the field) |
 | 3 | Credential HMAC + shape | ~0 (no I/O) | 401 `credential_missing` / `credential_invalid` |
-| 4 | `spot_id` in the spot index (cold-start-cached `pub/v1/meta/spot-index.json`, §4.5) | ~0 warm | 400 `unknown_spot` — junk-spot writes never reach the table |
+| 4 | `spot_id` in the spot index (cold-start-cached deployed S3 key `v1/meta/spot-index.json`, §4.5) | ~0 warm | 400 `unknown_spot` — junk-spot writes never reach the table |
 | 5 | Clock plausibility: `received_at − 12 h 15 m ≤ observed_at ≤ received_at + 15 m` (domain: back-dating ≤ 12 h; 15 m skew) | ~0 | 400 `observed_at_out_of_range` (carries both bounds and the server time so the client can correct) |
 | 6 | Resolve `predicted{}` from `log/calls/` (§4.5) | 1 S3 GET on cache miss | proceed with `predicted: null` (settled, domain model §15.4) |
 | 7 | **TransactWriteItems**: quota `ADD` with condition + report `PutItem` with `attribute_not_exists(SK)`. Quota item is the settled `(DEV#<device_id>, QUOTA#<yyyy-mm-dd>)` TTL item (domain §12), extended with **one counter attribute per surface** — `{reports, presigns, subs}`, each `ADD`ed under its own `< limit` condition, TTL 2 days (guardrail 7) | 4 WCU | quota branch → 429 `quota_exceeded` + `Retry-After`; dedup branch → §4.4 duplicate path |
@@ -180,7 +180,7 @@ Dedup key is **`report_id` alone**, as P4 requires. Implementation is the settle
 
 #### 4.5 `predicted{}` resolution (settled §7.4, implementation stated)
 
-The build live at `observed_at` = the latest `log/calls/v1/dt=<date>/build=<HH>Z/<region>.jsonl.gz` with `HH ≤ hour(observed_at)`, walking back ≤ 3 hours on 404. Region and geohash4 tile come from `pub/v1/meta/spot-index.json` — a **new small build artifact this lane requires from the builder** (producer: site build; consumers: this handler for S3 key construction, spot validation and GSI2 tile computation at write time; join key `spot_id`; ~1 KB). The handler caches the index and the last ~13 hourly call files in module scope; a cold start pays one S3 GET, warm requests pay none. Falls to `predicted: null` on any miss — degrade documented, never a 5xx.
+The build live at `observed_at` = the latest `log/calls/v1/dt=<date>/build=<HH>Z/<region>.jsonl.gz` with `HH ≤ hour(observed_at)`, walking back ≤ 3 hours on 404. Region and geohash4 tile come from deployed S3 key `v1/meta/spot-index.json` — a **new small build artifact this lane requires from the builder** (producer: site build; consumers: this handler for S3 key construction, spot validation and GSI2 tile computation at write time; join key `spot_id`; ~1 KB). The pipeline's local build store calls this `pub/v1/meta/spot-index.json`; `S3Store` strips the local `pub/` root before upload, so direct Lambda readers must use `v1/...`. The handler caches the index and the last ~13 hourly call files in module scope; a cold start pays one S3 GET, warm requests pay none. Falls to `predicted: null` on any miss — degrade documented, never a 5xx.
 
 #### 4.6 Sequence — report submitted online
 
@@ -423,7 +423,7 @@ Per component (Functional Core / Imperative Shell; every driven adapter carries 
 | Same pattern: `decide_mint`, `decide_subscribe`, `decide_presign`, `plan_notifications` | pure-function | none | n/a |
 | `ReportStore` adapter | bounded-change | `surfsup` table, exactly: `Put REP#`, `ADD QUOTA#`, `ADD (SPOT#, COUNTER)`. **Complement: no mutation of `CRED#`, `PUSH#`, `SCORE#`, identity items, any S3 prefix, or any other table** | `DescribeTable`: exists **and `BillingMode = PROVISIONED`** — the probe that catches the on-demand drift this design forbids, loudly, at startup |
 | `MintStore` / `PushStore` | bounded-change | `CRED#` items only / `PUSH#` items only. **Complement: neither can touch `REP#`, quota, counter, or the other's items** | shares the table probe |
-| `CallLogReader` | **read-only port — exposes no write method** (a driven port that only reads must not be able to write) | reads `log/calls/v1/*` and `pub/v1/meta/spot-index.json` only; zero writes, enforced by IAM (the report role holds no `s3:PutObject` at all) | non-fatal: a miss at runtime degrades to `predicted: null`, documented |
+| `CallLogReader` | **read-only port — exposes no write method** (a driven port that only reads must not be able to write) | reads `log/calls/v1/*` and deployed `v1/meta/spot-index.json` only; zero writes, enforced by IAM (the report role holds no `s3:PutObject` at all) | non-fatal: a miss at runtime degrades to `predicted: null`, documented |
 | `KeyMaterial` | read-only | none | HMAC sign→verify round trip on the loaded key; empty/malformed key refuses startup |
 | `WebPushSender` | effect adapter, **capability-restricted**: constructor takes the allowlist; it cannot POST to a host not on it, by construction | HTTPS POST to allowlisted origins | allowlist non-empty + VAPID key parses + ES256 sign self-test |
 | `Clock` | injected — `received_at` is a parameter of the core, never an ambient read (clause `contract:declared-inputs-not-ambient-reads`) | none | n/a |
@@ -443,7 +443,7 @@ Enforcement, proportionate to a handful of Lambdas (GDP-10): TypeScript (Node 22
 | 7 | Budgets action deny scope narrowed to `lambda:InvokeFunctionUrl` on the four write functions (never the ingest/build roles — a guardrail that stops the prediction log is worse than the bill it prevents) | — |
 | 8 | Runbook entries: delete-Function-URL-config script (tier 4); concurrency restore; PoW flag flip; credential key rotation | — |
 | 9 | Launch checklist: (a) the §5.0 quota precondition check **first**; (b) the 429-egress load test (§13) | — |
-| 10 | New build artifact from the site builder: `pub/v1/meta/spot-index.json` (§4.5) | ~1 KB, 1 PUT/build |
+| 10 | New build artifact from the site builder: deployed `v1/meta/spot-index.json` (§4.5) | ~1 KB, 1 PUT/build |
 
 ### 12. Worst-case dollars, whole write path
 
