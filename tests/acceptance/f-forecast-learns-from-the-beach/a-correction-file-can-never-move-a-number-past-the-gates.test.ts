@@ -780,27 +780,33 @@ describe('02-05 acceptance: however big the stored move, the clamps bind where t
 // ---------- 02-06 ----------
 
 /**
- * Everything one build published that a later build of the same morning must
- * be able to reproduce, with the two fields that CANNOT repeat removed by
- * name: `build_id` and `published_at`. Both are identity, not value -- a build
- * that reused either would be claiming to be a build it is not -- and they are
- * excluded here explicitly rather than by comparing a hand-picked subset of
- * fields, so a field added to the bundle tomorrow is compared by default
- * instead of being silently skipped.
+ * Everything a later build of the same forecast must reproduce, with fields
+ * that are necessarily time-dependent removed by name. `build_id` and
+ * `published_at` are identity, not value. `conf_level` legitimately changes
+ * as the archived model run ages, even when every forecast number and every
+ * correction input stays the same. Every other field remains under the
+ * byte-shaped oracle, so a future addition compares by default.
  */
 function publishedValuesOf(build: PublishedBuild): Record<string, unknown> {
   const bundle = JSON.parse(build.bundleBody) as Record<string, unknown>;
   const { build_id: _buildId, published_at: _publishedAt, publish_surface, ...rest } = bundle;
   const { published_at: _surfacePublishedAt, ...surface } = publish_surface as Record<string, unknown>;
-  return { ...rest, publish_surface: surface };
+  return withoutDynamicConfidence({ ...rest, publish_surface: surface }) as Record<string, unknown>;
 }
 
-/** Every archived row of one build, with the one field that must differ between builds removed. */
+function withoutDynamicConfidence(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(withoutDynamicConfidence);
+  if (value === null || typeof value !== 'object') return value;
+  const { conf_level: _confidenceLevel, ...rest } = value as Record<string, unknown>;
+  return Object.fromEntries(Object.entries(rest).map(([key, child]) => [key, withoutDynamicConfidence(child)]));
+}
+
+/** Every archived row of one build, with identity and model-age confidence fields removed. */
 function archivedRowsOf(store: MemoryBuildStore, at: string): readonly Record<string, unknown>[] {
   const body = archivedBody(store, at);
   assert.ok(body, `the build at ${at} must have archived its rows`);
   return body.split('\n').filter((line) => line !== '').map((line) => {
-    const { build_id, ...row } = JSON.parse(line) as Record<string, unknown>;
+    const { build_id, conf_value: _confidenceValue, conf_level: _confidenceLevel, ...row } = JSON.parse(line) as Record<string, unknown>;
     assert.equal(typeof build_id, 'string', 'test bug: every archived row must state the build that wrote it');
     return row;
   });

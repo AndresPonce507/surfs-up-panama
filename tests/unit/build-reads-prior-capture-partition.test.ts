@@ -152,6 +152,8 @@ async function build(store: RecordingStore) {
 }
 
 type SurfaceCallShape = { spot_id: string; score_q: number; size_band: string; conf_level: string };
+type CallReceiptShape = SurfaceCallShape & { valid_ts: string; conf_value: number };
+type ForecastProjection = Omit<SurfaceCallShape, 'conf_level'>;
 
 /** Today's published call, the thing a surfer actually reads. */
 function todaysPublishedCall(store: RecordingStore): SurfaceCallShape {
@@ -165,17 +167,36 @@ function todaysPublishedCall(store: RecordingStore): SurfaceCallShape {
   return call;
 }
 
+function forecastProjection(call: SurfaceCallShape): ForecastProjection {
+  const { conf_level: _confidenceLevel, ...forecast } = call;
+  return forecast;
+}
+
+/** The receipt preserves the continuous confidence value, which the reading
+ * surface deliberately projects down to a three-word level. */
+function todaysPublishedReceipt(store: RecordingStore): CallReceiptShape {
+  const key = [...store.objects.keys()].find((candidate) => candidate.startsWith('log/calls/v1/'));
+  assert.ok(key, 'A published build must write its call receipt before the bundle, or the confidence history is lost.');
+  const body = store.objects.get(key);
+  assert.ok(body, 'The call receipt key must resolve to bytes.');
+  const receipt = body.split('\n').map((line) => JSON.parse(line) as CallReceiptShape).find((row) => row.spot_id === SPOT_ID && row.valid_ts.startsWith(TODAY));
+  assert.ok(receipt, `The call receipt must preserve ${SPOT_ID}'s ${TODAY} confidence.`);
+  return receipt;
+}
+
 describe('the build reads the capture partition, not a forecast-dated one', () => {
   it('publishes from a capture filed under any recent prior run date, exactly as if it were filed today', async () => {
     // The law: `dt=` is an archive address, not a forecast input. The same
-    // rows produce the same published call no matter which recent run-date
-    // partition holds them. On the pre-fix code the offset-0 baseline
-    // publishes and every prior offset refuses, which IS the live outage.
+    // rows produce the same scored forecast no matter which recent run-date
+    // partition holds them. Confidence is intentionally excluded: model-run
+    // age is evidence, so a prior partition must earn a lower confidence.
+    // On the pre-fix code the offset-0 baseline published and every prior
+    // offset refused, which IS the live outage.
     const reference = new RecordingStore();
     capture(reference, TODAY, '06', bothDays());
     const referenceOutcome = await build(reference);
     assert.equal(referenceOutcome.published, true, `The same-day baseline must publish. Got ${JSON.stringify(referenceOutcome)}.`);
-    const expected = todaysPublishedCall(reference);
+    const expected = forecastProjection(todaysPublishedCall(reference));
 
     // One and two days back: the contracted lookback. A captured cycle covers
     // roughly two forecast days and the fetch skips an unchanged upstream
@@ -198,9 +219,9 @@ describe('the build reads the capture partition, not a forecast-dated one', () =
             `A capture filed ${daysBack} day(s) back at cycle ${cycleHour}Z still covers today; the build must publish it. Got ${JSON.stringify(outcome)}.`,
           );
           assert.deepEqual(
-            todaysPublishedCall(store),
+            forecastProjection(todaysPublishedCall(store)),
             expected,
-            'Where the archive filed the rows must not change the published call.',
+            'Where the archive filed the rows must not change the published forecast.',
           );
         },
       ),
@@ -288,6 +309,30 @@ describe('the build reads the capture partition, not a forecast-dated one', () =
       todaysPublishedCall(fresh),
       'With both partitions on hand the newer model run must win; a superseded run must never outrank the run that replaced it.',
     );
+  });
+
+  it('lowers confidence when the newest usable model run is two days old', async () => {
+    // The archived run can still forecast today's hour, so the build must
+    // publish it. But agreement among an old set of models cannot earn the
+    // same certainty as identical numbers from this afternoon's update.
+    const fresh = new RecordingStore();
+    capture(fresh, TODAY, '12', bothDays());
+    const freshOutcome = await build(fresh);
+    assert.equal(freshOutcome.published, true, `The fresh fixture must publish. Got ${JSON.stringify(freshOutcome)}.`);
+
+    const stale = new RecordingStore();
+    capture(stale, '2026-08-11', '12', bothDays());
+    const staleOutcome = await build(stale);
+    assert.equal(staleOutcome.published, true, `The two-day-old fixture must still publish its usable forecast. Got ${JSON.stringify(staleOutcome)}.`);
+
+    const freshReceipt = todaysPublishedReceipt(fresh);
+    const staleReceipt = todaysPublishedReceipt(stale);
+    assert.equal(staleReceipt.score_q, freshReceipt.score_q, 'The fixture changes only model-run age, not the scored forecast.');
+    assert.ok(
+      staleReceipt.conf_value < freshReceipt.conf_value,
+      `A two-day-old model run must earn less confidence than a current run. Fresh=${freshReceipt.conf_value}, stale=${staleReceipt.conf_value}.`,
+    );
+    assert.equal(staleReceipt.conf_level, 'low', 'The conservative freshness floor must keep a two-day-old forecast from reading above baja.');
   });
 
 });

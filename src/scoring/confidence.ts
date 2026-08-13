@@ -20,6 +20,8 @@ export type ConfidenceResult = {
   c_track: number;
   /** null = no report ever: excluded from the product, not floored (05 section 6.3). */
   c_fresh: number | null;
+  /** Freshness of the oldest model run that contributes to this call. */
+  c_model_fresh: number;
   c_total: number;
   level: ConfidenceLevel;
   track_state: 'unverified' | 'measured';
@@ -30,6 +32,7 @@ export type ConfidenceResult = {
     | 'spread_direction'
     | 'track'
     | 'freshness'
+    | 'model_freshness'
     | 'missing_data'
     | null;
 };
@@ -40,13 +43,23 @@ export function confidence(
   track: { mae: number; mae_ref: number } | null,
   last_report_age_h: number | null,
   missing: ('wind' | 'tide')[],
+  /**
+   * The oldest contributing model run's age at build time. `null` preserves
+   * the historical core-only call shape; the pipeline must supply a real age
+   * from its archived `run_ts` values.
+   */
+  model_run_age_h: number | null = null,
 ): ConfidenceResult {
   const c_spread = spread.kind === 'climatology'
     ? spread.pct <= 20 ? 1 : spread.pct < 80 ? 0.7 : 0.35
     : absoluteSpread(members);
   const c_track = track === null ? 1 : clamp(1 - track.mae / track.mae_ref);
-  const c_fresh = last_report_age_h === null ? null : Math.max(Math.exp(-last_report_age_h / 36), 0.3);
-  const product = c_spread * c_track * (c_fresh ?? 1);
+  const c_fresh = freshness(last_report_age_h);
+  // A model agreement is only as current as its oldest contributing run. The
+  // decay and conservative floor deliberately reuse the established report
+  // freshness policy, so no new confidence-tuning constant is invented.
+  const c_model_fresh = freshness(model_run_age_h) ?? 1;
+  const product = c_spread * c_track * (c_fresh ?? 1) * c_model_fresh;
   const cap = Math.min(
     missing.includes('wind') ? 0.4 : 1,
     missing.includes('tide') ? 0.7 : 1,
@@ -58,12 +71,13 @@ export function confidence(
     : absoluteSpreadTerms(members);
   const dominant = missing.length > 0
     ? 'missing_data'
-    : dominantSpreadTerm(spread_terms, c_track, c_fresh);
+    : dominantConfidenceTerm(spread_terms, c_track, c_fresh, c_model_fresh);
 
   return {
     c_spread,
     c_track,
     c_fresh,
+    c_model_fresh,
     c_total,
     level,
     track_state: track === null ? 'unverified' : 'measured',
@@ -86,9 +100,9 @@ export const CONFIDENCE_LEVEL_WORD_ES: Readonly<Record<ConfidenceLevel, string>>
 };
 
 const MODEL_AGREEMENT_ES: Readonly<Record<ConfidenceLevel, string>> = {
-  high: 'Los modelos coinciden bastante entre sí',
-  medium: 'Los modelos coinciden solo en parte',
-  low: 'Los modelos no se ponen de acuerdo',
+  high: 'Los modelos coinciden bastante y su actualización sigue reciente',
+  medium: 'Los modelos coinciden solo en parte o la actualización ya lleva varias horas',
+  low: 'Los modelos no coinciden o la actualización ya está vieja',
 };
 
 /** Zero beach reports exist in this system today. This sentence stays fixed
@@ -110,6 +124,14 @@ export function confidenceReasonEs(level: ConfidenceLevel): string {
 
 function clamp(value: number): number {
   return Math.min(Math.max(value, 0), 1);
+}
+
+function freshness(age_h: number | null): number | null {
+  if (age_h === null) return null;
+  // A malformed archived stamp is not evidence of freshness. It receives the
+  // same conservative floor as a very old, but parseable, model run.
+  if (!Number.isFinite(age_h)) return 0.3;
+  return Math.max(Math.exp(-Math.max(age_h, 0) / 36), 0.3);
 }
 
 function standardDeviation(values: number[]): number {
@@ -144,10 +166,11 @@ function absoluteSpread(members: MemberRow[]): number {
   return members.length < 2 ? Math.min(value, 0.4) : value;
 }
 
-function dominantSpreadTerm(
+function dominantConfidenceTerm(
   terms: { height: number; period: number; direction: number },
   c_track: number,
   c_fresh: number | null,
+  c_model_fresh: number,
 ): ConfidenceResult['dominant'] {
   const candidates: [ConfidenceResult['dominant'], number][] = [
     ['spread_height', terms.height],
@@ -156,6 +179,7 @@ function dominantSpreadTerm(
     ['track', -Math.log(c_track)],
   ];
   if (c_fresh !== null) candidates.push(['freshness', -Math.log(c_fresh)]);
+  candidates.push(['model_freshness', -Math.log(c_model_fresh)]);
   const dominant = candidates.reduce((current, candidate) => candidate[1] > current[1] ? candidate : current);
   return dominant[1] > 0 ? dominant[0] : null;
 }

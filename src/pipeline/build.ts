@@ -143,7 +143,7 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
     spotIds: spots.map((spot) => spot.spot_id),
     clock: deps.clock,
   });
-  const calls = spots.flatMap((spot) => callsForSpot(spot, rows, dates, hour, corrections.get(spot.spot_id) ?? null));
+  const calls = spots.flatMap((spot) => callsForSpot(spot, rows, dates, hour, now, corrections.get(spot.spot_id) ?? null));
   if (calls.length === 0) return { published: false, reason: 'no usable wave members' };
   const spotIndex = serializeSpotIndex(spots, coordinatesFor(deps));
 
@@ -284,7 +284,7 @@ async function predictionRows(deps: BuildDeps, dates: readonly string[]): Promis
   return rows;
 }
 
-function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: PredictionRow[], dates: readonly string[], hour: string, stored: StoredCorrection | null): CallRow[] {
+function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: PredictionRow[], dates: readonly string[], hour: string, now: Date, stored: StoredCorrection | null): CallRow[] {
   const validHours = [...new Set(rows.filter((row) => row.spot_id === spot.spot_id).map((row) => row.valid_ts))].sort();
   // The stored record's own verdict has no power here: applyCorrection re-runs
   // the whole gate ladder from the record's stated evidence at read time, so a
@@ -331,7 +331,14 @@ function callsForSpot(spot: NonNullable<BuildDeps['spots']>[number], rows: Predi
     }, correction.params, correction.delta_q);
     const counterfactual = publishedCounterfactualProjection(score, counterfactualScore(score));
     const members = declared.filter((member): member is MemberRow => !('exclusion' in member));
-    const confidenceResult = confidence(members, { kind: 'absolute' }, null, null, score.missing);
+    const confidenceResult = confidence(
+      members,
+      { kind: 'absolute' },
+      null,
+      null,
+      score.missing,
+      oldestModelRunAgeHours(bySource, now),
+    );
     // SIZE_BANDS is derived from the one canonical vocabulary whose tokens ARE
     // the v1 enum, so classification can only land on one of them.
     const band = sizeBand(effectiveHeight, SIZE_BANDS) as SizeBandToken;
@@ -423,6 +430,19 @@ function freshestBySource(hourRows: readonly PredictionRow[]): Map<string, Predi
 function runInstant(row: PredictionRow): number {
   const parsed = Date.parse(row.run_ts);
   return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
+}
+
+/**
+ * An ensemble only earns the freshness of its oldest contributing source.
+ * A malformed run timestamp is never treated as current: `runInstant()`
+ * makes it infinitely old and confidence() applies its conservative floor.
+ */
+function oldestModelRunAgeHours(rows: ReadonlyMap<string, PredictionRow>, now: Date): number {
+  const ages = DECLARED_MEMBER_SOURCES
+    .map((source) => rows.get(source))
+    .filter((row): row is PredictionRow => row !== undefined && !row.land_masked)
+    .map((row) => (now.getTime() - runInstant(row)) / 3_600_000);
+  return Math.max(...ages);
 }
 
 function bundleDay(date: string, calls: readonly CallRow[]): BundleDay {
