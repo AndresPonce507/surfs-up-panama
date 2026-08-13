@@ -534,6 +534,9 @@ const glanceSub = tailCount === 0
     ol.ranked li:first-child {
       max-width: 640px;
       padding: var(--sp-6);
+      /* the card sits on the right of the water band, opposite the title
+         block: left-only auto margin, never margin-inline (that centres it) */
+      margin-left: auto;
       margin-bottom: clamp(90px, 12vh, 150px);
       border-radius: 24px;
     }
