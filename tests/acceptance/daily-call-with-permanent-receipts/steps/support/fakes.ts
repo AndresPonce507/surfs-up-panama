@@ -170,7 +170,7 @@ export class FixtureSource implements ForecastSource {
 
   async fetchWavePayload(_spot_id: string): Promise<ReceivedSourcePayload> {
     if (this.waveFailure !== null) return { ok: false, reason: this.waveFailure };
-    return { ok: true as const, verbatim: JSON.stringify({ provider: 'open-meteo-marine', run_ts: this.runTs }) };
+    return { ok: true as const, verbatim: JSON.stringify({ provider: 'open-meteo-marine', run_ts: this.runTs }), provider: 'open-meteo-marine' };
   }
 
   parseWaveMembers(): SourceResult<MemberSeries[]> {
@@ -193,7 +193,7 @@ export class FixtureSource implements ForecastSource {
 
   async fetchWindPayload(_spot_id: string): Promise<ReceivedSourcePayload> {
     if (this.windDark) return { ok: false, reason: 'dark' };
-    return { ok: true as const, verbatim: JSON.stringify({ provider: 'open-meteo-wind', date: this.date }) };
+    return { ok: true as const, verbatim: JSON.stringify({ provider: 'open-meteo-wind', date: this.date }), provider: 'open-meteo-wind' };
   }
 
   parseWind(): SourceResult<WindHour[]> {
@@ -205,7 +205,7 @@ export class FixtureSource implements ForecastSource {
 
   async fetchTidePayload(_spot_id: string): Promise<ReceivedSourcePayload> {
     if (this.tideDark) return { ok: false, reason: 'dark' };
-    return { ok: true as const, verbatim: JSON.stringify({ provider: 'coops', date: this.date }) };
+    return { ok: true as const, verbatim: JSON.stringify({ provider: 'coops', date: this.date }), provider: 'coops' };
   }
 
   parseTide(): SourceResult<TideHour[]> {

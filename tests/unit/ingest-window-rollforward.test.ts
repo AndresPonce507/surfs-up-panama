@@ -167,7 +167,7 @@ class WindowedSource implements ForecastSource {
   }
 
   async fetchWavePayload(): Promise<ReceivedSourcePayload> {
-    return { ok: true, verbatim: JSON.stringify({ provider: 'open-meteo-marine', run_ts: this.runTs, days: this.days }) };
+    return { ok: true, verbatim: JSON.stringify({ provider: 'open-meteo-marine', run_ts: this.runTs, days: this.days }), provider: 'open-meteo-marine' };
   }
 
   parseWaveMembers(): SourceResult<MemberSeries[]> {
@@ -187,7 +187,7 @@ class WindowedSource implements ForecastSource {
   }
 
   async fetchWindPayload(): Promise<ReceivedSourcePayload> {
-    return { ok: true, verbatim: JSON.stringify({ provider: 'open-meteo-wind', days: this.days }) };
+    return { ok: true, verbatim: JSON.stringify({ provider: 'open-meteo-wind', days: this.days }), provider: 'open-meteo-wind' };
   }
 
   parseWind(): SourceResult<WindHour[]> {
@@ -195,7 +195,7 @@ class WindowedSource implements ForecastSource {
   }
 
   async fetchTidePayload(): Promise<ReceivedSourcePayload> {
-    return { ok: true, verbatim: JSON.stringify({ provider: 'coops', days: this.days }) };
+    return { ok: true, verbatim: JSON.stringify({ provider: 'coops', days: this.days }), provider: 'coops' };
   }
 
   parseTide(): SourceResult<TideHour[]> {

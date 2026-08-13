@@ -157,7 +157,7 @@ export class NoaaGfswaveForecastSource implements ForecastSource {
       });
     }
     const envelope: CaptureEnvelope = { capture: CAPTURE_KIND, provider: PROVIDER_NAME, requests };
-    return { ok: true, verbatim: JSON.stringify(envelope) };
+    return { ok: true, verbatim: JSON.stringify(envelope), provider: PROVIDER_NAME };
   }
 
   parseWaveMembers(verbatim: string): SourceResult<MemberSeries[]> {

@@ -34,7 +34,7 @@ const VENAO_SEED: SpotSeed = {
 
 class StubSource implements ForecastSource {
   fetchWavePayload(spot_id: string): Promise<ReceivedSourcePayload> {
-    return Promise.resolve({ ok: true as const, verbatim: JSON.stringify({ spot_id }) });
+    return Promise.resolve({ ok: true as const, verbatim: JSON.stringify({ spot_id }), provider: 'open-meteo-marine' });
   }
 
   parseWaveMembers(): SourceResult<MemberSeries[]> {
@@ -46,7 +46,7 @@ class StubSource implements ForecastSource {
     return { ok: true, data };
   }
 
-  fetchWindPayload(): Promise<ReceivedSourcePayload> { return Promise.resolve({ ok: true as const, verbatim: '{}' }); }
+  fetchWindPayload(): Promise<ReceivedSourcePayload> { return Promise.resolve({ ok: true as const, verbatim: '{}', provider: 'open-meteo-wind' }); }
   parseWind(): SourceResult<WindHour[]> {
     return { ok: true, data: [{ valid_ts: '2026-08-09T18:00Z', wind: { speed_kt: 6, dir_deg: 40 } }] };
   }

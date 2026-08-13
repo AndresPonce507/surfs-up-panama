@@ -120,6 +120,20 @@
       "s": "EXECUTED",
       "d": "PASS: adapter implemented 2026-08-13 by nw-functional-software-crafter under HANDOFF waiver 2 (DES-exempt dispatch). Focused 9/9 exit 0 (.ci-local-logs/slice04-02-green-unit.log, re-verified by the orchestrator in slice04-02-orchestrator-verify.log); full vitest 633/633 exit 0; tsc exit 0. Three falsifiability probes each failed for the right reason and were reverted with git diff proof: neighbor search removed -> Venao read land_masked; sha256 check skipped -> corrupted part parsed as ok with garbage data; land mask ignored -> 3 tests failed on masked-cell decode. FLAGS: nearest-ocean-cell distance measured from the spot's snapped cell center (documented; reproduces the pinned 0.76m east cell; from the raw coordinate the south 0.84m cell would be nearer); parseWaveMembers depends on the immediately preceding fetchWavePayload's spot via lastRequestedSpot, mirroring OM's lastProviderDate pattern, safe under ingest's sequential per-spot loop; pre-existing unseeded fast-check flake in tests/unit/scorecard-daily-aggregate.test.ts failed attempt 1 on a 1-ULP diff, passed clean on re-run, unrelated to this step.",
       "t": "2026-08-13T13:25:24Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: real red 2026-08-13, tests/unit/source-registry.test.ts written first and run against the missing module, exit 1 (.ci-local-logs/slice04-03-red-unit.log). The acceptance red for the same seam is the 04-01 record (5 scenarios / 5 failed, exit 1).",
+      "t": "2026-08-13T13:44:39Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: registry + provider attribution implemented 2026-08-13 by nw-functional-software-crafter under HANDOFF waiver 2 (DES-exempt dispatch). Registry units 8/8 exit 0 (one fast-check property pinning priority order, zero-calls-past-the-winner and provider passthrough); full vitest 641 exit 0; tsc exit 0; slice-04 acceptance 5 scenarios / 135 steps exit 0 (.ci-local-logs/slice04-03-green-acceptance.log; re-verified by the orchestrator: slice04-03-orchestrator-acceptance.log exit 0); slice-01+03 focused regression 10 scenarios / 245 steps exit 0 (slice04-03-orchestrator-regression.log); ci-local --fast 11 passed / 0 failed / 0 skipped exit 0 (slice04-fast-gate.log). Two falsifiability probes red for the right reason and reverted: fallback consulted under a healthy primary -> 17 calls counted where the contract demands 0; provenance hardcoded back -> raw/noaa-gfswave/ empty. Mechanical type-conformance ripple from the required provider field recorded as a W4 addendum: daily-call support fakes (3 sites), tests/unit fetch-handler (3) capture-cli (2) ingest-window-rollforward (3), and infra/test/guardrails.test.ts (2 sites, outside the anticipated list, flagged and recorded). pgrep hygiene 0 after gates; an orphaned astro preview (PID 8120) from a prior session in this worktree was found and killed.",
+      "t": "2026-08-13T13:44:39Z"
     }
   ]
 }
