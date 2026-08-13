@@ -184,6 +184,16 @@ export class WriteStack extends Stack {
         siteBucket.arnForObjects('log/calls/v1/*'),
       ],
     }));
+    // Without ListBucket on the bucket itself, S3 masks a missing key as
+    // AccessDenied instead of NoSuchKey, and the composition's spot-index
+    // read turned that into a 502 for every report while pub/v1 was empty.
+    // Same failure family as the Fetch predictions/ grant fixed 2026-08-12.
+    // Scoped to the two prefixes the function may read.
+    reportFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:ListBucket'],
+      resources: [siteBucket.bucketArn],
+      conditions: { StringLike: { 's3:prefix': ['pub/v1/*', 'log/calls/v1/*'] } },
+    }));
     reportFn.addToRolePolicy(new iam.PolicyStatement({
       actions: ['ssm:GetParameter'],
       resources: [`arn:aws:ssm:${projectRegion}:${projectAccountId}:parameter/surfsuppanama/prod/credential-hmac-key`],

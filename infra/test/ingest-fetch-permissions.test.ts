@@ -49,3 +49,28 @@ describe('Fetch Lambda IAM permissions', () => {
     expect(actions).toEqual(expect.arrayContaining(['s3:GetObject*']));
   });
 });
+
+// Same S3 failure family, write side: without ListBucket on the site bucket,
+// a missing pub/v1/meta/spot-index.json read surfaces as AccessDenied instead
+// of NoSuchKey and 502s every report. Proven falsifiable by removing the
+// report-fn ListBucket statement and watching this fail.
+import { describe as describeWrite, expect as expectWrite, it as itWrite } from 'vitest';
+import { Template as WriteTemplate } from 'aws-cdk-lib/assertions';
+import { App as WriteApp } from 'aws-cdk-lib';
+import { WriteStack } from '../lib/write-stack.js';
+
+describeWrite('report fn site-bucket list permission', () => {
+  itWrite('grants scoped s3:ListBucket so missing keys read as NoSuchKey', () => {
+    const app = new WriteApp();
+    const stack = new WriteStack(app, 'TestWrite');
+    const template = WriteTemplate.fromStack(stack);
+    const policies = template.findResources('AWS::IAM::Policy');
+    const hasScopedList = Object.values(policies).some((policy) => {
+      const statements = (policy.Properties as { PolicyDocument: { Statement: Array<Record<string, unknown>> } }).PolicyDocument.Statement;
+      return statements.some((statement) =>
+        JSON.stringify(statement.Action).includes('s3:ListBucket')
+        && JSON.stringify(statement.Condition ?? {}).includes('pub/v1/*'));
+    });
+    expectWrite(hasScopedList).toBe(true);
+  });
+});
