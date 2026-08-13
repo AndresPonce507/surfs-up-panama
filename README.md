@@ -5,7 +5,14 @@ it was right.
 
 Starting in Panama. Built to go anywhere.
 
-**Status: pre-build.** Research and product decisions are done. No code yet.
+**Status: live.** Twenty spots on Panama's Pacific coast, in Spanish, at
+**https://d1dtqpd8bf3oze.cloudfront.net/**. Forecast pipeline, scoring engine, spot pages,
+report flow and offline support are all running. No domain is registered yet, so it serves
+from the CloudFront hostname.
+
+The learning layer and the public track record are built and deliberately dormant: both need
+roughly 10 to 30 honest reports per spot before they can say anything true, and there are
+almost none yet. See [Where it stands](#where-it-stands).
 
 ---
 
@@ -48,10 +55,21 @@ would be less pleasant and exactly as accurate.
 No competitor publishes how accurate their forecast turned out to be. Not Surfline, not
 Windguru, none of them.
 
-This one keeps the receipts and shows them inline, on every spot:
+This one keeps the receipts. Every prediction is archived at the moment it is made, and each
+spot has a yesterday page showing exactly what was promised the day before. Once enough reports
+land, that becomes a published accuracy line on every spot:
 
 > Last 30 days: we called this spot right 24 out of 31. GFS-Wave has been running 25% big here,
 > so we are discounting it.
+
+That line does not render yet, on purpose. It appears when the data earns it, not before.
+
+Today every spot page does already show **what is holding the score back**, which is the other
+thing no competitor prints:
+
+> Lo que lo tumba: el viento, a 0.80. Sin él, hoy marcaría 94.
+>
+> ("What kills it: the wind, at 0.80. Without it, today would score 94.")
 
 ## What we will not claim
 
@@ -69,14 +87,24 @@ the same session.*
 ## Repo layout
 
 ```
-BRIEF.md                          scope, constraints, and the one non-negotiable decision
+src/pipeline/                     hourly ingest, adapters per provider, build step
+src/scoring/                      the deterministic score and its confidence
+src/learning/                     per-spot model bias, fit and gates (dormant, needs reports)
+src/publish/                      renders the published surface the site is built from
+src/pages/ src/components/        the Astro site
+infra/                            AWS CDK stacks plus the guardrail assertion suite
+tests/unit/ tests/acceptance/     127 unit suites, 53 Gherkin feature files
+tests/e2e/                        Playwright specs
+scripts/ci-local.mjs              the 13-job gate that every change must pass
+docs/product/architecture/        45 architecture documents, 35 of them ADRs
+docs/research/raw/                15 research documents, ~10,900 lines, all cited
 docs/DISCUSS-decisions.md         31 product decisions with their reasoning
-docs/surfs-up-panama-vision.html  the vision deck
-docs/research/raw/                12 research documents, ~8,400 lines, all cited
-docs/design/                      architecture designs (skeletons only, not yet written)
+BRIEF.md                          scope, constraints, and the one non-negotiable decision
+HANDOFF.md                        the project truth file, read this before changing anything
 ```
 
-Start with `BRIEF.md`, then `docs/DISCUSS-decisions.md`.
+New here? Read `BRIEF.md`, then `docs/DISCUSS-decisions.md`, then
+`docs/product/architecture/system-architecture.md`.
 
 ## The one thing that has to be right in version one
 
@@ -88,13 +116,49 @@ reality against and the learning loop is impossible, permanently.
 
 It costs almost nothing to do and it cannot be added later.
 
-## Planned stack
+## Stack
 
-Astro, static output, under 100KB, offline-capable. Precomputed JSON on the read path, no
-database in front of a page view. AWS: S3, CloudFront, Lambda Function URLs, DynamoDB for the
-small dynamic surface. Target running cost is a few cents a month.
+Astro, static output. Every reading page is finished HTML the moment it leaves the hourly build,
+with zero JavaScript on it; the browser downloads pages, never forecast data. The home page is
+9.6 KB over the wire against a 100 KB budget that a CI job enforces. A service worker keeps it
+working with no signal.
+
+AWS, all of it defined in CDK: S3 and CloudFront for the read path, EventBridge Scheduler and
+Lambda for the hourly ingest and build, bare Lambda Function URLs plus DynamoDB for the write
+path, deliberately off CloudFront so a flood of writes cannot burn the read path's free
+allowance. Eleven cost guardrails are asserted in the test suite, so a resource that ships
+without one fails the build. Running cost is about **$0.32 a month**.
 
 Mobile web only. Not an app.
+
+## Where it stands
+
+Built and running: the hourly ingest pipeline, the deterministic scoring engine with its
+weakest-link explanation, the ranked list for today and tomorrow, spot pages, the yesterday
+receipt, the report flow, offline support, the WhatsApp share card and the honesty pages.
+
+Built and dormant, waiting on real reports rather than on code:
+
+- **Per-spot learning.** Needs roughly 10 to 30 honest reports at a spot from several distinct
+  reporters before a correction is worth trusting.
+- **The published track record.** Refuses to print an accuracy number it has not earned.
+
+Not done yet: a real domain, and English pages beyond the partial `/en/` tree.
+
+## Development
+
+CI runs locally, not on GitHub Actions.
+
+```sh
+npm install
+npm run dev              # local site
+npm test                 # unit suites
+npm run test:at          # acceptance scenarios
+npm run ci:local         # the full 13-job gate, the only gate that counts
+```
+
+`npm run ci:local` exits 0 when jobs are **skipped**, not only when they pass, so read the
+summary line and confirm it says `0 skipped`. See `CLAUDE.md` for the rest of the traps.
 
 ## Data sources and attribution
 
