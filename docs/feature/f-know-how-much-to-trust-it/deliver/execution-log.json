@@ -106,6 +106,20 @@
       "s": "EXECUTED",
       "d": "PASS: slice-04 JIT DISTILL contract red for the right reason 2026-08-13. 5 scenarios / 5 failed, exit 1 (log .ci-local-logs/slice04-red-acceptance.log): every failure reads 'el registro de fuentes todavia no existe en src/pipeline/adapters/: Cannot find module .../source-registry', never an import crash; tsc --noEmit exit 0 through the computed dynamic import. Fixtures are real same-cycle captures of both vendors (NOAA grib_filter f000..f048 + Open-Meteo marine, 2026-08-13 00Z, receipts with sha256 beside the bytes).",
       "t": "2026-08-13T12:57:13Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: real red 2026-08-13, tests/unit/noaa-gfswave-source.test.ts written first and run against the missing module, exit 1 (.ci-local-logs/slice04-02-red-unit.log, Cannot find module noaa-gfswave-source).",
+      "t": "2026-08-13T13:25:24Z"
+    },
+    {
+      "sid": "04-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: adapter implemented 2026-08-13 by nw-functional-software-crafter under HANDOFF waiver 2 (DES-exempt dispatch). Focused 9/9 exit 0 (.ci-local-logs/slice04-02-green-unit.log, re-verified by the orchestrator in slice04-02-orchestrator-verify.log); full vitest 633/633 exit 0; tsc exit 0. Three falsifiability probes each failed for the right reason and were reverted with git diff proof: neighbor search removed -> Venao read land_masked; sha256 check skipped -> corrupted part parsed as ok with garbage data; land mask ignored -> 3 tests failed on masked-cell decode. FLAGS: nearest-ocean-cell distance measured from the spot's snapped cell center (documented; reproduces the pinned 0.76m east cell; from the raw coordinate the south 0.84m cell would be nearer); parseWaveMembers depends on the immediately preceding fetchWavePayload's spot via lastRequestedSpot, mirroring OM's lastProviderDate pattern, safe under ingest's sequential per-spot loop; pre-existing unseeded fast-check flake in tests/unit/scorecard-daily-aggregate.test.ts failed attempt 1 on a 1-ULP diff, passed clean on re-run, unrelated to this step.",
+      "t": "2026-08-13T13:25:24Z"
     }
   ]
 }
