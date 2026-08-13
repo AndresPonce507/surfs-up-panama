@@ -13,6 +13,16 @@
 // inject a refusing source and so slice-03 can swap in the real store read
 // without touching the callers.
 
+import type { SurfReport } from './pairing';
+
+/** Read-only port for the immutable observation log. The build owns when it
+ * reads; the S3 adapter owns how the gzip objects are listed and decoded. */
+export type ObservationLogReader = () => Promise<readonly SurfReport[]>;
+
+/** The local and focused-test reader. An empty immutable log is a real,
+ * explicit answer, not a recovery path for a failed production read. */
+export const emptyObservationLogReader: ObservationLogReader = async () => [];
+
 /**
  * The two things a source may honestly say.
  *

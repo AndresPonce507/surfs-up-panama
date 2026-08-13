@@ -25,6 +25,7 @@
 // Join key, both directions: `spot_id`, which IS the URL slug.
 
 import type { SizeBandToken } from '../data/size-bands';
+import type { ScorecardBlock } from '../scorecard/scorecard-block';
 import type { Factor } from '../scoring/engine';
 import type {
   BestWindow,
@@ -72,6 +73,8 @@ export type BundleDay = {
 /** Day-independent facts, held once per spot rather than once per spot per day. */
 export type BundleSpotDetail = {
   readonly name: string;
+  /** P5's already-decided scorecard. The renderer never computes it. */
+  readonly scorecard: ScorecardBlock;
   /**
    * The already-scored hours spanning both published days, held HERE rather
    * than per day summary for the same reason `name` is: array position in

@@ -17,6 +17,7 @@
 //     clock (contract:declared-inputs-not-ambient-reads).
 
 import type { LaunchSeedData } from '../data/launch-spots';
+import type { ObservationLogReader } from '../scorecard/observation-source';
 import type { SpotIndexCoordinate } from './static-publication';
 import type { SpotSeed, SwellTrain, WindObs } from '../scoring/engine';
 
@@ -149,6 +150,8 @@ export interface BuildDeps {
    * the report handler's minimal spot index. */
   spotCoordinates?: readonly SpotIndexCoordinate[];
   region_id: string;
+  /** Immutable observations only. Omit in local tests to state an empty log. */
+  observationLog?: ObservationLogReader;
 }
 
 export type BuildOutcome =
