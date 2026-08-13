@@ -166,6 +166,26 @@ describe('confidenceReasonEs — what a surfer actually reads', () => {
     assert.match(sentence, /no hay con qué comparar/u);
   });
 
+  it('never claims "Hoy" in the not-comparable sentence, because RankedList renders the exact same sentence unchanged on the Mañana page', () => {
+    // Source-blind examination (Vera, 2026-08-13) caught this verbatim: the
+    // Mañana page's own rank-1 disclosure read "Hoy solo un modelo alcanza a
+    // ver este spot...", carrying the word "Hoy" onto the tomorrow page.
+    // `confidenceReasonEs` has no day parameter and RankedList.astro does not
+    // thread one through Confidence.astro, so the sentence must be true on
+    // both days by construction: day-neutral wording, not a claim about
+    // "today" specifically. Property over every level, because a caller may
+    // construct `not_comparable` at any level even though `modelAgreement`
+    // itself only produces it at `low`.
+    fc.assert(fc.property(level(), (confLevel) => {
+      const sentence = confidenceReasonEs(confLevel, { kind: 'not_comparable' });
+      assert.doesNotMatch(
+        sentence,
+        /\bhoy\b/iu,
+        `WHAT: the not-comparable reason for "${confLevel}" claims "Hoy" (today). WHY: this exact sentence renders unchanged on the Mañana (tomorrow) page, so it must never name a specific day. Got "${sentence}".`,
+      );
+    }));
+  });
+
   it('says every distinct reading differently, so the sentence carries information', () => {
     const sentences = everyReading().map((reading) => confidenceReasonEs('medium', reading));
     assert.equal(new Set(sentences).size, sentences.length, `dos lecturas distintas produjeron la misma frase: ${sentences.join(' | ')}`);

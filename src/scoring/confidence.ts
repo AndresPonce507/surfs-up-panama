@@ -215,7 +215,13 @@ function agreementSentenceEs(level: ConfidenceLevel, agreement: ModelAgreement):
     return 'Esta lectura no compara los modelos entre sí, así que la confianza viene de otra parte';
   }
   if (agreement.kind === 'not_comparable') {
-    return 'Hoy solo un modelo alcanza a ver este spot, así que no hay con qué comparar';
+    // Day-neutral on purpose: this sentence renders unchanged on both the
+    // Hoy and Mañana pages (RankedList.astro knows `day`, but neither
+    // `Confidence.astro` nor `confidenceReasonEs` takes a day parameter), so
+    // it must never claim a specific day. It said "Hoy solo un modelo..."
+    // until a source-blind examination caught the tomorrow page telling a
+    // surfer "Hoy" (today).
+    return 'Solo un modelo alcanza a ver este spot, así que no hay con qué comparar';
   }
   if (agreement.disagree.length === 0) {
     return `Los modelos coinciden en ${listEs(agreement.agree)}`;
