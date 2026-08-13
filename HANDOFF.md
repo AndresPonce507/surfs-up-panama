@@ -108,6 +108,13 @@ This section supersedes the legacy notes below. They are retained only as histor
   state object as `AccessDenied` rather than `NoSuchKey`. This is absence detection for its two
   declared reads, not an inventory capability.
 
+## Publisher writable-runtime correction (2026-08-13)
+
+- The Lambda sandbox can replace the image user's HOME with a read-only account directory. Publisher
+  therefore sets `XDG_CONFIG_HOME=/tmp/.config` and disables Astro telemetry in its image. Rendering
+  remains the real `npm run build`; only global telemetry configuration and network reporting are
+  prevented from blocking it.
+
 ## Integration gate state (verified 2026-08-13 afternoon)
 
 - The Push live vertical passed the exact fast integration gate: **11 passed / 0 failed / 0
