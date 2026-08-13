@@ -32,9 +32,10 @@ export type BuildOverrides = {
   readonly spots?: readonly SpotSeed[];
   readonly probePublicManifest?: (build_id: string) => Promise<void>;
   /** The only way into the Publisher: a port passed in, never a module this
-   * handler reaches for. Called after the public-manifest probe and after
-   * deriveBuildLogLines' lines are printed, exactly once, only when the
-   * build published. A rejection is caught and written down as an
+   * handler reaches for. Called after deriveBuildLogLines' lines are printed,
+   * exactly once, only when the build published. A successful 200 answer is
+   * then followed by the public-manifest probe, because fresh pages cannot
+   * exist before Publisher has emitted them. A rejection is caught and written down as an
    * informational health.* line; it is never rethrown, never retried
    * in-cycle, and never changes what runBuild answers -- build.success
    * describes Build's own work, which really happened, so a publisher that
@@ -58,13 +59,16 @@ export async function runBuild(overrides: BuildOverrides = {}): Promise<BuildOut
       : { launchData: bundledLaunchSeedPaths }),
   });
 
-  if (outcome.published) await (overrides.probePublicManifest ?? probePublicManifest)(outcome.build_id);
-
   for (const line of deriveBuildLogLines(outcome)) {
     console.log(JSON.stringify(line));
   }
 
-  if (outcome.published) await handOverToPublisher(outcome.build_id, overrides.invokePublisher);
+  if (outcome.published) {
+    const publisherAnswer = await handOverToPublisher(outcome.build_id, overrides.invokePublisher);
+    if (publisherReportedFreshPages(publisherAnswer)) {
+      await (overrides.probePublicManifest ?? probePublicManifest)(outcome.build_id);
+    }
+  }
 
   return outcome;
 }
@@ -76,17 +80,29 @@ function publishedBundleKey(): string {
   return `pub/v1/regions/${REGION_ID}/bundle.json`;
 }
 
-async function handOverToPublisher(build_id: string, invokePublisher: BuildOverrides['invokePublisher']): Promise<void> {
-  if (invokePublisher === undefined) return;
+async function handOverToPublisher(build_id: string, invokePublisher: BuildOverrides['invokePublisher']): Promise<unknown> {
+  if (invokePublisher === undefined) return undefined;
   try {
-    await invokePublisher({ build_id, bundle_key: publishedBundleKey() });
+    return await invokePublisher({ build_id, bundle_key: publishedBundleKey() });
   } catch (error) {
     console.log(JSON.stringify({
       event: PUBLISH_HANDOFF_FAILED_EVENT,
       build_id,
       reason: error instanceof Error ? error.message : String(error),
     }));
+    return undefined;
   }
+}
+
+/** Only Publisher's own successful 200 answer earns an immediate public
+ * verification. A 204 refusal deliberately leaves the old, honest pages in
+ * place, so probing them for the fresh build would turn a stated refusal into
+ * a misleading Build failure. */
+function publisherReportedFreshPages(answer: unknown): boolean {
+  return typeof answer === 'object'
+    && answer !== null
+    && 'statusCode' in answer
+    && (answer as { statusCode?: unknown }).statusCode === 200;
 }
 
 // Composition-root-only wiring. Not covered directly by a unit test, same as
@@ -131,6 +147,16 @@ export function defaultInvokePublisher(
     if (response.FunctionError !== undefined && response.FunctionError !== '') {
       const detail = response.Payload === undefined ? '' : ` ${new TextDecoder().decode(response.Payload)}`;
       throw new Error(`publisher invocation answered FunctionError ${response.FunctionError}:${detail}`);
+    }
+    if (response.Payload !== undefined) {
+      try {
+        return JSON.parse(new TextDecoder().decode(response.Payload)) as { statusCode?: unknown };
+      } catch {
+        // The Lambda protocol accepted the request but did not provide the
+        // Publisher's typed answer. Build keeps its own success and skips the
+        // fresh-page probe rather than pretending an unknown response proves
+        // publication.
+      }
     }
     return response;
   };

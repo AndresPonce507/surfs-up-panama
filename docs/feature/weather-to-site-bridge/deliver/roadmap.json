@@ -86,7 +86,7 @@
           "name": "Build hands the bundle to the Publisher, once, and never retries it",
           "criteria": [
             "BuildOverrides gains exactly ONE new key, invokePublisher?: (invocation: { build_id: string; bundle_key: string }) => Promise<unknown>, per the pinned DISTILL seam. No other override is added.",
-            "It is called after the public-manifest probe AND after deriveBuildLogLines' lines are printed, only when outcome.published, exactly once per cycle. The ordering is load-bearing and pinned: build.success describes Build's own work, which really happened, so a publisher that hangs must not be able to erase it.",
+            "It is called after deriveBuildLogLines' lines are printed, only when outcome.published, exactly once per cycle. A successful 200 Publisher answer is followed by the public-manifest probe because fresh HTML cannot exist sooner. The ordering is load-bearing and pinned: build.success describes Build's own work, which really happened, so a publisher that hangs must not be able to erase it.",
             "The bundle key handed over is composed as pub/v1/regions/${REGION_ID}/bundle.json from the REGION_ID constant build-handler.ts already passes to runBuildOnce, never a second hand-typed literal.",
             "A rejecting publisher is caught: never rethrown, never retried in-cycle, and it never changes what runBuild answers. Build records the failure as one health.publish.handoff_failed line carrying { event, build_id, reason } with the rejection's own message as the reason.",
             "A publisher that resolves having refused is NOT recorded as a failed handover; the publisher already spoke for itself through its own publish.refused line.",

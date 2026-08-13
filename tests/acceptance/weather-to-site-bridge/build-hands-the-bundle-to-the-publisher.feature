@@ -8,13 +8,14 @@ Feature: Build hands the bundle to the publisher
   it happens once an hour and never twice.
 
   Everything else about the handover is refusal discipline. A cycle with
-  nothing worth publishing never wakes the publisher at all. Neither does a
-  cycle whose fresh pages could not be confirmed to be really public. A
-  publisher that cannot be reached is written down and left alone until the
-  next hour, because the next hour republishes everything anyway, and a
-  failed handover never erases a build that really happened. A publisher that
-  refuses is not a broken handover: it already said so itself, in its own
-  words, in its own log.
+  nothing worth publishing never wakes the publisher at all. A fresh page can
+  only be confirmed after the publisher has emitted it, so a failed public
+  check records the broken release chain after that one handover. A publisher
+  that cannot be reached is written down and left alone until the next hour,
+  because the next hour republishes everything anyway, and a failed handover
+  never erases a build that really happened. A publisher that refuses is not
+  a broken handover: it already said so itself, in its own words, in its own
+  log.
 
   These scenarios drive Build's own hourly cycle through its production entry
   point, against readings held in memory. The publisher itself, the public
@@ -37,12 +38,12 @@ Feature: Build hands the bundle to the publisher
     And the hour's log says the build refused, and never claims success
 
   @slice-02 @driving_port @in-memory @error
-  Scenario: Pages that cannot be confirmed public are never handed over
+  Scenario: Pages that cannot be confirmed public fail after their one handover
     Given Build already handed this morning's bundle to the publisher
     But this hour's fresh pages never turn up publicly
     When Build runs its hourly cycle
-    Then the publisher was asked for the morning's bundle only, never for this hour's
-    And Build's hour ends without claiming anything at all
+    Then the publisher was asked once before its fresh pages were checked
+    And Build's hour records that its fresh pages could not be confirmed publicly
 
   @slice-02 @driving_port @in-memory @error
   Scenario: A publisher that cannot be reached is written down, never retried, and never erases the build
