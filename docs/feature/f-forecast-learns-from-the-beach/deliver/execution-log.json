@@ -890,6 +890,34 @@
       "s": "EXECUTED",
       "d": "Committed 5ff909c on branch build/f2-learning-slice05: feat(learning): calibration names a failing confidence term for removal. Staged only owned paths (src/learning/metrics.ts, tests/unit/learning-metrics.test.ts, the AT skip-removal, execution-log.json, and force-added the gitignored 05-04-contract.json). gate-baseline.log left untracked (not owned). Trailer Step-ID: 05-04 present. 5 files changed, 241 insertions, 20 deletions.",
       "t": "2026-08-13T00:09:15Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "Loaded nw-tdd-methodology, nw-quality-framework, nw-fp-principles, nw-fp-domain-modeling skills. Inspected src/learning/metrics.ts's shrinkage section (flagged: false deferred literal, 05-01 shipped), the pre-authored AT and its support/monthly-port.ts harness, src/learning/correction-file.ts's GatedKey shape, and src/learning/evaluate.ts (the sealed driving port, read-only, not touched). Confirmed exactly one describe.skip in the target AT file.",
+      "t": "2026-08-13T00:21:36Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "Removed describe.skip from a-spot-still-mostly-pooled-after-eighty-mornings-is-flagged.test.ts, ran it standalone against the still-deferred production code: npx vitest run <file> -> EXIT=1, 1 collected, 1 failed, 0 collection errors. Semantic AssertionError: 'eighty mornings still sixty percent pooled away is a misconfiguration ... and the file must say so (09 s17.4 guardrail 2): {spot_id:playa-empozada, shrink_weight:0.6, n:80, reporters:12, flagged:false}', false !== true. Fail-for-right-reason gate satisfied: business assertion failure on the deferred literal, not an import/collection error.",
+      "t": "2026-08-13T00:21:44Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "Added two fast-check monotonicity properties to tests/unit/learning-metrics.test.ts (flagged(n,weight) implies flagged(n,higherWeight) at fixed n; flagged(n,weight) implies flagged(higherN,weight) at fixed shrink_weight), driving buildMonthlyMetrics through its own function signature (the pure driving port). Also repaired the pre-existing 05-01 pass-through property's stale 'flagged: false' oracle to compute the expected flag from an independently-restated threshold, since it failed post-GREEN for the documented reason (the deferred literal it pinned is exactly what this step replaces): npx vitest run tests/unit/learning-metrics.test.ts -> EXIT=1, 1 failed with AssertionError showing received flagged:true vs expected flagged:false for a generated n=80/shrink_weight=0.6 case, confirming the AT's fail-for-right-reason gate generalizes correctly before the oracle fix.",
+      "t": "2026-08-13T00:21:52Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "Implemented isOverPooled(n, shrinkWeight) in src/learning/metrics.ts: two named constants (SHRINKAGE_ALARM_MIN_N=80, SHRINKAGE_ALARM_MIN_WEIGHT=0.6, cited 09 s17.4 guardrail 2) and n>=min && weight>=min, wired into shrinkageOf replacing the flagged:false literal. Focused run (AT + unit) -> EXIT=0, 16 passed. Full suite: npx vitest run -> EXIT=0, 118 test files passed, 591 tests passed, 0 skipped. npm run typecheck -> EXIT=0. Post-GREEN wiring check: git diff --name-only shows src/learning/metrics.ts, tests/unit/learning-metrics.test.ts and the AT's skip-marker line changed -- no fixture theater. Non-visual step (operator-only JSON field, no consumer): npm run build intentionally not run, matching 05-03/05-04 precedent.",
+      "t": "2026-08-13T00:21:59Z"
     }
   ]
 }

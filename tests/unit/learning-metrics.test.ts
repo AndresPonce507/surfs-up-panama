@@ -373,36 +373,56 @@ describe('buildMonthlyMetrics: calibration bins, order-independence', () => {
   });
 });
 
+// 05-05: shrinkage[].flagged, the misconfiguration alarm (09 section 17.4
+// guardrail 2). Restated independently of metrics.ts's own (private)
+// threshold constants -- the Modeling oracle this file already uses for mae
+// and calibration -- so the test does not just mirror the implementation's
+// literals back at it.
+const SHRINKAGE_ALARM_MIN_N_ORACLE = 80;
+const SHRINKAGE_ALARM_MIN_WEIGHT_ORACLE = 0.6;
+
+function expectedFlagged(n: number, shrinkWeight: number): boolean {
+  return n >= SHRINKAGE_ALARM_MIN_N_ORACLE && shrinkWeight >= SHRINKAGE_ALARM_MIN_WEIGHT_ORACLE;
+}
+
+/** One stored correction, one applied height key, for the shrinkage-alarm properties below. */
+function singleKeyCorrection(spotId: string, n: number, shrinkWeight: number, reporters = 12): StoredCorrection {
+  return {
+    spot_id: spotId,
+    schema: 'spot-correction/1',
+    computed_at: '2026-08-09T07:00:00.000Z',
+    bias: {
+      swell_h_m: {
+        per_source: {
+          ncep_gfswave016: {
+            lead_24_48: { b: -0.18, se: 0.09, n, reporters, applied: true, shrunk_from_global: shrinkWeight },
+          },
+        },
+      },
+    },
+    clamp: { max_abs_h_frac: 0.4, max_abs_score: 12 },
+  };
+}
+
+function flaggedFor(n: number, shrinkWeight: number): boolean {
+  const metrics = buildMonthlyMetrics({
+    observations: [],
+    predictions: [],
+    calls: [],
+    corrections: [singleKeyCorrection('playa-venao', n, shrinkWeight)],
+  });
+  return metrics.shrinkage[0]!.flagged;
+}
+
 describe('buildMonthlyMetrics: shrinkage, one row per gated spot read off the correction\'s own fields', () => {
-  it('reports the fullest applied key\'s shrink weight, n and reporters, exactly as the stored correction carries them', () => {
+  it('reports the fullest applied key\'s shrink weight, n and reporters, exactly as the stored correction carries them, and flags per the guardrail alone', () => {
     fc.assert(
       fc.property(
         fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true }),
         fc.integer({ min: 10, max: 200 }),
         fc.integer({ min: 5, max: 50 }),
         (shrunkFromGlobal, n, reporters) => {
-          const correction: StoredCorrection = {
-            spot_id: 'playa-venao',
-            schema: 'spot-correction/1',
-            computed_at: '2026-08-09T07:00:00.000Z',
-            bias: {
-              swell_h_m: {
-                per_source: {
-                  ncep_gfswave016: {
-                    lead_24_48: {
-                      b: -0.18,
-                      se: 0.09,
-                      n,
-                      reporters,
-                      applied: true,
-                      shrunk_from_global: shrunkFromGlobal,
-                    },
-                  },
-                },
-              },
-            },
-            clamp: { max_abs_h_frac: 0.4, max_abs_score: 12 },
-          };
+          const correction = singleKeyCorrection('playa-venao', n, shrunkFromGlobal, reporters);
 
           const metrics = buildMonthlyMetrics({
             observations: [],
@@ -419,10 +439,10 @@ describe('buildMonthlyMetrics: shrinkage, one row per gated spot read off the co
                 shrink_weight: shrunkFromGlobal,
                 n,
                 reporters,
-                flagged: false,
+                flagged: expectedFlagged(n, shrunkFromGlobal),
               },
             ],
-            'the shrinkage row must read shrink_weight, n and reporters straight off the stored correction, never invent them',
+            'the shrinkage row must read shrink_weight, n and reporters straight off the stored correction, never invent them, and flag exactly per the independently-stated guardrail',
           );
         },
       ),
@@ -458,6 +478,50 @@ describe('buildMonthlyMetrics: shrinkage, one row per gated spot read off the co
       metrics.shrinkage,
       [],
       'a correction file with no applied key has nothing gated to report, and must never appear as a phantom row',
+    );
+  });
+});
+
+describe('buildMonthlyMetrics: shrinkage.flagged, the guardrail is monotone -- growing evidence or growing pooling never turns a flagged row unflagged', () => {
+  it('flagged(n, weight) implies flagged(n, higherWeight) at the same n, across the full [0,1] domain', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 10, max: 300 }),
+        fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true }),
+        fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true }),
+        (n, weightA, weightB) => {
+          const weightLow = Math.min(weightA, weightB);
+          const weightHigh = Math.max(weightA, weightB);
+          if (flaggedFor(n, weightLow)) {
+            assert.ok(
+              flaggedFor(n, weightHigh),
+              `at fixed n=${n}, flagged at shrink_weight=${weightLow} must stay flagged at the higher shrink_weight=${weightHigh}`,
+            );
+          }
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+
+  it('flagged(n, weight) implies flagged(higherN, weight) at the same shrink weight, across a wide n range', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 10, max: 300 }),
+        fc.integer({ min: 10, max: 300 }),
+        fc.double({ min: 0, max: 1, noNaN: true, noDefaultInfinity: true }),
+        (nA, nB, shrinkWeight) => {
+          const nLow = Math.min(nA, nB);
+          const nHigh = Math.max(nA, nB);
+          if (flaggedFor(nLow, shrinkWeight)) {
+            assert.ok(
+              flaggedFor(nHigh, shrinkWeight),
+              `at fixed shrink_weight=${shrinkWeight}, flagged at n=${nLow} must stay flagged at the higher n=${nHigh}`,
+            );
+          }
+        },
+      ),
+      { numRuns: 100 },
     );
   });
 });

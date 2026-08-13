@@ -1,10 +1,15 @@
 // Operator-only monthly metrics, 06-learning-layer.md section 10. Every
 // section here is a function of the rows the store actually holds -- never
-// a literal placeholder -- with one named exception this step deliberately
-// defers, per wave-decisions.md D-2026-08-12-1:
+// a literal placeholder.
 //
-//   - `shrinkage[].flagged` stays the literal false. The alarm threshold
-//     (09 section 17.4 guardrail 2) is 05-05's; this step ships the row.
+// `shrinkage[].flagged` is 05-05's real judgment now (09 section 17.4
+// guardrail 2): a spot with SHRINKAGE_ALARM_MIN_N observations still shrunk
+// by SHRINKAGE_ALARM_MIN_WEIGHT or more toward its parent means a
+// misconfiguration -- tau wildly off, or a parent eating its children. The
+// evaluation reads shrink_weight straight off the stored record's own
+// shrunk_from_global field (no refit) and the flag is an ALARM only
+// (adr-pooling-hierarchy-activation decision 6): nothing anywhere reacts to
+// it, automating a response would hand the pooling a knob to turn itself.
 //
 // `calibration.offending_term` is 05-04's real judgment now (06 section 10;
 // 09 section 3.6 consequence 3): the calibration check compares the 'high'
@@ -429,6 +434,11 @@ function offendingTermOf(
 
 // ---------- shrinkage (09 section 17.4 guardrail 2) ----------
 
+/** 09 section 17.4 guardrail 2: this many observations is enough evidence for a spot to have earned independence. */
+const SHRINKAGE_ALARM_MIN_N = 80;
+/** 09 section 17.4 guardrail 2: still pooled away by at least this much at that evidence level is the misconfiguration. */
+const SHRINKAGE_ALARM_MIN_WEIGHT = 0.6;
+
 function shrinkageOf(corrections: readonly StoredCorrection[]): MonthlyMetrics['shrinkage'] {
   return corrections
     .map((correction) => ({ spot_id: correction.spot_id, key: fullestAppliedKeyOf(correction) }))
@@ -438,9 +448,14 @@ function shrinkageOf(corrections: readonly StoredCorrection[]): MonthlyMetrics['
       shrink_weight: key.shrunk_from_global,
       n: key.n,
       reporters: key.reporters,
-      flagged: false,
+      flagged: isOverPooled(key.n, key.shrunk_from_global),
     }))
     .sort((left, right) => left.spot_id.localeCompare(right.spot_id));
+}
+
+/** A spot that has earned independence (high n) but is still mostly pooled away is a misconfiguration, never noise on day one. */
+function isOverPooled(n: number, shrinkWeight: number): boolean {
+  return n >= SHRINKAGE_ALARM_MIN_N && shrinkWeight >= SHRINKAGE_ALARM_MIN_WEIGHT;
 }
 
 /** The spot-level alarm representative: the applied key with the most evidence behind it. */
