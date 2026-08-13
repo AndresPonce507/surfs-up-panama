@@ -14,10 +14,20 @@ import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
 import { gunzipSync, gzipSync } from 'node:zlib';
 
-import type { BuildStore, IngestStore, RawArchiveRecord } from '../ports';
+import type { BuildStore, IngestStore, LogAppendStore, RawArchiveRecord } from '../ports';
 
-export class FilesystemStore implements IngestStore, BuildStore {
+export class FilesystemStore implements IngestStore, BuildStore, LogAppendStore {
   constructor(private readonly root: string) {}
+
+  /**
+   * Append one immutable object to a durable log (`LogAppendStore`), the local
+   * twin of the S3 adapter's method. It encodes by key suffix through the same
+   * `encodeText` every other write here uses, so a `.gz` key really carries
+   * gzip and a `.json` key really carries text.
+   */
+  async appendLogIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
+    return this.writeIfAbsent(key, encodeText(key, body));
+  }
 
   async putRawIfAbsent(record: RawArchiveRecord): Promise<'created' | 'already-exists'> {
     return this.writeIfAbsent(record.key, encodeText(record.key, record.verbatim));

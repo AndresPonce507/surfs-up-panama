@@ -1,0 +1,17 @@
+{
+  "step_id": "01-01",
+  "timestamp": "2026-08-13T15:05:46Z",
+  "kind": "evidence-correction-replay",
+  "result": "PASS",
+  "evidence": {
+    "historical_search": "No contemporaneous 01-01 phase event, execution-log entry, reachable Git note, or committed evidence file was found. This record does not backdate a TDD claim.",
+    "baseline": "npm run test:at -- --tags \"@feature-f-observation-export and @step-01-01\" exited 0: 5 scenarios / 130 steps passed.",
+    "semantic_red": "A controlled source mutation made isWithinUtcDay select the next UTC day. The same command exited 1: all 5 scenarios failed at their behaviour assertions. The first scenario expected two closed-day rows and observed zero; the boundary scenario observed the after-midnight report instead of the closed-day report.",
+    "restored_green": "The exact original day-window comparison was restored. The same command exited 0: 5 scenarios / 130 steps passed.",
+    "logs": [
+      "/private/tmp/psb-obs-export-review/green-0101-baseline.log",
+      "/private/tmp/psb-obs-export-review/red-0101-day-selection.log",
+      "/private/tmp/psb-obs-export-review/green-0101-replay.log"
+    ]
+  }
+}

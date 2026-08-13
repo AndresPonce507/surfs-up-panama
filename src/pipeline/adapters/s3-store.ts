@@ -32,7 +32,7 @@ import {
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { randomUUID } from 'node:crypto';
 
-import type { BuildStore, IngestStore, RawArchiveRecord } from '../ports';
+import type { BuildStore, IngestStore, LogAppendStore, RawArchiveRecord } from '../ports';
 
 /** The narrow slice of the real S3 client this adapter calls, so a test can
  * inject a fake `send` without ever touching AWS credentials or the network
@@ -47,11 +47,23 @@ function toBucketKey(key: string): string {
   return key.startsWith(PUB_PREFIX) ? key.slice(PUB_PREFIX.length) : key;
 }
 
-export class S3Store implements IngestStore, BuildStore {
+export class S3Store implements IngestStore, BuildStore, LogAppendStore {
   constructor(
     private readonly client: S3CommandSender,
     private readonly bucket: string,
   ) {}
+
+  /**
+   * Append one immutable object to a durable log (`LogAppendStore`). It routes
+   * through the same private conditional put every other log write here uses,
+   * so gzip-by-suffix, the 412 already-exists path and the single transient
+   * retry stay in exactly one place. `log/` and `ops/` keys are not under
+   * `pub/`, so `toBucketKey` hands them through unchanged and the object lands
+   * on the prefix the export's IAM grant names.
+   */
+  async appendLogIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
+    return this.putGzipIfAbsent(key, body);
+  }
 
   async putRawIfAbsent(record: RawArchiveRecord): Promise<'created' | 'already-exists'> {
     return this.putGzipIfAbsent(record.key, record.verbatim);
