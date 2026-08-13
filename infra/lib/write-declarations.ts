@@ -31,6 +31,14 @@ export const breakerAlarmPeriodSeconds = 300;
 export const notifyReservedConcurrency = 1;
 export const notifyMemorySizeMb = 256;
 
+// The nightly observation export, the second scheduled job and kept out of
+// the write-URL objects for the same reason as notify: it is neither
+// URL-exposed nor breaker-tripped. Values from 07-write-path.md section 2's
+// function table row `export` (RC 1, 512 MB); its 120 s timeout is already
+// declared on the frozen surface as the shared `timeout-notify-export` row.
+export const exportReservedConcurrency = 1;
+export const exportMemorySizeMb = 512;
+
 // Where the VAPID private key lives. This project NEVER holds key material in
 // the repository: the parameter is a SecureString a human provisions out of
 // band, and the Lambda reads it at cold start, exactly as report and mint read
@@ -40,13 +48,14 @@ export const vapidPrivateKeyParameterName = '/surfsuppanama/prod/vapid-private-k
 
 // The sum every deploy actually reserves. AWS rejects any reservation that
 // leaves fewer than 100 unreserved account-wide, so the applied Lambda
-// `Concurrent executions` quota must be at least this sum plus 100 (= 114)
+// `Concurrent executions` quota must be at least this sum plus 100 (= 115)
 // or PutFunctionConcurrency is rejected at deploy time and the write stack
 // must be rolled back (07-write-path section 7.2 item 0.15).
 //
-// Was 13 (quota >= 113) before the scheduled notify job added its 1.
+// Was 13 (quota >= 113) before the scheduled notify job added its 1, then
+// 14 (quota >= 114) before the nightly observation export added its 1.
 
 // Non-write reserved concurrency, guardrail 1: 2 on every function.
 export const defaultReservedConcurrency = 2;
 
-export const reservedConcurrencySum = 14;
+export const reservedConcurrencySum = 15;

@@ -71,7 +71,14 @@ describe('the scheduled export refuses a night it cannot run', () => {
     process.env['WRITE_STORE_TABLE'] = 'surfs-up-panama-write-store';
     process.env['SITE_BUCKET'] = 'surfs-up-panama-site';
 
-    const deps = await createComposition();
+    // The repository's own seed paths, handed in explicitly: the production
+    // default resolves BESIDE THE BUNDLED ENTRY FILE (fetch-handler
+    // precedent), and the staged-asset proof for that default lives in
+    // infra/test/observation-export-wiring.test.ts.
+    const deps = await createComposition({
+      sourceSeedPath: 'data/spots/pa-pacific.yaml',
+      policyPath: 'data/spots/pa-pacific-launch-v1.json',
+    });
 
     assert.deepEqual(
       Object.keys(deps).sort(),

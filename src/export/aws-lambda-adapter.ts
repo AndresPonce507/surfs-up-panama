@@ -21,6 +21,7 @@
 // instead of a container that has poisoned itself for its whole lifetime.
 
 import { loadLaunchSpotCoordinates } from '../pipeline/adapters/spot-coordinates';
+import { bundledLaunchSeedPaths } from '../pipeline/lambda/bundled-launch-seed-paths';
 import { S3Store } from '../pipeline/adapters/s3-store';
 import { createAwsStoredItemReader, type DynamoScanCommandSet } from './aws-item-reader';
 import { runExport } from './run-export';
@@ -72,7 +73,14 @@ async function composed(): Promise<ExportDeps> {
  * back without the beaches would kill the night at the first report it could
  * not tile -- on a schedule whose write-once keys make night one unrepairable.
  */
-export async function createComposition(): Promise<ExportDeps> {
+export async function createComposition(
+  // Default per the fetch-handler precedent: the seeds resolve BESIDE THE
+  // BUNDLED ENTRY FILE via import.meta.url, never against process.cwd(),
+  // which is not a Lambda-safe assumption to build a scheduled night on
+  // (src/pipeline/lambda/bundled-launch-seed-paths.ts). Tests hand in the
+  // repository's own data/spots paths explicitly.
+  seedPaths: { readonly sourceSeedPath: string; readonly policyPath: string } = bundledLaunchSeedPaths,
+): Promise<ExportDeps> {
   const tableName = requiredEnvironment('WRITE_STORE_TABLE');
   const bucket = requiredEnvironment('SITE_BUCKET');
   const [dynamo, document, s3] = await Promise.all([
@@ -98,7 +106,7 @@ export async function createComposition(): Promise<ExportDeps> {
     clock: { now: () => new Date() },
     // The seed files ride in the bundle: esbuild does not follow a runtime
     // readFileSync, so the CDK asset copies them (step 01-03's packaging hook).
-    spots: loadLaunchSpotCoordinates(),
+    spots: loadLaunchSpotCoordinates(seedPaths.sourceSeedPath, seedPaths.policyPath),
     timezone: SEED_TIMEZONE,
   };
 }

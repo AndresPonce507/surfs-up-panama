@@ -29,6 +29,7 @@ import {
 } from '../lib/guardrail-declarations.js';
 import {
   breakerInvocationThresholds,
+  exportReservedConcurrency,
   notifyReservedConcurrency,
   reservedConcurrencySum,
   writeReservedConcurrency,
@@ -486,6 +487,9 @@ const declaredRealTimeouts: Readonly<Record<string, number>> = {
   [functionNames['photo-presign']]: 5,
   [functionNames.resize]: 60,
   [functionNames.breaker]: 10,
+  // The tenth: the nightly observation export (07-write-path.md section 2's
+  // row `export`), sharing the declared `timeout-notify-export` row.
+  [functionNames.export]: 120,
 };
 
 const declaredRealReservedConcurrency: Readonly<Record<string, number>> = {
@@ -498,6 +502,7 @@ const declaredRealReservedConcurrency: Readonly<Record<string, number>> = {
   [functionNames['photo-presign']]: writeReservedConcurrency['photo-presign'],
   [functionNames.resize]: 2,
   [functionNames.breaker]: 2,
+  [functionNames.export]: exportReservedConcurrency,
 };
 
 function allRealResources(type: string): SynthesizedResource[] {
@@ -514,7 +519,7 @@ describe('real stack guardrails: Lambda cost caps (guardrails 1 and 2)', () => {
       reserved: numberProperty(properties, 'ReservedConcurrentExecutions'),
     }));
 
-  it('deploys exactly the nine declared functions, no strays', () => {
+  it('deploys exactly the ten declared functions, no strays', () => {
     expect(functions.map(({ name }) => name).sort())
       .toEqual(Object.keys(declaredRealTimeouts).sort());
   });
@@ -533,7 +538,7 @@ describe('real stack guardrails: Lambda cost caps (guardrails 1 and 2)', () => {
     }
   });
 
-  it('keeps the account-wide reservation sum at the documented 14, so quota >= 114 is the deploy precondition', () => {
+  it('keeps the account-wide reservation sum at the documented 15, so quota >= 115 is the deploy precondition', () => {
     const sum = functions.reduce((total, fn) => total + fn.reserved, 0);
     expect(sum).toBe(reservedConcurrencySum);
   });

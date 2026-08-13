@@ -26,6 +26,7 @@ import * as sns from 'aws-cdk-lib/aws-sns';
 import * as snsSubscriptions from 'aws-cdk-lib/aws-sns-subscriptions';
 import type { Construct } from 'constructs';
 import { buildSync } from 'esbuild';
+import { cpSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -43,6 +44,8 @@ import {
   breakerAlarmPeriodSeconds,
   breakerInvocationThresholds,
   defaultReservedConcurrency,
+  exportMemorySizeMb,
+  exportReservedConcurrency,
   notifyMemorySizeMb,
   notifyReservedConcurrency,
   vapidPrivateKeyParameterName,
@@ -311,6 +314,126 @@ export class WriteStack extends Stack {
         arn: notifyFn.functionArn,
         roleArn: notifySchedulerRole.roleArn,
         input: JSON.stringify({ job: 'notify' }),
+        retryPolicy: { maximumRetryAttempts: 0 },
+      },
+    });
+
+    // ------------------------------------------------------------------
+    // The nightly observation export (adr-observation-export.md; 07-write-
+    // path.md section 2's function table row `export`, section 7.4). The
+    // second scheduled job, and like notify never on the request path: no
+    // Function URL, no CORS, no breaker membership. It lives here because
+    // the write store it scans is declared here (ADR decision 1).
+    //
+    // The role is the write-once property in IAM form: read-only on the
+    // table (Scan + DescribeTable), put-only under the two log prefixes,
+    // nothing else anywhere. The handler is real (steps 01-01/01-02), so
+    // unlike notify it ships as a bundled asset, not a loud placeholder.
+    const exportCode = lambda.Code.fromAsset(projectRoot, {
+      // OUTPUT hashing for the same reason as reportMintCode above: the
+      // bundle result is what deploys, and SOURCE hashing races concurrent
+      // worktree mutation.
+      assetHashType: AssetHashType.OUTPUT,
+      bundling: {
+        image: lambda.Runtime.NODEJS_22_X.bundlingImage,
+        // Load-bearing, not decoration. CDK's AssetStaging caches staged
+        // assets by source path plus the SERIALIZABLE bundling options, and
+        // a `local.tryBundle` closure is not serializable, so it drops out
+        // of the fingerprint. Without this discriminator the second
+        // fromAsset(projectRoot) in this stack silently reuses the
+        // report-mint staging and this function deploys the report-mint
+        // bundle. Caught by the staged-asset assertion in
+        // infra/test/observation-export-wiring.test.ts.
+        environment: { SURFS_UP_PANAMA_BUNDLE: 'observation-export' },
+        local: {
+          tryBundle(outputDirectory: string): boolean {
+            buildSync({
+              entryPoints: [resolve(projectRoot, 'src/export/aws-lambda-adapter.ts')],
+              outfile: resolve(outputDirectory, 'observation-export.mjs'),
+              bundle: true,
+              format: 'esm',
+              platform: 'node',
+              target: 'node22',
+              sourcemap: false,
+              legalComments: 'none',
+              external: ['@aws-sdk/*'],
+            });
+            // esbuild follows only `import`, never a runtime readFileSync:
+            // the launch seeds ride the asset by this copy or not at all
+            // (copyLaunchSeedFiles precedent, infra/lib/ingest-stack.ts).
+            // The composition root resolves them beside its own bundled
+            // entry file, so the layout here is contract, not convenience.
+            cpSync(resolve(projectRoot, 'data/spots'), resolve(outputDirectory, 'data/spots'), { recursive: true });
+            return true;
+          },
+        },
+      },
+    });
+    const exportLogs = new logs.LogGroup(this, 'ExportLogs', {
+      logGroupName: `/aws/lambda/${functionNames.export}`,
+      retention: logs.RetentionDays.TWO_WEEKS, // guardrail 3
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+    const exportFn = new lambda.Function(this, 'Export', {
+      functionName: functionNames.export,
+      runtime: lambda.Runtime.NODEJS_22_X,
+      architecture: lambda.Architecture.ARM_64,
+      handler: 'observation-export.handler',
+      code: exportCode,
+      memorySize: exportMemorySizeMb, // 07-write-path section 2's row `export`
+      timeout: Duration.seconds(lambdaTimeoutSeconds['notify-export']), // guardrail 2, the shared declared row
+      reservedConcurrentExecutions: exportReservedConcurrency,
+      logGroup: exportLogs,
+      environment: {
+        WRITE_STORE_TABLE: writeStore.tableName,
+        SITE_BUCKET: siteBucketName,
+      },
+    });
+    // A duplicate EventBridge delivery re-runs a night whose keys already
+    // exist, which write-once turns into a no-op scan; a Lambda-level retry
+    // could only ever repeat that scan for nothing.
+    exportFn.configureAsyncInvoke({ retryAttempts: 0 });
+
+    exportFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['dynamodb:Scan', 'dynamodb:DescribeTable'],
+      resources: [writeStore.tableArn],
+    }));
+    exportFn.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['s3:PutObject'],
+      resources: [
+        siteBucket.arnForObjects('log/observations/v1/*'),
+        siteBucket.arnForObjects('ops/abuse-signals/v1/*'),
+      ],
+    }));
+
+    // Nightly at 00:30 UTC, after the received_at day closes (ADR decision
+    // 4's partition rule makes the closed day complete the moment it ends).
+    //
+    // THE SCHEDULE SHIPS DISABLED, ON PURPOSE, AND FOR A DIFFERENT REASON
+    // THAN NOTIFY. The handler is real and tested; the write-once property
+    // is the reason. The first production run seals that night's keys
+    // permanently -- a re-run finds them present and skips -- so a bug in
+    // night one is unfixable in place. An unattended 00:30Z cron with zero
+    // prior production observation is an irreversible action, and this
+    // project flags those for a human rather than taking them automatically
+    // (adr-observation-export.md decision 7). Enabling is this one word
+    // plus a redeploy, carried by the deploy note.
+    const exportSchedulerRole = new iam.Role(this, 'ExportSchedulerRole', {
+      assumedBy: new iam.ServicePrincipal('scheduler.amazonaws.com'),
+      description: 'Lets EventBridge Scheduler invoke the observation export function, nothing else',
+    });
+    exportFn.grantInvoke(exportSchedulerRole);
+    new scheduler.CfnSchedule(this, 'ExportSchedule', {
+      name: 'surfs-up-panama-export-nightly',
+      description: 'Nightly observation export at 00:30 UTC, after the received day closes',
+      scheduleExpression: 'cron(30 0 * * ? *)',
+      scheduleExpressionTimezone: 'UTC',
+      state: 'DISABLED', // until a human observes night one; ADR decision 7, see the note above
+      flexibleTimeWindow: { mode: 'OFF' },
+      target: {
+        arn: exportFn.functionArn,
+        roleArn: exportSchedulerRole.roleArn,
+        input: JSON.stringify({ job: 'export' }),
         retryPolicy: { maximumRetryAttempts: 0 },
       },
     });
