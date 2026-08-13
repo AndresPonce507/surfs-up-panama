@@ -173,6 +173,29 @@ describe('runBuild (Lambda Build composition root)', () => {
     logSpy.mockRestore();
   });
 
+  it('confirms the public manifest only after the Publisher has settled its fresh render', async () => {
+    const store = new InMemoryBuildStore();
+    store.seed('playa-venao');
+    const order: string[] = [];
+
+    const outcome = await runBuild({
+      store,
+      spots: [seed('playa-venao', 'Playa Venao')],
+      clock: { now: () => new Date(AT) },
+      invokePublisher: async () => {
+        order.push('publisher');
+        return { statusCode: 200 };
+      },
+      probePublicManifest: async () => {
+        expect(order).toEqual(['publisher']);
+        order.push('public-manifest');
+      },
+    });
+
+    expect(outcome.published).toBe(true);
+    expect(order).toEqual(['publisher', 'public-manifest']);
+  });
+
   it('catches a rejecting publisher, writes down the failed handover with the rejection\'s own reason, and still answers that it published', async () => {
     const store = new InMemoryBuildStore();
     store.seed('playa-venao');
@@ -300,6 +323,19 @@ describe('the production composition really calls the Publisher (review blocker 
     expect(input['FunctionName']).toBe(PUBLISHER_NAME_UNDER_TEST);
     expect(input['InvocationType']).toBe('RequestResponse');
     expect(payloadAsJson(input['Payload'])).toEqual(INVOCATION);
+  });
+
+  it('returns the Publisher response payload so only a real 200 can trigger public verification', async () => {
+    const factory = moduleExports['defaultInvokePublisher'];
+    expect(factory).toBeTypeOf('function');
+    const fakeClient: FakeLambdaClient = {
+      send: async () => ({
+        StatusCode: 200,
+        Payload: new TextEncoder().encode('{"statusCode":200}'),
+      }),
+    };
+
+    await expect((factory as InvokerFactory)(fakeClient)(INVOCATION)).resolves.toEqual({ statusCode: 200 });
   });
 
   it('composes its SDK client with retries capped at one attempt, never the default three', async () => {

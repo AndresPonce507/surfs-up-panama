@@ -22,8 +22,10 @@
 //   src/pipeline/lambda/build-handler.ts
 //     BuildOverrides gains ONE key:
 //       invokePublisher?: (invocation: { build_id, bundle_key }) => Promise<unknown>
-//     Called AFTER the public-manifest probe AND AFTER the build log lines are
-//     printed, only when outcome.published, exactly once. Its rejection is
+//     Called AFTER the build log lines are printed, only when outcome.published,
+//     exactly once. A successful Publisher answer is followed by the
+//     public-manifest probe, because that is the first instant fresh pages can
+//     exist. Its rejection is
 //     caught: never rethrown, never retried in-cycle, and it never changes what
 //     runBuild answers. That ordering is load-bearing -- build.success describes
 //     Build's own work, which really happened, so a publisher that hangs must

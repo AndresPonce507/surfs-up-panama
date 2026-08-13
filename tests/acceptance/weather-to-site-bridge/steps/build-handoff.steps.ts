@@ -118,7 +118,7 @@ Then('the publisher is asked exactly once, for the build Build just finished and
     1,
     `WHAT: the publisher was asked ${handoffs.length} time(s) this hour, not once. `
       + `WHY: one bounded publication per hourly cycle is the whole recorded decision; zero leaves the site stale forever, twice pays twice for the same hour. `
-      + `HOW: after the public page check and after the build lines are printed, call the injected invokePublisher override exactly once.${statedAbsence(scenario)}`,
+      + `HOW: after the build lines are printed, call the injected invokePublisher override exactly once, then check its fresh public pages.${statedAbsence(scenario)}`,
   );
   assert.deepEqual(
     { build_id: handoffs[0]?.build_id, bundle_key: handoffs[0]?.bundle_key },
@@ -161,6 +161,17 @@ Then('the day\'s log claims the build succeeded, exactly once', function (this: 
   assertHourAgrees(scenario);
 });
 
+Then('the publisher was asked once before its fresh pages were checked', function (this: object) {
+  const scenario = slice02(this);
+  assert.equal(
+    handoffsThisHour(scenario).length,
+    1,
+    `WHAT: this hour handed the publisher ${handoffsThisHour(scenario).length} bundle(s), not one. `
+      + `WHY: verification can only check a page after Publisher emitted it, but the one bounded handover must never duplicate spend. `
+      + `HOW: await exactly one Publisher handover before the public-manifest probe.${statedAbsence(scenario)}`,
+  );
+});
+
 Then('the publisher was asked for the morning\'s bundle only, never for this hour\'s', function (this: object) {
   const scenario = slice02(this);
   assert.equal(
@@ -197,20 +208,19 @@ Then('the hour\'s log says the build refused, and never claims success', functio
   );
 });
 
-Then('Build\'s hour ends without claiming anything at all', function (this: object) {
+Then('Build\'s hour records that its fresh pages could not be confirmed publicly', function (this: object) {
   const scenario = slice02(this);
   assert.ok(
     scenario.buildFailure !== null && scenario.buildFailure !== undefined,
     `WHAT: Build's hour finished normally and answered ${JSON.stringify(scenario.buildOutcome)}. `
-      + `WHY: pages that cannot be confirmed public mean the publication chain is broken upstream; the hour must stop, not carry on claiming. `
-      + `HOW: leave the public page check throwing before anything downstream of it runs.${statedAbsence(scenario)}`,
+      + `WHY: pages that cannot be confirmed public mean the release chain is broken, even after Publisher emitted them. `
+      + `HOW: run the public page check after the Publisher handover and surface its mismatch.${statedAbsence(scenario)}`,
   );
-  assert.deepEqual(
-    eventsThisHour(scenario),
-    [],
-    `WHAT: this hour still printed ${printedThisHour(scenario)}. `
-      + `WHY: an hour that could not confirm its own pages has earned no claim of any kind. `
-      + `HOW: keep the public page check ahead of both the log lines and the handover.${statedAbsence(scenario)}`,
+  assert.match(
+    message(scenario.buildFailure),
+    /health\.publish\.mismatch/,
+    `WHAT: Build failed with ${message(scenario.buildFailure)}, not its explicit public-page mismatch. `
+      + `HOW: preserve probePublicManifest's mismatch error after the Publisher handover.${statedAbsence(scenario)}`,
   );
 });
 

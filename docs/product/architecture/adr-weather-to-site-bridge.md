@@ -47,9 +47,11 @@ construction". Rejected upstream and honored here: GitHub Actions (billing-cappe
 The Publisher is one Lambda, packaged as a container image that carries the repository and its
 installed dependencies, and it runs the exact existing release pipeline. Per invocation:
 
-1. **Input**: Build invokes it synchronously (RequestResponse) after `build.success` and the
-   public-manifest probe, passing `{ build_id, bundle_key }`. The Publisher reads that bundle
-   from the site bucket and refuses when the bundle's `build_id` does not match the invocation.
+1. **Input**: Build invokes it synchronously (RequestResponse) after `build.success`, passing
+   `{ build_id, bundle_key }`. A successful Publisher answer is followed by Build's
+   public-manifest probe, because that is the first instant the fresh HTML can exist. The
+   Publisher reads that bundle from the site bucket and refuses when the bundle's `build_id`
+   does not match the invocation.
 2. **Merge**: `mergePublishedSurface` against the durable previous surface at
    `site/published-surface.json` in the site bucket, then writes the merged state back. S3 is the
    archive of record for the running system, so dawn receipts survive cold starts and redeploys;

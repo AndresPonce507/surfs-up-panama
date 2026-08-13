@@ -90,6 +90,16 @@ This section supersedes the legacy notes below. They are retained only as histor
   403/404/410 deletes the stale subscription. Physical Android and installed-iPhone PWA smoke is
   still required after deployment.
 
+## Bridge publication ordering correction (2026-08-13)
+
+- A fresh public-manifest probe is valid only **after** Publisher has synchronously returned its
+  own `200` result. Build first hands its immutable bundle to Publisher, then verifies the public
+  `manifest.json` for that exact build. The former order checked the old public site before it
+  could possibly render the new one.
+- A Publisher `204` refusal or a failed handover deliberately skips the fresh-page probe. The old
+  page remains honest; Build records its own completed bundle without falsely describing stale
+  public pages as a failed verification.
+
 ## Integration gate state (verified 2026-08-13 afternoon)
 
 - The Push live vertical passed the exact fast integration gate: **11 passed / 0 failed / 0
