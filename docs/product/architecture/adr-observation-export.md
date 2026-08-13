@@ -12,7 +12,7 @@ The export Lambda, its EventBridge schedule (00:30 UTC) and its IAM live in `inf
 
 - `07-write-path.md` §7.4 assigns ownership explicitly: "AP13, owned here: it is the write store's data leaving the store", and §2's topology places `EXPORT` inside the Write subgraph with RC 1 / 120 s / 512 MB.
 - The DynamoDB table (`surfs-up-panama-write-store`) is declared in `WriteStack` with no cross-stack export and no entry in `physical-names.ts`. Same-stack placement reuses the house pattern (`WRITE_STORE_TABLE` env, IAM against `writeStore.tableArn`) instead of inventing a cross-stack name path.
-- `IngestStack` owns scheduled jobs today, and its scheduler idiom (dedicated `iam.Role` for `scheduler.amazonaws.com` + `scheduler.CfnSchedule`, `flexibleTimeWindow OFF`, UTC cron) is copied into `WriteStack` — the idiom crosses, the function does not. `WriteStack` already carries scheduler machinery for the breaker restore.
+- The scheduled-job idiom already lives in `WriteStack` since notify landed (2026-08-12, `Notify` fn + `NotifySchedule` + dedicated scheduler role): the export copies its in-stack neighbor. The shared guardrail declaration `timeout-notify-export: '120 seconds'` was written for both jobs, so the export's timeout is pre-declared on the frozen surface.
 
 Considered and rejected: `IngestStack` placement (the "scheduled data-plane jobs live in Ingest" reading). Rejected because the table has no import path outside `WriteStack`, and §7.4's ownership sentence is unambiguous.
 
@@ -61,4 +61,4 @@ One line per accepted report in `log/observations/v1/`, fields flattened to `dom
 
 - The scorecard's slice-03/05 real store read and the learning fit get a log whose rows parse today with their committed readers.
 - The export role is read-only on DynamoDB (`Scan`, `DescribeTable` only) and can put only under `log/observations/v1/*` and `ops/abuse-signals/v1/*` — the write-once, no-clobber property is IAM-shaped as well as request-shaped.
-- Function roster lockstep: adding the ninth function updates `physical-names.ts`, the guardrails roster/RC-sum/log-group assertions, and `write-declarations.ts` (`reservedConcurrencySum` 13 → 14) in the same change, deliberately.
+- Function roster lockstep: adding the **tenth** function (notify became the ninth) updates `physical-names.ts`, the guardrails roster/RC-sum/log-group assertions, and `write-declarations.ts` (`reservedConcurrencySum` 14 → 15, quota-precondition comment moved with it) in the same change, deliberately.
