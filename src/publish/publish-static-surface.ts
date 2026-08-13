@@ -1,7 +1,7 @@
 import { readFile, rename, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-import { assertStrictTwoDayUpdate, mergePublishedSurface, type PublishedSurfaceUpdate, type StaticSurface } from './static-surface';
+import { assertCurrentCivilDay, assertStrictTwoDayUpdate, mergePublishedSurface, type PublishedSurfaceUpdate, type StaticSurface } from './static-surface';
 
 const DEFAULT_SURFACE_PATH = 'data/published-surface.json';
 
@@ -73,15 +73,10 @@ function isMissingFile(error: unknown): boolean {
 }
 
 function verifyCurrentCivilDay(surface: StaticSurface): void {
-  const panamaToday = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'America/Panama',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).format(new Date());
-  const today = surface.current.days[0].date;
-  if (today !== panamaToday) {
-    throw new Error(`publish-surface refused: WHAT static surface is for ${today}, not Panama's ${panamaToday}; WHY a stale build cannot pretend to be this morning's call; HOW publish the completed current bundle with npm run publish:surface -- --input <pub-v1-bundle.json>, then run npm run build again.`);
+  try {
+    assertCurrentCivilDay(surface, new Date());
+  } catch (error) {
+    throw new Error(`publish-surface refused: ${message(error)} HOW publish the completed current bundle with npm run publish:surface -- --input <pub-v1-bundle.json>, then run npm run build again.`);
   }
 }
 

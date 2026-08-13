@@ -6,7 +6,7 @@ const archivePrefix = 'predictions/';
 const requiredSafeguards = [
   ['lambda-reserved-concurrency', 'Lambda reserved concurrency', '2'],
   ['timeout-fetch', 'fetch timeout', '60 seconds'],
-  ['timeout-build', 'build timeout', '120 seconds'],
+  ['timeout-build', 'build timeout', '420 seconds'],
   ['timeout-report', 'report timeout', '5 seconds'],
   ['timeout-mint', 'mint timeout', '5 seconds'],
   ['timeout-push', 'push timeout', '5 seconds'],

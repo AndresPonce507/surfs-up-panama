@@ -40,13 +40,15 @@ export const vapidPrivateKeyParameterName = '/surfsuppanama/prod/vapid-private-k
 
 // The sum every deploy actually reserves. AWS rejects any reservation that
 // leaves fewer than 100 unreserved account-wide, so the applied Lambda
-// `Concurrent executions` quota must be at least this sum plus 100 (= 114)
+// `Concurrent executions` quota must be at least this sum plus 100 (= 115)
 // or PutFunctionConcurrency is rejected at deploy time and the write stack
 // must be rolled back (07-write-path section 7.2 item 0.15).
 //
 // Was 13 (quota >= 113) before the scheduled notify job added its 1.
+// Was 14 (quota >= 114) before the bounded Publisher added its own 1
+// (adr-weather-to-site-bridge.md: reserved concurrency 1).
 
 // Non-write reserved concurrency, guardrail 1: 2 on every function.
 export const defaultReservedConcurrency = 2;
 
-export const reservedConcurrencySum = 14;
+export const reservedConcurrencySum = 15;

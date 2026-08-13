@@ -1,0 +1,13 @@
+# Build context for infra/lambda-images/publisher/Dockerfile is the
+# repository root (CDK's DockerImageCode.fromImageAsset, step 02-02, points
+# at the repo root with the `file` option). `npm ci` runs INSIDE the image
+# build against the linux/arm64 base image -- the host's node_modules is
+# Darwin-built and must never be copied in; dist/build caches are
+# regenerated fresh at build/render time and would only bloat the context.
+node_modules
+.git
+cdk.out
+dist
+.astro
+.pipeline-out
+.ci-local-logs

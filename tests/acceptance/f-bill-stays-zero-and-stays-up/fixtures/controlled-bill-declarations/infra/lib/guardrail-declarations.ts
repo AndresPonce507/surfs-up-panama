@@ -5,7 +5,7 @@
 export const guardrailDeclarations = {
   'lambda-reserved-concurrency': '2',
   'timeout-fetch': '60 seconds',
-  'timeout-build': '120 seconds',
+  'timeout-build': '420 seconds',
   'timeout-report': '5 seconds',
   'timeout-mint': '5 seconds',
   'timeout-push': '5 seconds',

@@ -13,6 +13,9 @@ export const siteBucketName = `surfs-up-panama-site-${projectAccountId}`;
 export const functionNames = {
   fetch: 'surfs-up-panama-fetch',
   build: 'surfs-up-panama-build',
+  // The verb that pairs with fetch and build: Build's synchronous handover,
+  // and nothing else, is what starts it (adr-weather-to-site-bridge.md).
+  publish: 'surfs-up-panama-publish',
   report: 'surfs-up-panama-report',
   mint: 'surfs-up-panama-mint',
   push: 'surfs-up-panama-push',

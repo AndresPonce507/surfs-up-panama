@@ -122,6 +122,15 @@ async function runInsideLambdaRuntime() {
     AWS_ACCESS_KEY_ID: 'fixture', AWS_SECRET_ACCESS_KEY: 'fixture', AWS_REGION: 'us-east-1',
     AWS_ENDPOINT_URL_S3: `http://fixture.localhost:${address.port}`, BUCKET_NAME: 'fixture',
     PUBLIC_SITE_ORIGIN: `http://fixture.localhost:${address.port}`,
+    // The deployed environment carries the Publisher's name beside
+    // BUCKET_NAME (ingest-stack), and the handler's composition refuses
+    // loudly without it. The Lambda endpoint override keeps the handoff
+    // attempt inside this fixture: the fixture answers the invoke POST with
+    // 405, the SDK rejects (maxAttempts 1, one attempt), and the handler
+    // writes down health.publish.handoff_failed without erasing the build --
+    // exactly the deployed behavior when the Publisher is unreachable.
+    PUBLISH_FUNCTION_NAME: 'surfs-up-panama-publish',
+    AWS_ENDPOINT_URL_LAMBDA: `http://fixture.localhost:${address.port}`,
   });
   try {
     const build = await import(pathToFileURL('/var/task/index.mjs').href);

@@ -34,11 +34,13 @@
     "ci:local:fast": "node scripts/ci-local.mjs --fast",
     "smoke:build-lambda-arm64": "node scripts/smoke-build-lambda-arm64.mjs",
     "smoke:fetch-lambda-arm64": "node scripts/smoke-fetch-lambda-arm64.mjs",
+    "smoke:publish-lambda-arm64": "node scripts/smoke-publish-lambda-arm64.mjs",
     "merge:pr": "node scripts/merge-pr.mjs",
     "postinstall": "bash scripts/git-hooks/install.sh >/dev/null 2>&1 || true"
   },
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.1107.0",
+    "@aws-sdk/client-lambda": "^3.1107.0",
     "@aws-sdk/client-s3": "^3.1107.0",
     "@aws-sdk/lib-dynamodb": "^3.1107.0",
     "@cucumber/cucumber": "^13.2.1",

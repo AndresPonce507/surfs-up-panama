@@ -1,0 +1,83 @@
+{
+  "schema_version": "3.0",
+  "feature_id": "weather-to-site-bridge",
+  "events": [
+    {
+      "sid": "01-01",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-12T17:51:45Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-12T17:52:02Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-12T18:01:22Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-12T18:06:07Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-12T18:08:19Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-12T18:16:48Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-12T18:33:20Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-12T18:33:38Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "RED_UNIT",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: the pinned ATs (publish-handler.steps.ts) fully pin runPublish/handler wiring via injected overrides (environment, publish); no scenario reaches the default adapters (defaultStore/defaultRenderer/defaultCommandRunner), so no unit test is required to drive GREEN. Those default adapters are real-I/O composition-root wiring proven by the ARM64 container smoke (Mandate 6), not mock-driven unit tests.",
+      "t": "2026-08-12T23:50:20Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PARTIAL: focused AT 9/9 green, npm test 382/382 green, typecheck exit 0, Publisher ARM64 image builds and real npm-run-build render executes inside linux/arm64 (midnight verify + merge + real S3 get/put + 104/105 routes), but smoke script exits 1 -- refused by the pre-existing page-weight gate on spots/santa-catalina-la-punta/reportado (4099B gz vs 4096B ceiling) under Node 22's zlib inside the container vs Node 26 on host (4077B); a whole family of reportado routes sits within ~20 bytes of the ceiling. Content-independent (proven with 3 fixture variations incl. the unmodified committed data/published-surface.json). Out of step scope to fix (page-weight budget / route content); flagged for owner.",
+      "t": "2026-08-12T23:50:29Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: commit 789f752 on build/weather-site-bridge; 5 files (publish-handler.ts, Dockerfile, .dockerignore, smoke script, package.json); smoke exit-1 finding documented in commit body, not swept",
+      "t": "2026-08-12T23:51:47Z"
+    }
+  ]
+}

@@ -1,0 +1,164 @@
+{
+  "roadmap": {
+    "project_id": "weather-to-site-bridge",
+    "created_at": "2026-08-12T00:00:00Z",
+    "total_steps": 4,
+    "quality_contract_version": 1
+  },
+  "phases": [
+    {
+      "id": "01",
+      "name": "Slice-01: a fresh bundle republishes the site through one bounded pipeline",
+      "description": "The publish core and its Lambda composition root land in two serial steps. Step one owns the pure orchestration (merge, civil-day verify, render port, PUT-only upload through the real checked-in publication code) and the honest log-line derivation. Step two owns the container-image composition root, the Dockerfile, and the ARM64 smoke sibling of smoke-build-lambda-arm64. Reuse is load-bearing: mergePublishedSurface, publishBuild, directoryAliasFor, publicationPlan, assertPublicationArtifactOrigin are imported, never reimplemented.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "01-01",
+          "name": "The publish core walks merge, verify, render, PUT-only upload through injected ports",
+          "criteria": [
+            "runPublishOnce (src/pipeline/publish-site.ts) drives the whole chain through injected ports: bundle read by key, build_id match, mergePublishedSurface against the durable state object, Panama civil-day check against an injected clock (never the wall clock), render port, then the REAL publishBuild from scripts/preview/publish-preview.mjs with an injected command runner.",
+            "Every dishonest input refuses with a named reason, uploads zero objects, and leaves the previous state byte-identical: wrong civil day, origin receipt for another target, build_id mismatch (renderer never called).",
+            "The recorded operations across every path contain no list and no delete; publication is put-only by construction.",
+            "Dawn receipts survive across two simulated cycles via the state object at site/published-surface.json; a first-ever run with no state seeds from the incoming update alone.",
+            "derivePublishLogLines (src/pipeline/lambda/log-events.ts pattern) yields publish.success only when every put completed, publish.refused with the reason otherwise; a mid-upload failure yields no publish.success.",
+            "The civil-day check is extracted from src/publish/publish-static-surface.ts into a pure function with an injected instant, and the CLI keeps calling the extracted function so there is exactly one implementation."
+          ],
+          "test_file": "tests/acceptance/weather-to-site-bridge/a-fresh-bundle-republishes-the-site.feature",
+          "scenario_name": "A fresh bundle for today republishes every page with no human in the loop",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "docs/product/expectations/weather-to-site-bridge/a-fresh-bundle-republishes-the-whole-site-with-no-human-and-a-dishonest-input-refuses-and-uploads.md",
+          "non_visual_rationale": "No rendered surface changes: the HTML this pipeline uploads is byte-for-byte what the manual publish path already produces. The slice's honest surface is terminal output (acceptance suite + smoke evidence), examined against the charter through that surface.",
+          "deps": [],
+          "files_to_modify": [
+            "src/pipeline/publish-site.ts",
+            "src/pipeline/lambda/log-events.ts",
+            "src/publish/static-surface.ts",
+            "src/publish/publish-static-surface.ts",
+            "tests/acceptance/weather-to-site-bridge/a-fresh-bundle-republishes-the-site.feature",
+            "tests/acceptance/weather-to-site-bridge/steps/**",
+            "tests/unit/publish-site.test.ts"
+          ],
+          "implementation_notes": "Functional paradigm (project CLAUDE.md): pure functions, ports as type contracts, no ambient clock. Property-based tests where a law exists (e.g. every uploaded .html key except index.html gains exactly one directory alias; refusal implies zero puts). The ADR (docs/product/architecture/adr-weather-to-site-bridge.md) is the design contract. Do not copy publication logic: import publishBuild/directoryAliasFor from scripts/preview/publish-preview.mjs and assertPublicationArtifactOrigin/PUBLICATION_TARGETS from scripts/release/publication-target.mjs (JS modules; add minimal type declarations if tsc needs them rather than rewriting the modules)."
+        },
+        {
+          "id": "01-02",
+          "name": "The Lambda composition root and the ARM64 container smoke",
+          "criteria": [
+            "src/pipeline/lambda/publish-handler.ts is a composition-root-only file in the build-handler.ts pattern: overrides-injectable runPublish(overrides), real S3 adapter, a renderer adapter that materializes the project in a writable directory and runs the real npm run build (midnight verify stays in the execution path, never bypassed) with PUBLIC_SITE_ORIGIN from env, and an S3-SDK command runner for publishBuild.",
+            "The handler maps outcomes to responses and passes the invocation payload {build_id, bundle_key} through unchanged; a missing required env var refuses with the house WHAT/WHY/HOW message before any port is called.",
+            "A Dockerfile packages the repository with production node_modules for linux/arm64; layers are ordered so npm ci is cached on package-lock.json.",
+            "scripts/smoke-publish-lambda-arm64.mjs (npm run smoke:publish-lambda-arm64) builds the image and proves the real render inside it against fixture predictions, printing PASS evidence with sizes and refusing on budget breach, in the pattern of scripts/smoke-build-lambda-arm64.mjs.",
+            "npm run test:at -- --tags \"@feature-weather-to-site-bridge and @slice-01\" is fully green after this step."
+          ],
+          "test_file": "tests/acceptance/weather-to-site-bridge/the-publisher-answers-only-its-build.feature",
+          "scenario_name": "The front door passes Build's call through unchanged and answers with what happened",
+          "slice_id": "slice-01",
+          "surface_classification": "non-visual",
+          "charter_path": "docs/product/expectations/weather-to-site-bridge/a-fresh-bundle-republishes-the-whole-site-with-no-human-and-a-dishonest-input-refuses-and-uploads.md",
+          "non_visual_rationale": "Composition root and packaging; nothing renders differently. Observable is the smoke's printed evidence and the handler scenarios' terminal outcome.",
+          "deps": [
+            "01-01"
+          ],
+          "files_to_modify": [
+            "src/pipeline/lambda/publish-handler.ts",
+            "infra/lambda-images/publisher/Dockerfile",
+            "scripts/smoke-publish-lambda-arm64.mjs",
+            "package.json",
+            "tests/acceptance/weather-to-site-bridge/the-publisher-answers-only-its-build.feature",
+            "tests/acceptance/weather-to-site-bridge/steps/**",
+            "tests/unit/publish-handler.test.ts"
+          ],
+          "implementation_notes": "The Lambda filesystem is read-only outside /tmp: copy the project tree (without node_modules) to /tmp at cold start, point node_modules back at the image's installed tree, direct astro/vite cache and dist output under /tmp. The smoke runs the image with docker run --platform linux/arm64 and a local HTTP or filesystem stand-in exactly as smoke-build-lambda-arm64.mjs does; study it first. Do NOT deploy anything; do NOT run cdk diff."
+        }
+      ]
+    },
+    {
+      "id": "02",
+      "name": "Slice-02: Build hands the fresh bundle to the Publisher and the stacks know it",
+      "description": "The seam and its declaration land in two serial steps. Step one owns Build's synchronous handover to the Publisher through an injected port, and the informational log event a failed handover prints. Step two owns the infrastructure declaration that proves the boundary: the Publisher declared as a bounded ARM64 container-image function beside Build in IngestStack, PUT-only permissions with no List anywhere, Build's reviewed timeout move, and the PublishSuccess counter with its dead-man watch. Every seam pinned in the DISTILL slice-02 section of feature-delta.md is implemented to exactly, never re-decided.",
+      "default_agent": "nw-functional-software-crafter",
+      "default_deps_strategy": "sequential",
+      "steps": [
+        {
+          "id": "02-01",
+          "name": "Build hands the bundle to the Publisher, once, and never retries it",
+          "criteria": [
+            "BuildOverrides gains exactly ONE new key, invokePublisher?: (invocation: { build_id: string; bundle_key: string }) => Promise<unknown>, per the pinned DISTILL seam. No other override is added.",
+            "It is called after the public-manifest probe AND after deriveBuildLogLines' lines are printed, only when outcome.published, exactly once per cycle. The ordering is load-bearing and pinned: build.success describes Build's own work, which really happened, so a publisher that hangs must not be able to erase it.",
+            "The bundle key handed over is composed as pub/v1/regions/${REGION_ID}/bundle.json from the REGION_ID constant build-handler.ts already passes to runBuildOnce, never a second hand-typed literal.",
+            "A rejecting publisher is caught: never rethrown, never retried in-cycle, and it never changes what runBuild answers. Build records the failure as one health.publish.handoff_failed line carrying { event, build_id, reason } with the rejection's own message as the reason.",
+            "A publisher that resolves having refused is NOT recorded as a failed handover; the publisher already spoke for itself through its own publish.refused line.",
+            "log-events.ts gains exactly one constant, PUBLISH_HANDOFF_FAILED_EVENT = 'health.publish.handoff_failed', in the informational health.* family the file already defines. No metric filter watches it. No existing constant or derivation in that file changes.",
+            "The five @slice-02 scenarios in build-hands-the-bundle-to-the-publisher.feature are green, and slice-01's nine scenarios stay green."
+          ],
+          "test_file": "tests/acceptance/weather-to-site-bridge/build-hands-the-bundle-to-the-publisher.feature",
+          "scenario_name": "Build hands the publisher the build it just finished",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "docs/product/expectations/weather-to-site-bridge/build-hands-the-fresh-bundle-to-a-bounded-publisher-and-the-template-proves-the-boundary.md",
+          "non_visual_rationale": "A handler seam driven through injected ports; nothing renders. The observable is Build's recorded handover and the event lines the hour prints.",
+          "deps": [],
+          "files_to_modify": [
+            "src/pipeline/lambda/build-handler.ts",
+            "src/pipeline/lambda/log-events.ts",
+            "tests/unit/build-handler.test.ts"
+          ],
+          "implementation_notes": "Functional paradigm: the handover is a port passed in, never a module the handler reaches for. Do NOT edit any acceptance test or step file; they are the pinned specification and they are already RED for the right reason. cross_lane_seams row 2 still binds: existing event constants and derivations in log-events.ts are watched by the deployed dead-man chain and must not change, this step only ADDS. Do NOT deploy; do NOT run cdk diff."
+        },
+        {
+          "id": "02-02",
+          "name": "The declaration proves the publisher is bounded, and Build's limit covers the wait",
+          "criteria": [
+            "physical-names.ts gains functionNames.publish = 'surfs-up-panama-publish', following the surfs-up-panama-<role> convention every other slot follows.",
+            "The Publisher is declared in IngestStack beside Build as a DockerImageFunction using DockerImageCode.fromImageAsset(repositoryRoot, { file: 'infra/lambda-images/publisher/Dockerfile' }), ARM64, reserved concurrency 1, timeout 300 s, PUBLIC_SITE_ORIGIN for production plus BUCKET_NAME in its environment, and configureAsyncInvoke retryAttempts 0.",
+            "Permissions are PUT-only and contain NO List action anywhere. The bundle read MUST be an explicit s3:GetObject PolicyStatement on the physical prefix v1/*, NOT bucket.grantRead, because aws-cdk-lib's grantRead expands to include s3:List* and the charter forbids it. grantPut is safe for the published route keys and the durable archive at site/published-surface.json. No Delete action in any statement.",
+            "Build is the only path in: publishFn.grantInvoke(buildFn), and no schedule targets the Publisher, no S3 bucket notification exists, and no queue appears in any stack.",
+            "A PublishSuccess metric filter follows the BuildSuccessFilter pattern exactly, on the Publisher's own log group in the same stack, matching $.event against PUBLISH_SUCCESS_EVENT.",
+            "The site's staleness dead-man watches PublishSuccess rather than BuildSuccess, keeping the design at exactly ten alarms. This is a RECORDED DECISION, not a choice to re-litigate: see the alarm-ceiling decision section in feature-delta.md. Do not add an eleventh alarm.",
+            "Build's declared timeout moves 120 s -> 420 s, and EVERY declaration mirror moves with it in the SAME commit so no gate is left red: infra/lib/ingest-stack.ts (build: 120), infra/lib/guardrail-declarations.ts, infra/guardrail-evaluator.mjs, both controlled-declaration fixtures under tests/acceptance/f-bill-stays-zero-and-stays-up/ and tests/acceptance/daily-call-with-permanent-receipts/, plus the sibling declaration-mirror rows at daily-call-with-permanent-receipts/infrastructure-guardrails.feature and its steps file.",
+            "The closed-world guardrail assertions in infra/test/guardrails.test.ts move in the same commit: the nine-function list becomes ten, declaredRealTimeouts gains publish and updates build, declaredRealReservedConcurrency gains publish, reservedConcurrencySum moves 14 -> 15, and the per-function timeout ceiling stops asserting <= 120.",
+            "npm run synth:infra exits 0 credential-free and npm run test:infra exits 0. The six @slice-02 plan scenarios are green, the five handover scenarios stay green, and slice-01's nine stay green."
+          ],
+          "test_file": "tests/acceptance/weather-to-site-bridge/the-deployment-plan-proves-the-publisher-is-bounded.feature",
+          "scenario_name": "The plan carries the publisher bounded exactly as the decision says",
+          "slice_id": "slice-02",
+          "surface_classification": "non-visual",
+          "charter_path": "docs/product/expectations/weather-to-site-bridge/build-hands-the-fresh-bundle-to-a-bounded-publisher-and-the-template-proves-the-boundary.md",
+          "non_visual_rationale": "Infrastructure declarations; nothing renders. The observable is the synthesized CloudFormation template read as the boundary.",
+          "deps": [
+            "02-01"
+          ],
+          "files_to_modify": [
+            "infra/lib/physical-names.ts",
+            "infra/lib/ingest-stack.ts",
+            "infra/lib/observability-stack.ts",
+            "infra/lib/guardrail-declarations.ts",
+            "infra/guardrail-evaluator.mjs",
+            "infra/test/guardrails.test.ts",
+            "tests/acceptance/f-bill-stays-zero-and-stays-up/fixtures/controlled-bill-declarations/infra/lib/guardrail-declarations.ts",
+            "tests/acceptance/daily-call-with-permanent-receipts/fixtures/controlled-infrastructure-declarations/infra/lib/guardrail-declarations.ts",
+            "tests/acceptance/daily-call-with-permanent-receipts/infrastructure-guardrails.feature",
+            "tests/acceptance/daily-call-with-permanent-receipts/steps/infrastructure-guardrails.steps.ts"
+          ],
+          "implementation_notes": "The sibling-feature edits are sanctioned for this step and ONLY as declaration mirrors of a single source of truth: the only permitted change there is the build-timeout number and its adjacent regressed value. Changing anything else about those features' behavior is out of scope and must be flagged instead. The ADR sanctions the timeout move; the repo forbids committing over a red gate, which is why every mirror must move together. Do NOT edit the weather-to-site-bridge acceptance tests or step files. Do NOT deploy anything and NEVER run cdk diff: it uploads assets. Proof is npm run synth:infra plus npm run test:infra, both local and credential-free."
+        }
+      ]
+    }
+  ],
+  "cross_lane_seams": [
+    "scripts/preview/publish-preview.mjs and scripts/release/publication-target.mjs are shared with the manual release lane: this feature imports them and may add exports/type declarations, but behavior changes to them belong to the release lane, not here.",
+    "src/pipeline/lambda/log-events.ts is shared with the deployed dead-man alarm chain: existing event constants and derivations must not change; this feature only adds publish.* derivations.",
+    "src/pipeline/lambda/build-handler.ts is edited only in slice-02 (step 02-01), serialized after slice-01 seals."
+  ],
+  "implementation_scope": {
+    "in": "The bounded Publisher core, its Lambda container composition root, the Build->Publisher synchronous invoke seam, and the infra declarations that prove the boundary.",
+    "out": "Any deployment, cdk diff, preview-target automation, report activation env vars, asset cache-control fixes, any new trigger type."
+  },
+  "validation": {
+    "status": "pending",
+    "reviewer": "orchestrator quality gate (des-verify-integrity --roadmap-only)",
+    "approved_at": ""
+  }
+}

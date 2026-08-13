@@ -475,7 +475,11 @@ const WRITE_URL_FUNCTION_NAMES: readonly string[] = [
 
 const declaredRealTimeouts: Readonly<Record<string, number>> = {
   [functionNames.fetch]: 60,
-  [functionNames.build]: 120,
+  // 420 = Build's own ~2 min plus the whole 300 s the Publisher may now take:
+  // Build waits synchronously for the Publisher's answer
+  // (adr-weather-to-site-bridge.md "Consequences"; moved 120 -> 420 in the
+  // same commit as the Publisher's declaration below).
+  [functionNames.build]: 420,
   [functionNames.report]: 5,
   [functionNames.mint]: 5,
   [functionNames.push]: 5,
@@ -486,7 +490,30 @@ const declaredRealTimeouts: Readonly<Record<string, number>> = {
   [functionNames['photo-presign']]: 5,
   [functionNames.resize]: 60,
   [functionNames.breaker]: 10,
+  // The bounded Publisher (weather-to-site-bridge slice-02): a tenth
+  // function, container-image packaged, reserved concurrency 1, timeout 300 s
+  // (adr-weather-to-site-bridge.md "Bounded means, concretely").
+  [functionNames.publish]: 300,
 };
+
+// Every function's timeout stayed inside the shared 120 s ceiling until this
+// slice. Build and the Publisher now carry their own reviewed, wider bounds
+// (the synchronous publish wait); every other function keeps the original
+// ceiling. A per-function map, not a single deleted assertion -- the
+// guardrail still bounds every function, just not identically.
+const DEFAULT_TIMEOUT_CEILING_SECONDS = 120;
+const declaredRealTimeoutCeilings: Readonly<Record<string, number>> = {
+  [functionNames.build]: 420,
+  [functionNames.publish]: 300,
+};
+// A SECOND, independent bound: the per-function ceiling above pins each
+// function to its own declared value, which would silently pass if Build's
+// AND its ceiling were both raised together in a later change. This project-
+// wide reviewed ceiling is deliberately its own constant, not derived from
+// declaredRealTimeoutCeilings, so it still catches that case. 420 s is the
+// reviewed reason named by the ADR: Build's own ~2 min plus the whole 300 s
+// the Publisher may take (adr-weather-to-site-bridge.md "Consequences").
+const REVIEWED_TIMEOUT_CEILING_SECONDS = 420;
 
 const declaredRealReservedConcurrency: Readonly<Record<string, number>> = {
   [functionNames.fetch]: 2,
@@ -498,6 +525,9 @@ const declaredRealReservedConcurrency: Readonly<Record<string, number>> = {
   [functionNames['photo-presign']]: writeReservedConcurrency['photo-presign'],
   [functionNames.resize]: 2,
   [functionNames.breaker]: 2,
+  // One cycle at a time: two publishers racing would upload two different
+  // renders of the same hour over each other (adr-weather-to-site-bridge.md).
+  [functionNames.publish]: 1,
 };
 
 function allRealResources(type: string): SynthesizedResource[] {
@@ -514,7 +544,7 @@ describe('real stack guardrails: Lambda cost caps (guardrails 1 and 2)', () => {
       reserved: numberProperty(properties, 'ReservedConcurrentExecutions'),
     }));
 
-  it('deploys exactly the nine declared functions, no strays', () => {
+  it('deploys exactly the ten declared functions, no strays', () => {
     expect(functions.map(({ name }) => name).sort())
       .toEqual(Object.keys(declaredRealTimeouts).sort());
   });
@@ -522,7 +552,10 @@ describe('real stack guardrails: Lambda cost caps (guardrails 1 and 2)', () => {
   it('gives every real function its declared timeout, never the 900 s default', () => {
     for (const fn of functions) {
       expect(fn.timeout, `${fn.name} timeout`).toBe(declaredRealTimeouts[fn.name]);
-      expect(fn.timeout, `${fn.name} exceeds the 120 s ceiling`).toBeLessThanOrEqual(120);
+      expect(fn.timeout, `${fn.name} exceeds its per-function ceiling`)
+        .toBeLessThanOrEqual(declaredRealTimeoutCeilings[fn.name] ?? DEFAULT_TIMEOUT_CEILING_SECONDS);
+      expect(fn.timeout, `${fn.name} exceeds the reviewed project-wide ceiling`)
+        .toBeLessThanOrEqual(REVIEWED_TIMEOUT_CEILING_SECONDS);
     }
   });
 
@@ -533,7 +566,7 @@ describe('real stack guardrails: Lambda cost caps (guardrails 1 and 2)', () => {
     }
   });
 
-  it('keeps the account-wide reservation sum at the documented 14, so quota >= 114 is the deploy precondition', () => {
+  it('keeps the account-wide reservation sum at the documented 15, so quota >= 115 is the deploy precondition', () => {
     const sum = functions.reduce((total, fn) => total + fn.reserved, 0);
     expect(sum).toBe(reservedConcurrencySum);
   });
@@ -627,6 +660,20 @@ describe('real stack guardrails: ingest scheduling and the dead-man signal chain
     const buildLogicalId = synthesizedResources('AWS::Lambda::Function', realTemplates.ingest)
       .find(({ properties }) => stringProperty(properties, 'FunctionName') === functionNames.build)?.logicalId;
     expect(resolvedFunctionArnTarget(target)).toBe(buildLogicalId);
+  });
+
+  // covers: the platform review's HIGH-1 (the Publisher had no caller). The
+  // deployed Build handler composes defaultInvokePublisher() from
+  // PUBLISH_FUNCTION_NAME, so this wiring is what makes the handoff real:
+  // without it the Build Lambda refuses loudly at composition instead of
+  // silently never publishing.
+  it("hands Build the Publisher's physical name through its environment, so the deployed handler can address it", () => {
+    const build = synthesizedResources('AWS::Lambda::Function', realTemplates.ingest)
+      .find(({ properties }) => stringProperty(properties, 'FunctionName') === functionNames.build);
+    if (!build) throw new Error('expected the Build function in the ingest template');
+    const environment = build.properties.Environment as Readonly<Record<string, unknown>>;
+    const variables = environment.Variables as Readonly<Record<string, unknown>>;
+    expect(variables.PUBLISH_FUNCTION_NAME).toBe(functionNames.publish);
   });
 
   it('turns fetch log lines into the IngestSuccess and ProviderErrors metrics the alarms watch', () => {
@@ -775,7 +822,64 @@ describe('real stack guardrails: ingest scheduling and the dead-man signal chain
     expect(rendered).not.toContain('s3:DeleteObject');
     expect(rendered).not.toContain('lambda:PutFunctionConcurrency');
   });
+
+  // The two assertions below mirror the weather-to-site-bridge acceptance
+  // suite's Publisher-boundary scenarios into the fast infra gate (the
+  // platform review's short-term ask), so a widening grant is caught by
+  // test:infra alone, without running cucumber.
+  it('never lets the Publisher list or delete anything, in any statement, regardless of effect', () => {
+    const statements = publisherRoleStatements();
+    expect(statements.length).toBeGreaterThan(0);
+    const actions = statements.flatMap((statement) => {
+      const action = statement['Action'];
+      return Array.isArray(action) ? action.map(String) : [String(action)];
+    });
+    for (const action of actions) {
+      expect(
+        action,
+        'the Publisher walks the pages it just rendered and puts each one; it never asks the store what is there and can never erase',
+      ).not.toMatch(/list|delete/i);
+    }
+  });
+
+  it('denies the Publisher every surface it never writes, including the ones Build owns: v1/*, log/* and the root manifest.json', () => {
+    const statements = publisherRoleStatements();
+    const deny = statements.find((statement) => statement['Effect'] === 'Deny');
+    if (!deny) throw new Error('expected the narrowing Deny statement on the Publisher role');
+    const resources = JSON.stringify(deny['Resource']);
+    for (const suffix of ['/raw/*', '/predictions/*', '/probes/*', '/photos/*', '/learned/*', '/v1/*', '/log/*', '/manifest.json'] as const) {
+      expect(resources, `the Publisher's Deny must cover ${suffix}`).toContain(suffix);
+    }
+  });
 });
+
+/** Every IAM statement attached to the Publisher's execution role, from both
+ * the CDK-managed DefaultPolicy resources and any policies inlined on the
+ * role itself, so nothing can dodge the no-List/no-Delete net by choosing a
+ * different attachment mechanism. */
+function publisherRoleStatements(): readonly Readonly<Record<string, unknown>>[] {
+  const publisher = synthesizedResources('AWS::Lambda::Function', realTemplates.ingest)
+    .find(({ properties }) => stringProperty(properties, 'FunctionName') === functionNames.publish);
+  if (!publisher) throw new Error('expected the Publisher function in the ingest template');
+  const role = publisher.properties['Role'] as Readonly<{ 'Fn::GetAtt'?: readonly string[] }>;
+  const roleLogicalId = role['Fn::GetAtt']?.[0];
+  if (roleLogicalId === undefined) throw new Error('expected the Publisher to reference its role by Fn::GetAtt');
+
+  type PolicyDocument = Readonly<{ Statement?: readonly Readonly<Record<string, unknown>>[] }>;
+  const statements: Readonly<Record<string, unknown>>[] = [];
+  for (const policy of synthesizedResources('AWS::IAM::Policy', realTemplates.ingest)) {
+    const roles = (policy.properties['Roles'] ?? []) as readonly Readonly<Record<string, unknown>>[];
+    if (!roles.some((reference) => reference['Ref'] === roleLogicalId)) continue;
+    statements.push(...(((policy.properties['PolicyDocument'] as PolicyDocument).Statement) ?? []));
+  }
+  const roleResource = synthesizedResources('AWS::IAM::Role', realTemplates.ingest)
+    .find(({ logicalId }) => logicalId === roleLogicalId);
+  const inlinePolicies = (roleResource?.properties['Policies'] ?? []) as readonly Readonly<Record<string, unknown>>[];
+  for (const inlinePolicy of inlinePolicies) {
+    statements.push(...(((inlinePolicy['PolicyDocument'] as PolicyDocument).Statement) ?? []));
+  }
+  return statements;
+}
 
 describe('real stack guardrails: the write path (guardrails 1, 6; 07-write-path 7.2)', () => {
   it('keeps the store PROVISIONED at exactly 25/25 so it throttles free instead of billing', () => {

@@ -92,10 +92,26 @@ export class ObservabilityStack extends Stack {
     deadMan.addAlarmAction(snsAction);
     deadMan.addOkAction(snsAction);
 
+    // Retargeted 2026-08-13 (weather-to-site-bridge slice-02) from
+    // BuildSuccess to PublishSuccess: the design already sits at 10 of the
+    // 10 CloudWatch alarms system-architecture.md section 12 budgets as a
+    // perpetual free tier, so a dedicated publish dead-man would be an
+    // eleventh. Retargeting instead of adding strictly dominates the old
+    // watch as a staleness detector -- Build hands over to the Publisher
+    // only after build.success, and the Publisher logs publish.success only
+    // after every PUT completed, so one publish.success line implies the
+    // whole chain worked. What is given up is differential paging between
+    // "build failed" and "built but never published"; both stay diagnosable
+    // from the build.refused / publish.refused / health.publish.handoff_failed
+    // log lines. Decision recorded in feature-delta.md and
+    // adr-weather-to-site-bridge.md section 5's 2026-08-13 amendment. The
+    // alarm's physical name and CDK logical id are kept stable on purpose
+    // (avoids an unforced CloudFormation replacement); only the metric it
+    // watches and its description change.
     const buildDeadMan = new cloudwatch.Alarm(this, 'BuildDeadMansSwitch', {
       alarmName: 'surfs-up-panama-build-dead-mans-switch',
-      alarmDescription: 'BuildSuccess absent for 2 consecutive hours: public forecast publication may be stale',
-      metric: new cloudwatch.Metric({ namespace: metricNamespace, metricName: 'BuildSuccess', statistic: 'Sum', period: Duration.hours(1) }),
+      alarmDescription: 'PublishSuccess absent for 2 consecutive hours: public forecast publication may be stale',
+      metric: new cloudwatch.Metric({ namespace: metricNamespace, metricName: 'PublishSuccess', statistic: 'Sum', period: Duration.hours(1) }),
       threshold: 1,
       comparisonOperator: cloudwatch.ComparisonOperator.LESS_THAN_THRESHOLD,
       evaluationPeriods: 2,

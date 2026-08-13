@@ -14,6 +14,7 @@
 // never masquerades as a synthetic prediction receipt.
 
 import type { BuildOutcome, IngestOutcome } from '../ports';
+import type { PublishOutcome } from '../publish-site';
 
 export const INGEST_SUCCESS_EVENT = 'ingest.success';
 export const PROVIDER_ERROR_EVENT = 'provider.error';
@@ -21,6 +22,10 @@ export const BUILD_SUCCESS_EVENT = 'build.success';
 /** Informational only: no metric filter watches this. Lets a human read why
  * an hourly build cycle produced no new page without paging anyone. */
 export const BUILD_REFUSED_EVENT = 'build.refused';
+export const PUBLISH_SUCCESS_EVENT = 'publish.success';
+/** Informational only, same reason as BUILD_REFUSED_EVENT: lets a human read
+ * why a publish cycle left the previous pages serving without paging anyone. */
+export const PUBLISH_REFUSED_EVENT = 'publish.refused';
 export const STARTUP_REFUSED_EVENT = 'health.startup.refused';
 /** Informational only: no metric filter watches this. A provider restated an
  * already-archived hour with a different forecast under the same run stamp and
@@ -28,6 +33,12 @@ export const STARTUP_REFUSED_EVENT = 'health.startup.refused';
  * a human reading it means the upstream contradicted itself. */
 export const ARCHIVE_REWRITE_REFUSED_EVENT = 'health.archive.rewrite_refused';
 export const CYCLE_FROZEN_EVENT = 'health.provider.cycle_frozen';
+/** Informational only, same reason as BUILD_REFUSED_EVENT: lets a human read
+ * why an hour's handover to the publisher could not be delivered, without
+ * paging anyone. The build itself already succeeded (this line is only ever
+ * printed after build.success), and the next hourly cycle republishes
+ * everything anyway because publication is additive-only. */
+export const PUBLISH_HANDOFF_FAILED_EVENT = 'health.publish.handoff_failed';
 export const UNCHANGED_CYCLE_EVENT = 'ingest.cycle_unchanged';
 
 export type LogLine = Readonly<Record<string, unknown>>;
@@ -70,4 +81,16 @@ export function deriveBuildLogLines(outcome: BuildOutcome): readonly LogLine[] {
     return [{ event: BUILD_SUCCESS_EVENT, build_id: outcome.build_id }];
   }
   return [{ event: BUILD_REFUSED_EVENT, reason: outcome.reason }];
+}
+
+/**
+ * The publish honesty gate, same pattern as deriveBuildLogLines: `published`
+ * is structurally impossible on a PublishOutcome unless runPublishOnce
+ * completed every put, so this derivation cannot itself invent a success.
+ */
+export function derivePublishLogLines(outcome: PublishOutcome): readonly LogLine[] {
+  if (outcome.published) {
+    return [{ event: PUBLISH_SUCCESS_EVENT, build_id: outcome.build_id }];
+  }
+  return [{ event: PUBLISH_REFUSED_EVENT, reason: outcome.reason }];
 }
