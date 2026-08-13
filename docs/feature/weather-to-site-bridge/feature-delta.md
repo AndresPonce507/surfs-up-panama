@@ -732,3 +732,51 @@ stack.
    applicable"*, because both steps are `surface_classification=non-visual` — even though the
    slice-01 charter explicitly commissions a non-visual CLI examination. The verdict was written
    into the charter's Session log by hand instead.
+
+## Wave: DELIVER / [REF] Review remediation 2026-08-13: both deploy blockers closed, short-term items done
+
+The independent platform review conditionally approved slice-02's infra (`4c1467b`, `c38e98f`
+defect-free on their own scope) behind two blockers. Both are closed on this branch, test-first,
+on the rebased base (`origin/main` 50a42ee).
+
+- **HIGH-1 closed (`61e78ff`) — the Publisher has a real caller now.** The deployed handler
+  called `runBuild()` bare, so `overrides.invokePublisher` was always undefined and
+  `handOverToPublisher` silently no-oped: the feature's whole premise did not execute outside
+  tests, and the retargeted dead-man would have paged forever, correctly but uselessly. The fix
+  follows `defaultStore`'s composition pattern: `handler` composes `productionBuildOverrides()`,
+  whose `defaultInvokePublisher` sends one `InvokeCommand` (`InvocationType: 'RequestResponse'`)
+  addressed by the `PUBLISH_FUNCTION_NAME` the ingest stack now wires beside `BUCKET_NAME`, from
+  the same `functionNames.publish` single source of truth. The SDK client is capped
+  `maxAttempts: 1` explicitly — the template's `MaximumRetryAttempts: 0` governs async invokes
+  only and is inert on this synchronous path; the SDK default of 3 attempts x 300 s behind
+  reserved concurrency 1 would serialize to ~900 s against Build's 420 s budget and triple-bill
+  a wedged render. A `FunctionError` answer surfaces as a rejection so Build writes down the
+  failed handover. Guardrails now pin the env wiring (`test:infra`), and three deliberate
+  mutants (empty production overrides, uncapped client, injected `s3:ListBucket`) were each
+  killed and reverted — the guards are falsifiable, not decorative.
+  - Scope note: Build's composition root gained a third required setting. The DISTILL pin
+    "exactly `BUCKET_NAME` + `PUBLIC_SITE_ORIGIN`" binds the *Publisher's* front door
+    (untouched); Build's own root already refused loudly on missing env in the house
+    WHAT/WHY/HOW shape, and `PUBLISH_FUNCTION_NAME` joins that same contract.
+- **HIGH-2 closed (`89a3440`) — runbook matches the alarm.**
+  `docs/demo/weather-ingestion-release-readiness-2026-08-11.md` now states the dead-man watches
+  `PublishSuccess` (threshold: no `publish.success` by the second `:22` cycle after a successful
+  Fetch), why the physical name still says build, and that the Observability deploy is **gated
+  on the map-manifest portability fix**, not merely ordered last.
+- **Short-term items closed (`035b115`).** The Publisher's narrowing Deny now also covers
+  `v1/*`, `log/*` and the root `manifest.json` (surfaces Build owns; the rendered dist never
+  touches them — it carries `manifest.webmanifest` and no `v1/` or `log/` directory). The
+  acceptance suite's no-List/no-Delete guarantee is mirrored into
+  `infra/test/guardrails.test.ts` over both DefaultPolicy and role-inlined statements, so a
+  widening grant reds `test:infra` alone.
+- **gitleaks:** HEAD-reachable history verified clean
+  (`gitleaks detect --source . --config gitleaks.toml --redact --no-banner --log-opts="HEAD"`,
+  exit 0). The tripping assertion prose was already reworded in the current commits; the known
+  offender `dde8651` is an orphaned pre-rebase object in the shared store, unreachable from this
+  branch, and reds other lanes' full-store scans until it is garbage-collected.
+- **Vera:** N/A recorded — both remediation surfaces are the roadmap's `non-visual`
+  pipeline/infra steps, examined through their terminal gates per the slice classifications.
+
+**The lane's deploy posture is unchanged:** slice-02 is now genuinely deploy-ready on its own
+scope, but the map-manifest portability blocker (maps lane) still stops every live publish
+cycle, slice-01 DoD 6 stays unmet, and Observability stays gated on that fix.
