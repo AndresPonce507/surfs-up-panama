@@ -28,6 +28,11 @@ export const functionNames = {
   'photo-presign': 'surfs-up-panama-photo-presign',
   resize: 'surfs-up-panama-resize',
   breaker: 'surfs-up-panama-breaker',
+  // The tenth function: the nightly observation export + abuse signals
+  // (07-write-path.md section 2's function table row `export`;
+  // adr-observation-export.md). Scheduled at 00:30 UTC, never on the
+  // request path.
+  export: 'surfs-up-panama-export',
 } as const;
 
 export const opsAlarmTopicName = 'surfs-up-panama-alarms';

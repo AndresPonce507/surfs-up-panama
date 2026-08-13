@@ -1,0 +1,76 @@
+{
+  "schema_version": "3.0",
+  "feature_id": "f-observation-export",
+  "events": [
+    {
+      "sid": "01-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "resumed post allocation pause; checkpoint 9487288 rebased clean onto origin/main 50a42ee; roadmap criteria and requirement checklist reread",
+      "t": "2026-08-13T12:34:03Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "4 @step-01-02 scenarios authored pre-pause rode the checkpoint; on resume the focused run is green (at-0102-resume.log EXIT=0); red evidence for the resumed work supplied at unit level",
+      "t": "2026-08-13T12:34:03Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "composition test proven falsifiable: spots load deliberately broken, vitest exit 1 for the right reason (red-0102-composition-falsifiability.log); revert verified by empty git diff",
+      "t": "2026-08-13T12:34:03Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "units 18/18 EXIT=0 (unit-export-resume.log); focused ATs 4/4 EXIT=0; whole-feature 9 scenarios 245 steps EXIT=0 (at-feature-resume.log); dynamodb-local reader integration 2/2 EXIT=0 (dynamodb-export-resume.log); Vera N/A: non-visual step per roadmap non_visual_rationale",
+      "t": "2026-08-13T12:34:03Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "sealed on build/observation-export as the step 01-02 seal commit (subject: feat(export): seal step 01-02 with the composition proven and the bucket key made unsplittable); evidence log paths in the commit body",
+      "t": "2026-08-13T12:35:29Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "precedents read: notify block + NotifySchedule idiom, report/mint tryBundle asset, copyLaunchSeedFiles hook, guardrails roster maps, staged-asset assertion helper, ADR D7 DISABLED schedule, 07 section 2 export row (RC1/120s/512MB/00:30Z); plan: red wiring test first, then WriteStack Export block + lockstep, plus bundled seed-path fix in the composition root per fetch-handler precedent",
+      "t": "2026-08-13T12:40:03Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "SKIPPED",
+      "d": "NOT_APPLICABLE: cucumber N/A for infra per house style (roadmap scenario_name field); the vitest template suite is the acceptance surface for this step",
+      "t": "2026-08-13T12:41:40Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "observation-export-wiring.test.ts authored first: 10/10 failed, 7 on 'missing Lambda surfs-up-panama-export', EXIT=1 (red-0103-wiring.log)",
+      "t": "2026-08-13T12:41:40Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "wiring 10/10 then 11/11 after lockstep refactor; test:infra 12 files 107/107 EXIT=0 (green-0103-testinfra-final.log); synth:infra credential-free EXIT=0; feature ATs 9 scenarios 245 steps EXIT=0; export units 18/18 EXIT=0; falsifiability: IAM widened with GetObject broke exactly 2 tests EXIT=1 (red-0103-iam-falsifiability.log), schedule flipped ENABLED broke exactly the D7 test EXIT=1 (red-0103-disabled-falsifiability.log), both reverted and re-proven green; staged-asset test caught a REAL defect: CDK AssetStaging cache reuse handed the export fn the report-mint bundle until a serializable bundling discriminator was added; Vera N/A: non-visual step per roadmap non_visual_rationale",
+      "t": "2026-08-13T12:48:35Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "sealed on build/observation-export (subject: feat(export): declare the nightly export in WriteStack with an exact role and a DISABLED first night); evidence log paths in the commit body",
+      "t": "2026-08-13T12:49:11Z"
+    }
+  ]
+}

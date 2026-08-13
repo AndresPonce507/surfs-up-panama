@@ -29,6 +29,7 @@ import {
 } from '../lib/guardrail-declarations.js';
 import {
   breakerInvocationThresholds,
+  exportReservedConcurrency,
   notifyReservedConcurrency,
   reservedConcurrencySum,
   writeReservedConcurrency,
@@ -494,6 +495,9 @@ const declaredRealTimeouts: Readonly<Record<string, number>> = {
   // function, container-image packaged, reserved concurrency 1, timeout 300 s
   // (adr-weather-to-site-bridge.md "Bounded means, concretely").
   [functionNames.publish]: 300,
+  // The eleventh: the nightly observation export (07-write-path.md section 2's
+  // row `export`), sharing the declared `timeout-notify-export` row.
+  [functionNames.export]: 120,
 };
 
 // Every function's timeout stayed inside the shared 120 s ceiling until this
@@ -528,6 +532,7 @@ const declaredRealReservedConcurrency: Readonly<Record<string, number>> = {
   // One cycle at a time: two publishers racing would upload two different
   // renders of the same hour over each other (adr-weather-to-site-bridge.md).
   [functionNames.publish]: 1,
+  [functionNames.export]: exportReservedConcurrency,
 };
 
 function allRealResources(type: string): SynthesizedResource[] {
@@ -544,7 +549,7 @@ describe('real stack guardrails: Lambda cost caps (guardrails 1 and 2)', () => {
       reserved: numberProperty(properties, 'ReservedConcurrentExecutions'),
     }));
 
-  it('deploys exactly the ten declared functions, no strays', () => {
+  it('deploys exactly the eleven declared functions, no strays', () => {
     expect(functions.map(({ name }) => name).sort())
       .toEqual(Object.keys(declaredRealTimeouts).sort());
   });
@@ -566,7 +571,7 @@ describe('real stack guardrails: Lambda cost caps (guardrails 1 and 2)', () => {
     }
   });
 
-  it('keeps the account-wide reservation sum at the documented 15, so quota >= 115 is the deploy precondition', () => {
+  it('keeps the account-wide reservation sum at the documented 16, so quota >= 116 is the deploy precondition', () => {
     const sum = functions.reduce((total, fn) => total + fn.reserved, 0);
     expect(sum).toBe(reservedConcurrencySum);
   });
