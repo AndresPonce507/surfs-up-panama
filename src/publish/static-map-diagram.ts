@@ -113,13 +113,14 @@ function orientationArrow(frame: DiagramFrame, bearingDeg: number): string {
 }
 
 /**
- * A single "N" at the top of the frame. Without it the arrow is a direction on a
- * blank field and means nothing; with it, it is a compass bearing a surfer can
- * read. It is one letter, the same in Spanish, and it is the only glyph the
- * asset carries.
+ * A single vector "N" at the top of the frame. Without it the arrow is a
+ * direction on a blank field and means nothing; with it, it is a compass
+ * bearing a surfer can read. Keeping its strokes in SVG avoids making the
+ * content-addressed raster depend on the deploy runtime's installed fonts.
  */
 function northTick(frame: DiagramFrame): string {
-  return `<text x="${frame.width / 2}" y="18" fill="${RING}" font-family="Helvetica,Arial,sans-serif" font-size="12" font-weight="700" text-anchor="middle" opacity="0.85">N</text>`;
+  const x = frame.width / 2;
+  return `<path data-compass-north="true" d="M${round(x - 4)} 18V6L${round(x + 4)} 18V6" fill="none" stroke="${RING}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.85"/>`;
 }
 
 /**
