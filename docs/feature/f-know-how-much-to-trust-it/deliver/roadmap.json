@@ -245,7 +245,7 @@
             "src/pipeline/adapters/open-meteo-source.ts",
             "tests/unit/source-registry.test.ts"
           ],
-          "implementation_notes": "The W4 amendment governs every pipeline path here: ports.ts types-only, ingest.ts source-loop-and-attribution only, build.ts and the lambda composition roots untouched in this step. Wiring the registry into capture-cli.ts and lambda/fetch-handler.ts is deliberately NOT this step: the acceptance contract composes the registry itself, and the composition-root wiring is a follow-up decision for the coordinator because it changes what the deployed Fetch Lambda does on its next human-run deploy. Recording that boundary here keeps the slice honest about what is live and what is code."
+          "implementation_notes": "The W4 amendment governs every pipeline path here: ports.ts types-only, ingest.ts source-loop-and-attribution only, and build.ts remains untouched. Recovery addendum 2026-08-13 wires one tested productionForecastSource factory into both capture-cli.ts and lambda/fetch-handler.ts, so the NOAA adapter is not only acceptance-composed. The factory keeps Open-Meteo first and invokes NOAA only when it cannot deliver. Fetch retains its S3 conditional-PUT startup probe but does not make Open-Meteo's clock-skew probe a prerequisite, because a dark primary must be allowed to fall through to the independent source. This is code only. The human-run SurfsUpPanamaIngest deploy remains required before the live Lambda can use the registry."
         }
       ]
     }

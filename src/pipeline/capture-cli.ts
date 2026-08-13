@@ -1,7 +1,7 @@
 // One-time, out-of-band real-data capture. NOT the deterministic, tested
-// `pipeline:build` path: this makes a real network call (Open-Meteo Marine +
-// Weather APIs) and its output is meant to be committed once, then read
-// repeatedly by `npm run pipeline:build`, which stays a pure function of the
+// `pipeline:build` path: this makes real network calls through the production
+// source registry (Open-Meteo primary, NOAA gfswave fallback) and its output
+// is meant to be committed once, then read repeatedly by `npm run pipeline:build`, which stays a pure function of the
 // committed snapshot + an explicit --at (nw-tdd-methodology "Determinism
 // Contract": real-adapter runs accept non-determinism as the cost of
 // environmental realism; deterministic InMemory-style tests are the fast
@@ -21,7 +21,7 @@ import { resolve } from 'node:path';
 
 import { runIngestOnce } from './ingest';
 import { FilesystemStore } from './adapters/filesystem-store';
-import { OpenMeteoForecastSource } from './adapters/open-meteo-source';
+import { productionForecastSource } from './adapters/source-registry';
 import { loadLaunchSpotCoordinates } from './adapters/spot-coordinates';
 import { loadLaunchSpotSeeds } from '../data/launch-spots';
 import type { Clock, ForecastSource, IngestOutcome } from './ports';
@@ -59,9 +59,10 @@ export async function runCapture(argv: readonly string[], overrides: CaptureOver
       {
         captured_at: startedAt,
         spots_requested: spots.length,
-        wave_endpoint: 'https://marine-api.open-meteo.com/v1/marine',
-        wind_endpoint: 'https://api.open-meteo.com/v1/forecast',
-        models: ['ncep_gfswave016', 'ncep_gfswave025', 'meteofrance_wave', 'dwd_gwam'],
+        wave_sources: {
+          primary: { provider: 'open-meteo-marine' },
+          fallback: { provider: 'noaa-gfswave', invocation: 'only when the primary wave source cannot deliver' },
+        },
         tide: {
           fetched: false,
           reason: 'no per-spot tide station reference exists in the spot seed schema yet (04-ingest-pipeline.md section 11, DELIVER BLOCKER); reusing one station for every spot would misattribute a real number to spots hundreds of km away',
@@ -86,7 +87,7 @@ function defaultSource(spots: readonly SpotSeed[], clock: Clock): ForecastSource
       throw new Error(`pipeline:capture refused: WHAT ${spot.spot_id} has no registered coordinate; WHY the forecast source needs a real lat/lon per spot; HOW add it to data/spots/pa-pacific.yaml or pass an explicit source override.`);
     }
   }
-  return new OpenMeteoForecastSource(bySpotId, clock);
+  return productionForecastSource(bySpotId, clock);
 }
 
 async function summarizeCoverage(store: FilesystemStore): Promise<{ readonly date: string; readonly sources_present: string[] }[]> {

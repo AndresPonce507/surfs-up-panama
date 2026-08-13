@@ -14,7 +14,7 @@ import { S3Client } from '@aws-sdk/client-s3';
 
 import { runIngestOnce } from '../ingest';
 import { S3Store } from '../adapters/s3-store';
-import { OpenMeteoForecastSource } from '../adapters/open-meteo-source';
+import { productionForecastSource } from '../adapters/source-registry';
 import { loadLaunchSpotCoordinates } from '../adapters/spot-coordinates';
 import type { Clock, ForecastSource, IngestOutcome, IngestStore } from '../ports';
 import type { SpotSeed } from '../../scoring/engine';
@@ -40,7 +40,7 @@ export async function runFetch(overrides: FetchOverrides = {}): Promise<IngestOu
   const store = overrides.store ?? defaultStore();
   const source = overrides.source ?? defaultSource(clock);
   const startupProbe = overrides.startup_probe ?? (overrides.store === undefined && overrides.source === undefined
-    ? async () => { await (store as S3Store).probeConditionalPut(); await (source as OpenMeteoForecastSource).probeClockSkew(); }
+    ? async () => { await (store as S3Store).probeConditionalPut(); }
     : undefined);
 
   const outcome = await runIngestOnce({
@@ -71,7 +71,7 @@ function defaultStore(): IngestStore {
 function defaultSource(clock: Clock): ForecastSource {
   const coordinates = loadLaunchSpotCoordinates(bundledLaunchSeedPaths.sourceSeedPath, bundledLaunchSeedPaths.policyPath);
   const bySpotId = new Map(coordinates.map((coordinate) => [coordinate.spot_id, coordinate]));
-  return new OpenMeteoForecastSource(bySpotId, clock);
+  return productionForecastSource(bySpotId, clock);
 }
 
 function requiredEnv(name: string): string {

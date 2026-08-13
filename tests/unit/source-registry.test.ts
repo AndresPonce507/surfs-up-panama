@@ -155,6 +155,47 @@ describe('registryForecastSource: fetch priority fold', () => {
 
     expect(result).toEqual({ ok: false, reason: 'stale' });
   });
+
+  it('wires the production primary and independent fallback through this registry', async () => {
+    type ProductionFactory = (
+      spotsById: ReadonlyMap<string, { readonly spot_id: string; readonly lat: number; readonly lon: number }>,
+      clock: { readonly now: () => Date },
+      fetchImpl: typeof fetch,
+    ) => ForecastSource;
+    const module = await import('../../src/pipeline/adapters/source-registry') as unknown as {
+      readonly productionForecastSource?: ProductionFactory;
+    };
+    if (typeof module.productionForecastSource !== 'function') {
+      throw new Error('the production source registry is not wired into the ForecastSource port');
+    }
+
+    const spots = new Map([['playa-venao', { spot_id: 'playa-venao', lat: 7.4320526, lon: -80.1928532 }]]);
+    const clock = { now: () => new Date('2026-08-13T08:02:14Z') };
+
+    const healthyUrls: string[] = [];
+    const healthyFetch: typeof fetch = async (input) => {
+      const url = String(input);
+      healthyUrls.push(url);
+      return new Response('{}', { status: 200 });
+    };
+    const healthy = await module.productionForecastSource(spots, clock, healthyFetch).fetchWavePayload('playa-venao');
+    expect(healthy).toMatchObject({ ok: true, provider: 'open-meteo-marine' });
+    expect(healthyUrls).toHaveLength(1);
+    expect(healthyUrls[0]).toContain('marine-api.open-meteo.com');
+
+    const darkPrimaryUrls: string[] = [];
+    const darkPrimaryFetch: typeof fetch = async (input) => {
+      const url = String(input);
+      darkPrimaryUrls.push(url);
+      return url.includes('marine-api.open-meteo.com')
+        ? new Response('', { status: 503 })
+        : new Response('GRIB2 fallback bytes', { status: 200 });
+    };
+    const fallback = await module.productionForecastSource(spots, clock, darkPrimaryFetch).fetchWavePayload('playa-venao');
+    expect(fallback).toMatchObject({ ok: true, provider: 'noaa-gfswave' });
+    expect(darkPrimaryUrls.filter((url) => url.includes('marine-api.open-meteo.com'))).toHaveLength(2);
+    expect(darkPrimaryUrls.filter((url) => url.includes('filter_gfswave.pl'))).toHaveLength(17);
+  });
 });
 
 describe('registryForecastSource: parse routing', () => {

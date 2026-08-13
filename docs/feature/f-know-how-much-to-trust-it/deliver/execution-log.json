@@ -134,6 +134,13 @@
       "s": "EXECUTED",
       "d": "PASS: registry + provider attribution implemented 2026-08-13 by nw-functional-software-crafter under HANDOFF waiver 2 (DES-exempt dispatch). Registry units 8/8 exit 0 (one fast-check property pinning priority order, zero-calls-past-the-winner and provider passthrough); full vitest 641 exit 0; tsc exit 0; slice-04 acceptance 5 scenarios / 135 steps exit 0 (.ci-local-logs/slice04-03-green-acceptance.log; re-verified by the orchestrator: slice04-03-orchestrator-acceptance.log exit 0); slice-01+03 focused regression 10 scenarios / 245 steps exit 0 (slice04-03-orchestrator-regression.log); ci-local --fast 11 passed / 0 failed / 0 skipped exit 0 (slice04-fast-gate.log). Two falsifiability probes red for the right reason and reverted: fallback consulted under a healthy primary -> 17 calls counted where the contract demands 0; provenance hardcoded back -> raw/noaa-gfswave/ empty. Mechanical type-conformance ripple from the required provider field recorded as a W4 addendum: daily-call support fakes (3 sites), tests/unit fetch-handler (3) capture-cli (2) ingest-window-rollforward (3), and infra/test/guardrails.test.ts (2 sites, outside the anticipated list, flagged and recorded). pgrep hygiene 0 after gates; an orphaned astro preview (PID 8120) from a prior session in this worktree was found and killed.",
       "t": "2026-08-13T13:44:39Z"
+    },
+    {
+      "sid": "04-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: recovery addendum after current-main reconciliation. The five-scenario slice-04 contract was re-run red first, exit 1 with every failure naming the absent source registry, then green 5 scenarios / 135 steps exit 0. The production registry factory was then driven red, exit 1 because it was absent, then green: healthy Open-Meteo made one request and zero NOAA requests; two failed primary attempts caused seventeen NOAA GRIB subset requests. Slice-03 exposed the merged optional-argument collision as a semantic red, 2 of 5 scenarios failed because a factor object was read as model-run age; the compatibility dispatch restored its sealed sixth-argument factor form while preserving the later numeric model-run age, and slice-03 passed 5 scenarios / 128 steps. Focused compatibility units 20/20, full vitest 660/660, tsc exit 0, build exit 0 with dist/index.html inspected. No deploy performed; fast gate and HEAD-only gitleaks remain the final branch checks.",
+      "t": "2026-08-13T14:49:41Z"
     }
   ]
 }

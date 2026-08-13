@@ -90,7 +90,7 @@ export function confidence(
    * the historical core-only call shape; the pipeline must supply a real age
    * from its archived `run_ts` values.
    */
-  model_run_age_h: number | null = null,
+  model_run_age_h_or_factors: number | null | ConfidenceFactors = null,
   // Defaults to today's live constant, not a hardcoded copy of it: the sole
   // production caller of this function is the ingest build (out of scope for
   // slice-03, `src/pipeline/**`), and a default that reads CONFIDENCE_FACTORS
@@ -99,6 +99,17 @@ export function confidence(
   // reads (`modelAgreement`, below) pass it explicitly and require it.
   factors: ConfidenceFactors = CONFIDENCE_FACTORS,
 ): ConfidenceResult {
+  // Slice-03 shipped the factor switch as the sixth argument while the later
+  // model-run-age fix made that same optional slot an age. Keep both sealed
+  // driving-port shapes: production passes a number, and the slice contract
+  // passes its factor data. Treating the data object as an age floors
+  // freshness and falsely pins the factor-off reading at low confidence.
+  const model_run_age_h = model_run_age_h_or_factors !== null && typeof model_run_age_h_or_factors === 'object'
+    ? null
+    : model_run_age_h_or_factors;
+  const effectiveFactors = model_run_age_h_or_factors !== null && typeof model_run_age_h_or_factors === 'object'
+    ? model_run_age_h_or_factors
+    : factors;
   const members = usableMembers(declaredMembers);
   const c_spread = spread.kind === 'climatology'
     ? spread.pct <= 20 ? 1 : spread.pct < 80 ? 0.7 : 0.35
@@ -109,7 +120,7 @@ export function confidence(
   // decay and conservative floor deliberately reuse the established report
   // freshness policy, so no new confidence-tuning constant is invented.
   const c_model_fresh = freshness(model_run_age_h) ?? 1;
-  const product = (factors.spread ? c_spread : 1) * c_track * (c_fresh ?? 1) * c_model_fresh;
+  const product = (effectiveFactors.spread ? c_spread : 1) * c_track * (c_fresh ?? 1) * c_model_fresh;
   const cap = Math.min(
     missing.includes('wind') ? 0.4 : 1,
     missing.includes('tide') ? 0.7 : 1,
@@ -120,7 +131,7 @@ export function confidence(
   // which is fabricated certainty. Forcing c_total itself to 0 (rather than
   // overriding `level` separately) keeps level a pure threshold projection
   // of c_total in every case, factor disabled or not.
-  const noUsableSignal = !factors.spread && track === null && c_fresh === null;
+  const noUsableSignal = !effectiveFactors.spread && track === null && c_fresh === null;
   const c_total = noUsableSignal ? 0 : Math.min(product, cap);
   const level = c_total <= 0.4 ? 'low' : c_total <= 0.7 ? 'medium' : 'high';
   const spread_terms = spread.kind === 'climatology'
@@ -130,7 +141,7 @@ export function confidence(
     ? 'missing_data'
     : noUsableSignal
       ? null
-      : dominantConfidenceTerm(spread_terms, c_track, c_fresh, c_model_fresh, factors);
+      : dominantConfidenceTerm(spread_terms, c_track, c_fresh, c_model_fresh, effectiveFactors);
 
   return {
     c_spread,

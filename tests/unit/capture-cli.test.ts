@@ -87,10 +87,18 @@ describe('runCapture (one-time real-data snapshot composition root)', () => {
     const provenance = JSON.parse(await readFile(result.provenancePath, 'utf8')) as {
       captured_at: string;
       tide: { fetched: boolean };
+      wave_sources: {
+        primary: { provider: string };
+        fallback: { provider: string; invocation: string };
+      };
       coverage: { date: string; sources_present: string[] }[];
     };
     expect(provenance.captured_at).toBe('2026-08-09T14:00:00.000Z');
     expect(provenance.tide.fetched).toBe(false);
+    expect(provenance.wave_sources).toEqual({
+      primary: { provider: 'open-meteo-marine' },
+      fallback: { provider: 'noaa-gfswave', invocation: 'only when the primary wave source cannot deliver' },
+    });
     expect(provenance.coverage.find((c) => c.date === '2026-08-09')?.sources_present).toEqual(['ncep_gfswave016']);
   });
 });

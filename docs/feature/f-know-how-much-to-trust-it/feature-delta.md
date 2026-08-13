@@ -320,6 +320,17 @@ law L9 continues to hold because nothing here becomes readable by `combine()`),
 change lands as code; `SurfsUpPanamaIngest` redeployment remains a human-run step outside this
 lane, exactly as the archive-key change of 2026-08-13 was handled.
 
+**Recovery addendum, 2026-08-13.** `productionForecastSource()` now declares the same
+priority registry once and both W4-authorized composition roots call it. The Open-Meteo primary
+still owns healthy four-member captures. A source-level failure reaches the raw NOAA fallback,
+which records its own provider name and supplies only the one independent `ncep_gfswave016`
+series. The Fetch startup probe retains the S3 conditional-PUT check but no longer treats the
+primary's clock-skew probe as a gate, because that would prevent the fallback from doing the work
+this slice exists to provide. The focused registry test first failed because the factory was
+absent, then proved both paths with injected network responses: one healthy primary request and
+zero NOAA requests, then two failed primary attempts and seventeen NOAA GRIB subsets. This does
+not deploy the code or claim that the live Lambda has changed.
+
 ## Wave: DELIVER / [REF] Wave decisions
 
 | # | Decision | Made by | Rationale |

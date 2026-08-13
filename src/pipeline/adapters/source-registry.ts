@@ -15,11 +15,36 @@
 // so the registry never needs to remember which entry it consulted last.
 
 import type { ForecastSource, ReceivedSourcePayload, SourceResult } from '../ports';
+import type { Clock } from '../ports';
+import { NoaaGfswaveForecastSource } from './noaa-gfswave-source';
+import { OpenMeteoForecastSource } from './open-meteo-source';
+import type { SpotCoordinate } from './spot-coordinates';
 
 export type RegistryEntry = {
   readonly id: string;
   readonly source: ForecastSource;
 };
+
+/**
+ * The production composition of the two wave vendors. The primary remains
+ * Open-Meteo because it is the four-member launch source. NOAA is the
+ * independent public-domain fallback for a dark primary, never a second copy
+ * of a healthy primary's GFS member.
+ *
+ * This factory is deliberately at the adapter boundary rather than in either
+ * composition root, so capture and Lambda Fetch cannot drift into different
+ * provider order or silently leave the NOAA adapter reachable only from tests.
+ */
+export function productionForecastSource(
+  spotsById: ReadonlyMap<string, SpotCoordinate>,
+  clock: Clock,
+  fetchImpl: typeof fetch = fetch,
+): ForecastSource {
+  return registryForecastSource([
+    { id: 'open-meteo', source: new OpenMeteoForecastSource(spotsById, clock, fetchImpl) },
+    { id: 'noaa-gfswave', source: new NoaaGfswaveForecastSource(spotsById, clock, fetchImpl) },
+  ]);
+}
 
 export function registryForecastSource(entries: readonly RegistryEntry[]): ForecastSource {
   return {
