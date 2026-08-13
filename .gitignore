@@ -25,3 +25,4 @@ dist/
 
 # CDK synth output — regenerated every synth, never project content
 cdk.out/
+.acceptance-endpointless-dist/
