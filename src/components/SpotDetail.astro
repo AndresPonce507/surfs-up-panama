@@ -5,6 +5,16 @@
 // static map and report photos arrive with their data contracts; not
 // scaffolded because each would mean inventing content the bundle owns.
 //
+// The water treatment (the same system RankedList.astro ships on the home
+// routes) lives entirely in this component under its own sd- namespace:
+// markup below, one scoped style block, one inline script. The two routes
+// share the GLOBAL tokens (tokens.css) but never a scoped selector, so their
+// styles cannot collide and every other route's bytes stay flat (reportado
+// sits within tens of bytes of its 4 KB ceiling -- the same budget decision
+// Breakdown.astro records). Copies of the dg-* water values are declared as
+// sd-* custom properties below, byte for byte, because RankedList's scoped
+// block only ships on ranked-list documents and this page never receives it.
+//
 // The two Breakdown mounts are the shared-host edit slice-04 records as X10.
 // Each day section passes its own day index, so each reads its own selected
 // hour and its own published weakest_link; nothing is shared between them.
@@ -14,11 +24,20 @@
 // surface says the same thing about the same wave (application-architecture.md
 // section 10, decision 18). When a spot has no structured size or window yet,
 // the page says so in words rather than showing nothing or a raw value.
+//
+// CONTRAST CONTRACT (the seven visual checks read h1, section p,
+// section strong and every [data-field] against the BODY background): all
+// reading text on this page sits on light surfaces in ink tokens. The deep
+// water band is a BACKDROP ONLY, aria-hidden, pointer-events none; the two
+// day cards are solid --surface riding on it. Nothing textual ever wears
+// --hero-ink here.
 import Base from '../layouts/Base.astro';
 import CopyControl from './CopyControl.astro';
 import ShareControls from './ShareControls.astro';
 import { forecast, type DaySummary } from '../data/forecast';
 import { spotById } from '../data/region';
+import { CONFIDENCE_FACTORS, modelAgreement, type ModelAgreement } from '../scoring/confidence';
+import { bestWindowSpan } from '../render/best-window';
 import { strings, type Locale } from '../i18n/strings';
 import { paths } from '../i18n/routes';
 import { formatBestWindowEs, formatSizeEs, formatUpdatedAtEs } from '../publish/display-format';
@@ -28,6 +47,8 @@ import WeakestLink from './WeakestLink.astro';
 import StaticMap from './StaticMap.astro';
 import TrackRecordBox from './TrackRecordBox.astro';
 import PushSettings from './PushSettings.astro';
+import Confidence from './Confidence.astro';
+import mapManifest from '../../data/maps/pa-pacific-map-manifest.json';
 
 interface Props {
   locale: Locale;
@@ -66,8 +87,40 @@ function windowText(summary: DaySummary | undefined): string {
   return formatBestWindowEs(summary.best_window);
 }
 
+/**
+ * How the models compared for this row. Same reading, same rationale as
+ * RankedList.astro's agreementFor (the component Confidence.astro names as
+ * this page's intended second caller): a row published before
+ * `confidence_reason` existed reads `unknown` and falls back to the older
+ * level-only sentence, which is a stated absence rather than an invented
+ * agreement. Reading the terms needs the level too, because zero terms are
+ * ambiguous: they mean perfect agreement OR a single member, and only a level
+ * above `low` proves two or more members took part.
+ */
+function agreementFor(summary: DaySummary): ModelAgreement {
+  if (summary.confidence_reason === undefined || summary.conf_level === undefined) {
+    return { kind: 'unknown' };
+  }
+  return modelAgreement(summary.confidence_reason.spread_terms, summary.conf_level, CONFIDENCE_FACTORS);
+}
+
 const today = summaryFor(0);
 const tomorrow = summaryFor(1);
+
+// The daylight track draws only what bestWindowSpan can represent honestly; a
+// refused span renders NO track at all (stated absence, never an invented
+// bar). The sentence above it always carries the meaning; the track is
+// aria-hidden decoration.
+const todaySpan = today?.best_window === undefined ? undefined : bestWindowSpan(today.best_window);
+const tomorrowSpan = tomorrow?.best_window === undefined ? undefined : bestWindowSpan(tomorrow.best_window);
+
+// Layout-only existence probe: two launch beaches carry no citable
+// orientation and the manifest refuses them by name, in which case StaticMap
+// renders NOTHING -- and an empty card chrome around nothing would be exactly
+// the "empty box with a shrug" its header forbids. StaticMap remains the sole
+// reader of the row's CONTENTS; this reads presence only, from the same
+// manifest, so the two cannot disagree.
+const hasMap = (mapManifest.spots as Record<string, unknown>)[spotId] !== undefined;
 ---
 
 <Base
@@ -76,68 +129,727 @@ const tomorrow = summaryFor(1);
   currentPath={paths.spot(locale, spotId)}
   announcement={announcement}
 >
-  <h1>{spot.name}</h1>
-  <p><time datetime={forecast.published_at}>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</time></p>
-  <p data-stale-notice hidden style="color:var(--warn);font-size:var(--text-meta);font-weight:600"></p>
-  <script is:inline>const t=document.querySelector('time[datetime]'),n=document.querySelector('[data-stale-notice]');if(t&&n&&Date.now()-Date.parse(t.dateTime)>108e5){const d=new Date(t.dateTime),h=(d.getUTCHours()+19)%24;n.hidden=!1;n.textContent=`Viejo. Lo último que vimos fue a las ${h%12||12}:${String(d.getUTCMinutes()).padStart(2,'0')} ${h<12?'a.m.':'p.m.'} No pudimos sacar datos nuevos esta mañana.`}</script>
-  <nav>
-    <a data-field="back-to-list" href={paths.home(locale)}>Volver a la lista</a>
-  </nav>
-  <section data-day="today">
-    <h2>{t.home.tabToday}</h2>
+  {/* The sea: same three rolling swells and --bg edge wave as home, absolute
+      behind the content, never interactive, never announced. Decorative
+      layers only; the contrast the page is audited on lives on the cards. */}
+  <div class="sd-sea" aria-hidden="true">
+    <div class="sd-swell sd-s1"><svg viewBox="0 0 2880 150" preserveAspectRatio="none"><path d="M0,90 C240,50 480,130 720,95 C960,60 1200,120 1440,90 C1680,50 1920,130 2160,95 C2400,60 2640,120 2880,90 L2880,150 L0,150 Z"/></svg></div>
+    <div class="sd-swell sd-s2"><svg viewBox="0 0 2880 180" preserveAspectRatio="none"><path d="M0,110 C220,70 460,150 720,112 C980,74 1180,148 1440,110 C1660,70 1900,150 2160,112 C2420,74 2620,148 2880,110 L2880,180 L0,180 Z"/></svg></div>
+    <div class="sd-swell sd-s3"><svg viewBox="0 0 2880 200" preserveAspectRatio="none"><path d="M0,120 C260,80 480,165 720,125 C960,85 1200,160 1440,120 C1700,80 1920,165 2160,125 C2400,85 2640,160 2880,120 L2880,200 L0,200 Z"/></svg></div>
+    <svg class="sd-edge" viewBox="0 0 1440 110" preserveAspectRatio="none"><path d="M0,55 C180,20 360,90 540,60 C720,30 900,85 1080,58 C1260,32 1360,70 1440,50 L1440,110 L0,110 Z"/></svg>
+  </div>
+
+  {/* The way back: a fixed glass pill, top-right, mirror of .lang-toggle's
+      recipe (solid first, glass under @supports, solid again under reduced
+      transparency). The theme toggle owns top-left. The acceptance oracle
+      measures this element's rendered box against 44x44. */}
+  <a class="sd-back" data-field="back-to-list" href={paths.home(locale)}>
+    <span aria-hidden="true">‹</span> Volver a la lista
+  </a>
+
+  {/* Identity strip: a slim white card carrying the name (h1 textContent is
+      the spot name EXACTLY -- the oracle reads it), the publish stamp and the
+      staleness line, kept verbatim. It sits above BOTH day cards because the
+      two days share one identity; burying it inside today's card made today
+      look like the whole page. */}
+  <header class="sd-ident">
+    <h1>{spot.name}</h1>
+    <p class="sd-stamp"><time datetime={forecast.published_at}>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</time></p>
+    <p data-stale-notice hidden style="color:var(--warn);font-size:var(--text-meta);font-weight:600"></p>
+    <script is:inline>const t=document.querySelector('time[datetime]'),n=document.querySelector('[data-stale-notice]');if(t&&n&&Date.now()-Date.parse(t.dateTime)>108e5){const d=new Date(t.dateTime),h=(d.getUTCHours()+19)%24;n.hidden=!1;n.textContent=`Viejo. Lo último que vimos fue a las ${h%12||12}:${String(d.getUTCMinutes()).padStart(2,'0')} ${h<12?'a.m.':'p.m.'} No pudimos sacar datos nuevos esta mañana.`}</script>
+  </header>
+
+  {/* The two days ride the water TOGETHER, side by side on wide screens:
+      "¿hoy o mañana?" is the actual decision, so both halves of the answer
+      stay in one glance. Today keeps the louder voice (bigger ring); a
+      toggle was rejected on purpose -- this site refuses JS tabs
+      (adr-publish-time-html-rendering, same reason home's Hoy/Mañana are two
+      routes) and a toggle hides half the answer. */}
+  <div class="sd-days">
+  <section data-day="today" class="sd-hero">
+    <h2 class="sd-chip">{t.home.tabToday}</h2>
     {
       today ? (
         <>
-          <p><strong data-field="score">{today.score_q}</strong> {today.call[locale]}</p>
-          <p data-field="size">{sizeText(today)}</p>
-          <p data-field="window">{windowText(today)}</p>
-          <WeakestLink spotId={spotId} day={0} />
-          <Breakdown spotId={spotId} day={0} />
+          <div class="sd-callrow">
+            {/* The score wears the same drawn conic ring as home's hero, on
+                card tokens: --go arc, --sunken remainder, ink number. The
+                data-field element's textContent is ONLY the number. */}
+            <strong data-field="score" class="sd-ring" style={`--sd-score:${today.score_q}`}>{today.score_q}</strong>
+            <p class="sd-call">{today.call[locale]}</p>
+          </div>
+          <div class="sd-facts">
+            <div class="sd-fact">
+              {/* Labels live OUTSIDE the data-field elements: the oracle
+                  requires [data-field="size"]/[data-field="window"] to hold
+                  the formatter sentence and nothing else. "Olas" and "Mejor
+                  ventana" are the glance table's own established column
+                  words, not new copy. */}
+              <span class="sd-lbl">Olas</span>
+              <p data-field="size">{sizeText(today)}</p>
+            </div>
+            <div class="sd-fact">
+              <span class="sd-lbl">Mejor ventana</span>
+              <p data-field="window">{windowText(today)}</p>
+              {todaySpan !== undefined && (
+                <div class="sd-daylight" aria-hidden="true">
+                  <span class="sd-dl-track"><i style={`left:${todaySpan.left}%;width:${todaySpan.width}%`}></i></span>
+                  <span class="sd-dl-hours"><span>06:00</span><span>12:00</span><span>18:00</span></span>
+                </div>
+              )}
+            </div>
+          </div>
+          {/* The "why" panel: the culprit sentence and the four factor bars
+              are one story (what held the score down), so they share one
+              framed panel instead of floating loose in the card. The panel
+              hides itself when both children go silent (legacy surfaces);
+              the components' own zero-element silence contracts are
+              untouched. */}
+          <div class="sd-why">
+            <WeakestLink spotId={spotId} day={0} />
+            <Breakdown spotId={spotId} day={0} />
+          </div>
+          {today.conf_level !== undefined && (
+            <Confidence level={today.conf_level} agreement={agreementFor(today)} />
+          )}
         </>
       ) : (
         <p>Todavía no hay número de hoy para este spot.</p>
       )
     }
   </section>
-  <section data-day="tomorrow">
-    <h2>{t.home.tabTomorrow}</h2>
+  <section data-day="tomorrow" class="sd-card sd-manana" data-sd="reveal">
+    <h2 class="sd-chip">{t.home.tabTomorrow}</h2>
+      {
+        tomorrow ? (
+          <>
+            <div class="sd-callrow">
+              <strong data-field="score" class="sd-ring sd-ring-s" style={`--sd-score:${tomorrow.score_q}`}>{tomorrow.score_q}</strong>
+              <p class="sd-call">{tomorrow.call[locale]}</p>
+            </div>
+            <div class="sd-facts">
+              <div class="sd-fact">
+                <span class="sd-lbl">Olas</span>
+                <p data-field="size">{sizeText(tomorrow)}</p>
+              </div>
+              <div class="sd-fact">
+                <span class="sd-lbl">Mejor ventana</span>
+                <p data-field="window">{windowText(tomorrow)}</p>
+                {tomorrowSpan !== undefined && (
+                  <div class="sd-daylight" aria-hidden="true">
+                    <span class="sd-dl-track"><i style={`left:${tomorrowSpan.left}%;width:${tomorrowSpan.width}%`}></i></span>
+                    <span class="sd-dl-hours"><span>06:00</span><span>12:00</span><span>18:00</span></span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div class="sd-why">
+              <WeakestLink spotId={spotId} day={1} />
+              <Breakdown spotId={spotId} day={1} />
+            </div>
+            {tomorrow.conf_level !== undefined && (
+              <Confidence level={tomorrow.conf_level} agreement={agreementFor(tomorrow)} />
+            )}
+          </>
+        ) : (
+          <p>Todavía no hay número de mañana para este spot.</p>
+        )
+      }
+    </section>
+  </div>
+
+  {/* Everything below the band: map beside the track record on wide screens,
+      then share and avisos full width; on phones it is the same single
+      column the source order already reads as. */}
+  <div class="sd-below">
+    {/* The map card carries NO heading of its own: the figure and its credit
+        caption stand alone (inventing a heading would be inventing copy). */}
+    {hasMap && (
+      <div class="sd-card sd-map" data-sd="reveal">
+        <StaticMap locale={locale} spotId={spotId} spotName={spot.name} />
+      </div>
+    )}
+    {/* TrackRecordBox already wears its own dashed state-empty voice; this
+        wrapper only spaces and reveals it, never re-cards it. */}
+    <div class="sd-track" data-sd="reveal">
+      <TrackRecordBox block={forecast.spot_detail?.[spotId]?.scorecard} />
+    </div>
     {
-      tomorrow ? (
-        <>
-          <p><strong data-field="score">{tomorrow.score_q}</strong> {tomorrow.call[locale]}</p>
-          <p data-field="size">{sizeText(tomorrow)}</p>
-          <p data-field="window">{windowText(tomorrow)}</p>
-          <WeakestLink spotId={spotId} day={1} />
-          <Breakdown spotId={spotId} day={1} />
-        </>
-      ) : (
-        <p>Todavía no hay número de mañana para este spot.</p>
-      )
+      shareCall !== undefined && shareHref !== undefined ? (
+        <section class="spot-share sd-card" aria-label="Compartir este llamado" data-sd="reveal">
+          <h2>Compartir este llamado</h2>
+          <ShareControls href={shareHref} label="Mandar el llamado por WhatsApp" />
+          <CopyControl call={shareCall} />
+        </section>
+      ) : null
     }
-  </section>
-  <StaticMap locale={locale} spotId={spotId} spotName={spot.name} />
-  <TrackRecordBox block={forecast.spot_detail?.[spotId]?.scorecard} />
-  {
-    shareCall !== undefined && shareHref !== undefined ? (
-      <section class="spot-share" aria-label="Compartir este llamado">
-        <h2>Compartir este llamado</h2>
-        <ShareControls href={shareHref} label="Mandar el llamado por WhatsApp" />
-        <CopyControl call={shareCall} />
-      </section>
-    ) : null
-  }
-  <PushSettings locale={locale} spotId={spotId} />
+    <PushSettings locale={locale} spotId={spotId} />
+  </div>
   <p>
     <a class="cta" href={paths.report(locale, spotId)}>{t.spot.reportCta}</a>
   </p>
 </Base>
 
-<style is:global>
-  .spot-share .share-controls {
-    margin-top: 0;
+<script is:inline>
+(() => {
+  // Same gating as home's reveal script: reduced motion sees the finished
+  // page immediately, and a browser without IntersectionObserver never gets
+  // the hidden-until-revealed state, because that state only exists under
+  // the sd-js class this script adds. Without JS everything is fully
+  // visible by default.
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (!('IntersectionObserver' in window)) return;
+  const root = document.documentElement;
+  root.classList.add('sd-js');
+  const cards = [...document.querySelectorAll('[data-sd="reveal"]')];
+  cards.forEach((card, i) => card.style.setProperty('--sd-d', `${(i % 2) * 90 + Math.floor(i / 2) * 60}ms`));
+  const io = new IntersectionObserver((entries) => entries.forEach((entry) => {
+    if (entry.isIntersecting) { entry.target.classList.add('sd-in'); io.unobserve(entry.target); }
+  }), { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+  cards.forEach((card) => io.observe(card));
+  requestAnimationFrame(() => root.classList.add('sd-load'));
+})();
+</script>
+
+<style>
+  /* ============ the water, spot edition ============
+     Ships only on spot documents (scoped block; the site inlines all CSS per
+     document, which is why heavy styling is allowed HERE and never in
+     components.css). Values below are byte-for-byte the home page's dg-*
+     water tokens so both routes read as one ocean; they are custom-property
+     DEFINITIONS, the token system's legitimate home (U7). */
+  :global(:root) {
+    --sd-wave-1: #0c4653;
+    --sd-wave-2: #0e5e6e;
+    --sd-wave-3: #0f6877;
+    --sd-card-shadow: #02141a80;
+    --sd-mask-solid: #000;
+    --sd-mask-clear: #0000;
+    /* the callout wash: 7% --danger PRECOMPOSITED over --surface, opaque on
+       purpose -- the acceptance contrast walkers parse only rgb() strings,
+       so a color-mix() backdrop reads as unmeasurable (one oracle) or as
+       black (another). Same alpha-blind-reader rule --go-tint documents in
+       tokens.css. --ink on this is 13.9:1 day (self-computed). */
+    --sd-danger-tint: #f8eff0;
+  }
+  :global([data-theme='dark']) {
+    --sd-wave-1: #052730;
+    --sd-wave-2: #07333f;
+    --sd-wave-3: #093f4c;
+    --sd-danger-tint: #1c2e37; /* the same 7% of dark --danger over dark --surface */
   }
 
-  .spot-share .copy-control {
+  .sd-sea {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: clamp(340px, 55vh, 480px);
+    background: var(--hero-grad);
+    overflow: hidden;
+    pointer-events: none;
+  }
+  .sd-swell { position: absolute; left: 0; width: 200%; }
+  .sd-swell svg { display: block; width: 100%; height: 100%; }
+  .sd-s1 { bottom: 66px; height: 96px; opacity: .32; }
+  .sd-s1 path { fill: var(--sd-wave-1); }
+  .sd-s2 { bottom: 30px; height: 116px; opacity: .5; }
+  .sd-s2 path { fill: var(--sd-wave-2); }
+  .sd-s3 { bottom: -4px; height: 130px; opacity: .85; }
+  .sd-s3 path { fill: var(--sd-wave-3); }
+  .sd-edge { position: absolute; bottom: -1px; left: 0; width: 100%; height: 56px; }
+  .sd-edge path { fill: var(--bg); }
+
+  /* content paints over the absolute band -- EVERY top-level block needs
+     this, not just the hero: an absolutely positioned box paints above
+     static in-flow content, so a wrapper left static here renders its cards
+     UNDER the water (the Mañana card lost its top half exactly that way
+     when it moved up beside the hero). */
+  .sd-ident, .sd-days, .sd-hero, .sd-below { position: relative; }
+
+  /* ============ the way back: fixed solid pill, top-right ============
+     SOLID --surface, deliberately not the lang-toggle glass: this pill
+     floats over the DEEP water band, and --glass there composites --ink to
+     roughly 1.9:1 in day theme (pixel-measured in review). The lang-toggle's
+     "composites are AAA" math assumed light page surfaces under the glass.
+     Same construction as .theme-toggle in base.css, which shares this band. */
+  .sd-back {
+    position: fixed;
+    top: var(--sp-3);
+    right: var(--sp-3);
+    z-index: 10;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-1);
+    min-width: var(--tap);
+    min-height: var(--tap);
+    padding: 0 var(--sp-3);
+    border: 1px solid var(--ctrl);
+    border-radius: var(--r-full);
+    background: var(--surface);
+    box-shadow: var(--shadow-1);
+    color: var(--ink);
+    font-size: var(--text-caption);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-decoration: none;
+  }
+
+  /* ============ identity strip + the two day cards ============
+     Solid --surface, never glass and never gradient: every audited text
+     element on this page is measured against the day background, so the
+     cards keep all reading text on light surfaces in ink tokens. */
+  .sd-ident {
+    /* clears the two fixed 44px pills by margin, so the h1 sheds base.css's
+       3.5rem side padding (that padding exists to dodge the pills on pages
+       whose title sits at the very top). */
+    margin-top: calc(var(--tap) + var(--sp-4));
+    padding: var(--sp-4);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-l);
+    background: var(--surface);
+    box-shadow: 0 24px 60px -18px var(--sd-card-shadow);
+  }
+  .sd-ident h1 {
+    padding-left: 0;
+    padding-right: 0;
+    font-size: clamp(1.65rem, 6.5vw, 2.1rem);
+  }
+  .sd-ident > p:last-of-type { margin-bottom: 0; }
+  .sd-stamp { margin-bottom: 0; }
+
+  /* both days in one glance: a single column on phones (today first), the
+     pair side by side from 900px with today slightly louder */
+  .sd-days {
+    display: grid;
+    gap: var(--sp-4);
+    margin-top: var(--sp-4);
+    margin-bottom: var(--sp-5);
+    align-items: start;
+  }
+  .sd-hero {
+    padding: var(--sp-5) var(--sp-4);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-l);
+    background: var(--surface);
+    box-shadow: 0 24px 60px -18px var(--sd-card-shadow);
+  }
+
+  .sd-card {
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-l);
+    background: var(--surface);
+    box-shadow: var(--shadow-1);
+    padding: var(--sp-4);
+    margin-bottom: 0;
+  }
+
+  /* day chips: the established tab words, worn as small uppercase labels.
+     Full --ink on the sunken wash: these are h2 elements and the palette
+     oracle floors every h2 at 7:1 in both themes (--ink-2 on --sunken
+     measured 6.33:1 and failed). */
+  .sd-chip {
+    display: inline-flex;
+    align-items: center;
+    margin: var(--sp-3) 0 var(--sp-3);
+    padding: var(--sp-1) var(--sp-3);
+    border-radius: var(--r-full);
+    background: var(--sunken);
+    color: var(--ink);
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    line-height: var(--leading-snug);
+  }
+  .sd-card .sd-chip { margin-top: 0; }
+
+  /* score ring + call sentence, one row that wraps on narrow phones */
+  .sd-callrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-3) var(--sp-4);
+  }
+  .sd-call {
+    flex: 1 1 12rem;
+    margin: 0;
+    color: var(--ink);
+    font-size: var(--text-body);
+    line-height: var(--leading-body);
+  }
+
+  /* the drawn ring: home's exact conic + radial-mask trick on card tokens.
+     Non-text arc (--go over --sunken) so no text-contrast duty; the number
+     inside is plain ink and IS the audited element. */
+  .sd-ring {
+    position: relative;
+    flex: none;
+    display: inline-grid;
+    place-items: center;
+    min-width: 6.5rem;
+    min-height: 6.5rem;
+    /* a three-digit score (100) grows the box wider than 6.5rem; the ring
+       must stay a circle, not an ellipse */
+    aspect-ratio: 1;
+    padding: var(--sp-2);
+    margin-right: 0;
+    color: var(--ink);
+    font-size: var(--score-hero);
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .sd-ring::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(var(--go) calc(var(--sd-score, 0) * 1%), var(--sunken) 0);
+    -webkit-mask: radial-gradient(closest-side, var(--sd-mask-clear) calc(100% - 7px), var(--sd-mask-solid) calc(100% - 6px));
+    mask: radial-gradient(closest-side, var(--sd-mask-clear) calc(100% - 7px), var(--sd-mask-solid) calc(100% - 6px));
+  }
+  .sd-ring-s {
+    min-width: 4.5rem;
+    min-height: 4.5rem;
+    /* between --score-row and --score-hero: the quieter day keeps a readable
+       number without competing with today's. Scoped one-off, commented for
+       that reason. */
+    font-size: 1.75rem;
+  }
+  .sd-ring-s::before {
+    -webkit-mask: radial-gradient(closest-side, var(--sd-mask-clear) calc(100% - 6px), var(--sd-mask-solid) calc(100% - 5px));
+    mask: radial-gradient(closest-side, var(--sd-mask-clear) calc(100% - 6px), var(--sd-mask-solid) calc(100% - 5px));
+  }
+
+  /* structured facts: caption label above, sentence below, hairline rhythm.
+     From 560px the two facts sit side by side so the card stops being one
+     long single column; the hairline flips from a row divider to a column
+     divider with it. */
+  .sd-facts {
+    display: grid;
+    gap: var(--sp-3);
+    margin-top: var(--sp-4);
+  }
+  .sd-fact { display: grid; gap: var(--sp-1); align-content: start; }
+  .sd-fact + .sd-fact {
+    border-top: 1px solid var(--hairline);
+    padding-top: var(--sp-3);
+  }
+  @media (min-width: 560px) {
+    .sd-facts { grid-template-columns: 1fr 1fr; gap: var(--sp-4); }
+    .sd-fact + .sd-fact {
+      border-top: 0;
+      padding-top: 0;
+      border-left: 1px solid var(--hairline);
+      padding-left: var(--sp-4);
+    }
+  }
+  .sd-lbl {
+    color: var(--ink-2);
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+  .sd-fact p { margin: 0; color: var(--ink); }
+  /* When the drawn daylight track is present it is the window's primary
+     reading and the formatter sentence backs it up as a caption, so the same
+     fact stops appearing at full voice twice (the call already says it once
+     in words). DOM order is untouched (the oracle reads the sentence);
+     `order` flips only the paint. A :has miss simply keeps both at full
+     size, which is the pre-existing reading. */
+  .sd-fact:has(.sd-daylight) { grid-auto-flow: row; }
+  .sd-fact:has(.sd-daylight) > .sd-lbl { order: 0; }
+  .sd-fact:has(.sd-daylight) > .sd-daylight { order: 1; margin-top: var(--sp-1); }
+  .sd-fact:has(.sd-daylight) > p {
+    order: 2;
+    color: var(--ink-2);
+    font-size: var(--text-meta);
+  }
+
+  /* the daylight track under the window sentence. Only rendered when
+     bestWindowSpan accepted the window; aria-hidden because the sentence
+     above it carries the meaning. */
+  .sd-daylight { display: grid; gap: var(--sp-1); margin-top: var(--sp-1); }
+  .sd-dl-track {
+    position: relative;
+    display: block;
+    height: 8px;
+    border-radius: var(--r-full);
+    background: var(--sunken);
+    overflow: hidden;
+  }
+  .sd-dl-track i {
+    position: absolute;
+    top: 0; bottom: 0;
+    border-radius: var(--r-full);
+    background: var(--accent);
+  }
+  .sd-dl-hours {
+    display: flex;
+    justify-content: space-between;
+    color: var(--ink-2);
+    font-size: var(--text-caption);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ============ styling the mounted children (:global, never edits) ==== */
+
+  /* the "why" panel: one framed inset holding the culprit sentence and the
+     factor bars, so the diagnosis reads as a single grouped block instead of
+     loose rows. It hides itself when every child went silent (both children
+     render zero elements on a legacy surface; an empty frame would read as a
+     broken box). A :has miss shows a small empty inset on those rare
+     surfaces only, cosmetic, never a wrong claim. */
+  .sd-why {
+    margin-top: var(--sp-4);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-m);
+    background: var(--bg);
+    padding: var(--sp-3);
+  }
+  .sd-why:not(:has(*)) { display: none; }
+
+  /* weakest-link callout: soft danger-tinted card. Solid fallback declared
+     on the line before color-mix for browsers without it; the component's
+     own --danger left border and ink text stay untouched. */
+  section[data-day] :global(p.weakest-link) {
+    margin-top: 0;
+    padding: var(--sp-3);
+    border-radius: 0 var(--r-s) var(--r-s) 0;
+    background: var(--sd-danger-tint);
+  }
+
+  /* Breakdown BUG FIX: components.css's `.bar .fill` paints with
+     var(--rank-bar-fill), which is only defined under ol.ranked, so on this
+     page the four factor fills resolved to nothing and rendered INVISIBLE.
+     Defining the custom property at the day-section scope feeds the same
+     rule a real colour; the weakest row's fill stays --danger via the
+     existing `.bar.weakest .fill`. */
+  section[data-day] {
+    --rank-bar-fill: var(--accent);
+  }
+  section[data-day] :global(ul.breakdown) {
+    /* inside the why panel the frame does the separating; the old hairline
+       row split would double it */
     margin-top: var(--sp-3);
+    border-top: 0;
+    padding-top: 0;
+  }
+  /* factor labels wear the same caption voice as the facts labels above, so
+     the card reads as one system; values stay tabular ink. */
+  section[data-day] :global(.breakdown .factor) {
+    color: var(--ink-2);
+    /* var(--text-meta), never smaller: the breakdown quality oracle floors
+       every factor/value/absence cell at 14px (U6). The caption voice comes
+       from weight and tracking alone. */
+    font-size: var(--text-meta);
+    font-weight: 700;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+  section[data-day] :global(.breakdown .value) {
+    color: var(--ink);
+  }
+
+  /* confidence: a quiet chip row. The components.css disclosure recipe is
+     scoped to ol.ranked and never reaches this page, so the summary is
+     restyled here: 44px target, no native marker, same chevron voice. */
+  section[data-day] :global(details.confidence) {
+    margin-top: var(--sp-3);
+    color: var(--ink-2);
+  }
+  section[data-day] :global(details.confidence > summary) {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    min-width: var(--tap);
+    min-height: var(--tap);
+    padding: var(--sp-1) var(--sp-3);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-full);
+    background: var(--sunken);
+    color: inherit;
+    font-size: var(--text-caption);
+    font-weight: 600;
+    letter-spacing: var(--track-meta);
+    list-style: none;
+    cursor: pointer;
+  }
+  section[data-day] :global(details.confidence > summary::-webkit-details-marker) { display: none; }
+  section[data-day] :global(details.confidence > summary::after) { content: '›'; }
+  section[data-day] :global(details.confidence[open] > summary::after) { content: '⌄'; }
+  section[data-day] :global(details.confidence > div) {
+    padding: var(--sp-2) var(--sp-2) 0;
+    font-size: var(--text-caption);
+    line-height: var(--leading-snug);
+  }
+
+  /* ============ below the band ============ */
+  .sd-below {
+    display: grid;
+    gap: var(--sp-4);
+  }
+  .sd-map { padding: var(--sp-3); }
+  .sd-map :global(figure.static-map) { margin: 0; }
+  .sd-track :global(.scorecard) { margin-bottom: 0; }
+  .sd-below :global(section.avisos-control) { margin-bottom: 0; }
+
+  .spot-share h2 {
+    margin: 0;
+    color: var(--ink-2);
+    font-size: 11px;
+    font-weight: 750;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+  .spot-share :global(.share-controls) { margin-top: var(--sp-3); }
+  .spot-share :global(.copy-control) { margin-top: var(--sp-3); }
+  @media (min-width: 720px) {
+    .spot-share {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sp-3);
+      align-items: start;
+    }
+    .spot-share h2 { grid-column: 1 / -1; }
+    .spot-share :global(.share-controls),
+    .spot-share :global(.copy-control) { margin-top: 0; }
+    /* ShareControls declares grid-column: 1 / -1 for its life inside the
+       home hero's grid ("outside a grid the declaration is inert") -- this
+       card IS a grid, so the declaration wakes up and the WhatsApp action
+       swallowed both columns, stacking the pair it was meant to sit beside.
+       Pin it back to its own cell. */
+    .spot-share :global(.share-controls) { grid-column: auto; }
+  }
+
+  /* ============ motion, all of it opt-in ============
+     Every animation and transition lives inside this media block, and the
+     reveal JS is gated by the same matchMedia, so reduced motion computes
+     zero transition durations everywhere (base.css's kill switch is the
+     second lock on the same door). Default state without JS: everything
+     fully visible, every fill at full width. */
+  @media (prefers-reduced-motion: no-preference) {
+    .sd-swell { animation: sd-roll var(--sd-v, 22s) linear infinite; }
+    .sd-s1 { --sd-v: 26s; }
+    .sd-s2 { --sd-v: 17s; animation-direction: reverse; }
+    .sd-s3 { --sd-v: 12s; }
+    @keyframes sd-roll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+    /* hero: fade-rise on load, then the gentle buoy float (hero only) */
+    :global(.sd-js:not(.sd-load)) .sd-ident,
+    :global(.sd-js:not(.sd-load)) .sd-hero {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    .sd-ident {
+      transition: opacity .8s ease, transform .8s cubic-bezier(.22, .9, .24, 1);
+    }
+    .sd-hero {
+      transition: opacity .8s ease .1s, transform .8s cubic-bezier(.22, .9, .24, 1) .1s;
+      animation: sd-buoy 9s ease-in-out 2.2s infinite;
+    }
+    @keyframes sd-buoy { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    :global(.sd-js:not(.sd-load)) .sd-hero .sd-ring {
+      opacity: 0;
+      transform: scale(.92);
+    }
+    .sd-hero .sd-ring {
+      transition: opacity .7s ease .15s, transform .7s cubic-bezier(.22, .9, .24, 1) .15s;
+    }
+    :global(.sd-js:not(.sd-load)) .sd-hero :global(.fill),
+    :global(.sd-js:not(.sd-load)) .sd-hero .sd-dl-track i { transform: scaleX(0); }
+    .sd-hero :global(.fill),
+    .sd-hero .sd-dl-track i {
+      transform-origin: left;
+      transition: transform .9s cubic-bezier(.22, .9, .24, 1) .25s;
+    }
+
+    /* below-band cards: staggered fade-rise on scroll (delays set by the
+       inline script through --sd-d); their fills draw in with them */
+    :global(.sd-js) [data-sd='reveal']:not(.sd-in) {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    [data-sd='reveal'] {
+      transition: opacity .65s ease var(--sd-d, 0ms), transform .65s cubic-bezier(.22, .9, .24, 1) var(--sd-d, 0ms);
+    }
+    :global(.sd-js) [data-sd='reveal']:not(.sd-in) :global(.fill),
+    :global(.sd-js) [data-sd='reveal']:not(.sd-in) .sd-dl-track i { transform: scaleX(0); }
+    [data-sd='reveal'] :global(.fill),
+    [data-sd='reveal'] .sd-dl-track i {
+      transform-origin: left;
+      transition: transform .9s cubic-bezier(.22, .9, .24, 1) calc(var(--sd-d, 0ms) + 120ms);
+    }
+
+    /* hover lift on the quieter cards, pointer devices only; the hero keeps
+       its buoy instead of a competing lift */
+    @media (hover: hover) and (pointer: fine) {
+      .sd-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-2);
+        transition: transform .3s cubic-bezier(.2, .9, .25, 1.2), box-shadow .3s;
+      }
+    }
+  }
+
+  /* ============ desktop composition ============ */
+  /* the pair goes side by side well before full desktop: two ~430px cards
+     fit from 900px, and phones/tablets below that keep the stack */
+  @media (min-width: 900px) {
+    .sd-days {
+      grid-template-columns: 1.08fr 1fr;
+      gap: var(--sp-5);
+    }
+  }
+
+  @media (min-width: 1080px) {
+    /* same widening rule the home routes apply, so the two agree */
+    :global(body) { max-width: 72rem; padding-left: var(--sp-6); padding-right: var(--sp-6); }
+    .sd-ident {
+      margin-top: var(--sp-7);
+      padding: var(--sp-5) var(--sp-6);
+      border-radius: 24px;
+    }
+    .sd-ident h1 {
+      font-size: clamp(34px, 2.8vw, 44px);
+      font-weight: 800;
+      letter-spacing: -.022em;
+      line-height: 1.05;
+    }
+    .sd-days { margin-bottom: var(--sp-6); }
+    .sd-hero {
+      padding: var(--sp-6);
+      border-radius: 24px;
+    }
+    .sd-manana { border-radius: 24px; }
+    .sd-hero .sd-ring { min-width: 7rem; min-height: 7rem; }
+    /* Below the band: the short map card pairs with the one-line track
+       record on the left/right split; share and avisos close full-width.
+       The two no-map beaches let the track record take the whole row (:has
+       miss on such a beach degrades to an empty right slot, cosmetic
+       only). */
+    .sd-below {
+      grid-template-columns: 1fr 1fr;
+      grid-template-areas:
+        'map track'
+        'share share'
+        'avisos avisos';
+      gap: var(--sp-5);
+      align-items: start;
+    }
+    .sd-below:not(:has(.sd-map)) {
+      grid-template-areas:
+        'track track'
+        'share share'
+        'avisos avisos';
+    }
+    .sd-map { grid-area: map; }
+    .sd-track { grid-area: track; }
+    .spot-share { grid-area: share; }
+    .sd-below :global(section.avisos-control) { grid-area: avisos; }
+    .sd-card { padding: var(--sp-5); }
+    .sd-map { padding: var(--sp-4); }
   }
 </style>
