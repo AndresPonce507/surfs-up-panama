@@ -179,6 +179,21 @@ describe('the generated map assets', () => {
 });
 
 describe('the diagram source, over any frame', () => {
+  it('draws the north reference as vector geometry with no runtime font dependency', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 120, max: 640 }),
+        fc.integer({ min: 90, max: 480 }),
+        (width, height) => {
+          const svg = renderStaticMapDiagram({ width, height }, { spot_id: 'playa-x', shore_normal_deg: 135 });
+
+          assert.ok(!/<text\b|font-(?:family|size|weight)=/u.test(svg), 'the north reference still depends on a runtime font');
+          assert.match(svg, /<path\b[^>]*data-compass-north="true"/u, 'the north reference is not declared vector geometry');
+        },
+      ),
+    );
+  });
+
   it('draws one marker inside its own frame and nothing that implies a shore', () => {
     fc.assert(
       fc.property(
