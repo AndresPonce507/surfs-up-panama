@@ -10,6 +10,7 @@
 // (src/pipeline/lambda/log-events.ts) is the pure gate; this file's only job
 // is to call it and print what it returns.
 
+import { InvokeCommand, LambdaClient, type InvokeCommandOutput } from '@aws-sdk/client-lambda';
 import { S3Client } from '@aws-sdk/client-s3';
 
 import { runBuildOnce } from '../build';
@@ -95,6 +96,53 @@ function defaultStore(): BuildStore {
   return new S3Store(new S3Client({}), requiredEnv('BUCKET_NAME'));
 }
 
+/** The Publisher's SDK client, retries capped at ONE attempt -- load-bearing,
+ * not a style choice. The CFN template's MaximumRetryAttempts: 0 governs
+ * ASYNC invokes only and is inert on this synchronous RequestResponse path.
+ * Left at the SDK v3 default of 3 attempts, a wedged 300 s render behind
+ * reserved concurrency 1 would serialize to ~900 s, blow Build's 420 s
+ * budget, and triple-bill the same failed publication. The next hourly cycle
+ * is the retry policy (publication is idempotent PUT-only). */
+export function publisherInvokeClient(): LambdaClient {
+  return new LambdaClient({ maxAttempts: 1 });
+}
+
+type PublisherInvokeClient = Readonly<{
+  send: (command: InvokeCommand) => Promise<InvokeCommandOutput>;
+}>;
+
+/** The Publisher's real caller, following defaultStore's composition pattern:
+ * composed by the deployed handler, injected as overrides.invokePublisher by
+ * tests. Synchronous RequestResponse -- Build's 420 s limit exists precisely
+ * to cover this wait -- addressed by the PUBLISH_FUNCTION_NAME the ingest
+ * stack wires beside BUCKET_NAME. A FunctionError answer (the Publisher
+ * crashed without speaking for itself through publish.refused) is surfaced
+ * as a rejection so handOverToPublisher writes down the failed handover. */
+export function defaultInvokePublisher(
+  client: PublisherInvokeClient = publisherInvokeClient(),
+): NonNullable<BuildOverrides['invokePublisher']> {
+  const functionName = requiredEnv('PUBLISH_FUNCTION_NAME');
+  return async (invocation) => {
+    const response = await client.send(new InvokeCommand({
+      FunctionName: functionName,
+      InvocationType: 'RequestResponse',
+      Payload: new TextEncoder().encode(JSON.stringify(invocation)),
+    }));
+    if (response.FunctionError !== undefined && response.FunctionError !== '') {
+      const detail = response.Payload === undefined ? '' : ` ${new TextDecoder().decode(response.Payload)}`;
+      throw new Error(`publisher invocation answered FunctionError ${response.FunctionError}:${detail}`);
+    }
+    return response;
+  };
+}
+
+/** Everything the deployed handler wires that tests inject instead. Exported
+ * so the composition itself is provable offline (review blocker HIGH-1: the
+ * handler once called runBuild() bare and the Publisher was never invoked). */
+export function productionBuildOverrides(): BuildOverrides {
+  return { invokePublisher: defaultInvokePublisher() };
+}
+
 function requiredEnv(name: string): string {
   const value = process.env[name];
   if (value === undefined || value === '') {
@@ -112,6 +160,6 @@ async function probePublicManifest(build_id: string): Promise<void> {
 }
 
 export const handler = async (): Promise<{ readonly statusCode: number }> => {
-  const outcome = await runBuild();
+  const outcome = await runBuild(productionBuildOverrides());
   return { statusCode: outcome.published ? 200 : 204 };
 };

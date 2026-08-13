@@ -162,6 +162,11 @@ export class IngestStack extends Stack {
       environment: {
         BUCKET_NAME: bucket.bucketName,
         PUBLIC_SITE_ORIGIN: Fn.importValue(siteOriginExportName),
+        // The Publisher's physical name, so build-handler's
+        // defaultInvokePublisher can address its synchronous handoff
+        // (review blocker HIGH-1: without this the Publisher has no
+        // caller). The same single source of truth as functionName below.
+        PUBLISH_FUNCTION_NAME: functionNames.publish,
       },
     });
 

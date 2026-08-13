@@ -40,6 +40,7 @@
   },
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "^3.1107.0",
+    "@aws-sdk/client-lambda": "^3.1107.0",
     "@aws-sdk/client-s3": "^3.1107.0",
     "@aws-sdk/lib-dynamodb": "^3.1107.0",
     "@cucumber/cucumber": "^13.2.1",

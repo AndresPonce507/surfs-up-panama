@@ -662,6 +662,20 @@ describe('real stack guardrails: ingest scheduling and the dead-man signal chain
     expect(resolvedFunctionArnTarget(target)).toBe(buildLogicalId);
   });
 
+  // covers: the platform review's HIGH-1 (the Publisher had no caller). The
+  // deployed Build handler composes defaultInvokePublisher() from
+  // PUBLISH_FUNCTION_NAME, so this wiring is what makes the handoff real:
+  // without it the Build Lambda refuses loudly at composition instead of
+  // silently never publishing.
+  it("hands Build the Publisher's physical name through its environment, so the deployed handler can address it", () => {
+    const build = synthesizedResources('AWS::Lambda::Function', realTemplates.ingest)
+      .find(({ properties }) => stringProperty(properties, 'FunctionName') === functionNames.build);
+    if (!build) throw new Error('expected the Build function in the ingest template');
+    const environment = build.properties.Environment as Readonly<Record<string, unknown>>;
+    const variables = environment.Variables as Readonly<Record<string, unknown>>;
+    expect(variables.PUBLISH_FUNCTION_NAME).toBe(functionNames.publish);
+  });
+
   it('turns fetch log lines into the IngestSuccess and ProviderErrors metrics the alarms watch', () => {
     const filters = synthesizedResources('AWS::Logs::MetricFilter', realTemplates.ingest);
     const transformations = filters.flatMap(({ properties }) => (
