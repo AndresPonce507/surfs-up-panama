@@ -35,9 +35,16 @@ Feature: A saved report arrives once and stays honest while it waits
     When the surfer sends the saved report
     Then the report is refused because the named beach is not known
 
+  # Reconciled 2026-08-13 (deliver/wave-decisions.md). The flush trigger is
+  # unchanged: opening the screen still sends the waiting report. What changed
+  # is where its result may appear. The form screen stays a blank form, and the
+  # receipt is reached by an explicit choice, because a comparison rendered
+  # above a fresh blank form anchors the next cold answer to our own number.
   @slice-03 @real-io @requires_external @covers-R21 @covers-R26
   Scenario: Opening the report screen sends a report that was already waiting
     Given a surfer has a saved report for Playa Venao
     When the surfer opens the report screen with signal
+    Then the report that was waiting goes through with the form still blank
+    When the surfer opens the earlier report
     Then the surfer sees that their report arrived
     And the arrival says nothing about our forecast

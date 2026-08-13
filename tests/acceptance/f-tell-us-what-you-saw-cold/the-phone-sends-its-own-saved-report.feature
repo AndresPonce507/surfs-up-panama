@@ -36,4 +36,23 @@ Feature: The phone sends its own saved report
     And the phone gets signal and opens the report screen
     Then the page itself asks for anonymous permission and sends that exact saved label
     And the phone receives the saved label's private answer before it can show the outcome
-    And the surfer sees their saved report arrived only after its matching answer
+    And the screen says plainly that the earlier report already went through
+    When the surfer follows the way to see how that earlier report went
+    Then the surfer sees that the earlier report arrived
+
+  # The deciding rule of the R4/R26 reconciliation, 2026-08-13 (deliver/
+  # wave-decisions.md). A report that sends itself when the screen opens must
+  # acknowledge itself and nothing more: putting the prior report's comparison
+  # above a fresh blank form would anchor the new capture to our own number,
+  # the exact bias the RESOLVED anchoring section of docs/DISCUSS-decisions.md
+  # exists to remove.
+  @slice-03 @driving_port @real-io @local-real-io @negative @error @covers-R4 @covers-R26
+  Scenario: A report that sends itself on open puts no reveal on the form screen
+    Given the built site is running as it would be at the beach
+    And a surfer has the report screen open for Playa Venao
+    And the phone has no signal
+    When the surfer answers waist to chest, choppy wind and a good session
+    And the surfer taps Mandar
+    And the phone gets signal and opens the report screen
+    Then the earlier report goes through and leaves no reveal on the form screen
+    And the acknowledgement carries no number, no size, no wind, no quality word and no comparison
