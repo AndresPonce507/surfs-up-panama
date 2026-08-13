@@ -52,6 +52,7 @@ export function createAwsStoredItemReader(
       do {
         const page = await client.send(new commands.ScanCommand({
           TableName: tableName,
+          ConsistentRead: true,
           ...(pageSize === undefined ? {} : { Limit: pageSize }),
           ...(startKey === undefined ? {} : { ExclusiveStartKey: startKey }),
         }));

@@ -1,0 +1,15 @@
+{
+  "step_id": "01-02",
+  "timestamp": "2026-08-13T15:05:46Z",
+  "kind": "review-remediation",
+  "result": "PASS",
+  "evidence": {
+    "requirement": "Every DynamoDB ScanCommand must request a strongly consistent read before the nightly immutable output is sealed.",
+    "semantic_red": "New two-page command-shape test exited 1 because both captured ScanCommand inputs lacked ConsistentRead: true.",
+    "green": "After adding ConsistentRead: true in createAwsStoredItemReader, the same test exited 0: 1 test passed.",
+    "logs": [
+      "/private/tmp/psb-obs-export-review/red-consistent-scan-semantic.log",
+      "/private/tmp/psb-obs-export-review/green-consistent-scan.log"
+    ]
+  }
+}

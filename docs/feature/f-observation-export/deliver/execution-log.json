@@ -78,6 +78,20 @@
       "s": "BLOCKED",
       "d": "DISCREPANCY: the coordinator's untracked FINDINGS-20260813.md dated 2026-08-13 says this lane has an independent reviewer APPROVED verdict with zero critical/high findings. No committed reviewer verdict, reviewer identity, or approval timestamp is reachable from the branch, refs, notes, or durable project artefacts. Roadmap validation remains pending; do not report review approval or merge readiness from the untracked claim. Record the actual verdict with its source and timestamp before changing validation status.",
       "t": "2026-08-13T14:42:31Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "EVIDENCE_CORRECTION",
+      "s": "EXECUTED",
+      "d": "REPLAY, not a historical claim: no contemporaneous 01-01 phase evidence was reachable in immutable commits, refs, notes, or committed artefacts. The existing 01-01 Cucumber contract was re-run on the current integration commit: baseline and restored GREEN each exit 0 with 5 scenarios and 130 steps passed. A controlled day-window falsification then selected the next UTC day instead of the closed day; the same contract exited 1 with all five scenarios failing at their behaviour assertions, including expected 2 rows but received 0 and the after-midnight report appearing in the closed file. The source was restored byte-for-byte before the final green replay. Commands and exact exit files: /private/tmp/psb-obs-export-review/green-0101-baseline.log, red-0101-day-selection.log, green-0101-replay.log.",
+      "t": "2026-08-13T15:05:46Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "GREEN_CORRECTION",
+      "s": "EXECUTED",
+      "d": "Reviewer remediation: every DynamoDB ScanCommand now carries ConsistentRead: true, including continuation pages, so a completed report cannot be omitted permanently before its immutable nightly object is sealed. New exact command-shape test was semantic RED first: exit 1 because both captured ScanCommand inputs lacked ConsistentRead. The one-line production change made it GREEN: exit 0, 1/1 test passed. Evidence: /private/tmp/psb-obs-export-review/red-consistent-scan-semantic.log and green-consistent-scan.log.",
+      "t": "2026-08-13T15:05:46Z"
     }
   ]
 }
