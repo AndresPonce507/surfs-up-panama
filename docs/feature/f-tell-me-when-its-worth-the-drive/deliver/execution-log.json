@@ -1,258 +1,293 @@
 {
- "schema_version": 1,
- "feature_id": "f-tell-me-when-its-worth-the-drive",
- "events": [
-  {
-   "sid": "01-08",
-   "p": "PREPARE",
-   "s": "EXECUTED",
-   "d": "PASS: verified the accepted 01-08 contract in build/f2-push, the 01-06 planner provenance (83a335f), and that the current integration base already retains the pure injected-clock local-morning guard. The only missing approved artifact was the focused property test.",
-   "t": "2026-08-11T14:53:06Z"
-  },
-  {
-   "sid": "01-08",
-   "p": "RED_ACCEPTANCE",
-   "s": "NOT_APPLICABLE",
-   "d": "The approved Cucumber feature exists on build/f2-push but is absent from this integration base. Per the accepted contract, its public planner property was ported unchanged instead; no acceptance fixture or source was invented.",
-   "t": "2026-08-11T14:53:06Z"
-  },
-  {
-   "sid": "01-08",
-   "p": "RED_UNIT",
-   "s": "EXECUTED",
-   "d": "PASS: a temporary isMorningAtSpot => false mutation made the ported fast-check contract fail semantically. The 01-08 property shrank to Etc/GMT-1 at 05:25Z (a valid 06:25 local time) and raised AssertionError because the planner returned zero sends where one was required. The pre-existing threshold property also failed. The original guard was restored without changing either test.",
-   "t": "2026-08-11T14:53:06Z"
-  },
-  {
-   "sid": "01-08",
-   "p": "GREEN",
-   "s": "EXECUTED",
-   "d": "PASS: npx vitest run tests/unit/push-plan-notifications.test.ts passed 2/2 and npm run typecheck passed after the parent-directed prerequisite b1ba1b4 was cherry-picked as 4da8a4d. Test budget: 1 new 01-08 public planner behavior x 2 = 2; one closed-window property was added while the existing threshold prerequisite property remains. UI N/A: this is a pure injected-clock planning decision with no rendered surface.",
-   "t": "2026-08-11T14:53:06Z"
-  },
-  {
-   "sid": "01-08",
-   "p": "COMMIT",
-   "s": "EXECUTED",
-   "d": "PASS: 3563f28 committed the approved hourly-at-:25 closed-window property and the factual PREPARE, RED_ACCEPTANCE, RED_UNIT, and GREEN evidence. Independent review iteration 3 approved the unchanged accepted contract; no source planner change was required.",
-   "t": "2026-08-11T14:58:25Z"
-  },
-  {
-   "sid": "01-09",
-   "p": "PREPARE",
-   "s": "EXECUTED",
-   "d": "PASS: verified the accepted 01-09 contract, 01-06 dependency, active-lane path disjointness, and the current pure planner. The planner lacked both a spot-local date write plan and same-day suppression.",
-   "t": "2026-08-11T15:01:04Z"
-  },
-  {
-   "sid": "01-09",
-   "p": "RED_ACCEPTANCE",
-   "s": "NOT_APPLICABLE",
-   "d": "The approved Cucumber feature exists on build/f2-push but is absent from this integration base. The accepted public planner property was added instead; no acceptance fixture or source was invented.",
-   "t": "2026-08-11T15:01:04Z"
-  },
-  {
-   "sid": "01-09",
-   "p": "RED_UNIT",
-   "s": "EXECUTED",
-   "d": "PASS: the new fast-check public-port property failed semantically on the first shrunk valid Panama 06:25 run because the planner lacked the required planned date write. AssertionError: expected an array of writes, received false.",
-   "t": "2026-08-11T15:01:04Z"
-  },
-  {
-   "sid": "01-09",
-   "p": "GREEN",
-   "s": "EXECUTED",
-   "d": "PASS: focused planner properties passed 3/3 and npm run typecheck passed. The pure plan now emits one adapter write with the spot-local date and suppresses later runs against that declared stored state. Test budget: 1 new behavior x 2 = 2; one generated public-port property added. UI N/A: a pure notification-planning decision has no rendered surface.",
-   "t": "2026-08-11T15:01:04Z"
-  },
-  {
-   "sid": "01-09",
-   "p": "RED_UNIT",
-   "s": "EXECUTED",
-   "d": "PASS: review correction added a complete planned-write assertion. A temporary 2099-01-01 stamp shrank to one valid Panama 06:25 run and raised AssertionError showing expected 2026-08-10 versus received 2099-01-01. The source date was restored unchanged.",
-   "t": "2026-08-11T15:04:10Z"
-  },
-  {
-   "sid": "01-09",
-   "p": "GREEN",
-   "s": "EXECUTED",
-   "d": "PASS: after restoration focused planner properties passed 3/3 and npm run typecheck passed. The one added property now verifies send/write identity and the exact injected spot-local civil date, in addition to same-day suppression and input purity.",
-   "t": "2026-08-11T15:04:10Z"
-  },
-  {
-   "sid": "01-09",
-   "p": "RED_UNIT",
-   "s": "EXECUTED",
-   "d": "PASS: review correction added the Pacific/Kiritimati UTC-midnight seam to the existing generated property. A temporary UTC-date stamp shrank to Kiritimati at local 2026-08-11 06:25 and raised AssertionError because it emitted 2026-08-10 instead of the required 2026-08-11. The source date was restored unchanged.",
-   "t": "2026-08-11T15:06:06Z"
-  },
-  {
-   "sid": "01-09",
-   "p": "GREEN",
-   "s": "EXECUTED",
-   "d": "PASS: focused planner properties passed 3/3 and npm run typecheck passed after restoring the spot-local date. The property now covers both ordinary same-day slots and the UTC-midnight spot-local-date seam without adding another behavior or test.",
-   "t": "2026-08-11T15:06:06Z"
-  },
-  {
-   "sid": "01-09",
-   "p": "COMMIT",
-   "s": "EXECUTED",
-   "d": "PASS: 4878e57 committed the pure same-day suppression, explicit spot-local write plan, generated seam coverage, and factual PREPARE through GREEN evidence. Fresh independent review approved; the commit carries the real Step-ID: 01-09 trailer.",
-   "t": "2026-08-11T15:08:18Z"
-  },
-  {
-   "sid": "01-10",
-   "p": "PREPARE",
-   "s": "EXECUTED",
-   "d": "PASS: restored the accepted build/f2-push feature, shared declared-surface support, and step bindings that were absent from this integration base. The roadmap retains the accepted 01-06 dependency and explicitly owns these contract assets for this repair. No active Theme, Report, Weather, or Learning path was touched.",
-   "t": "2026-08-11T15:13:56Z"
-  },
-  {
-   "sid": "01-10",
-   "p": "RED_ACCEPTANCE",
-   "s": "EXECUTED",
-   "d": "PASS: the named accepted scenario bound non-emptily (1 scenario, 19 steps) and then failed semantically at its server-bar oracle. With threshold_score null, the current planner planned no sends across 0..100, proving the missing declared default-threshold behaviour without a loading or binding error. npm run typecheck passed. This is a contract-only repair: no GREEN or implementation COMMIT is claimed.",
-   "t": "2026-08-11T15:13:56Z"
-  },
-  {
-   "sid": "01-10",
-   "p": "RED_UNIT",
-   "s": "EXECUTED",
-   "d": "PASS: the new fast-check sweep over a declared 0..100 server bar failed semantically. It shrank to server bar 0 and showed that a null-bar subscription produced no sends instead of the required monotone cut.",
-   "t": "2026-08-11T15:20:01Z"
-  },
-  {
-   "sid": "01-10",
-   "p": "GREEN",
-   "s": "EXECUTED",
-   "d": "PASS: planNotifications now accepts default_threshold_score as a declared input and uses it only when threshold_score is null; no numeric Push-module default was added. Focused unit 4/4, named acceptance 1/1, typecheck, and full units 321/321 passed. The 100-run complete-scale property receives a 15-second runner timeout without reducing its generated cases or assertions. UI N/A: pure planning decision.",
-   "t": "2026-08-11T15:20:01Z"
-  },
-  {
-   "sid": "01-10",
-   "p": "RED_UNIT",
-   "s": "EXECUTED",
-   "d": "PASS: temporary mutation ignored default_threshold_score by using 0 for every null-bar subscriber. The property shrank to server bar 1 and raised AssertionError because score 0 sent when it should not. The selection function was restored unchanged.",
-   "t": "2026-08-11T15:20:01Z"
-  },
-  {
-   "sid": "01-10",
-   "p": "GREEN",
-   "s": "EXECUTED",
-   "d": "PASS: after restoration focused unit 4/4, named acceptance 1/1, typecheck, and full units 321/321 remained green.",
-   "t": "2026-08-11T15:20:01Z"
-  },
-  {
-   "sid": "01-10",
-   "p": "COMMIT",
-   "s": "EXECUTED",
-   "d": "PASS: bde53ae4b5edce674e0a3f54f94705c92bd2230b committed the declared default_threshold_score input for null subscriber bars, its complete-scale property, and truthful PREPARE through GREEN evidence. Independent review iteration 1 approved; src/push contains no product default. The approved contract repair assets from e38be824 were left unchanged.",
-   "t": "2026-08-11T15:23:15Z"
-  },
-  {
-   "sid": "01-11",
-   "p": "PREPARE",
-   "s": "EXECUTED",
-   "d": "PASS: verified the accepted named scenario, 01-08 COMMIT/PASS dependency, planner timezone seam, and disjoint active Theme, Report, Weather, and Learning lanes. The declared 01-11 paths were already behaviorally complete, with no source change required.",
-   "t": "2026-08-11T15:26:20Z"
-  },
-  {
-   "sid": "01-11",
-   "p": "RED_ACCEPTANCE",
-   "s": "EXECUTED",
-   "d": "PASS: a temporary regression that evaluated every spot against America/Panama made the unchanged named scenario fail semantically at its business oracle: it planned 1 aviso when the six-hours-ahead spot was already past midday. The injected spot.timezone rule was restored unchanged.",
-   "t": "2026-08-11T15:26:20Z"
-  },
-  {
-   "sid": "01-11",
-   "p": "RED_UNIT",
-   "s": "NOT_APPLICABLE",
-   "d": "The accepted driving-port scenario was already green before and after the semantic mutation, so it required no unit test or production-code addition. The existing focused planner properties exercise the same public port.",
-   "t": "2026-08-11T15:26:20Z"
-  },
-  {
-   "sid": "01-11",
-   "p": "GREEN",
-   "s": "EXECUTED",
-   "d": "PASS: restoration left no source or test diff. The named acceptance scenario passed 1/1 with 18 steps; focused planner properties 4/4, typecheck, and full units 321/321 passed. UI N/A: this remains a pure injected-clock planning decision.",
-   "t": "2026-08-11T15:26:20Z"
-  },
-  {
-   "sid": "01-11",
-   "p": "COMMIT",
-   "s": "EXECUTED",
-   "d": "PASS: 757223f9bb3afc57d49cfa57f540388106b3e09a commits only the accepted-contract verification and factual lifecycle proof. Independent review iteration 2 approved the exact two evidence paths; no planner or test behavior changed.",
-   "t": "2026-08-11T15:28:16Z"
-  },
-  {
-   "sid": "01-13",
-   "p": "COMMIT",
-   "s": "EXECUTED",
-   "d": "RECONCILED: two lanes implemented planSendReactions independently on top of 6eeb4fc. build/f2-push-notify-infra's version kept, because its properties fail against the fresh version on two real behaviours, one of them a safety hole (the fresh version ignores its declared `sends` input, so a mismatched or replayed 410 deletes a LIVE subscription). PruneEvent kept as a recorded DELIVER overrule under this step's own invitation; 07-write-path.md 8.4 attaches LOUD to the run-cap skip only. Fresh's 01-12 run-cap property preserved through the merge and re-proven falsifiable. Commit 3f56685.",
-   "t": "2026-08-12T13:10:00Z"
-  },
-  {
-   "sid": "01-14",
-   "p": "COMMIT",
-   "s": "EXECUTED",
-   "d": "RECONCILED with 01-13. The roadmap's prescribed break was re-prosecuted against the replacement implementation rather than inherited: widening isGone to every non-2xx failed this row alone while 01-13 and 01-12 stayed green. Commit 3f56685.",
-   "t": "2026-08-12T13:10:00Z"
-  },
-  {
-   "sid": "01-15",
-   "p": "RED",
-   "s": "EXECUTED",
-   "d": "PASS: 5 scenarios collected, 5 failed at their own behaviour oracles with the absence 'todavia no existe src/push/notification-seat.ts'. No collection error, no skip marker.",
-   "t": "2026-08-12T13:10:00Z"
-  },
-  {
-   "sid": "01-15",
-   "p": "GREEN",
-   "s": "EXECUTED",
-   "d": "PASS: seat module landed by cherry-pick of 485a1bc. Commit b0870de.",
-   "t": "2026-08-12T13:10:00Z"
-  },
-  {
-   "sid": "01-16",
-   "p": "RED",
-   "s": "EXECUTED",
-   "d": "PASS, and this row is why the merge was worth verifying. The cherry-picked seat read the tag from payload.spot_id; the wire payload carries `tag`. The sibling lane's unit fixture declared a shape nothing produces, so all its unit tests were green against a seat reading the wrong key. Only the real reconciled oracle caught it. Fixture corrected first, unit RED reproduced: expected 'playa-venao', received 'aviso'.",
-   "t": "2026-08-12T13:10:00Z"
-  },
-  {
-   "sid": "01-16",
-   "p": "GREEN",
-   "s": "EXECUTED",
-   "d": "PASS: seat reads `tag`. 5/5 acceptance, 8/8 unit, typecheck clean. Commit 354b350.",
-   "t": "2026-08-12T13:10:00Z"
-  },
-  {
-   "sid": "01-17",
-   "p": "GREEN",
-   "s": "EXECUTED",
-   "d": "PASS: statelessness proven against the trapped scope; inserting a scope.fetch() call fails this row alone. Commit b0870de.",
-   "t": "2026-08-12T13:10:00Z"
-  },
-  {
-   "sid": "01-18",
-   "p": "GREEN",
-   "s": "EXECUTED",
-   "d": "PASS: close, then focus the matching client. Roadmap-prescribed break (always openWindow) fails this row alone while 01-19 stays green. Commit b0870de.",
-   "t": "2026-08-12T13:10:00Z"
-  },
-  {
-   "sid": "01-19",
-   "p": "GREEN",
-   "s": "EXECUTED",
-   "d": "PASS: the else branch from the real client list. Roadmap-prescribed break (always focus) fails this row alone while 01-18 stays green. Commit b0870de.",
-   "t": "2026-08-12T13:10:00Z"
-  },
-  {
-   "sid": "01-15..01-19",
-   "p": "COMMIT",
-   "s": "BLOCKED_FLAG",
-   "d": "FLAGGED, not blocking this commit: Pre-requisite 4(a) is still OPEN. This ships the handler MODULE only. The two listener registrations belong to F-WORKS-WITH-NO-SIGNAL's service worker file and are handed over as a contract. Push is NOT wired end to end; nothing mounts the seat yet. Separately, the acceptance harness fabricates the click event's data.url instead of chaining it from what handlePush showed, so 01-18 cannot observe 01-15 dropping `data`. That coupling is covered falsifiably at the unit layer instead. The acceptance files are DISTILL's and were not edited.",
-   "t": "2026-08-12T13:10:00Z"
-  }
- ]
+  "schema_version": "3.0",
+  "feature_id": "f-tell-me-when-its-worth-the-drive",
+  "events": [
+    {
+      "sid": "01-08",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified the accepted 01-08 contract in build/f2-push, the 01-06 planner provenance (83a335f), and that the current integration base already retains the pure injected-clock local-morning guard. The only missing approved artifact was the focused property test.",
+      "t": "2026-08-11T14:53:06Z"
+    },
+    {
+      "sid": "01-08",
+      "p": "RED_ACCEPTANCE",
+      "s": "NOT_APPLICABLE",
+      "d": "The approved Cucumber feature exists on build/f2-push but is absent from this integration base. Per the accepted contract, its public planner property was ported unchanged instead; no acceptance fixture or source was invented.",
+      "t": "2026-08-11T14:53:06Z"
+    },
+    {
+      "sid": "01-08",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: a temporary isMorningAtSpot => false mutation made the ported fast-check contract fail semantically. The 01-08 property shrank to Etc/GMT-1 at 05:25Z (a valid 06:25 local time) and raised AssertionError because the planner returned zero sends where one was required. The pre-existing threshold property also failed. The original guard was restored without changing either test.",
+      "t": "2026-08-11T14:53:06Z"
+    },
+    {
+      "sid": "01-08",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: npx vitest run tests/unit/push-plan-notifications.test.ts passed 2/2 and npm run typecheck passed after the parent-directed prerequisite b1ba1b4 was cherry-picked as 4da8a4d. Test budget: 1 new 01-08 public planner behavior x 2 = 2; one closed-window property was added while the existing threshold prerequisite property remains. UI N/A: this is a pure injected-clock planning decision with no rendered surface.",
+      "t": "2026-08-11T14:53:06Z"
+    },
+    {
+      "sid": "01-08",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 3563f28 committed the approved hourly-at-:25 closed-window property and the factual PREPARE, RED_ACCEPTANCE, RED_UNIT, and GREEN evidence. Independent review iteration 3 approved the unchanged accepted contract; no source planner change was required.",
+      "t": "2026-08-11T14:58:25Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified the accepted 01-09 contract, 01-06 dependency, active-lane path disjointness, and the current pure planner. The planner lacked both a spot-local date write plan and same-day suppression.",
+      "t": "2026-08-11T15:01:04Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "RED_ACCEPTANCE",
+      "s": "NOT_APPLICABLE",
+      "d": "The approved Cucumber feature exists on build/f2-push but is absent from this integration base. The accepted public planner property was added instead; no acceptance fixture or source was invented.",
+      "t": "2026-08-11T15:01:04Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: the new fast-check public-port property failed semantically on the first shrunk valid Panama 06:25 run because the planner lacked the required planned date write. AssertionError: expected an array of writes, received false.",
+      "t": "2026-08-11T15:01:04Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: focused planner properties passed 3/3 and npm run typecheck passed. The pure plan now emits one adapter write with the spot-local date and suppresses later runs against that declared stored state. Test budget: 1 new behavior x 2 = 2; one generated public-port property added. UI N/A: a pure notification-planning decision has no rendered surface.",
+      "t": "2026-08-11T15:01:04Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: review correction added a complete planned-write assertion. A temporary 2099-01-01 stamp shrank to one valid Panama 06:25 run and raised AssertionError showing expected 2026-08-10 versus received 2099-01-01. The source date was restored unchanged.",
+      "t": "2026-08-11T15:04:10Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: after restoration focused planner properties passed 3/3 and npm run typecheck passed. The one added property now verifies send/write identity and the exact injected spot-local civil date, in addition to same-day suppression and input purity.",
+      "t": "2026-08-11T15:04:10Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: review correction added the Pacific/Kiritimati UTC-midnight seam to the existing generated property. A temporary UTC-date stamp shrank to Kiritimati at local 2026-08-11 06:25 and raised AssertionError because it emitted 2026-08-10 instead of the required 2026-08-11. The source date was restored unchanged.",
+      "t": "2026-08-11T15:06:06Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: focused planner properties passed 3/3 and npm run typecheck passed after restoring the spot-local date. The property now covers both ordinary same-day slots and the UTC-midnight spot-local-date seam without adding another behavior or test.",
+      "t": "2026-08-11T15:06:06Z"
+    },
+    {
+      "sid": "01-09",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 4878e57 committed the pure same-day suppression, explicit spot-local write plan, generated seam coverage, and factual PREPARE through GREEN evidence. Fresh independent review approved; the commit carries the real Step-ID: 01-09 trailer.",
+      "t": "2026-08-11T15:08:18Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: restored the accepted build/f2-push feature, shared declared-surface support, and step bindings that were absent from this integration base. The roadmap retains the accepted 01-06 dependency and explicitly owns these contract assets for this repair. No active Theme, Report, Weather, or Learning path was touched.",
+      "t": "2026-08-11T15:13:56Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: the named accepted scenario bound non-emptily (1 scenario, 19 steps) and then failed semantically at its server-bar oracle. With threshold_score null, the current planner planned no sends across 0..100, proving the missing declared default-threshold behaviour without a loading or binding error. npm run typecheck passed. This is a contract-only repair: no GREEN or implementation COMMIT is claimed.",
+      "t": "2026-08-11T15:13:56Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: the new fast-check sweep over a declared 0..100 server bar failed semantically. It shrank to server bar 0 and showed that a null-bar subscription produced no sends instead of the required monotone cut.",
+      "t": "2026-08-11T15:20:01Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: planNotifications now accepts default_threshold_score as a declared input and uses it only when threshold_score is null; no numeric Push-module default was added. Focused unit 4/4, named acceptance 1/1, typecheck, and full units 321/321 passed. The 100-run complete-scale property receives a 15-second runner timeout without reducing its generated cases or assertions. UI N/A: pure planning decision.",
+      "t": "2026-08-11T15:20:01Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: temporary mutation ignored default_threshold_score by using 0 for every null-bar subscriber. The property shrank to server bar 1 and raised AssertionError because score 0 sent when it should not. The selection function was restored unchanged.",
+      "t": "2026-08-11T15:20:01Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: after restoration focused unit 4/4, named acceptance 1/1, typecheck, and full units 321/321 remained green.",
+      "t": "2026-08-11T15:20:01Z"
+    },
+    {
+      "sid": "01-10",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: bde53ae4b5edce674e0a3f54f94705c92bd2230b committed the declared default_threshold_score input for null subscriber bars, its complete-scale property, and truthful PREPARE through GREEN evidence. Independent review iteration 1 approved; src/push contains no product default. The approved contract repair assets from e38be824 were left unchanged.",
+      "t": "2026-08-11T15:23:15Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS: verified the accepted named scenario, 01-08 COMMIT/PASS dependency, planner timezone seam, and disjoint active Theme, Report, Weather, and Learning lanes. The declared 01-11 paths were already behaviorally complete, with no source change required.",
+      "t": "2026-08-11T15:26:20Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: a temporary regression that evaluated every spot against America/Panama made the unchanged named scenario fail semantically at its business oracle: it planned 1 aviso when the six-hours-ahead spot was already past midday. The injected spot.timezone rule was restored unchanged.",
+      "t": "2026-08-11T15:26:20Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "RED_UNIT",
+      "s": "NOT_APPLICABLE",
+      "d": "The accepted driving-port scenario was already green before and after the semantic mutation, so it required no unit test or production-code addition. The existing focused planner properties exercise the same public port.",
+      "t": "2026-08-11T15:26:20Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: restoration left no source or test diff. The named acceptance scenario passed 1/1 with 18 steps; focused planner properties 4/4, typecheck, and full units 321/321 passed. UI N/A: this remains a pure injected-clock planning decision.",
+      "t": "2026-08-11T15:26:20Z"
+    },
+    {
+      "sid": "01-11",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: 757223f9bb3afc57d49cfa57f540388106b3e09a commits only the accepted-contract verification and factual lifecycle proof. Independent review iteration 2 approved the exact two evidence paths; no planner or test behavior changed.",
+      "t": "2026-08-11T15:28:16Z"
+    },
+    {
+      "sid": "01-13",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "RECONCILED: two lanes implemented planSendReactions independently on top of 6eeb4fc. build/f2-push-notify-infra's version kept, because its properties fail against the fresh version on two real behaviours, one of them a safety hole (the fresh version ignores its declared `sends` input, so a mismatched or replayed 410 deletes a LIVE subscription). PruneEvent kept as a recorded DELIVER overrule under this step's own invitation; 07-write-path.md 8.4 attaches LOUD to the run-cap skip only. Fresh's 01-12 run-cap property preserved through the merge and re-proven falsifiable. Commit 3f56685.",
+      "t": "2026-08-12T13:10:00Z"
+    },
+    {
+      "sid": "01-14",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "RECONCILED with 01-13. The roadmap's prescribed break was re-prosecuted against the replacement implementation rather than inherited: widening isGone to every non-2xx failed this row alone while 01-13 and 01-12 stayed green. Commit 3f56685.",
+      "t": "2026-08-12T13:10:00Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS: 5 scenarios collected, 5 failed at their own behaviour oracles with the absence 'todavia no existe src/push/notification-seat.ts'. No collection error, no skip marker.",
+      "t": "2026-08-12T13:10:00Z"
+    },
+    {
+      "sid": "01-15",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: seat module landed by cherry-pick of 485a1bc. Commit b0870de.",
+      "t": "2026-08-12T13:10:00Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "RED",
+      "s": "EXECUTED",
+      "d": "PASS, and this row is why the merge was worth verifying. The cherry-picked seat read the tag from payload.spot_id; the wire payload carries `tag`. The sibling lane's unit fixture declared a shape nothing produces, so all its unit tests were green against a seat reading the wrong key. Only the real reconciled oracle caught it. Fixture corrected first, unit RED reproduced: expected 'playa-venao', received 'aviso'.",
+      "t": "2026-08-12T13:10:00Z"
+    },
+    {
+      "sid": "01-16",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: seat reads `tag`. 5/5 acceptance, 8/8 unit, typecheck clean. Commit 354b350.",
+      "t": "2026-08-12T13:10:00Z"
+    },
+    {
+      "sid": "01-17",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: statelessness proven against the trapped scope; inserting a scope.fetch() call fails this row alone. Commit b0870de.",
+      "t": "2026-08-12T13:10:00Z"
+    },
+    {
+      "sid": "01-18",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: close, then focus the matching client. Roadmap-prescribed break (always openWindow) fails this row alone while 01-19 stays green. Commit b0870de.",
+      "t": "2026-08-12T13:10:00Z"
+    },
+    {
+      "sid": "01-19",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: the else branch from the real client list. Roadmap-prescribed break (always focus) fails this row alone while 01-18 stays green. Commit b0870de.",
+      "t": "2026-08-12T13:10:00Z"
+    },
+    {
+      "sid": "01-15..01-19",
+      "p": "COMMIT",
+      "s": "BLOCKED_FLAG",
+      "d": "FLAGGED, not blocking this commit: Pre-requisite 4(a) is still OPEN. This ships the handler MODULE only. The two listener registrations belong to F-WORKS-WITH-NO-SIGNAL's service worker file and are handed over as a contract. Push is NOT wired end to end; nothing mounts the seat yet. Separately, the acceptance harness fabricates the click event's data.url instead of chaining it from what handlePush showed, so 01-18 cannot observe 01-15 dropping `data`. That coupling is covered falsifiably at the unit layer instead. The acceptance files are DISTILL's and were not edited.",
+      "t": "2026-08-12T13:10:00Z"
+    },
+    {
+      "sid": "01-20",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "PASS (re-proof after rebase). The prior lane held 01-20 at GREEN pre-COMMIT and died to a watchdog; its runs were against base 03f6781 and no longer attest to this tree. Rebased onto origin/main (142 commits): 3 docs commits replayed, the data commit f63a8ab DROPPED because main independently carries the same 2026-08-12 capture plus a newer surface (surf_date 2026-08-13, published 05:48Z). publish:surface --verify now exits 0 reporting 'current 2026-08-13; tomorrow 2026-08-14', clearing the civil-day guard that wedged the prior lane. Main's SpotDetail.astro had moved (Breakdown x2, StaticMap added), so the mount was re-applied by hand rather than merged: import beside the existing ones, <PushSettings/> immediately above the report CTA, matching application-architecture.md section 14. Verified main's notification-seat.ts reads 'tag' not 'spot_id', so the 01-16 finding travelled.",
+      "t": "2026-08-13T10:31:37Z"
+    },
+    {
+      "sid": "01-20",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS (real falsifiability pass on the rebased tree, not inherited). Break applied: removed the <PushSettings/> mount from SpotDetail.astro, leaving the component, island and copy files intact, which is exactly the 'renders nothing anywhere' implementation the step's implementation_notes say must fail. npm run test:at -- avisos-de-este-spot.feature --name 'Donde el telefono no puede pedir avisos' exited 1: 1 scenario failed, 20 steps (18 passed, 1 skipped, 1 failed). It failed at the R6 comparison oracle itself, not at collection or import: 'la misma pagina tampoco ofrece la accion donde el navegador SI puede pedir avisos, asi que su ausencia aqui no distingue nada' (declared-surface.ts:112 via avisos-island.steps.ts:644). This is the discriminating proof the roadmap demands: absence alone cannot pass, the capable context must show the action. Mount restored and verified byte-exact by sha256 against the pre-break snapshot (c5998aeb...); diff clean. Evidence: 01-20-red-at.log.",
+      "t": "2026-08-13T10:31:56Z"
+    },
+    {
+      "sid": "01-20",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS (re-proven on the rebased tree). Break applied to src/push/island.ts: deleted the 'if (!canRequestPush(windowPort)) return;' guard in mountPushSettings so the control reveals unconditionally. npx vitest run tests/unit/push-island.test.ts exited 1: 1 failed, 2 passed of 3, failing at its own behaviour assertion 'an incapable browser must never reveal an action that cannot lead anywhere', not at import or collection. Restored from snapshot and verified byte-exact by sha256; re-run exits 0 with 3/3 passed. Evidence: 01-20-red-unit.log, 01-20-green-unit.log.",
+      "t": "2026-08-13T10:32:37Z"
+    },
+    {
+      "sid": "01-20",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS on the rebased tree, every number re-measured, none inherited. npx vitest run tests/unit/push-island.test.ts exit 0, 3/3. npm run typecheck exit 0. npm run test:at -- avisos-de-este-spot.feature --name 'Donde el telefono no puede pedir avisos' exit 0: 1 scenario passed, 20 steps passed, 4 hooks passed. npm run build exit 0 (maps:verify + publish:surface --verify + astro build all green). R37 BYTE MEASUREMENT, measured not asserted, as the roadmap requires: the push island emits as an inlined type=module script on dist/spots/playa-venao.html at 317 B raw / 215 B gzip -9, against the 2.0 KB gz booking of application-architecture.md sections 5 and 6, leaving 1833 B gz of headroom. Shape noted honestly: at 01-20 the island runs on load because revealing the pre-rendered control IS the mount; the 'loads only on tap' half of the booking belongs to the tap behaviour that 01-21 adds. npm run budget exit 0: 105 documents across 10 declared routes, heaviest /spots/santa-catalina-la-punta at 6,712 B gz of 14,336 B gz, under every ceiling. Evidence files: 01-20-green-unit.log, 01-20-typecheck.log, 01-20-green-at.log, 01-20-build.log, 01-20-budget.log.",
+      "t": "2026-08-13T10:33:47Z"
+    },
+    {
+      "sid": "01-20",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS",
+      "t": "2026-08-13T10:34:21Z"
+    }
+  ]
 }
