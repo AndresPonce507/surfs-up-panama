@@ -22,8 +22,8 @@ Each slice's acceptance tests are written Just In Time when that slice legally e
 
 | Slice | Value statement | Status | Annotation | Justification |
 |-------|-----------------|--------|------------|---------------|
-| slice-01 | A fresh bundle becomes a freshly published site through one bounded pipeline: given the bundle a Build cycle just wrote, the Publisher merges it into the durable surface archive, renders the real Astro site for the production origin, and uploads every page PUT-only with its directory alias; and every dishonest input (wrong civil day, wrong origin receipt, wrong build id) refuses loudly, uploads nothing, and leaves the previous surface intact. | pending | @walking_skeleton, owns the publish core + Lambda image | Thinnest end-to-end vertical that proves the risky part: the whole manual release chain (`pipeline:build` → `publish:surface` → `npm run build` → `publish-preview --target production`) running unattended inside one function, with its four seam commitments preserved by reuse, not by copy: PUT-only additive publication, directory-key double-write (`directoryAliasFor`), the origin receipt guard (`publicationPlan` / `assertPublicationArtifactOrigin`, commit `0fa6d66`), and the midnight rule (`publish:surface --verify` refusing a surface that is not Panama's current civil day). Durable previous-surface state lives at `site/published-surface.json` in the site bucket so dawn receipts survive cold starts (ADR decision 2); a missing state object seeds honestly from the incoming update, the same null-previous path `publish-static-surface.ts` already has. `publish.success` is derived by a pure function in the `log-events.ts` pattern and is never logged unless every PUT completed; refusals log `publish.refused` with the reason. The container image is proven on Linux/ARM64 by a smoke sibling of `scripts/smoke-build-lambda-arm64.mjs` before anything counts. |
-| slice-02 | Build hands the fresh bundle to the Publisher and the stacks know it: the hour Build logs build.success, it synchronously invokes the Publisher with the bundle it just wrote; the synthesized template carries the bounded function (reserved concurrency 1, 300 s timeout, PUT-only grants, no schedule of its own, no S3 event, no queue), and a publish dead-man alarm mirrors the Build pattern so a silently stale site pages a human. | pending | depends-on slice-01 | The seam is `build-handler.ts` after the public-manifest probe: synchronous RequestResponse invoke with `{build_id, bundle_key}`, `retryAttempts: 0`, failure logged as an event line and never retried (next hour self-heals because publication is idempotent PUT-only). Build's declared timeout rises 120 s → 420 s to cover the wait; that is a reviewed guardrail change shipped with its declaration and `test:infra` updates in the same slice, not drift. Infra is honest by synthesis: `synth:infra` stays credential-free green, and the template assertions pin what "bounded" means (no new trigger types, no Delete in any Publisher grant, `PublishSuccess` metric filter, observability dead-man mirroring `surfs-up-panama-build-dead-mans-switch`). Deploy explicitly does NOT happen in this lane; order Site → Ingest → Observability belongs to the integration terminal per the release-readiness doc. |
+| slice-01 | A fresh bundle becomes a freshly published site through one bounded pipeline: given the bundle a Build cycle just wrote, the Publisher merges it into the durable surface archive, renders the real Astro site for the production origin, and uploads every page PUT-only with its directory alias; and every dishonest input (wrong civil day, wrong origin receipt, wrong build id) refuses loudly, uploads nothing, and leaves the previous surface intact. | **BLOCKED, not shipped** (code complete; Vera FAIL 2026-08-13; DoD 6 unmet) | @walking_skeleton, owns the publish core + Lambda image | Thinnest end-to-end vertical that proves the risky part: the whole manual release chain (`pipeline:build` → `publish:surface` → `npm run build` → `publish-preview --target production`) running unattended inside one function, with its four seam commitments preserved by reuse, not by copy: PUT-only additive publication, directory-key double-write (`directoryAliasFor`), the origin receipt guard (`publicationPlan` / `assertPublicationArtifactOrigin`, commit `0fa6d66`), and the midnight rule (`publish:surface --verify` refusing a surface that is not Panama's current civil day). Durable previous-surface state lives at `site/published-surface.json` in the site bucket so dawn receipts survive cold starts (ADR decision 2); a missing state object seeds honestly from the incoming update, the same null-previous path `publish-static-surface.ts` already has. `publish.success` is derived by a pure function in the `log-events.ts` pattern and is never logged unless every PUT completed; refusals log `publish.refused` with the reason. The container image is proven on Linux/ARM64 by a smoke sibling of `scripts/smoke-build-lambda-arm64.mjs` before anything counts. |
+| slice-02 | Build hands the fresh bundle to the Publisher and the stacks know it: the hour Build logs build.success, it synchronously invokes the Publisher with the bundle it just wrote; the synthesized template carries the bounded function (reserved concurrency 1, 300 s timeout, PUT-only grants, no schedule of its own, no S3 event, no queue), and a publish dead-man alarm mirrors the Build pattern so a silently stale site pages a human. | **shipped** `b3f64cb` (02-01) + `4c1467b` (02-02) | depends-on slice-01 | The seam is `build-handler.ts` after the public-manifest probe: synchronous RequestResponse invoke with `{build_id, bundle_key}`, `retryAttempts: 0`, failure logged as an event line and never retried (next hour self-heals because publication is idempotent PUT-only). Build's declared timeout rises 120 s → 420 s to cover the wait; that is a reviewed guardrail change shipped with its declaration and `test:infra` updates in the same slice, not drift. Infra is honest by synthesis: `synth:infra` stays credential-free green, and the template assertions pin what "bounded" means (no new trigger types, no Delete in any Publisher grant, `PublishSuccess` metric filter, observability dead-man mirroring `surfs-up-panama-build-dead-mans-switch`). Deploy explicitly does NOT happen in this lane; order Site → Ingest → Observability belongs to the integration terminal per the release-readiness doc. |
 
 Notes on the plan:
 
@@ -657,3 +657,78 @@ but it means the deploy has an extra ordering constraint beyond the usual stack 
 `adr-weather-to-site-bridge.md` §5 has been amended: its "a publish dead-man alarm mirror[s] the
 existing Build pattern" sentence was true when written and is now false. Leaving an ADR
 contradicting the implementation is precisely the drift this project treats as its worst bug.
+
+## Wave: DELIVER / [REF] Lane close-out 2026-08-13: what is sealed, what is not, and what the deploy needs
+
+### Status, stated as a binary rather than softened
+
+| Slice | State | Why |
+|---|---|---|
+| slice-01 | **NOT sealed** | Code complete and correct in its own terms, but DoD 6 (real render proven inside the ARM64 image) cannot be met by this lane. Vera examined it and returned **FAIL** on 2026-08-13, on the charter's own named negative. The cause is the map-manifest portability blocker recorded above, owned by the maps lane. |
+| slice-02 | **shipped** | `b3f64cb` (02-01, the handover) + `4c1467b` (02-02, the declaration). Its own observables are the synthesized template and Build's handler against fakes; neither touches the container render, so its evidence is complete on its own terms. |
+
+slice-01 is not "sealed except for an external blocker". It is not sealed.
+
+### Gates, measured on the final tree
+
+| Gate | Result |
+|---|---|
+| `npm run test:at --tags "@feature-weather-to-site-bridge"` | exit 0 — 20 scenarios (20 passed), 480 steps (480 passed) |
+| `npm run synth:infra` | exit 0, credential-free |
+| `npm run test:infra` | exit 0 — 10 files / 94 tests |
+| `npm run typecheck` | exit 0 |
+| `npm test` | exit 0 — 122 files / 614 tests |
+| `node scripts/ci-local.mjs --fast` | exit 0 — **11 passed / 0 failed / 0 skipped** |
+| `npm run smoke:publish-lambda-arm64` | **exit 1** — blocked by the map manifest, see above |
+
+### What the deploy step needs
+
+Deploy belongs to the integration terminal. Nothing in this lane deployed, and `cdk diff` was never
+run (it uploads assets; a prior lane was stopped for exactly that).
+
+Order, per `docs/demo/weather-ingestion-release-readiness-2026-08-11.md`, with one addition this
+lane is responsible for:
+
+1. `SurfsUpPanamaSite`
+2. `SurfsUpPanamaIngest` — carries both the Publisher (`surfs-up-panama-publish`) and Build's
+   420 s timeout. This is the stack that activates the bridge.
+3. `SurfsUpPanamaObservability` — **and this one is now gated, not merely last.**
+
+**The added constraint:** the staleness dead-man now watches `PublishSuccess`, and the Publisher
+refuses every cycle while the map manifest is unportable. Deploying Observability before that fix
+lands means an alarm that pages continuously. Honest, but useless. Hold step 3 until the maps fix
+is in.
+
+Deploying requires Docker on the deploying machine and ECR access, because the Publisher is a
+container-image function whose asset is built and pushed at deploy time. That is new for this
+stack.
+
+### Open, flagged, owned elsewhere
+
+1. **Map manifest is not reproducible on the deploy runtime.** The blocker. Maps lane. Stops every
+   publish cycle. Fully diagnosed above.
+2. **Page-weight ceilings are measured with a different runtime than publishes.** Page-weight gate
+   owner. Worst route has ~5 B of true margin; all twenty `*/reportado` routes sit inside 50 B.
+3. **The dead-man's physical name no longer matches its meaning.** It is still
+   `surfs-up-panama-build-dead-mans-switch` while watching publication. Kept deliberately to avoid
+   an unforced CloudFormation replacement and drift against the readiness doc and `HANDOFF.md`,
+   but it will mislead whoever it pages at 03:00. Observability owner.
+4. **Publisher `memorySize` is 1536 MB**, an unpinned choice. A ceiling rather than an
+   expectation, but worth the billing owner's eyes against `f-bill-stays-zero-and-stays-up`.
+5. **`system-architecture.md` §12 records 8 CloudWatch alarms; the design synthesizes 10.** Small
+   pre-existing doc drift, found while settling the alarm ceiling.
+6. **300 s (Publisher) and 420 s (Build) are declared but UNVALIDATED on this base.** The full
+   container render cannot be timed end to end while it refuses at `maps:verify`. The host build
+   takes 2.03 s, which suggests both are ample, but that is an inference from a warm-cache host
+   run, not a measurement of the runtime these numbers govern. Re-measure once the blocker closes.
+
+### Tooling defects, recorded verbatim rather than worked around
+
+1. A PreToolUse hook on this machine blocks any bash command whose text contains the string
+   `execution-log`. Every dispatch in this lane carried the standing rule to record such a block
+   rather than reword a command past the filter. No block fired this session.
+2. `des-record-examine` refused to record Vera's examination against roadmap step 01-01 or 01-02,
+   reporting *"is not a user-visible upgraded roadmap step; source-blind examination is not
+   applicable"*, because both steps are `surface_classification=non-visual` — even though the
+   slice-01 charter explicitly commissions a non-visual CLI examination. The verdict was written
+   into the charter's Session log by hand instead.
