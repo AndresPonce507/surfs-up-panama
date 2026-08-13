@@ -154,3 +154,33 @@ const homeAnnouncement = composeLinkAnnouncement({
     <p>En iPhone: Compartir, y luego Añadir a pantalla de inicio. Queda a un toque y abre aunque no haya señal.</p>
   </details>
 </RankedList>
+
+<style>
+  /* The A2HS hint is the footer's one control: its summary must be a real
+     finger target (U-series 44px floor via --tap), not a bare text line.
+     Same native-disclosure look as details.confidence in components.css,
+     but scoped here on purpose: the shared stylesheet is inlined into
+     every route and the reportado documents sit bytes under their 4 KB
+     ceiling, while this control renders only on the home document. */
+  summary {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sp-1);
+    min-height: var(--tap);
+    font-weight: 600;
+    list-style: none;
+    cursor: pointer;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary::after {
+    content: '›';
+  }
+
+  details[open] > summary::after {
+    content: '⌄';
+  }
+</style>
