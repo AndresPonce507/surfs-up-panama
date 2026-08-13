@@ -1,6 +1,6 @@
 # ADR: Per-reporter offset — backfitting additive model, shrink to zero
 
-**Status:** Proposed (DESIGN round 2, 2026-08-08) · **Context:** C3 Verification & Learning · **Implements:** the DISCUSS "Known cost" note (2026-08-08) on decision 28; research 09 §13.2
+**Status:** Accepted (2026-08-12) · **Context:** C3 Verification & Learning · **Implements:** the DISCUSS "Known cost" note (2026-08-08) on decision 28; research 09 §13.2
 
 ## Decision
 
@@ -25,4 +25,4 @@
 - A reporter who loses browser storage restarts calibration (accepted cost, adr-identity-claim-merge); a later claim-merge retroactively unifies their offset because everything is recomputed from logs + current mapping.
 - tau_u mis-set only changes convergence speed, never correctness of the gates: no public number depends on u_r without G1-G3 passing.
 
-**Status note (2026-08-12):** stays Proposed. The backfit itself landed on the learning lane 2026-08-12 (`d7e2236`, "backfit the per-reporter offset; subtract the habit") but without decision 1's trailing 90-day fit window; the window is being added in the same lane, and this ADR flips to Accepted when it lands.
+**Status note (2026-08-12, superseding the morning note):** Accepted. The backfit landed on the learning lane 2026-08-12 (`d7e2236`, "backfit the per-reporter offset; subtract the habit"), and decision 1's trailing 90-day fit window landed the same day (`5d54c7c`, "bound the nightly observation read to the trailing 90-day window": the read now skips whole out-of-window `dt=` days before fetch, `FIT_WINDOW_DAYS = 90` declared beside the propensity window, regression test in `tests/unit/learning-fit-window.test.ts` proven red on the pre-fix code). Both halves of the estimator this ADR specifies are now shipped; the flip to Accepted is the one this note promised.
