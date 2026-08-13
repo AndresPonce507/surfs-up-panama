@@ -76,6 +76,17 @@ This section supersedes the legacy notes below. They are retained only as histor
 - This is code-only. The emitted-worker test and normal gates passed locally. Physical-device Push
   smoke still remains before anyone calls the device path complete.
 
+## Tide station assignment decision (2026-08-13)
+
+- `adr-tide-source-chain.md` is now **Accepted**. A tide station is assigned per spot only after an
+  auditable exact-spot validation record: at least 28 observed high/low events across 14 consecutive
+  local days, p90 absolute phase error no greater than 30 minutes, no error above 45 minutes, and a
+  0.80–1.20 observed/predicted daily tidal-range ratio. The record must identify its local reference,
+  coordinates/time zone, dates, and station.
+- There are no accepted mappings yet. Balboa `9812501` and Cristobal `9817583` are candidate stations,
+  not coast-wide assignments. Keep every current tide reading dark until a spot passes the policy;
+  do not lower confidence thresholds to compensate.
+
 ## Landing train (merge order) and lane map
 
 Order: **paste-fix + IAM-fix → deltas 04-05 → learning → report 04-05 → record 01-02 →

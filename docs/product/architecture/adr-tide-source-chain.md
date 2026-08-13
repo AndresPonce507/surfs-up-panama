@@ -1,6 +1,6 @@
 # ADR: Tide source — NOAA CO-OPS harmonic predictions primary, WorldTides the global fallback
 
-**Status:** Proposed (DESIGN round 2, 2026-08-08) · **Lane:** ingest (nw-system-designer) · **Context:** C1 Forecast Intake
+**Status:** Accepted (amended 2026-08-13) · **Lane:** ingest (nw-system-designer) · **Context:** C1 Forecast Intake
 
 ## Context, including a round-1 discrepancy this ADR resolves
 
@@ -35,6 +35,15 @@ source decision. Facts (research 03, all live-verified 2026-08-08):
 4. Optional later, Caribbean launch only: IOC `bdto` real-time water level as an
    observation cross-check (research 03 §3), not a forecast input; commercial-use terms
    UNVERIFIED there.
+5. **A station is never assigned by coast, distance, or intuition.** A per-spot mapping may enter
+   the seed data only with an auditable validation record for that exact spot: at least 28 observed
+   local high/low events across at least 14 consecutive local days; 90th-percentile absolute phase
+   error at or below 30 minutes; no observed phase error above 45 minutes; and observed-to-predicted
+   tidal-range ratio between 0.80 and 1.20 for every compared local day. The record names the local
+   reference, its coordinates/time zone, collection dates, station id, and computed errors. A failed
+   or absent record means the spot stays dark. This threshold is the explicit product safety policy
+   adopted by Andres through delegated decision authority on 2026-08-13, not an inference from the
+   two Panama station locations.
 
 ## Alternatives considered
 
@@ -54,3 +63,6 @@ source decision. Facts (research 03, all live-verified 2026-08-08):
   time (Domain Model §5.1 field consumers), so a replay needs no tide re-fetch.
 - The domain lane owes the seed (or ingest-config) field carrying the station reference;
   named consumer: the tide adapter, join key `spot_id` (flagged in 04-ingest-pipeline §11).
+- **No Panama spot is mapped at acceptance time.** Balboa `9812501` and Cristobal `9817583` are
+  candidates, not blanket approvals. Existing seed data contains no validation records, so launch
+  behavior remains an honest dark tide until one passes the rule above.
