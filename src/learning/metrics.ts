@@ -1,13 +1,21 @@
 // Operator-only monthly metrics, 06-learning-layer.md section 10. Every
 // section here is a function of the rows the store actually holds -- never
-// a literal placeholder -- with two named exceptions this step deliberately
-// defers, per wave-decisions.md D-2026-08-12-1:
+// a literal placeholder.
 //
-//   - `calibration.offending_term` stays the literal null. Naming which
-//     confidence term failed the calibration check is 05-04's; this step
-//     ships the bins the naming logic will read.
-//   - `shrinkage[].flagged` stays the literal false. The alarm threshold
-//     (09 section 17.4 guardrail 2) is 05-05's; this step ships the row.
+// `shrinkage[].flagged` is 05-05's real judgment now (09 section 17.4
+// guardrail 2): a spot with SHRINKAGE_ALARM_MIN_N observations still shrunk
+// by SHRINKAGE_ALARM_MIN_WEIGHT or more toward its parent means a
+// misconfiguration -- tau wildly off, or a parent eating its children. The
+// evaluation reads shrink_weight straight off the stored record's own
+// shrunk_from_global field (no refit) and the flag is an ALARM only
+// (adr-pooling-hierarchy-activation decision 6): nothing anywhere reacts to
+// it, automating a response would hand the pooling a knob to turn itself.
+//
+// `calibration.offending_term` is 05-04's real judgment now (06 section 10;
+// 09 section 3.6 consequence 3): the calibration check compares the 'high'
+// and 'low' confidence bins' hit rates and names 'c_spread' only on the
+// affirmative inversion (high strictly less often right than low). Naming is
+// routing, not removal -- the scoring lane owns C_spread's actual deletion.
 //
 // `cv.verdict` is 05-02's real judgment now (06 section 7 G7;
 // src/learning/cross-validation.ts), not the deferred literal 05-01 shipped:
@@ -55,7 +63,7 @@ export type MonthlyMetrics = {
   sigma_human: { value: number | null; co_observer_pairs: number };
   calibration: {
     probability: 'score_q/100 (naive)';
-    bins: Record<string, { reports: number; hits: number; hit_rate: number; brier: number }>;
+    bins: { conf_level: string; reports: number; hits: number; hit_rate: number; brier: number }[];
     offending_term: 'c_spread' | null;
   };
   shrinkage: {
@@ -394,23 +402,42 @@ function calibrationOf(observations: readonly ObservationRow[]): MonthlyMetrics[
     aggregates.set(confidence, aggregate);
   }
 
-  const bins = Object.fromEntries(
-    [...aggregates]
-      .sort(([left], [right]) => left.localeCompare(right))
-      .map(([confidence, aggregate]) => [
-        confidence,
-        {
-          reports: aggregate.reports,
-          hits: aggregate.hits,
-          hit_rate: aggregate.hits / aggregate.reports,
-          brier: aggregate.squaredError / aggregate.reports,
-        },
-      ]),
-  );
-  return { probability: 'score_q/100 (naive)', bins, offending_term: null };
+  const bins = [...aggregates]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([confidence, aggregate]) => ({
+      conf_level: confidence,
+      reports: aggregate.reports,
+      hits: aggregate.hits,
+      hit_rate: aggregate.hits / aggregate.reports,
+      brier: aggregate.squaredError / aggregate.reports,
+    }));
+  return { probability: 'score_q/100 (naive)', bins, offending_term: offendingTermOf(bins) };
+}
+
+/**
+ * 09 section 3.6 consequence 3: if the high-confidence bin is not more often
+ * right than the low-confidence bin, C_spread is named for removal. Compares
+ * only the 'high' and 'low' bins the design names -- a month missing either
+ * one has no comparison to make, and absence must never manufacture a
+ * removal (a detector only ever seen firing proves nothing about its
+ * judgment). A tie (equal hit rates) is not an inversion: only a STRICTLY
+ * lower high-confidence hit rate names the term.
+ */
+function offendingTermOf(
+  bins: readonly { conf_level: string; hit_rate: number }[],
+): 'c_spread' | null {
+  const high = bins.find((bin) => bin.conf_level === 'high');
+  const low = bins.find((bin) => bin.conf_level === 'low');
+  if (high === undefined || low === undefined) return null;
+  return high.hit_rate < low.hit_rate ? 'c_spread' : null;
 }
 
 // ---------- shrinkage (09 section 17.4 guardrail 2) ----------
+
+/** 09 section 17.4 guardrail 2: this many observations is enough evidence for a spot to have earned independence. */
+const SHRINKAGE_ALARM_MIN_N = 80;
+/** 09 section 17.4 guardrail 2: still pooled away by at least this much at that evidence level is the misconfiguration. */
+const SHRINKAGE_ALARM_MIN_WEIGHT = 0.6;
 
 function shrinkageOf(corrections: readonly StoredCorrection[]): MonthlyMetrics['shrinkage'] {
   return corrections
@@ -421,9 +448,14 @@ function shrinkageOf(corrections: readonly StoredCorrection[]): MonthlyMetrics['
       shrink_weight: key.shrunk_from_global,
       n: key.n,
       reporters: key.reporters,
-      flagged: false,
+      flagged: isOverPooled(key.n, key.shrunk_from_global),
     }))
     .sort((left, right) => left.spot_id.localeCompare(right.spot_id));
+}
+
+/** A spot that has earned independence (high n) but is still mostly pooled away is a misconfiguration, never noise on day one. */
+function isOverPooled(n: number, shrinkWeight: number): boolean {
+  return n >= SHRINKAGE_ALARM_MIN_N && shrinkWeight >= SHRINKAGE_ALARM_MIN_WEIGHT;
 }
 
 /** The spot-level alarm representative: the applied key with the most evidence behind it. */

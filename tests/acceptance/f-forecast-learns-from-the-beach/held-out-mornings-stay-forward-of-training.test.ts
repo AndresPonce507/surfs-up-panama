@@ -76,7 +76,7 @@ const FORWARD_UNIVERSE: Record<string, string> = {
   ].join("\n"),
 };
 
-describe.skip("05-03 acceptance: held-out mornings stay forward of training, never shuffled with it", () => {
+describe("05-03 acceptance: held-out mornings stay forward of training, never shuffled with it", () => {
   it("refuses a declared CV scheme whose folds shuffle time, naming the rule and the file", async () => {
     await writeUniverse(SHUFFLED_UNIVERSE);
 

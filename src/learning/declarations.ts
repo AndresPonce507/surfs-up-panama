@@ -48,8 +48,22 @@ export const RULE_ONLY_THE_GATE_MAY_MARK_APPLIED = 'only-the-gate-may-mark-a-cor
  */
 export const RULE_WIND_RESIDUAL_NEEDS_ITS_OWN_FLOOR = 'a-wind-residual-must-bring-its-own-noise-floor';
 
+/**
+ * A declared CV_SCHEME whose kind shuffles time is banned outright, not
+ * merely unused (06-learning-layer.md section 7 row G7): consecutive hours
+ * of one swell are near-duplicates, so a shuffled split leaks the very thing
+ * it claims to hold out and flatters whatever correction it judges. The one
+ * legal shape is rolling-origin blocked time. A universe that declares no
+ * CV_SCHEME at all is not in violation -- absence is legal, only the wrong
+ * shape is not.
+ */
+export const RULE_HELD_OUT_STAYS_FORWARD_OF_TRAINING = 'held-out-mornings-must-stay-forward-of-training';
+
 /** A module allowed to construct the applied state: any file whose basename starts with this. */
 const GATE_MODULE_PREFIX = 'gates';
+
+/** The only legal CV_SCHEME.kind (06-learning-layer.md section 7 row G7). */
+const LEGAL_CV_SCHEME_KIND = 'rolling_origin_blocked';
 
 /** The residual form whose noise floor this rule requires. */
 const WIND_RESIDUAL_FORM = 'r_wind';
@@ -89,6 +103,7 @@ export async function evaluateLearningDeclarations(input: { root: string }): Pro
   const residualForms: string[] = [];
   const noiseFloors: Record<string, NoiseFloor> = {};
   const appliedMarkingSites: string[] = [];
+  const cvSchemes: DeclaredCvScheme[] = [];
 
   for (const filePath of files) {
     const text = await readFile(filePath, 'utf8');
@@ -96,6 +111,7 @@ export async function evaluateLearningDeclarations(input: { root: string }): Pro
     residualForms.push(...declared.residualForms);
     Object.assign(noiseFloors, declared.noiseFloors);
     appliedMarkingSites.push(...declared.appliedMarkingSites);
+    cvSchemes.push(...declared.cvSchemes);
   }
 
   const dedupedResidualForms = dedupe(residualForms);
@@ -107,6 +123,7 @@ export async function evaluateLearningDeclarations(input: { root: string }): Pro
     violations: [
       ...onlyTheGateMayMarkAppliedViolations(appliedMarkingSites),
       ...windResidualNeedsItsOwnFloorViolations(dedupedResidualForms, noiseFloors),
+      ...heldOutMorningsStayForwardViolations(cvSchemes),
     ],
   };
 }
@@ -177,13 +194,29 @@ function derivedFromNamesTheWindLabelsOwnConfusionStructure(derivedFrom: string)
   return /wind/i.test(derivedFrom) && !/height/i.test(derivedFrom);
 }
 
+// ---------- the rule (05-03 criteria 1-2) ----------
+
+/** Every declared CV_SCHEME whose kind is anything but the one legal shape is a violation, wherever it ships. */
+function heldOutMorningsStayForwardViolations(schemes: readonly DeclaredCvScheme[]): LearningDeclarationsViolation[] {
+  return schemes
+    .filter((scheme) => scheme.kind !== LEGAL_CV_SCHEME_KIND)
+    .map((scheme) => ({
+      rule: RULE_HELD_OUT_STAYS_FORWARD_OF_TRAINING,
+      detail: `${scheme.filePath} declares CV_SCHEME.kind ${JSON.stringify(scheme.kind)}; held-out mornings must stay forward of training`,
+    }));
+}
+
 // ---------- per-file syntax scan ----------
 
 type FileDeclarations = {
   residualForms: string[];
   noiseFloors: Record<string, NoiseFloor>;
   appliedMarkingSites: string[];
+  cvSchemes: DeclaredCvScheme[];
 };
+
+/** One declared `CV_SCHEME` const, and the file it was found in. `kind` is `null` when the literal has no `kind` field. */
+type DeclaredCvScheme = { filePath: string; kind: string | null };
 
 function declarationsOfFile(filePath: string, text: string): FileDeclarations {
   const { comments, strings } = lexStringsAndComments(text);
@@ -199,6 +232,7 @@ function declarationsOfFile(filePath: string, text: string): FileDeclarations {
     residualForms: residualFormsDeclaredIn(commentMasked),
     noiseFloors: noiseFloorsDeclaredIn(commentMasked),
     appliedMarkingSites: marksApplied ? [filePath] : [],
+    cvSchemes: cvSchemesDeclaredIn(filePath, commentMasked),
   };
 }
 
@@ -238,6 +272,32 @@ function noiseFloorsDeclaredIn(commentMaskedText: string): Record<string, NoiseF
     floors[key] = { value: Number(match[2]), derived_from: derivedFrom };
   }
   return floors;
+}
+
+/**
+ * Every literal `CV_SCHEME` declaration is source evidence, not executable
+ * configuration -- a file may declare it more than once (each is its own
+ * violation candidate), so this walks every occurrence rather than the
+ * single-marker `bracketedBodyAfter` the two rules above use.
+ */
+function cvSchemesDeclaredIn(filePath: string, commentMaskedText: string): DeclaredCvScheme[] {
+  const declarations: DeclaredCvScheme[] = [];
+  const declarationStart = /(?:^|\n)\s*(?:export\s+)?const\s+CV_SCHEME\b/g;
+  for (const match of commentMaskedText.matchAll(declarationStart)) {
+    const start = match.index ?? 0;
+    const equalsIndex = commentMaskedText.indexOf('=', start);
+    const openIndex = equalsIndex === -1 ? -1 : commentMaskedText.indexOf('{', equalsIndex);
+    if (openIndex === -1) {
+      declarations.push({ filePath, kind: null });
+      continue;
+    }
+    const closeIndex = matchingCloseIndex(commentMaskedText, openIndex, '{', '}');
+    const body =
+      closeIndex === -1 ? commentMaskedText.slice(openIndex + 1) : commentMaskedText.slice(openIndex + 1, closeIndex);
+    const kindMatch = /\bkind\s*:\s*(?:'([^']*)'|"([^"]*)")/.exec(body);
+    declarations.push({ filePath, kind: kindMatch?.[1] ?? kindMatch?.[2] ?? null });
+  }
+  return declarations;
 }
 
 /**

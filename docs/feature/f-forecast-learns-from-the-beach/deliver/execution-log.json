@@ -820,6 +820,111 @@
       "s": "EXECUTED",
       "d": "Staged exactly the owned paths (src/learning/cross-validation.ts new, evaluate.ts/load-correction.ts/metrics.ts, src/pipeline/build.ts, both 05-02 acceptance test files, tests/unit/learning-cv-laws.test.ts new, tests/unit/learning-load-correction.test.ts, plus git add -f for the gitignored 05-02-contract.json and execution-log.json). gate-baseline.log left untracked, not staged. Committed a6563cf on branch build/f2-learning-slice05 with Step-ID: 05-02 trailer. git status confirms only gate-baseline.log remains untracked (not mine).",
       "t": "2026-08-12T19:18:35Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "Loaded tdd-methodology, quality-framework, fp-principles, fp-domain-modeling skills. Read src/learning/declarations.ts top-to-bottom (two existing rules + lexer mechanism), the acceptance test, tests/unit/learning-declarations.test.ts, src/learning/cross-validation.ts (CV_SCHEME kind rolling_origin_blocked shipped in 05-02), 06-learning-layer.md section 7 G7, and distill/red-classification-slice-05.md supersession note. Confirmed via grep that slice-01's 'only the two named rules' pin is not a literal violations-length assertion anywhere in the test suite -- the two shipped-source-scanning tests (shipped-residual-inventory.test.ts, unreadable-correction-is-read-as-absent.test.ts) assert report.violations deepEqual [] over the whole src/ tree, which stays true under rule three since the only shipped CV_SCHEME (cross-validation.ts) already declares the legal kind. Confirmed the AT is still describe.skip before RED (dry run: 2 skipped).",
+      "t": "2026-08-12T23:40:11Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "Removed describe.skip from held-out-mornings-stay-forward-of-training.test.ts and ran it standalone: npx vitest run tests/acceptance/f-forecast-learns-from-the-beach/held-out-mornings-stay-forward-of-training.test.ts -> EXIT=1, 1 failed | 1 passed. Refusing half fails for the right reason: AssertionError 'this universe shuffles time and the examination let it through: ... Violations reported: none' (semantic assertion on report.violations, no import/collection error). Accepting half (rolling-origin-blocked universe, zero violations) already passes -- the GUARD-ALREADY-GREEN rail confirmed live before any production change.",
+      "t": "2026-08-12T23:40:18Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "Added two tests to tests/unit/learning-declarations.test.ts: (1) a fast-check property 'refuses every declared CV_SCHEME whose kind is not rolling_origin_blocked, naming the rule, the file, and the kind, for any generated kind' (fc.stringMatching generator over lowercase kind strings excluding the legal value, numRuns 25) -- justified as a property despite the file's stated example-shaped-rule exemption because rule three's contract genuinely generalizes over the kind string domain, unlike the two fixed-shape rules; (2) an example test 'accepts a universe that declares no CV_SCHEME at all: absence is legal, not a violation' per the design intent that absence is not a violation. Ran npx vitest run tests/unit/learning-declarations.test.ts -> EXIT=1, 1 failed | 11 passed. The property test fails for the right reason: AssertionError 'expected [] to have a length of 1 but got +0' (semantic, RULE_HELD_OUT_STAYS_FORWARD_OF_TRAINING imports as undefined pre-implementation so zero violations match a rule name that does not exist yet -- no import/collection error). The no-CV_SCHEME test passes trivially pre-implementation (GUARD-ALREADY-GREEN, same pattern as the AT's accepting half).",
+      "t": "2026-08-12T23:41:53Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "Implemented rule three in src/learning/declarations.ts: exported RULE_HELD_OUT_STAYS_FORWARD_OF_TRAINING='held-out-mornings-must-stay-forward-of-training', LEGAL_CV_SCHEME_KIND='rolling_origin_blocked', a DeclaredCvScheme type, cvSchemesDeclaredIn() extraction (walks every 'const CV_SCHEME' literal in comment-masked text, reads the kind field, absence of a CV_SCHEME yields zero entries so absence stays legal per design intent), and heldOutMorningsStayForwardViolations() wired into the report's violations array alongside the two existing rules. No change to src/learning/cross-validation.ts (it already declares the legal kind, as anticipated) and no change to the slice-01 pin (the two shipped-source violations===[] tests stayed green without any edit). Focused run (AT + unit): npx vitest run tests/acceptance/.../held-out-mornings-stay-forward-of-training.test.ts tests/unit/learning-declarations.test.ts -> EXIT=0, 14 passed. Full suite: npx vitest run -> EXIT=0, 583 passed | 3 skipped (the two still-parked 05-04/05-05 AT files, unrelated to this step) -- no regressions, no other red. npm run typecheck -> EXIT=0. Falsifiability probe: mutated the filter to 'scheme.kind !== LEGAL_CV_SCHEME_KIND' -> 'false && scheme.kind !== LEGAL_CV_SCHEME_KIND', re-ran the AT + unit file -> EXIT=1, both the AT's refusing half and the new property test failed for the right reason; reverted the mutation and confirmed with git diff (grep for the mutation string returns clean) and a final green re-run (14 passed). Post-GREEN wiring check: git diff --name-only includes src/learning/declarations.ts (production file changed, not fixture theater). Non-visual (UI N/A): the entire observable surface is the examination's violations list over source text; nothing executes, nothing renders -- roadmap's stated rationale confirmed and carried into the contract.",
+      "t": "2026-08-12T23:44:39Z"
+    },
+    {
+      "sid": "05-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "Staged only owned paths (src/learning/declarations.ts, the AT's skip marker, tests/unit/learning-declarations.test.ts, docs/feature/.../execution-log.json, and force-added the gitignored 05-03-contract.json), leaving gate-baseline.log untouched. Committed 69a6dad 'feat(learning): refuse shuffled CV structurally (rule three)' with trailer Step-ID: 05-03. 5 files changed, 169 insertions, 1 deletion. Wrote docs/feature/f-forecast-learns-from-the-beach/deliver/05-03-contract.json matching the 05-02-contract.json field set, validated as parseable JSON before commit.",
+      "t": "2026-08-12T23:46:27Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "Loaded tdd-methodology, quality-framework, fp-principles, fp-domain-modeling skills, plus pbt-typescript on language detection (package.json/tsconfig.json). Read the AT scaffold, its support/monthly-port.ts harness, src/learning/metrics.ts (calibrationOf's deferred offending_term:null and Record-shaped bins), src/learning/evaluate.ts (the driving port), 06-learning-layer.md section 10 and the Confidence contradiction paragraph, and grepped the whole tree for conf_level/calibration/.bins usage to confirm ConfLevel is low|medium|high and that no other consumer depends on the current bins Record shape before deciding to reshape it to an array. Removed describe.skip from the AT file; confirmed exactly one describe block (two scenarios) enabled. Baseline full suite: 583 passed | 3 skipped, EXIT=0.",
+      "t": "2026-08-13T00:08:21Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "Ran the unskipped AT standalone: npx vitest run tests/acceptance/f-forecast-learns-from-the-beach/a-confidence-level-that-does-not-predict-correctness-is-named.test.ts -> EXIT=1, 2 collected, 1 failed | 1 passed. The inversion scenario failed with semantic AssertionError 'null !== c_spread' on metricAt(metrics,'calibration.offending_term') (the 05-01 deferred literal), no import or collection error -- fail-for-right-reason gate satisfied. The control scenario already passed (GUARD-ALREADY-GREEN: offending_term was always null pre-implementation, and the control asserts null).",
+      "t": "2026-08-13T00:08:24Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "Authored 3 fast-check properties in tests/unit/learning-metrics.test.ts covering what the AT's two fixed examples cannot prove alone: the offending_term equivalence law generalized over arbitrary logs including the missing-bin branch no AT fixture produces; correctness of every bin field against an independently-computed Modeling oracle (reports/hits/hit_rate/brier, same style as the file's existing mae.per_key-vs-hEff oracle); and order-independence of the bin aggregation under a full-length shuffle. Each was iterated against the still-deferred-null production code during GREEN decomposition; falsifiability mutations recorded at GREEN reproduce the equivalent pre-GREEN failure shapes for all three.",
+      "t": "2026-08-13T00:08:32Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "Implemented offendingTermOf in src/learning/metrics.ts: compares only the 'high' and 'low' bins' hit rates, names 'c_spread' on a strict inversion, null otherwise (including either bin absent). Reshaped calibration.bins from Record<string,{...}> to an array of {conf_level,reports,hits,hit_rate,brier} rows (the shape the AT oracle requires; grep confirmed no other consumer). evaluate.ts needed no edit -- it already threads buildMonthlyMetrics verbatim into its one write. Focused run (AT+unit): EXIT=0, 15 passed. Full suite: npx vitest run -> EXIT=0, 117 files passed | 1 skipped (118), 588 tests passed | 1 skipped (589) -- the 1 skip is the still-parked 05-05 AT; no other file red, the task-context pre-existing staleness family did not appear this session. npm run typecheck -> EXIT=0. Post-GREEN wiring check: git diff --name-only shows only src/learning/metrics.ts in src/ (not fixture theater). Falsifiability: 4 mutations planted and reverted, each caught by the intended test and diff-confirmed clean afterward -- (1) inverted comparison direction caught by both AT scenarios + the equivalence property; (2) removed missing-bin guard caught ONLY by the equivalence property (bins=[] manufactured c_spread), proving the unit law's necessity since neither AT fixture ever omits a bin; (3) brier forced to 0 caught by the independent-oracle property (an earlier bounds-only draft of this property would have missed it -- replaced per advisor review before commit); (4) removed the bins sort caught by the order-independence property on the first generated case. npm run build NOT run: non-visual step, UI N/A, matching 05-03's own recorded precedent.",
+      "t": "2026-08-13T00:08:39Z"
+    },
+    {
+      "sid": "05-04",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "Committed 5ff909c on branch build/f2-learning-slice05: feat(learning): calibration names a failing confidence term for removal. Staged only owned paths (src/learning/metrics.ts, tests/unit/learning-metrics.test.ts, the AT skip-removal, execution-log.json, and force-added the gitignored 05-04-contract.json). gate-baseline.log left untracked (not owned). Trailer Step-ID: 05-04 present. 5 files changed, 241 insertions, 20 deletions.",
+      "t": "2026-08-13T00:09:15Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "Loaded nw-tdd-methodology, nw-quality-framework, nw-fp-principles, nw-fp-domain-modeling skills. Inspected src/learning/metrics.ts's shrinkage section (flagged: false deferred literal, 05-01 shipped), the pre-authored AT and its support/monthly-port.ts harness, src/learning/correction-file.ts's GatedKey shape, and src/learning/evaluate.ts (the sealed driving port, read-only, not touched). Confirmed exactly one describe.skip in the target AT file.",
+      "t": "2026-08-13T00:21:36Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "Removed describe.skip from a-spot-still-mostly-pooled-after-eighty-mornings-is-flagged.test.ts, ran it standalone against the still-deferred production code: npx vitest run <file> -> EXIT=1, 1 collected, 1 failed, 0 collection errors. Semantic AssertionError: 'eighty mornings still sixty percent pooled away is a misconfiguration ... and the file must say so (09 s17.4 guardrail 2): {spot_id:playa-empozada, shrink_weight:0.6, n:80, reporters:12, flagged:false}', false !== true. Fail-for-right-reason gate satisfied: business assertion failure on the deferred literal, not an import/collection error.",
+      "t": "2026-08-13T00:21:44Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "Added two fast-check monotonicity properties to tests/unit/learning-metrics.test.ts (flagged(n,weight) implies flagged(n,higherWeight) at fixed n; flagged(n,weight) implies flagged(higherN,weight) at fixed shrink_weight), driving buildMonthlyMetrics through its own function signature (the pure driving port). Also repaired the pre-existing 05-01 pass-through property's stale 'flagged: false' oracle to compute the expected flag from an independently-restated threshold, since it failed post-GREEN for the documented reason (the deferred literal it pinned is exactly what this step replaces): npx vitest run tests/unit/learning-metrics.test.ts -> EXIT=1, 1 failed with AssertionError showing received flagged:true vs expected flagged:false for a generated n=80/shrink_weight=0.6 case, confirming the AT's fail-for-right-reason gate generalizes correctly before the oracle fix.",
+      "t": "2026-08-13T00:21:52Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "Implemented isOverPooled(n, shrinkWeight) in src/learning/metrics.ts: two named constants (SHRINKAGE_ALARM_MIN_N=80, SHRINKAGE_ALARM_MIN_WEIGHT=0.6, cited 09 s17.4 guardrail 2) and n>=min && weight>=min, wired into shrinkageOf replacing the flagged:false literal. Focused run (AT + unit) -> EXIT=0, 16 passed. Full suite: npx vitest run -> EXIT=0, 118 test files passed, 591 tests passed, 0 skipped. npm run typecheck -> EXIT=0. Post-GREEN wiring check: git diff --name-only shows src/learning/metrics.ts, tests/unit/learning-metrics.test.ts and the AT's skip-marker line changed -- no fixture theater. Non-visual step (operator-only JSON field, no consumer): npm run build intentionally not run, matching 05-03/05-04 precedent.",
+      "t": "2026-08-13T00:21:59Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "Staged owned paths only (git status confirmed gate-baseline.log, not mine, left untracked): src/learning/metrics.ts, tests/unit/learning-metrics.test.ts, the AT's skip-marker line, plus git add -f on 05-05-contract.json and execution-log.json (gitignored via .git/info/exclude). Committed 4c309ff02660e642bce13bce0b23cb74c980ecad on build/f2-learning-slice05, trailer Step-ID: 05-05. 5 files changed, 177 insertions(+), 31 deletions(-). No push, no merge, per boundary rules.",
+      "t": "2026-08-13T00:22:37Z"
     }
   ]
 }

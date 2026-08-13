@@ -163,7 +163,7 @@ function binFor(bins: unknown, confLevel: string): CalibrationBin {
   return row;
 }
 
-describe.skip("05-04 acceptance: a confidence level that does not predict correctness is named for removal", () => {
+describe("05-04 acceptance: a confidence level that does not predict correctness is named for removal", () => {
   it("names c_spread when high-confidence mornings hit less often than low-confidence ones", async () => {
     const { metrics } = await monthlyMetricsOver(false);
 

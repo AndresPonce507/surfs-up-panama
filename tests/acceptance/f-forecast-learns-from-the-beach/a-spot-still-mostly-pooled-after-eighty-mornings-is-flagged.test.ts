@@ -117,7 +117,7 @@ function rowFor(rows: unknown, spotId: string): ShrinkageRow {
   return row;
 }
 
-describe.skip("05-05 acceptance: a spot still mostly pooled after eighty mornings is flagged as a misconfiguration", () => {
+describe("05-05 acceptance: a spot still mostly pooled after eighty mornings is flagged as a misconfiguration", () => {
   it("flags the over-pooled spot, spares the healthy one, and changes nothing else anywhere", async () => {
     const store = new MemoryLearningStore();
     await store.put(
