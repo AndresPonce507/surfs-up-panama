@@ -43,6 +43,14 @@ Opened 2026-08-13 by the slice-04 lane.
   reservations. Flagged by the slice-04 lane, deliberately not fixed there: editing architecture
   docs was outside its scope.
 
+- [ ] **Guard the BUILD dead-man's switch in CI, not just the ingest one.** Found by the slice-04
+  lane 2026-08-13, flagged and deliberately not fixed because slice-02's declaration lane is closed
+  and this is new scope. `surfs-up-panama-build-dead-mans-switch` (metric `BuildSuccess`) is
+  deployed, live, and did real work in this incident: it is the switch that caught the 2026-08-13
+  archive-key defect. But R5 to R11 and slice-02's gate only ever name the ingest switch, so a
+  future edit could weaken or delete the build switch and no gate would say a word. Slice-04's
+  probe watches both, which closes the evidence half; the declaration half is still one-sided.
+
 - [ ] **Amend the epic F-BILL row's "within the hour" promise** to the settled 2-to-3-hour floor, or
   overrule the design. Open question 1, unchanged, and now with live confirmation that the deployed
   alarms carry the floor's configuration (`EvaluationPeriods: 2` x `Period: 3600`, `breaching`).

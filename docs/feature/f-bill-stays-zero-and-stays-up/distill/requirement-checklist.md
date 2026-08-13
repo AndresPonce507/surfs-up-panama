@@ -54,9 +54,70 @@ Slices 01, 02 and 03 entered DISTILL and shipped (2026-08-09). R1-R17 covered in
 `tests/acceptance/f-bill-stays-zero-and-stays-up/bill-and-uptime-guardrails.feature`
 (`@covers-R1` through `@covers-R17` tags) plus unit-level red-proof coverage in
 `infra/test/guardrails.test.ts`: `assertBucketVersioningEnabled` (R1, R2, R4) and
-`assertCostAllocationTagPresent` (R16). Slices 04 and 05 have no authorable test at all: their
-observables are a live email and a live account read, gated on pre-requisites 3 to 8 in
-`feature-delta.md`; R18-R24 remain uncovered by design.
+`assertCostAllocationTagPresent` (R16).
+
+Slice-04 entered DISTILL 2026-08-13. R18 and R19 are now covered by five `@slice-04` scenarios
+in the same feature file, driving a new command through its `--input` port
+(`infra/alarm-probe.mjs` shell over the `infra/alarm-probe-core.mjs` pure core, mirroring the
+`month-close.mjs` split). Slice-05's R20-R24 remain uncovered.
+
+### Slice-04 substitution deviation, stated plainly
+
+The synthetic probe slice-04 planned was NEVER PERFORMED. Nobody disabled the ingest schedule,
+waited for the ALARM mail, re-enabled it and waited for the OK mail. No scenario here may be read
+as if that drill happened.
+
+What replaced it: a real production incident of 2026-08-11 to 13 drove a complete ALARM then OK
+cycle on BOTH deployed dead-man's switches, and the read-only capture of it is committed at
+`infra/evidence/alarm-probe-capture-2026-08-13.json`. An outage is strictly better evidence than a
+drill, because nobody staged the conditions. It is also DIFFERENT evidence, and the difference is
+load-bearing in three places, each of which is an explicit assertion in the scenarios rather than
+something the wording glides over:
+
+1. **The detection floor was never measured.** Both ALARM transitions fired on the alarm's FIRST
+   evaluation, about a minute after the alarm was created, with `recentDatapoints` empty: absence
+   from birth. There is therefore NO elapsed time from a last successful run to the ALARM anywhere
+   in this history, and R18's "within the honest 2 to 3 hour floor" is proven STRUCTURALLY and
+   live, read off the deployed alarm (`EvaluationPeriods: 2` x `Period: 3600` with
+   `TreatMissingData: breaching`), never by stopwatch. The scenario asserts the report says so, and
+   the existing slice-02 ban on the words "within the hour" is re-asserted against this report too.
+2. **Nobody read the mail.** Delivery to the confirmed subscription is proven and no delivery
+   failed. The message body was never opened. Scenarios may assert the state reason text that
+   populates the body (it is in the capture); they may not assert that Andres read it. R18's "the
+   ALARM email arrives at the confirmed subscription naming the alarm, the region and the state
+   reason" is covered at the delivery-and-content level the capture supports, not at the inbox
+   level it does not.
+3. **The site's freshness stamp was not observed here.** R19's second half (`08-devops.md` §7
+   runbook step 4) is not provable from an alarm capture. The alarm half of R19, the OK that closes
+   the loop, is covered; the freshness-stamp half stays for the human charter.
+
+The human charter
+`docs/product/expectations/f-bill-stays-zero-and-stays-up/the-alarm-is-proven-alive-not-assumed-andres-disables-the-ingest-schedule-for-a-test-window.md`
+still owns the inbox-level oracle and is not closed by these tests.
+
+### Three brief-versus-file corrections found while writing slice-04
+
+Recorded because each one would have produced a scenario asserting more certainty than the capture
+earns, which is the one rule this whole product rests on.
+
+- `NumberOfNotificationsDelivered` is non-zero in FIVE hours, not four. Four align with the four
+  state transitions; the fifth, `2026-08-09T22:00:00-05:00` with `Sum: 2.0`, matches no transition
+  in this capture and cannot be attributed from it. The scenarios therefore assert COVERAGE (a
+  delivery was recorded in the hour of every state change) and never exactness.
+- `NumberOfNotificationsFailed` is NOT empty. It has five datapoints, all `Sum: 0.0`. That is
+  stronger evidence than an empty series, which could equally mean the metric never published, so
+  the scenarios assert "no delivery failed" rather than "no failure data exists".
+- The gap between alarm creation and the ALARM transition is 53.7 s (ingest) and 60.6 s (build),
+  not ~70 s. The scenarios assert the load-bearing fact instead: both fired on their first
+  evaluation with no run behind them.
+
+### Unguarded switch, flagged not fixed
+
+`surfs-up-panama-build-dead-mans-switch` (metric `BuildSuccess`) is deployed, live, and supplies
+half the evidence above, but slice-02's CI guard covers only `surfs-up-panama-dead-mans-switch`.
+No requirement in this checklist guards the build switch's four load-bearing properties. Slice-04's
+scenarios watch both switches at the evidence level, which is not the same thing as a declaration
+gate rejecting a drifted build switch at deploy time.
 
 Architectural note recorded here because it changes how future slices must be authored: the
 declaration checks for slices 01-03 do NOT live inside the pre-existing
