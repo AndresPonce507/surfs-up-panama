@@ -1,0 +1,90 @@
+---
+// The avisos control for a spot page (application-architecture.md section
+// 14 wireframe: "Avisos de este spot (activar)", just above the report CTA).
+// Server-rendered hidden by default; revealed only when the browser
+// genuinely supports push (src/push/island.ts, mountPushSettings). Step
+// 01-20 wired capability detection and mount. Step 01-21 wires the tap: it
+// requests the real permission and, when it is not granted, fills the
+// message paragraph below with the refusal in words -- it starts empty and
+// hidden so nothing renders before a tap ever happens.
+//
+// No on-state renders here: an avisos-active state requires a real browser
+// PushSubscription plus a server acknowledgement, neither of which exists
+// until the write-path steps land.
+import type { Locale } from '../i18n/strings';
+import { pushCopy } from '../push/copy';
+
+interface Props {
+  locale: Locale;
+  spotId: string;
+}
+
+const { locale, spotId } = Astro.props;
+---
+
+<section class="avisos-control" data-field="avisos" data-spot-id={spotId} lang={locale} hidden>
+  <button class="avisos-action" type="button" data-field="avisos-activate">
+    {pushCopy.activate}
+  </button>
+  <p class="avisos-message" data-field="avisos-message" hidden></p>
+</section>
+
+<script>
+  import { mountPushSettings } from '../push/island';
+
+  void mountPushSettings(document, window);
+</script>
+
+<style>
+  .avisos-control {
+    margin-bottom: var(--sp-3);
+    padding: var(--sp-3);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-m);
+    background: var(--surface);
+  }
+
+  .avisos-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    min-height: var(--tap);
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--go);
+    border-radius: var(--r-s);
+    background: var(--go);
+    color: var(--on-go);
+    font: inherit;
+    font-size: var(--text-body);
+    font-weight: 700;
+    line-height: var(--leading-snug);
+    letter-spacing: var(--track-meta);
+    text-align: start;
+  }
+
+  .avisos-action:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  /* A refused permission disables the action (src/push/island.ts). This
+     rule's own specificity (class + attribute, from Astro's scoping) beats
+     the shared button:disabled rule in components.css (element +
+     pseudo-class), so that global mute never actually applied here -- the
+     button kept rendering in the same bold --go as the fully active
+     buttons on the page. Match the global disabled convention explicitly
+     instead of relying on it to win a cascade fight it cannot win. */
+  .avisos-action:disabled {
+    background: var(--sunken);
+    color: var(--ink-2);
+    border-color: var(--sunken);
+  }
+
+  .avisos-message {
+    margin: var(--sp-2) 0 0;
+    color: var(--warn);
+    font-size: var(--text-meta);
+    font-weight: 600;
+  }
+</style>
