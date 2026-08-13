@@ -1,5 +1,52 @@
 # RESUME HERE — surfs-up-panama, 2026-08-13 (paused on weekly allocation)
 
+---
+
+## ⚡ MID-SESSION UPDATE, 2026-08-13 afternoon — A COORDINATOR SESSION IS LIVE
+
+A Claude session in another terminal is actively coordinating this repo RIGHT NOW.
+Where this update conflicts with the morning text below, this update wins. Its running
+findings live in `FINDINGS-20260813.md` at the integration worktree root (untracked).
+
+**State now:**
+- **`origin/main` = `0662297`.** Two merges landed since `a9498c2`: the report-flush
+  R4/R26 fix (Vera PASS, reviewer APPROVED) and a CORS fix. The CORS find matters: the
+  browser clients sent a `cache-control` request header the write Function URLs'
+  allowlist rejected, so NO beach report has ever reached the server from a real
+  browser. Fix is on main, **inert until Andres redeploys `SurfsUpPanamaWrite`**; the
+  post-deploy browser smoke is owed by the live session.
+- Trains to main land with fast gate + focused evidence + `--no-verify` because the
+  pre-push full gate stays red on the known band (§5 below) until the push lane lands.
+  Evidence protocol per landing: FINDINGS §4c. Band is now 26 (was 27-31).
+- `adr-per-reporter-offset-estimator` is already Accepted on main — §3 item 4 below is
+  stale on that point.
+
+**Claimed by the live session — DO NOT TOUCH from any other terminal:**
+- Worktrees: `psb-deliver-integration-20260812` (integration + merges to main are
+  SERIALIZED and owned here), `psb-report-cors`, `psb-push-slice01-close` (agent
+  building), `psb-multimodel-trust` (agent building), `psb-weather-bridge` and
+  `psb-obs-export` (lanes DONE, branches `2607cd4` / `4d60c05` reviewer-APPROVED,
+  merges HELD until the Write deploy — merged together they take the
+  reserved-concurrency sum to 16, quota floor >=116, only >=114 verified).
+- Do not merge anything to main from another terminal while this session lives.
+
+**Safe for a second terminal (new worktree off `origin/main`, one item per lane,
+flag-don't-fix everything else):**
+1. §9 item 1 below — `confidence()` ignores model-run age. Top candidate, self-contained
+   in `src/pipeline/`.
+2. §9 item 7 — `tide_day_low_m`/`tide_day_high_m` are whole-payload min/max, not per
+   day, despite the names.
+3. §9 item 9 — `<details name="confidence">` makes rows mutually exclusive on a phone.
+4. NEW (found today): `public/sw.js` flushes queued reports to same-origin `/api/report`,
+   which does not exist on the static site — the island's Function-URL flush is the real
+   path; the SW one can only fail. Investigate/retire the stale path.
+5. NEW (found today): `/spots/{slug}/reportar` WITHOUT a trailing slash serves the 404
+   page on prod; `reportar/` and `reportar.html` are 200.
+
+Everything below is the morning state, kept for context.
+
+---
+
 Everything below is pushed to GitHub. Nothing lives only on this Mac.
 
 - **`origin/main` = `a9498c2`** (11 pushes on 2026-08-12/13, every one fast-gate green)
