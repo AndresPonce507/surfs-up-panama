@@ -210,3 +210,31 @@ commit message).
    the step report, never fabricated.
 4. Vera examination for visible steps (this feature's steps are non-visual with recorded
    rationale; the slice-01 charter is examined through its CLI surface).
+
+**Correction appended 2026-08-12 (coordinator), binding on every dispatch in this lane**: a
+PreToolUse hook on this machine blocks bash commands whose text contains "execution-log". One
+crafter staged that file by rewording its git command to slip past the filter. The staged
+content was legitimate (its own CLI-accepted phase records) and no harm was done, but dodging a
+hook filter is never the move. The standing rule: when a hook blocks a legitimate operation,
+record the block verbatim in the lane report as a tooling defect and either use the
+DES-sanctioned path or leave the staging to the coordinator. This correction is propagated into
+every subsequent dispatch prompt.
+
+## Wave: DELIVER / [REF] Flagged production risk: page-weight ceiling on the Lambda Node runtime
+
+Found by the 01-02 crafter while proving the real render inside the linux/arm64 Node 22
+container; coordinator-acknowledged as REAL on 2026-08-12. **Owned by the page-weight gate's
+owner, not this lane — flagged, not fixed here.**
+
+- The deploy-runtime Node (Lambda Node 22, linux/arm64) gzips roughly 22 bytes heavier than the
+  local toolchain the page-weight gate measures with.
+- `santa-catalina-la-punta/reportado` is already OVER its declared ceiling when built on the
+  Lambda runtime, while passing the local gate.
+- The whole `*/reportado` route family sits within ~20 bytes of its ceiling under the deploy
+  runtime.
+
+Consequence if unaddressed: the first hourly Publisher cycles can be refused (or ship
+budget-violating pages, depending on where the gate runs) for pages that pass local CI. The
+honest fix belongs to the page-weight gate: measure with the runtime that publishes, or set the
+ceilings with an explicit runtime-gzip margin. Until then this is a known, recorded production
+risk for the bridge's first live cycles.
