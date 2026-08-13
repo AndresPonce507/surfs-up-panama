@@ -24,8 +24,13 @@
                              ten pairs, which does not cover --ctrl) */
   --go: #0a6a2d;         /* primary action, unchanged. "The green stays green" (ADR) */
   --on-go: #ffffff;      /* 6.75:1 on --go */
-  --go-tint: rgba(10, 106, 45, 0.08); /* selected-control wash, unchanged --
-                                          still derived from --go, which did not change */
+  --go-tint: #dfedea;    /* selected-control wash: the former rgba(10,106,45,.08)
+                             tint PRECOMPOSITED over --bg (same pixels the browser
+                             painted). Declared opaque so computed-style contrast
+                             readers (the acceptance harness drops alpha and was
+                             reading --ink on solid --go, 2.37:1) measure the real
+                             backdrop: --ink on this is 13.27:1
+                             (tests/unit/checked-label-wash-contrast.test.ts) */
   --warn: #7a5200;       /* staleness, offline, unchanged value. 6.45:1 on --bg (ADR table) */
   --warn-bg: #f6eedc;
   --danger: #9e1c23;     /* errors, weakest link, unchanged value. 7.41:1 on --bg (ADR table) */
@@ -139,11 +144,13 @@
                              non-text on the new --bg (self-computed) */
     --go: #6ed694;
     --on-go: #04240f;
-    --go-tint: rgba(87, 199, 133, 0.12); /* unchanged -- still the alpha tint
-                                             of the OLD dark --go (#57c785);
-                                             now visibly off from the new
-                                             --go (#6ED694). Flagged, not
-                                             recoloured: not an ADR value */
+    --go-tint: #102f2d;  /* the former rgba(87,199,133,.12) tint PRECOMPOSITED
+                             over --bg, same pixels as before -- still the wash
+                             of the OLD dark --go (#57c785), still visibly off
+                             from the new --go (#6ED694), still flagged and not
+                             recoloured (not an ADR value). Declared opaque for
+                             the same alpha-blind-reader reason as the day value;
+                             --ink on this is 12.49:1 */
     --warn: #e3a85f;
     --warn-bg: #2b2412;
     --danger: #f2848d;
