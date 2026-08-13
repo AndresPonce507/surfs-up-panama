@@ -42,7 +42,7 @@ Run only after the coordinator confirms the exact candidate has reached `main`, 
 
 1. `SurfsUpPanamaSite`
 2. `SurfsUpPanamaIngest`
-3. `SurfsUpPanamaObservability`
+3. `SurfsUpPanamaObservability` -- **gated, not merely last.** Its staleness dead-man now watches `PublishSuccess`, and the Publisher honestly refuses every cycle until the static-map manifest is reproducible on the deploy runtime (the map-manifest portability blocker recorded in the weather-to-site-bridge lane close-out). Deployed before that fix lands, this alarm pages continuously. Hold this step until the map-manifest fix is in.
 4. `SurfsUpPanamaWrite` last, only if the approved release includes the write path
 
 Weather activation is complete after step 3. Step 1 must remain first because Build imports the site origin; the project’s declared stack order deliberately keeps the write path last.
@@ -67,7 +67,7 @@ Before each command, record `aws cloudformation describe-stacks --stack-name <na
 | Alarm | Deployment expectation | Rollback threshold |
 | --- | --- | --- |
 | `surfs-up-panama-dead-mans-switch` | May remain `ALARM` until two hourly Fetch successes. It must become `OK` after two successful `:17` cycles. | No `ingest.success` by the second scheduled cycle, `health.startup.refused`, or failed prediction write |
-| `surfs-up-panama-build-dead-mans-switch` | Created by the candidate observability stack. It must become `OK` after two successful Build cycles. | No `build.success` by the second `:22` cycle after a successful Fetch |
+| `surfs-up-panama-build-dead-mans-switch` | Created by the candidate observability stack. Despite its physical name it watches `PublishSuccess` -- the Publisher's own `publish.success` line, logged only after every PUT completed (weather-to-site-bridge alarm-ceiling decision; the name is kept to avoid an unforced CloudFormation replacement). It must become `OK` after two successful publish cycles. | No `publish.success` by the second `:22` cycle after a successful Fetch |
 | `surfs-up-panama-provider-errors` | `OK` unless three provider failures occur in one hour. | `ALARM`, then preserve raw evidence and investigate provider access/schema before advancing |
 | `surfs-up-panama-wind-source-errors` | `OK` unless three wind failures occur in one hour. | `ALARM`; public site may remain stale-but-correct |
 | `surfs-up-panama-frozen-provider-cycle` | `OK`. | First occurrence is a correctness failure |
