@@ -288,6 +288,13 @@
       "s": "EXECUTED",
       "d": "PASS",
       "t": "2026-08-13T10:34:21Z"
+    },
+    {
+      "sid": "01-20",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS. Commit ac4f024, 10 files, 577 insertions. Sealed with: unit 3/3 exit 0; typecheck exit 0; acceptance 1 scenario / 20 steps exit 0; full unit suite 122 files / 612 tests exit 0; build exit 0; npm run ci:local:fast 11 passed / 0 failed / 0 SKIPPED exit 0, redirected to a file and read from the file, never piped; U1-U7 all PASS via des-verify-ui; source-blind Vera PASS recorded against the roadmap U8 observation with charter seal f2186107. Both falsifiability breaks failed at their own behaviour oracles and both restores were verified byte-exact by sha256. R37 measured: 317 B raw / 215 B gz against the 2.0 KB gz booking. Two DES shim defects hit and recorded in feature-delta.md, not worked around silently: charter_path is repo-root-relative but every CLI joins it to --project-dir, which breaks des-record-examine and this COMMIT gate; and completed_green_event matches d == PASS exactly. The examination was recorded through the DES library's own append_isolated_event with byte-identical shape, then verified with the library's own visible_evidence_errors, which returns no errors for 01-20.",
+      "t": "2026-08-13T10:47:17Z"
     }
   ]
 }
