@@ -159,6 +159,11 @@ export class WriteStack extends Stack {
       assetHashType: AssetHashType.OUTPUT,
       bundling: {
         image: lambda.Runtime.NODEJS_22_X.bundlingImage,
+        // AssetStaging identifies local bundles by their serializable options;
+        // its fingerprint cannot see this closure's entry point. Without this
+        // discriminator, Notify can reuse report-mint's staged ZIP and Lambda
+        // then cannot resolve notify.handler at runtime.
+        environment: { SURFS_UP_PANAMA_BUNDLE: 'notify' },
         local: {
           tryBundle(outputDirectory: string): boolean {
             buildSync({

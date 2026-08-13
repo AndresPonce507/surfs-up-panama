@@ -16,9 +16,11 @@
 // request rate."
 
 import { Template } from 'aws-cdk-lib/assertions';
+import { existsSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { writeStack } from '../bin/app.js';
+import { app, writeStack } from '../bin/app.js';
 import { functionNames, projectAccountId, projectRegion, siteBucketName } from '../lib/physical-names.js';
 import { notifyMemorySizeMb, notifyReservedConcurrency, vapidPrivateKeyParameterName } from '../lib/write-declarations.js';
 
@@ -28,6 +30,11 @@ type TemplateJson = Readonly<{ readonly Resources?: Readonly<Record<string, Reso
 
 const template = Template.fromStack(writeStack).toJSON() as TemplateJson;
 const resources = Object.entries(template.Resources ?? {});
+// The template identifies an S3 asset, but only the staged assembly proves
+// that the named Lambda handler actually exists in the ZIP CDK will upload.
+// This guards the same fromAsset staging-cache collision that previously put
+// report-mint.mjs in Notify's package while the runtime sought notify.handler.
+const cloudAssembly = app.synth();
 
 function resourcesOfType(type: string): readonly (readonly [string, Resource])[] {
   return resources.filter(([, resource]) => resource.Type === type);
@@ -100,6 +107,14 @@ describe('the scheduled notify job', () => {
     const [, notify] = notifyFunction();
     expect(notify.Properties?.Handler).toBe('notify.handler');
     expect(JSON.stringify(notify.Properties?.Code)).toContain('S3Bucket');
+  });
+
+  it('stages the notify handler under the exact module name Lambda loads', () => {
+    const [, notify] = notifyFunction();
+    const code = notify.Properties?.Code as Properties;
+    const s3Key = String(code.S3Key);
+    const assetDirectory = resolve(cloudAssembly.directory, `asset.${s3Key.slice(0, -'.zip'.length)}`);
+    expect(existsSync(resolve(assetDirectory, 'notify.mjs'))).toBe(true);
   });
 
   it('reads the VAPID private key from the one declared SecureString parameter and can never write a parameter', () => {
