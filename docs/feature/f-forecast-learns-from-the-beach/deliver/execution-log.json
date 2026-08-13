@@ -918,6 +918,13 @@
       "s": "EXECUTED",
       "d": "Implemented isOverPooled(n, shrinkWeight) in src/learning/metrics.ts: two named constants (SHRINKAGE_ALARM_MIN_N=80, SHRINKAGE_ALARM_MIN_WEIGHT=0.6, cited 09 s17.4 guardrail 2) and n>=min && weight>=min, wired into shrinkageOf replacing the flagged:false literal. Focused run (AT + unit) -> EXIT=0, 16 passed. Full suite: npx vitest run -> EXIT=0, 118 test files passed, 591 tests passed, 0 skipped. npm run typecheck -> EXIT=0. Post-GREEN wiring check: git diff --name-only shows src/learning/metrics.ts, tests/unit/learning-metrics.test.ts and the AT's skip-marker line changed -- no fixture theater. Non-visual step (operator-only JSON field, no consumer): npm run build intentionally not run, matching 05-03/05-04 precedent.",
       "t": "2026-08-13T00:21:59Z"
+    },
+    {
+      "sid": "05-05",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "Staged owned paths only (git status confirmed gate-baseline.log, not mine, left untracked): src/learning/metrics.ts, tests/unit/learning-metrics.test.ts, the AT's skip-marker line, plus git add -f on 05-05-contract.json and execution-log.json (gitignored via .git/info/exclude). Committed 4c309ff02660e642bce13bce0b23cb74c980ecad on build/f2-learning-slice05, trailer Step-ID: 05-05. 5 files changed, 177 insertions(+), 31 deletions(-). No push, no merge, per boundary rules.",
+      "t": "2026-08-13T00:22:37Z"
     }
   ]
 }
