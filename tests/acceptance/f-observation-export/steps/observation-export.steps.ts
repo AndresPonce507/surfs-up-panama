@@ -16,11 +16,16 @@
 // S3-shaped objects through in-memory doubles. Observables are stored objects
 // and a returned outcome. No page, component, style or pixel. U1-U7/U8 N/A.
 
-import { Before, Given, Then, When } from '@cucumber/cucumber';
+import { After, Before, Given, Then, When } from '@cucumber/cucumber';
 import assert from 'node:assert/strict';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import { gunzipSync } from 'node:zlib';
 
 import { runExport } from '../../../../src/export/run-export';
-import type { ExportOutcome } from '../../../../src/export/ports';
+import type { AbuseSignalsStore, ExportOutcome, ObservationLogStore } from '../../../../src/export/ports';
+import { FilesystemStore } from '../../../../src/pipeline/adapters/filesystem-store';
 import {
   A_LIVE_CALL,
   FrozenClock,
@@ -29,6 +34,7 @@ import {
   NON_REPORT_ITEMS,
   SEEDED_SPOTS,
   halfWrittenReportItem,
+  mintLedgerItem,
   storedReportItem,
 } from './support/observation-export-world';
 
@@ -56,11 +62,32 @@ const ROW_KEYS = [
   'wind',
 ];
 
+/** The zone every launch-seed row declares. The signals bucket by ITS civil day, not the file's UTC day. */
+const SEED_TIMEZONE = 'America/Panama';
+
+/** ops/abuse-signals/v1/dt=<date>.json -- plain JSON beside the gzipped rows, written in the same pass. */
+const SIGNALS_KEY = `ops/abuse-signals/v1/dt=${CLOSED_DAY}.json`;
+
+/**
+ * Where a scenario sends the night's writes when it wants real bytes on a real
+ * disk instead of strings in a map. Only the gzip scenario asks for this: the
+ * claim it makes is about BYTES, and no in-memory double can carry that claim.
+ */
+type DiskWrites = {
+  readonly root: string;
+  readonly log: ObservationLogStore;
+  readonly signals: AbuseSignalsStore;
+};
+
 type ExportWorld = {
   store: InMemoryItemReader;
   log: InMemoryLogStore;
+  signals: InMemoryLogStore;
+  disk: DiskWrites | null;
   clock: FrozenClock;
   outcome: ExportOutcome | null;
+  /** What the FIRST run left behind, captured before a re-run is allowed to touch it. */
+  firstRun: { readonly outcome: ExportOutcome; readonly objects: Readonly<Record<string, string>> } | null;
   failure: unknown;
 };
 
@@ -70,10 +97,17 @@ Before({ tags: SCOPE }, function () {
   world = {
     store: new InMemoryItemReader(),
     log: new InMemoryLogStore(),
+    signals: new InMemoryLogStore(),
+    disk: null,
     clock: new FrozenClock(new Date('2026-08-13T00:30:00Z')),
     outcome: null,
+    firstRun: null,
     failure: null,
   };
+});
+
+After({ tags: SCOPE }, async function () {
+  if (world.disk !== null) await rm(world.disk.root, { recursive: true, force: true });
 });
 
 // ------------------------------------------------------------------- Given --
@@ -172,15 +206,129 @@ Given('the write store holds one report accepted at {int}:{int} UTC on {word}', 
   }));
 });
 
+/**
+ * Three devices, three freshly minted credentials, one beach, one size answer
+ * between them, two of the three reports 300 ms apart. Every number the four
+ * signals report is present in this one fixture, and their received instants
+ * (02:00 UTC on the 12th) are 21:00 the previous evening in Panama -- which is
+ * what makes the local-day bucket a different day from the file's.
+ */
+const PILE_ON = [
+  { report_id: '01JPILE00000000000000001', device_id: 'd_cohort_a', received_at: '2026-08-12T02:00:00.000Z', credential_issued_at: '2026-08-10T02:00:00.000Z' },
+  { report_id: '01JPILE00000000000000002', device_id: 'd_cohort_b', received_at: '2026-08-12T02:00:00.300Z', credential_issued_at: '2026-08-09T02:00:00.300Z' },
+  { report_id: '01JPILE00000000000000003', device_id: 'd_cohort_c', received_at: '2026-08-12T02:00:01.000Z', credential_issued_at: '2026-08-08T02:00:01.000Z' },
+] as const;
+
+/** The local days the two fixtures below fall on. Named so the Gherkin dates are load-bearing, not decoration. */
+const PILE_ON_LOCAL_DAY = '2026-08-11';
+const LONE_REPORT_LOCAL_DAY = '2026-08-12';
+
+Given('the write store holds a young-cohort pile-on at Playa Venao late on {word} local time', function (day: string) {
+  assert.equal(day, PILE_ON_LOCAL_DAY, 'these reports arrive at 02:00 UTC, which is the previous evening in Panama');
+  for (const report of PILE_ON) {
+    world.store.add(storedReportItem({
+      report_id: report.report_id,
+      spot_id: 'playa-venao',
+      device_id: report.device_id,
+      received_at: report.received_at,
+      credential_issued_at: report.credential_issued_at,
+      size_band: 'waist_chest',
+      predicted: A_LIVE_CALL,
+    }));
+  }
+});
+
+Given('the write store holds one ordinary report at Santa Catalina on {word} local time', function (day: string) {
+  assert.equal(day, LONE_REPORT_LOCAL_DAY, 'this report arrives at 18:00 UTC, which is the same civil day in Panama');
+  world.store.add(storedReportItem({
+    report_id: '01JLONE00000000000000001',
+    spot_id: 'santa-catalina-la-punta',
+    device_id: 'd_lone',
+    received_at: '2026-08-12T18:00:00.000Z',
+    credential_issued_at: '2026-06-12T18:00:00.000Z',
+    size_band: 'head_high',
+    predicted: null,
+  }));
+});
+
+Given('the write store holds the mint ledger those credentials came from', function () {
+  for (const report of PILE_ON) {
+    world.store.add(mintLedgerItem({
+      device_id: report.device_id,
+      issued_at: report.credential_issued_at,
+      src_hash: 'sh_one_host',
+    }));
+  }
+  world.store.add(mintLedgerItem({
+    device_id: 'd_lone',
+    issued_at: '2026-06-12T18:00:00.000Z',
+    src_hash: 'sh_long_ago',
+  }));
+});
+
+/**
+ * The house storage adapter, on a real temporary disk, wired exactly the way
+ * the composition root wires the deployed one: the export's two narrow write
+ * capabilities are two object literals over the adapter's one log-append
+ * method, so the run can never reach anything else the adapter can do.
+ */
+Given('the night writes through the house storage adapter onto a real disk', async function () {
+  const root = await mkdtemp(join(tmpdir(), 'observation-export-'));
+  const store = new FilesystemStore(root);
+  world.disk = {
+    root,
+    log: { putIfAbsent: (key, body) => store.appendLogIfAbsent(key, body) },
+    signals: { putIfAbsent: (key, body) => store.appendLogIfAbsent(key, body) },
+  };
+});
+
 // -------------------------------------------------------------------- When --
 
 When('the nightly observation export runs', async function () {
+  const writes = world.disk ?? { log: world.log, signals: world.signals };
+  try {
+    world.outcome = await runExport({
+      store: world.store,
+      log: writes.log,
+      signals: writes.signals,
+      clock: world.clock,
+      spots: SEEDED_SPOTS,
+      timezone: SEED_TIMEZONE,
+    });
+  } catch (error) {
+    world.failure = error;
+  }
+});
+
+/**
+ * A second run of the SAME night, over a store that has changed underneath it.
+ *
+ * The extra report is what makes this test worth writing. It means the second
+ * run genuinely recomputes a different body for a key the first run already
+ * sealed, so the log's write-once property is being asked to refuse a real
+ * competing write rather than to notice that nothing happened. This is the
+ * exact property that makes a bug in night one unfixable in place
+ * (adr-observation-export.md Decision 7), so it is pinned rather than assumed.
+ */
+When('that same night gains one more report and the export runs again', async function () {
+  world.firstRun = { outcome: completedRun(), objects: writtenObjects() };
+  world.store.add(storedReportItem({
+    report_id: '01JAGAIN0000000000000001',
+    spot_id: 'playa-venao',
+    device_id: 'd_cohort_a',
+    received_at: '2026-08-12T02:00:02.000Z',
+    credential_issued_at: '2026-08-10T02:00:00.000Z',
+    size_band: 'head_high',
+    predicted: A_LIVE_CALL,
+  }));
   try {
     world.outcome = await runExport({
       store: world.store,
       log: world.log,
+      signals: world.signals,
       clock: world.clock,
       spots: SEEDED_SPOTS,
+      timezone: SEED_TIMEZONE,
     });
   } catch (error) {
     world.failure = error;
@@ -305,7 +453,207 @@ Then('only the report received on that day became a line', function () {
   );
 });
 
+Then('the night leaves one signals file beside its rows', function () {
+  completedRun();
+  assert.deepEqual(
+    [...world.signals.objects.keys()],
+    [SIGNALS_KEY],
+    'the same pass that writes the night\'s rows writes exactly one ops signals file, named for the day that closed.',
+  );
+  assert.equal(
+    signalsDocument()['dt'],
+    CLOSED_DAY,
+    'the signals file names the day it covers.',
+  );
+});
+
+Then('the signals say how many devices reported at each beach and how old their credentials were', function () {
+  assert.deepEqual(
+    bucketsOf().map((bucket) => [bucket['spot_id'], bucket['distinct_devices'], bucket['median_credential_age_days']]),
+    [['playa-venao', 3, 3], ['santa-catalina-la-punta', 1, 61]],
+    'a young-cohort pile-on is three fresh credentials agreeing at one beach; the signal that catches it is the pair (distinct devices, median credential age in days).',
+  );
+});
+
+Then('the signals say how alike the sizes were, and say nothing where too few devices reported', function () {
+  const [pileOn, lone] = bucketsOf();
+  assert.equal(
+    pileOn?.['band_dispersion'],
+    0.33,
+    'three devices, one size answer between them: dispersion is distinct bands over reports, and low variance is what gets FLAGGED here, never rewarded.',
+  );
+  assert.equal(
+    lone?.['band_dispersion'],
+    null,
+    'section 7.4 computes dispersion across three or more devices. One device has no dispersion to report, and printing a number for it would claim a spread the data never earned.',
+  );
+});
+
+Then('the signals say how fast the reports arrived and how many arrived in a burst', function () {
+  const [pileOn, lone] = bucketsOf();
+  assert.equal(pileOn?.['min_interarrival_ms'], 300, 'the closest two reports in the bucket arrived 300 ms apart: machine cadence.');
+  assert.equal(pileOn?.['burst_clusters'], 1, 'gaps under 500 ms make one burst cluster; the third report, 700 ms later, is not in it.');
+  assert.equal(lone?.['min_interarrival_ms'], null, 'one report has no gap to another, and zero would read as "instantaneous" rather than "not applicable".');
+  assert.equal(lone?.['burst_clusters'], 0, 'one report is never a burst.');
+});
+
+Then('the signals count the mints each source host made over the trailing week', function () {
+  const mints = signalsDocument()['mints_per_src_hash'] as Record<string, unknown>;
+  assert.deepEqual(
+    mints['utc_window'],
+    { from: '2026-08-06T00:00:00.000Z', to: '2026-08-13T00:00:00.000Z' },
+    'the mint signal is the only one that is not a day bucket: it looks back seven whole days from the close of the exported day.',
+  );
+  assert.deepEqual(
+    mints['counts'],
+    [{ src_hash: 'sh_one_host', mints: 3 }],
+    'three credentials minted from one host inside the trailing week is the signal. The mint from two months ago is outside the window and is not counted, and a host with nothing in the window is not listed at all.',
+  );
+});
+
+Then('the source hash rides in the signals file and on no line of the log', function () {
+  const signalsText = world.signals.objects.get(SIGNALS_KEY) ?? '';
+  assert.ok(
+    signalsText.includes('sh_one_host'),
+    'src_hash lives on the mint ledger item and nowhere else, and the abuse-signals file is the ONE place section 7.4 sends it.',
+  );
+  for (const line of observedLines()) {
+    assert.ok(!('src_hash' in line), 'src_hash must never reach an observation row: R5 forbids it and the log can never be repaired.');
+    assert.ok(
+      !JSON.stringify(line).includes('sh_'),
+      `no part of a mint ledger item may ride out on a row, under any key.\n  line: ${JSON.stringify(line)}`,
+    );
+  }
+});
+
+Then('the signals group each beach by its own local day, never by the UTC day of the file', function () {
+  assert.deepEqual(
+    bucketsOf().map((bucket) => [bucket['spot_id'], bucket['local_day']]),
+    [['playa-venao', '2026-08-11'], ['santa-catalina-la-punta', '2026-08-12']],
+    'section 7.4 groups per (spot, LOCAL day). Panama is UTC-5, so reports received at 02:00Z on the 12th were made at 21:00 on the 11th, and regrouping them under the file\'s UTC day would silently redefine the signal.',
+  );
+});
+
+Then('every bucket names the UTC window it was really computed over', function () {
+  assert.deepEqual(
+    bucketsOf().map((bucket) => bucket['utc_window']),
+    [
+      { from: '2026-08-12T00:00:00.000Z', to: '2026-08-12T05:00:00.000Z' },
+      { from: '2026-08-12T05:00:00.000Z', to: '2026-08-13T00:00:00.000Z' },
+    ],
+    'a bucket carries the window it was ACTUALLY computed over, which is its local day intersected with the file\'s UTC day, so a reader can see exactly which hours the number came from.',
+  );
+});
+
+Then('every bucket the file cut short says it is incomplete', function () {
+  for (const bucket of bucketsOf()) {
+    assert.equal(
+      bucket['complete'],
+      false,
+      `Panama is UTC-5, so no local day is ever whole inside one received-UTC file: both ends of this one are cut. A median over a clipped day that presented as whole would claim more certainty than the data earns, which is the one move this project forbids.\n  bucket: ${JSON.stringify(bucket)}`,
+    );
+  }
+});
+
+Then('the second run recomputed the night and offered it under the same names', function () {
+  const second = completedRun();
+  const first = firstRun();
+  assert.equal(second.day, first.outcome.day, 'a re-run closes the same night, so it names the same day.');
+  assert.deepEqual(
+    [...second.keys].sort(),
+    [...first.outcome.keys].sort(),
+    'the re-run recomputes the whole night and offers it under exactly the same object names. It does not skip the work; the log refuses the write.',
+  );
+  assert.ok(
+    second.rows > first.outcome.rows,
+    `the store gained a report for that night, so the second run really did compute a different night: ${first.outcome.rows} rows became ${second.rows}. Without that, this scenario would only prove that nothing happened twice.`,
+  );
+});
+
+Then('every object still holds byte for byte what the first run wrote', function () {
+  const first = firstRun();
+  const now = writtenObjects();
+  for (const [key, body] of Object.entries(first.objects)) {
+    assert.equal(
+      now[key],
+      body,
+      `${key} was rewritten by the second run. The observation log is immutable: the first bytes under a key are the only bytes, which is why a bug in night one is repaired by a new day and never by an overwrite.`,
+    );
+  }
+});
+
+Then('the second run left no object of its own behind', function () {
+  assert.deepEqual(
+    Object.keys(writtenObjects()).sort(),
+    Object.keys(firstRun().objects).sort(),
+    'a re-run of the same night adds no object at all: same day, same tiles, same signals file.',
+  );
+});
+
+Then('the bytes under the beach\'s .gz key begin with the gzip magic number', async function () {
+  const bytes = await storedBytes(`log/observations/v1/dt=${CLOSED_DAY}/${VENAO_TILE}.jsonl.gz`);
+  assert.deepEqual(
+    [bytes[0], bytes[1]],
+    [0x1f, 0x8b],
+    'a .gz key must carry real gzip. Reading the object back through the house adapter proves NOTHING here: its readGzip only unzips when these two bytes are present and otherwise hands back the text unchanged, so plain text under a .gz name would pass a round-trip and fail in production, where the learning lane\'s read path gunzips on the suffix unconditionally.',
+  );
+});
+
+Then('unzipping those bytes gives back exactly the lines the run wrote', async function () {
+  const bytes = await storedBytes(`log/observations/v1/dt=${CLOSED_DAY}/${VENAO_TILE}.jsonl.gz`);
+  const lines = gunzipSync(bytes).toString('utf8').split('\n').filter((line) => line !== '');
+  assert.deepEqual(
+    lines.map((line) => (JSON.parse(line) as Record<string, unknown>)['report_id']),
+    ['01JONLY00000000000000001'],
+    'gunzipping the stored bytes yields the night\'s JSON lines, unchanged and parseable one per line.',
+  );
+});
+
+Then('the signals file is plain readable JSON, not gzip wearing a .json name', async function () {
+  const bytes = await storedBytes(SIGNALS_KEY);
+  assert.notEqual(bytes[0], 0x1f, 'the ops file is named .json and must be plain JSON: an operator opens it during an incident.');
+  assert.equal(
+    (JSON.parse(bytes.toString('utf8')) as Record<string, unknown>)['dt'],
+    CLOSED_DAY,
+    'the signals bytes parse as JSON straight off the disk, with no unzip step.',
+  );
+});
+
 // ----------------------------------------------------------------- reading --
+
+/** The bytes an object really carries, read off the disk rather than back through the adapter. */
+async function storedBytes(key: string): Promise<Buffer> {
+  completedRun();
+  assert.ok(world.disk !== null, 'this scenario asserts on bytes, so it must be the one that writes to a real disk');
+  return readFile(join(world.disk.root, key));
+}
+
+/** Everything both write capabilities are holding, keyed by object name. */
+function writtenObjects(): Readonly<Record<string, string>> {
+  return { ...Object.fromEntries(world.log.objects), ...Object.fromEntries(world.signals.objects) };
+}
+
+function firstRun(): { readonly outcome: ExportOutcome; readonly objects: Readonly<Record<string, string>> } {
+  assert.ok(world.firstRun !== null, 'this scenario compares against a first run that has not happened');
+  return world.firstRun;
+}
+
+function signalsDocument(): Record<string, unknown> {
+  completedRun();
+  const body = world.signals.objects.get(SIGNALS_KEY);
+  assert.ok(
+    body !== undefined,
+    `the run wrote no ${SIGNALS_KEY}; it holds ${JSON.stringify([...world.signals.objects.keys()])}.`,
+  );
+  return JSON.parse(body) as Record<string, unknown>;
+}
+
+function bucketsOf(): Record<string, unknown>[] {
+  const buckets = signalsDocument()['spot_local_days'];
+  assert.ok(Array.isArray(buckets), 'the signals file carries its per-beach-per-local-day buckets under spot_local_days.');
+  return buckets as Record<string, unknown>[];
+}
+
 
 function completedRun(): ExportOutcome {
   assert.equal(world.failure, null, `the export refused the night: ${String(world.failure)}`);

@@ -18,7 +18,7 @@
 
 import assert from 'node:assert/strict';
 
-import type { ObservationLogStore, StoredItemReader } from '../../../../../src/export/ports';
+import type { AbuseSignalsStore, ObservationLogStore, StoredItemReader } from '../../../../../src/export/ports';
 import type { SpotCoordinate } from '../../../../../src/pipeline/adapters/spot-coordinates';
 
 /** The two seeded beaches these scenarios use, lat/lon verbatim from data/spots/pa-pacific.yaml. */
@@ -54,8 +54,16 @@ export class InMemoryItemReader implements StoredItemReader {
   }
 }
 
-/** Write-once object storage: the first writer of a key wins, exactly as S3 If-None-Match does. */
-export class InMemoryLogStore implements ObservationLogStore {
+/**
+ * Write-once object storage: the first writer of a key wins, exactly as S3
+ * If-None-Match does.
+ *
+ * It stands in for BOTH narrow write capabilities the run is handed -- the
+ * observation log and the ops signals file -- because they are the same
+ * contract over two different prefixes, which is exactly how the deployed
+ * role's two prefix grants read.
+ */
+export class InMemoryLogStore implements ObservationLogStore, AbuseSignalsStore {
   readonly objects = new Map<string, string>();
 
   async putIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'> {
@@ -100,6 +108,10 @@ export type StoredReportFixture = {
   readonly device_id: string;
   readonly received_at: string;
   readonly predicted?: StoredPrediction | null;
+  /** Defaults to the one age the row scenarios pin. The signals scenarios vary it: credential age IS the signal. */
+  readonly credential_issued_at?: string;
+  /** Defaults to the one answer the row scenarios pin. The signals scenarios vary it: band spread IS the signal. */
+  readonly size_band?: string;
 };
 
 /** A live call, the five keys the store's PredictedCall carries. */
@@ -120,13 +132,13 @@ export function storedReportItem(fixture: StoredReportFixture): Record<string, u
     report_id: fixture.report_id,
     device_id: fixture.device_id,
     received_at: fixture.received_at,
-    credential_issued_at: '2026-07-01T12:00:00Z',
+    credential_issued_at: fixture.credential_issued_at ?? '2026-07-01T12:00:00Z',
     record: {
       report_id: fixture.report_id,
       spot_id: fixture.spot_id,
       observed_at: observedAt,
       submitted_at: observedAt,
-      size_band: 'waist_chest',
+      size_band: fixture.size_band ?? 'waist_chest',
       size_band_schema: 1,
       wind: 'choppy',
       quality: 'good',
@@ -148,6 +160,32 @@ export const NON_REPORT_ITEMS: readonly Record<string, unknown>[] = [
   { pk: 'DEV#d_abc', sk: 'QUOTA#2026-08-12', reports: 2 },
   { pk: 'SPOT#playa-venao', sk: 'COUNTER', n_reports: 41 },
 ];
+
+export type MintLedgerFixture = {
+  readonly device_id: string;
+  readonly issued_at: string;
+  readonly src_hash: string;
+};
+
+/**
+ * One mint-ledger item, the shape src/report/aws-write-store.ts writes under
+ * `CRED#<device_id>` / `MINT`.
+ *
+ * `src_hash` exists on this shape and on no other. It is the join key the
+ * trailing-week mint signal counts on, and it is the one field that must reach
+ * the ops file while never reaching a single line of the observation log
+ * (07-write-path.md section 7.4 for the first half, R5 for the second).
+ */
+export function mintLedgerItem(fixture: MintLedgerFixture): Record<string, unknown> {
+  return {
+    pk: `CRED#${fixture.device_id}`,
+    sk: 'MINT',
+    device_id: fixture.device_id,
+    issued_at: fixture.issued_at,
+    issued_at_epoch: Math.floor(Date.parse(fixture.issued_at) / 1000),
+    src_hash: fixture.src_hash,
+  };
+}
 
 /** A report item a partial write left behind: the sort key is right, the record is gone. */
 export function halfWrittenReportItem(reportId: string): Record<string, unknown> {

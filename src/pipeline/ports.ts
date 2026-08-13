@@ -50,6 +50,25 @@ export interface BuildStore {
   putManifest(key: string, body: string): Promise<void>;
 }
 
+/**
+ * Appending one immutable object to a durable log, first writer wins.
+ *
+ * Deliberately ONE method, and deliberately on the storage adapters rather
+ * than duplicated inside the nightly export. Gzip-by-key-suffix, S3's 412
+ * already-exists path and the single transient retry are three rules that must
+ * agree across every log this project writes; a second implementation of them
+ * would be a second contract, and the observation log is immutable, so a
+ * disagreement about its bytes could never be repaired in place.
+ *
+ * The capability is narrow on purpose: a caller handed only this cannot read,
+ * cannot list, cannot overwrite, and cannot publish. The nightly export
+ * receives exactly it, through its own ports (src/export/ports.ts), and the
+ * deployed role grants exactly the two prefixes that export writes.
+ */
+export interface LogAppendStore {
+  appendLogIfAbsent(key: string, body: string): Promise<'created' | 'already-exists'>;
+}
+
 export interface Clock {
   now(): Date;
 }
