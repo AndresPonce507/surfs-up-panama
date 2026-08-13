@@ -15,7 +15,10 @@ import { forecast } from '../../src/data/forecast';
 import { formatPanamaTime } from '../../src/publish/reading-state';
 
 function stampFrom(html: string): { publishedAt: string; visible: string } | null {
-  const match = /<time datetime="([^"]+)">Actualizado ([^<]+)<\/time>/.exec(html);
+  // Attributes may follow datetime (Astro stamps scoped-style ids on the
+  // element); the contract is the instant + the plain clock, not attribute
+  // order.
+  const match = /<time datetime="([^"]+)"[^>]*>Actualizado ([^<]+)<\/time>/.exec(html);
   return match === null ? null : { publishedAt: match[1]!, visible: match[2]! };
 }
 

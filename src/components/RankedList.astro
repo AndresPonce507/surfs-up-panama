@@ -4,11 +4,19 @@
 // inside its own byte budget and the refusal to forecast past tomorrow is
 // visible in the information architecture itself (application-architecture.md
 // section 4). Array position IS the rank; no rank field exists.
+//
+// The water treatment (f-looks-like-the-ocean slice-06) lives entirely in
+// this component: markup below, scoped style, one inline script. Nothing is
+// added to the shared stylesheets, so every other route's bytes stay flat
+// (reportado sits within tens of bytes of its 4 KB ceiling). The hero card
+// stays a SOLID gradient: 09-design-system.md section 4 refuses glass under
+// the sunlight-read score (white over the glass wash computes ~3.9:1).
 import Base from '../layouts/Base.astro';
 import Confidence from './Confidence.astro';
 import { forecast, type DaySummary } from '../data/forecast';
 import { CONFIDENCE_FACTORS, modelAgreement, type ModelAgreement } from '../scoring/confidence';
 import { spotById } from '../data/region';
+import { bestWindowSpan } from '../render/best-window';
 import { strings, type Locale } from '../i18n/strings';
 import { paths } from '../i18n/routes';
 import { formatUpdatedAtEs } from '../publish/display-format';
@@ -75,6 +83,11 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
   }
   return summary.call[locale] ?? 'Condiciones publicadas para hoy.';
 }
+
+// The window bar draws only what bestWindowSpan can represent honestly; a
+// refused span renders nothing (stated absence, never an invented bar).
+const topWindow = daySpots[0]?.best_window;
+const topSpan = topWindow === undefined ? undefined : bestWindowSpan(topWindow);
 ---
 
 <Base
@@ -83,8 +96,18 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
   currentPath={currentPath}
   announcement={announcement}
 >
+  <div class="dg-sea" data-dg="sea" aria-hidden="true">
+    <div class="dg-caustic dg-a"></div>
+    <div class="dg-caustic dg-b"></div>
+    <div class="dg-rays"></div>
+    <div class="dg-swell dg-s1"><svg viewBox="0 0 2880 150" preserveAspectRatio="none"><path d="M0,90 C240,50 480,130 720,95 C960,60 1200,120 1440,90 C1680,50 1920,130 2160,95 C2400,60 2640,120 2880,90 L2880,150 L0,150 Z"/></svg></div>
+    <div class="dg-swell dg-s2"><svg viewBox="0 0 2880 180" preserveAspectRatio="none"><path d="M0,110 C220,70 460,150 720,112 C980,74 1180,148 1440,110 C1660,70 1900,150 2160,112 C2420,74 2620,148 2880,110 L2880,180 L0,180 Z"/></svg></div>
+    <div class="dg-swell dg-s3"><svg viewBox="0 0 2880 200" preserveAspectRatio="none"><path d="M0,120 C260,80 480,165 720,125 C960,85 1200,160 1440,120 C1700,80 1920,165 2160,125 C2400,85 2640,160 2880,120 L2880,200 L0,200 Z"/></svg></div>
+    <svg class="dg-edge" viewBox="0 0 1440 110" preserveAspectRatio="none"><path d="M0,55 C180,20 360,90 540,60 C720,30 900,85 1080,58 C1260,32 1360,70 1440,50 L1440,110 L0,110 Z"/></svg>
+  </div>
+
   <h1>{t.home.header}</h1>
-  <p><time datetime={forecast.published_at}>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</time></p>
+  <p class="dg-stamp"><time datetime={forecast.published_at}>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</time></p>
   <p data-stale-notice hidden style="color:var(--warn);font-size:var(--text-meta);font-weight:600"></p>
   <script is:inline>const t=document.querySelector('time[datetime]'),n=document.querySelector('[data-stale-notice]');if(t&&n&&Date.now()-Date.parse(t.dateTime)>108e5){const d=new Date(t.dateTime),h=(d.getUTCHours()+19)%24;n.hidden=!1;n.textContent=`Viejo. Lo último que vimos fue a las ${h%12||12}:${String(d.getUTCMinutes()).padStart(2,'0')} ${h<12?'a.m.':'p.m.'} No pudimos sacar datos nuevos esta mañana.`}</script>
   <nav>
@@ -98,15 +121,15 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
       {t.home.tabTomorrow}
     </a>
   </nav>
-  <ol class="ranked">
+  <ol class="ranked" data-dg="coast">
     {
       daySpots.map((summary, index) => (
-        <li>
+        <li data-dg={index === 0 ? undefined : 'reveal'}>
           <span>{index + 1}</span>
           <a href={paths.spot(locale, summary.spot_id)}>
             {index === 0 ? `VE A ${nameOf(summary.spot_id)}` : nameOf(summary.spot_id)}
           </a>
-          <strong>{summary.score_q}</strong>
+          <strong data-dg={index === 0 ? 'ring' : undefined} style={index === 0 ? `--dg-score:${summary.score_q}` : undefined}>{summary.score_q}</strong>
           <div class="bars" aria-hidden="true">
             <div class="bar">
               <div class="track">
@@ -115,6 +138,13 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
             </div>
           </div>
           <p>{index === 0 ? repeatableCall(summary) : summary.call[locale]}</p>
+          {index === 0 && topSpan !== undefined && topWindow !== undefined && (
+            <div class="dg-window" data-dg="window" role="img" aria-label={`Mejor ventana de ${topWindow.start} a ${topWindow.end}`}>
+              <span class="dg-window-lbl">Mejor ventana</span>
+              <span class="dg-window-track"><i style={`left:${topSpan.left}%;width:${topSpan.width}%`}></i></span>
+              <span class="dg-window-hours"><span>06:00</span><span>12:00</span><span>18:00</span></span>
+            </div>
+          )}
           {summary.conf_level !== undefined && (
             <Confidence level={summary.conf_level} agreement={agreementFor(summary)} />
           )}
@@ -136,3 +166,307 @@ function repeatableCall(summary: (typeof daySpots)[number]): string {
     </a>
   </p>
 </Base>
+
+<script is:inline>
+(() => {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (!('IntersectionObserver' in window)) return;
+  const root = document.documentElement;
+  root.classList.add('dg-js');
+  const rows = [...document.querySelectorAll('[data-dg="reveal"]')];
+  rows.forEach((row, i) => row.style.setProperty('--dg-d', `${(i % 2) * 90 + Math.floor(i / 2) * 60}ms`));
+  const io = new IntersectionObserver((entries) => entries.forEach((entry) => {
+    if (entry.isIntersecting) { entry.target.classList.add('dg-in'); io.unobserve(entry.target); }
+  }), { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+  rows.forEach((row) => io.observe(row));
+  requestAnimationFrame(() => root.classList.add('dg-load'));
+  if (matchMedia('(pointer:fine)').matches) {
+    const sea = document.querySelector('[data-dg="sea"]');
+    if (sea) {
+      let raf = 0;
+      addEventListener('pointermove', (e) => {
+        const x = (e.clientX / innerWidth - 0.5).toFixed(3);
+        const y = (e.clientY / innerHeight - 0.5).toFixed(3);
+        if (!raf) raf = requestAnimationFrame(() => { sea.style.setProperty('--dg-mx', x); sea.style.setProperty('--dg-my', y); raf = 0; });
+      }, { passive: true });
+    }
+  }
+})();
+</script>
+
+<style>
+  /* ============ the water (f-looks-like-the-ocean slice-06) ============
+     Ships only on ranked-list documents. Decorative layers are aria-hidden;
+     every animation is transform/opacity; everything ambient is gated to
+     (pointer:fine) or desktop widths; reduced-motion strips it all. */
+  /* slice-06 tokens. Custom-property definitions are the token system's
+     legitimate home (U7); these ship only on ranked-list documents. The
+     ring/track/wave values sit on the dark water band in BOTH themes. */
+  :global(:root) {
+    --dg-wave-1: #0c4653;
+    --dg-wave-2: #0e5e6e;
+    --dg-wave-3: #0f6877;
+    --dg-ring: #6ed694;
+    --dg-on-water-dim: #ffffff29;
+    --dg-dawn-1: #ffe0b2bf;
+    --dg-dawn-2: #fffffff2;
+    --dg-dawn-3: #ffd6a5cc;
+    --dg-card-shadow: #02141a80;
+    --dg-mask-solid: #000;
+    --dg-mask-clear: #0000;
+    --dg-glint-hi: #ffffff8c;
+    --dg-glint-mid: #ffffff66;
+    --dg-glint-soft: #ffffff52;
+  }
+  :global([data-theme='dark']) {
+    --dg-wave-1: #052730;
+    --dg-wave-2: #07333f;
+    --dg-wave-3: #093f4c;
+  }
+  .dg-sea {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: clamp(430px, 74vh, 590px);
+    background: var(--hero-grad);
+    overflow: hidden;
+    pointer-events: none;
+  }
+  /* content over the band */
+  h1, .dg-stamp, p[data-stale-notice], nav, ol.ranked, footer, .home-primary {
+    position: relative;
+  }
+  h1 {
+    color: var(--hero-ink);
+    padding-top: var(--sp-5);
+  }
+  .dg-stamp, .dg-stamp time { color: var(--hero-ink-2); }
+  p[data-stale-notice]:not([hidden]) {
+    display: inline-block;
+    background: var(--warn-bg);
+    padding: var(--sp-1) var(--sp-3);
+    border-radius: var(--r-s);
+  }
+  nav { border-bottom: 0; }
+  nav a { color: var(--hero-ink-2); }
+  nav a[aria-current='page'] {
+    color: var(--hero-ink);
+    border-bottom-color: var(--hero-ink);
+  }
+
+  /* caustic light + rays: desktop pointers only, soft-light so they never
+     change what the contrast was computed against */
+  .dg-caustic, .dg-rays { display: none; }
+
+  /* rolling swells at the band's foot, three depths */
+  .dg-swell { position: absolute; left: 0; width: 200%; }
+  .dg-swell svg { display: block; width: 100%; height: 100%; }
+  .dg-s1 { bottom: 66px; height: 96px; opacity: .32; }
+  .dg-s1 path { fill: var(--dg-wave-1); }
+  .dg-s2 { bottom: 30px; height: 116px; opacity: .5; }
+  .dg-s2 path { fill: var(--dg-wave-2); }
+  .dg-s3 { bottom: -4px; height: 130px; opacity: .85; }
+  .dg-s3 path { fill: var(--dg-wave-3); }
+  .dg-edge { position: absolute; bottom: -1px; left: 0; width: 100%; height: 56px; }
+  .dg-edge path { fill: var(--bg); }
+
+  /* hero card rides the water: solid gradient stays (sunlight score), the
+     glass edge and lift come from border + shadow, never a backdrop wash */
+  ol.ranked li:first-child {
+    border-color: var(--glass-line);
+    box-shadow: 0 24px 60px -18px var(--dg-card-shadow);
+  }
+  /* the ring carries what the old grey track carried; two meters on one
+     card read as clutter */
+  ol.ranked li:first-child > .bars { display: none; }
+  /* one fixed meter colour for every row, same rule, richer token */
+  ol.ranked { --rank-bar-fill: var(--accent); }
+
+  /* the score wears a drawn ring on the card */
+  ol.ranked li:first-child > strong {
+    position: relative;
+    display: inline-grid;
+    place-items: center;
+    min-width: 5.4rem;
+    min-height: 5.4rem;
+    padding: var(--sp-2);
+  }
+  ol.ranked li:first-child > strong::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: conic-gradient(var(--dg-ring) calc(var(--dg-score, 0) * 1%), var(--dg-on-water-dim) 0);
+    /* ring green = the night go-green; it sits on the dark water in BOTH
+       themes (non-text, 3:1+ against every gradient stop) */
+    -webkit-mask: radial-gradient(closest-side, var(--dg-mask-clear) calc(100% - 7px), var(--dg-mask-solid) calc(100% - 6px));
+    mask: radial-gradient(closest-side, var(--dg-mask-clear) calc(100% - 7px), var(--dg-mask-solid) calc(100% - 6px));
+  }
+
+  /* best window on the daylight track */
+  .dg-window {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: var(--sp-1);
+    margin-top: var(--sp-2);
+  }
+  .dg-window-lbl {
+    color: var(--hero-ink-2);
+    font-size: var(--text-caption);
+    font-weight: 700;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+  }
+  .dg-window-track {
+    position: relative;
+    display: block;
+    height: 8px;
+    border-radius: var(--r-full);
+    background: var(--dg-on-water-dim);
+    overflow: hidden;
+  }
+  .dg-window-track i {
+    position: absolute;
+    top: 0; bottom: 0;
+    border-radius: var(--r-full);
+    background: linear-gradient(90deg, var(--dg-dawn-1), var(--dg-dawn-2) 45%, var(--dg-dawn-3));
+  }
+  .dg-window-hours {
+    display: flex;
+    justify-content: space-between;
+    color: var(--hero-ink-2);
+    font-size: var(--text-caption);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* coast rows become cards of the same product */
+  ol.ranked li + li {
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-m);
+    background: var(--surface);
+    padding: var(--sp-3) var(--sp-4);
+    margin-top: var(--sp-2);
+  }
+
+  /* ============ motion, all of it opt-in ============ */
+  @media (prefers-reduced-motion: no-preference) {
+    .dg-swell { animation: dg-roll var(--dg-v, 22s) linear infinite; }
+    .dg-s1 { --dg-v: 26s; }
+    .dg-s2 { --dg-v: 17s; animation-direction: reverse; }
+    .dg-s3 { --dg-v: 12s; }
+    @keyframes dg-roll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+    :global(.dg-js) li[data-dg='reveal']:not(.dg-in) {
+      opacity: 0;
+      transform: translateY(24px);
+    }
+    li[data-dg='reveal'] {
+      transition: opacity .65s ease var(--dg-d, 0ms), transform .65s cubic-bezier(.22, .9, .24, 1) var(--dg-d, 0ms);
+    }
+    :global(.dg-js) li[data-dg='reveal']:not(.dg-in) .fill { transform: scaleX(0); }
+    li[data-dg='reveal'] .fill {
+      transform-origin: left;
+      transition: transform .9s cubic-bezier(.22, .9, .24, 1) calc(var(--dg-d, 0ms) + 120ms);
+    }
+    ol.ranked li:first-child {
+      animation: dg-buoy 9s ease-in-out 2.2s infinite;
+    }
+    @keyframes dg-buoy { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    :global(.dg-js:not(.dg-load)) ol.ranked li:first-child {
+      opacity: 0;
+      transform: translateY(18px);
+    }
+    ol.ranked li:first-child {
+      transition: opacity .8s ease, transform .8s cubic-bezier(.22, .9, .24, 1);
+    }
+    li + li:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-2);
+      transition: transform .3s cubic-bezier(.2, .9, .25, 1.2), box-shadow .3s;
+    }
+  }
+
+  /* ============ desktop composition ============ */
+  @media (min-width: 1080px) {
+    :global(body) { max-width: 72rem; padding-left: var(--sp-6); padding-right: var(--sp-6); }
+    .dg-sea { height: clamp(560px, 82vh, 760px); }
+    h1 {
+      font-size: clamp(40px, 4vw, 58px);
+      font-weight: 800;
+      letter-spacing: -.022em;
+      line-height: 1.04;
+      max-width: 14ch;
+      text-align: left;
+      padding-top: var(--sp-7);
+    }
+    ol.ranked li:first-child > a { font-size: clamp(26px, 2.3vw, 34px); }
+    /* actions share one row on wide screens: both are items of the card's
+       own two-column grid, so placement beats display (grid items blockify) */
+    ol.ranked li:first-child :global(.copy-control),
+    ol.ranked li:first-child :global(.share-controls) {
+      grid-column: auto;
+      justify-self: start;
+      margin-top: var(--sp-4);
+    }
+    ol.ranked li:first-child :global(.share-controls) { justify-self: end; }
+    ol.ranked li:first-child :global(.copy-call),
+    ol.ranked li:first-child :global(.share-whatsapp) {
+      width: auto;
+      padding-left: var(--sp-5);
+      padding-right: var(--sp-5);
+    }
+    ol.ranked {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sp-3);
+      align-items: start;
+    }
+    ol.ranked li:first-child {
+      grid-column: 1 / -1;
+      max-width: 640px;
+      padding: var(--sp-6);
+      margin-bottom: clamp(120px, 16vh, 200px);
+      border-radius: 24px;
+    }
+    ol.ranked li:first-child > strong {
+      min-width: 8.5rem;
+      min-height: 8.5rem;
+      float: right;
+    }
+    ol.ranked li + li { margin-top: 0; padding: var(--sp-4) var(--sp-5); }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .dg-caustic {
+        display: block;
+        position: absolute;
+        inset: -20%;
+        mix-blend-mode: soft-light;
+        translate: calc(var(--dg-mx, 0) * 14px) calc(var(--dg-my, 0) * 8px);
+      }
+      .dg-a {
+        background:
+          radial-gradient(38% 30% at 22% 28%, var(--dg-glint-hi), var(--dg-mask-clear) 70%),
+          radial-gradient(30% 26% at 74% 16%, var(--dg-glint-mid), var(--dg-mask-clear) 70%),
+          radial-gradient(26% 24% at 58% 66%, var(--dg-glint-soft), var(--dg-mask-clear) 70%);
+        animation: dg-drift-a 26s ease-in-out infinite alternate;
+      }
+      .dg-b {
+        background:
+          radial-gradient(30% 26% at 80% 62%, var(--dg-glint-mid), var(--dg-mask-clear) 70%),
+          radial-gradient(24% 22% at 34% 78%, var(--dg-glint-soft), var(--dg-mask-clear) 70%);
+        animation: dg-drift-b 34s ease-in-out infinite alternate;
+      }
+      @keyframes dg-drift-a { from { transform: translate3d(-2.5%, -2%, 0) scale(1); } to { transform: translate3d(2.5%, 2.5%, 0) scale(1.06); } }
+      @keyframes dg-drift-b { from { transform: translate3d(2%, 1.5%, 0) scale(1.04); } to { transform: translate3d(-2%, -2%, 0) scale(1); } }
+      .dg-rays {
+        display: block;
+        position: absolute;
+        inset: 0;
+        opacity: .16;
+        background: linear-gradient(101deg, var(--dg-mask-clear) 12%, var(--dg-glint-hi) 15%, var(--dg-mask-clear) 19%, var(--dg-mask-clear) 34%, var(--dg-glint-soft) 38%, var(--dg-mask-clear) 43%, var(--dg-mask-clear) 66%, var(--dg-glint-mid) 70%, var(--dg-mask-clear) 75%);
+        transform-origin: top;
+        animation: dg-sway 18s ease-in-out infinite alternate;
+      }
+      @keyframes dg-sway { from { transform: skewX(-2deg) translateX(-1.5%); } to { transform: skewX(2deg) translateX(1.5%); } }
+    }
+  }
+</style>
