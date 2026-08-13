@@ -51,6 +51,13 @@ export default defineConfig({
   output: 'static',
   build: {
     format: 'file',
+    // Scoped component styles must land inside the document: a reading route
+    // arrives in one paint, so an extracted stylesheet is a render-blocking
+    // round trip the two-second beach-3G promise does not have (section 5;
+    // the page-weight gate refuses it). Astro's 'auto' default externalizes
+    // any scoped block past a size threshold, which the ranked-list water
+    // treatment crossed.
+    inlineStylesheets: 'always',
   },
   // The measurement is written straight to the streams rather than through
   // Astro's logger: the route-by-route list is the artefact a reader (and the
