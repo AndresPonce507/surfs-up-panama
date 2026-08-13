@@ -57,8 +57,10 @@ Notes on the plan:
   corpus; §12 makes it progressive enhancement only and this plan's flush triggers (`online`
   event, SW activation, plus f-tell's page-open trigger) work everywhere. No slice, scenario or
   DoD row may depend on it.
-- **Byte discipline.** Estimated adds, all inside ceilings `application-architecture.md` §5
-  already books: SW script ≤ 3.0 KB gz (line item 4), registration ≤ 0.2 KB inline, manifest plus
+- **Byte discipline.** The complete accepted Push append measures 3,290 B gz on the current
+  `public/sw.js` (2026-08-13). The previous 3.0 KB ceiling rejects even the compliant listener
+  pair, so SIGNAL amends its owned SW budget to ≤ 3.3 KB gz in `application-architecture.md` §5.
+  Registration remains ≤ 0.2 KB inline, manifest plus
   favicon ≤ 1.5 KB (line item 5), icons 0 on first visit (line item 6), staleness upgrade script
   ≤ 0.3 KB inline (inside line item 1), `/sin-senal` document ≤ 3 KB gz (§4 route table). The
   ceilings are contractual now; the CI gate that enforces them is keystone slice-08 (in flight
@@ -99,7 +101,7 @@ boundary is `docs/feature/f-works-with-no-signal/**` only (flagged in Pre-requis
 | 4 | The flush honours `07-write-path.md` §5 exactly: triggers are `online`, SW activation and f-tell's page-open; mint completes first; backoff 30s×2^n plus jitter on 429/5xx; any 200 deletes the entry; the record replays byte-identical; nothing anywhere depends on Background Sync. |
 | 5 | Once and only once is observable: a replayed acked `report_id` renders the original reveal identically (`queued_duplicate`), the counter never double-increments, the quota is untouched on the duplicate branch, and the queue entry is deleted on the idempotent ack. |
 | 6 | Request discipline holds: a typical reading session stays at ~8-10 CloudFront requests with the SW active (research 08 §12.4). |
-| 7 | Byte gates green: SW ≤ 3.0 KB gz, `/sin-senal` ≤ 3 KB gz, manifest plus favicon ≤ 1.5 KB, staleness script ≤ 0.3 KB inline, registration ≤ 0.2 KB inline; every route under its §4/§5 ceiling. |
+| 7 | Byte gates green: SW ≤ 3.3 KB gz, `/sin-senal` ≤ 3 KB gz, manifest plus favicon ≤ 1.5 KB, staleness script ≤ 0.3 KB inline, registration ≤ 0.2 KB inline; every route under its §4/§5 ceiling. |
 | 8 | The site is installable per §12's manifest (`standalone`, `start_url: /`, `lang: es`, 192/512 icons, per-theme colours) and the A2HS iOS hint renders verbatim §10 as a 0 JS `<details>`; the installed standalone context is ready to be the push context for the later push feature. |
 | 9 | U1-U7 checks green per slice through the built surface, and a sealed source-blind Vera PASS against each slice charter's U8 observation: 390 px, WCAG-AA against the real backdrop in both themes, reduced motion honoured, 44 px targets. |
 | 10 | Zero technical text on the Spanish surface in every state this feature adds: no raw ISO timestamps, no JSON, no placeholder tokens, no English. |

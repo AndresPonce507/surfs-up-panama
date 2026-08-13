@@ -64,6 +64,18 @@ This section supersedes the legacy notes below. They are retained only as histor
 - **F-READ-IT-IN-YOUR-LANGUAGE (i18n) is DROPPED from scope** by Andres 2026-08-12. Workspace
   parked on `build/f2-i18n`; the `/en/` routes from Design 07 remain live and are not removed.
 
+## Push service-worker seam decision (2026-08-13)
+
+- SIGNAL accepts the Push v1 payload and click contract. The append is exactly two independent
+  listeners at the end of `public/sw.js`: show the payload's title, body, tag and URL inside
+  `waitUntil`, then close a tapped notification and focus the matching path or open its URL.
+  It does not alter router rows, existing listeners, storage, fetches or analytics.
+- SIGNAL's service-worker gzip ceiling is amended from **3.0 KB to 3.3 KB**. The pre-append worker
+  was 2,887 B gzip; the complete compliant append measures 3,290 B gzip. The old ceiling rejected the
+  required behavior. The page budget changes from 25.5 KB to 25.8 KB, retaining 74.2 KB headroom.
+- This is code-only. The emitted-worker test and normal gates passed locally. Physical-device Push
+  smoke still remains before anyone calls the device path complete.
+
 ## Landing train (merge order) and lane map
 
 Order: **paste-fix + IAM-fix → deltas 04-05 → learning → report 04-05 → record 01-02 →

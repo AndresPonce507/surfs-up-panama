@@ -253,6 +253,13 @@
    "s": "BLOCKED_FLAG",
    "d": "FLAGGED, not blocking this commit: Pre-requisite 4(a) is still OPEN. This ships the handler MODULE only. The two listener registrations belong to F-WORKS-WITH-NO-SIGNAL's service worker file and are handed over as a contract. Push is NOT wired end to end; nothing mounts the seat yet. Separately, the acceptance harness fabricates the click event's data.url instead of chaining it from what handlePush showed, so 01-18 cannot observe 01-15 dropping `data`. That coupling is covered falsifiably at the unit layer instead. The acceptance files are DISTILL's and were not edited.",
    "t": "2026-08-12T13:10:00Z"
+  },
+  {
+   "sid": "01-15..01-19",
+   "p": "SEAM_ACKNOWLEDGEMENT",
+   "s": "EXECUTED",
+   "d": "PASS: SIGNAL accepted the documented v1 payload and click contract, then the real public worker test first failed because it registered zero push and notificationclick listeners. The serial append now registers both without router or existing-listener edits. It shows payload title/body/tag/data.url inside waitUntil, closes then focuses a matching path or opens the URL, and falls back instead of a silent unreadable push. The emitted dist/sw.js is byte-identical to public/sw.js at 3,290 B gzip, within the amended 3.3 KB SIGNAL ceiling. Focused worker checks, typecheck, build, ci:local --fast 11/0/0, and gitleaks HEAD passed. Physical-device Push smoke remains external.",
+   "t": "2026-08-13T14:50:00Z"
   }
  ]
 }

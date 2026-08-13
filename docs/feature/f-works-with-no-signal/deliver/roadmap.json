@@ -1071,11 +1071,12 @@
     },
     {
       "seam": "public/sw.js, push and notificationclick listeners",
-      "status": "RECORDED, NOT BUILT BY THIS LANE",
+      "status": "BUILT, VERIFIED LOCALLY",
       "where": "the END of public/sw.js, after every listener registration this slice ships and after the router table",
       "what": "Two new event-listener registrations added by F-TELL-ME-WHEN-ITS-WORTH-THE-DRIVE. Zero edits to existing router rows and zero edits to existing listeners.",
       "ordering": "A serial append, never concurrent with a SIGNAL slice in flight. Step 01-11 ships the structure and the scenario that keeps the seat honest.",
       "owner": "the PUSH lane, coordinated as a serial append",
+      "acknowledgement": "2026-08-13: SIGNAL accepts the Push v1 payload and click contract recorded in the Push feature delta: show title/body/tag/data.url inside event.waitUntil, then close and focus a matching client path or open the url. The two listeners remain a serial append with no router or existing-listener edits. SIGNAL also amends its owned gzip ceiling to 3.3 KB because the complete accepted append measures 3,290 B gzip.",
       "consequence": "This slice ships zero push code. Background Sync is never load-bearing: iOS availability is UNVERIFIED and section 12 makes it progressive enhancement only."
     },
     {

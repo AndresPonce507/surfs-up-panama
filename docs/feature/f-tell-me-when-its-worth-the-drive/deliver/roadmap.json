@@ -358,6 +358,7 @@
           "u8_observation": "",
           "non_visual_rationale": "A service worker handler exercised against a trapped scope object, not a rendered page; the notification itself is an operating system surface, observable only on Pre-requisite 10's real-device smoke.",
           "ui_checks": {},
+          "seam_status": "2026-08-13 supersedes the open Pre-requisite 4(a) note below: SIGNAL accepted the documented v1 payload and click contract, and the two registrations now append to the shipped public worker without changing router rows or existing listeners.",
           "files_to_modify": [
             "src/push/notification-seat.ts",
             "tests/unit/push-notification-seat.test.ts"
