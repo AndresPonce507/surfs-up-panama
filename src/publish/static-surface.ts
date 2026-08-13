@@ -1,6 +1,7 @@
 import type { WindStateToken } from '../data/report-vocab';
 import type { SizeBandToken } from '../data/size-bands';
 import type { ConfidenceResult } from '../scoring/confidence';
+import type { ScorecardBlock } from '../scorecard/scorecard-block';
 import { FACTOR_TOKENS, type FactorToken } from './factor-vocab';
 
 /** Spot-local `HH:MM` strings, precomputed at publish time; pages never compute them. */
@@ -81,6 +82,8 @@ export type HourlySubscorePoint = {
  * bundle for it -- the bundle is written to S3 and never committed. */
 export type SurfaceSpotDetail = {
   readonly name: string;
+  /** Optional only for retained pre-P5 published surfaces. */
+  readonly scorecard?: ScorecardBlock;
   /**
    * The scored hours spanning both published civil days.
    *
@@ -289,12 +292,24 @@ function isSpotDetailIndex(value: unknown, horizon: PublishedHorizon): boolean {
 
 function isSurfaceSpotDetail(value: unknown, horizon: PublishedHorizon): boolean {
   if (!isRecord(value) || typeof value.name !== 'string') return false;
+  if (Object.hasOwn(value, 'scorecard') && !isScorecardBlock(value.scorecard)) return false;
   // A legacy detail carries no key at all. Only a present projection is
   // inspected, and then it is inspected completely.
   if (!Object.hasOwn(value, 'hourly')) return true;
   return Array.isArray(value.hourly)
     && value.hourly.length > 0
     && value.hourly.every((point) => isHourlySubscorePoint(point, horizon));
+}
+
+function isScorecardBlock(value: unknown): value is ScorecardBlock {
+  return isRecord(value)
+    && typeof value.n_obs === 'number' && Number.isInteger(value.n_obs) && value.n_obs >= 0
+    && typeof value.n_reporters === 'number' && Number.isInteger(value.n_reporters) && value.n_reporters >= 0
+    && typeof value.threshold === 'number' && Number.isInteger(value.threshold) && value.threshold > 0
+    && value.counter === `${value.n_obs} / ${value.threshold}`
+    && typeof value.claim_ok === 'boolean'
+    && (value.headline === null || (typeof value.headline === 'string' && value.headline.trim().length > 0))
+    && (!value.claim_ok || value.headline !== null);
 }
 
 function isHourlySubscorePoint(value: unknown, horizon: PublishedHorizon): boolean {

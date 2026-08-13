@@ -212,6 +212,9 @@ export class IngestStack extends Stack {
     // detection: list the day's keys, then re-fetch the latest to compare).
     bucket.grantRead(fetchFn, 'predictions/*');
     bucket.grantRead(buildFn, 'predictions/*');
+    // Immutable observation objects are the scorecard's only report input.
+    // A failed list/get must fail the build; it must never become a zero.
+    bucket.grantRead(buildFn, 'log/observations/*');
     bucket.grantRead(buildFn, 'learned/corrections/*');
     for (const prefix of ['v1/*', 'site/*', 'assets/*', 'log/*', 'manifest.json']) {
       bucket.grantPut(buildFn, prefix);

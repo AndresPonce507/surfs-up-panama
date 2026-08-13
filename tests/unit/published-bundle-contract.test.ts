@@ -19,6 +19,7 @@ import { describe, it } from 'vitest';
 
 import { runBuildOnce } from '../../src/pipeline/build';
 import type { BuildStore, Clock } from '../../src/pipeline/ports';
+import type { ObservationLogReader } from '../../src/scorecard/observation-source';
 import { assertStrictTwoDayUpdate } from '../../src/publish/static-surface';
 import type { SpotSeed } from '../../src/scoring/engine';
 
@@ -85,13 +86,13 @@ function seed(spot_id: string, name: string): SpotSeed {
   };
 }
 
-function predictionLines(spot_id: string, date: string, height_m: number, utcHour = '18'): string {
+function predictionLines(spot_id: string, date: string, height_m: number, utcHour = '18', validDate = date): string {
   return MEMBER_SOURCES
     .map((source, index) => JSON.stringify({
       spot_id,
       source,
       run_ts: `${date}T06:00Z`,
-      valid_ts: `${date}T${utcHour}:00Z`,
+      valid_ts: `${validDate}T${utcHour}:00Z`,
       lead_h: 12,
       swell_h_m: height_m + index * 0.02,
       swell_t_s: 15.5,
@@ -161,7 +162,11 @@ async function publishEveryScoredHour(): Promise<{ bundle: Record<string, unknow
   };
 }
 
-async function publishTwoSpots(): Promise<{ bundle: Record<string, unknown>; callLog: string }> {
+async function publishTwoSpots(
+  observationLog?: ObservationLogReader,
+  buildInstant = BUILD_INSTANT,
+  historicalPredictionFiles: Readonly<Record<string, string>> = {},
+): Promise<{ bundle: Record<string, unknown>; callLog: string }> {
   const store = new RecordingStore();
   // Heights differ per spot and per day, so today's ranking and tomorrow's are
   // genuinely their own lists and the build's clone guard cannot mask a bug.
@@ -173,13 +178,15 @@ async function publishTwoSpots(): Promise<{ bundle: Record<string, unknown>; cal
     predictionLines('playa-venao', TOMORROW, 0.5),
     predictionLines('playa-cambutal', TOMORROW, 1.4),
   ].join('\n'));
+  for (const [key, body] of Object.entries(historicalPredictionFiles)) store.objects.set(key, body);
 
-  const clock: Clock = { now: () => new Date(BUILD_INSTANT) };
+  const clock: Clock = { now: () => new Date(buildInstant) };
   const outcome = await runBuildOnce({
     store,
     clock,
     region_id: 'pa-pacific',
     spots: [seed('playa-venao', 'Playa Venao'), seed('playa-cambutal', 'Playa Cambutal')],
+    ...(observationLog === undefined ? {} : { observationLog }),
   });
   assert.equal(outcome.published, true, `The two-day fixture must publish before its contract can be read. Got ${JSON.stringify(outcome)}.`);
 
@@ -196,6 +203,112 @@ async function publishTwoSpots(): Promise<{ bundle: Record<string, unknown>; cal
 }
 
 describe('published region bundle contract', () => {
+  it('carries the honest zero-data P5 scorecard block for every rendered spot', async () => {
+    const { bundle } = await publishTwoSpots();
+    const details = bundle.spot_detail as Record<string, Record<string, unknown>>;
+    const publishSurface = bundle.publish_surface as { spot_detail: Record<string, Record<string, unknown>> };
+
+    for (const spotId of PROJECTED_SPOTS) {
+      assert.deepEqual(
+        details[spotId]?.scorecard,
+        {
+          n_obs: 0,
+          n_reporters: 0,
+          threshold: 30,
+          counter: '0 / 30',
+          claim_ok: false,
+          headline: null,
+        },
+        `P5: ${spotId} must carry a computed scorecard block into the bundle even before the immutable observation log has an object.`,
+      );
+      assert.deepEqual(
+        publishSurface.spot_detail[spotId]?.scorecard,
+        details[spotId]?.scorecard,
+        `P5: ${spotId}'s scorecard must cross the Publisher's publish_surface handoff unchanged.`,
+      );
+    }
+  });
+
+  it('projects actual immutable observation rows into the matching spot block', async () => {
+    const observationLog: ObservationLogReader = async () => [
+      ...['device-1', 'device-2', 'device-3'].map((device_id, index) => ({
+        spot_id: 'playa-venao',
+        device_id,
+        observed_at: `2026-08-09T18:0${index}:00Z`,
+        size_band: 'waist_chest',
+        quality: 'good',
+        credential_issued_at: '2026-07-01T00:00:00Z',
+        received_at: `2026-08-09T18:0${index}:00Z`,
+        predicted: { score_q: 70 },
+      })),
+    ];
+    const { bundle } = await publishTwoSpots(observationLog, '2026-08-09T23:22:00Z');
+    const details = bundle.spot_detail as Record<string, Record<string, unknown>>;
+
+    assert.deepEqual(details['playa-venao']?.scorecard, {
+      n_obs: 3,
+      n_reporters: 3,
+      threshold: 30,
+      counter: '3 / 30',
+      claim_ok: false,
+      headline: null,
+    });
+    assert.deepEqual(details['playa-cambutal']?.scorecard, {
+      n_obs: 0,
+      n_reporters: 0,
+      threshold: 30,
+      counter: '0 / 30',
+      claim_ok: false,
+      headline: null,
+    });
+  });
+
+  it('reads the immutable prediction partition that matches an older observation before projecting it', async () => {
+    const observationLog: ObservationLogReader = async () => [{
+      spot_id: 'playa-venao',
+      device_id: 'device-1',
+      observed_at: '2026-08-01T18:00:00Z',
+      size_band: 'waist_chest',
+      quality: 'good',
+      credential_issued_at: '2026-07-01T00:00:00Z',
+      received_at: '2026-08-01T18:00:00Z',
+      predicted: { score_q: 70 },
+    }];
+
+    const { bundle } = await publishTwoSpots(
+      observationLog,
+      '2026-08-09T23:22:00Z',
+      {
+        'predictions/v1/dt=2026-07-25/history.jsonl': predictionLines(
+          'playa-venao',
+          '2026-07-25',
+          1.2,
+          '18',
+          '2026-08-01',
+        ),
+      },
+    );
+    const details = bundle.spot_detail as Record<string, Record<string, unknown>>;
+
+    assert.equal(
+      (details['playa-venao']?.scorecard as { counter?: string } | undefined)?.counter,
+      '1 / 30',
+      'a scorecard rebuild must join an observation with the immutable prediction log rather than only today\'s forecast input',
+    );
+  });
+
+  it('refuses the build when the immutable observation reader cannot answer, never falling back to zero', async () => {
+    const unreadable: ObservationLogReader = async () => {
+      throw new Error('observation source access denied');
+    };
+
+    await assert.rejects(
+      () => publishTwoSpots(unreadable),
+      /observation source access denied/,
+      'a read failure must stop before the bundle can substitute the day-one counter for a real source',
+    );
+  });
+
   it('gives both days the same joinable summary and every spot one identity', async () => {
     const { bundle, callLog } = await publishTwoSpots();
 

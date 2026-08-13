@@ -19,6 +19,11 @@ import { confidence } from '../scoring/confidence';
 import { loadLaunchSpotSeeds } from '../data/launch-spots';
 import { loadStoredCorrections } from '../learning/load-correction';
 import type { StoredCorrection } from '../learning/correction-record';
+import trustConfig from '../../data/config/trust-gate.json';
+import { emptyObservationLogReader } from '../scorecard/observation-source';
+import { projectScorecard } from '../scorecard/projection';
+import type { PredictionSnapshot, SurfReport } from '../scorecard/pairing';
+import type { ScorecardBlock } from '../scorecard/scorecard-block';
 import { sizeBands, type SizeBandToken } from '../data/size-bands';
 import type {
   BundleDay,
@@ -134,6 +139,11 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
   const hour = now.toISOString().slice(11, 13);
   const dates = [date, followingCivilDate(date)] as const;
   const rows = await predictionRows(deps, capturePartitionDates(date));
+  const reports = await (deps.observationLog ?? emptyObservationLogReader)();
+  const scorecardReports = reportsWithinScorecardWindow(reports, now);
+  const historicalRows = await scorecardPredictionRows(deps, scorecardReports);
+  const scorecards = scorecardsForBuild([...rows, ...historicalRows], scorecardReports, now);
+  refuseUnsettledClaims(scorecards);
   // Read before scoring, once per build, at each spot's own key. A correction
   // is an OPTIONAL build input: a spot with no file, an unreadable file or an
   // unreachable store all arrive here as null and publish the day-zero
@@ -186,7 +196,8 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
       // A spot with no scored hour inside either published day omits the key
       // entirely, exactly like a legacy surface. An empty array would be a
       // third state meaning neither "legacy" nor "here are the hours".
-      return [spot.spot_id, { name: spot.name, ...(hourly.length === 0 ? {} : { hourly }) }];
+      const scorecard = scorecards[spot.spot_id] ?? emptyScorecardBlock();
+      return [spot.spot_id, { name: spot.name, scorecard, ...(hourly.length === 0 ? {} : { hourly }) }];
     }),
   );
   const bundle: RegionBundle = {
@@ -213,6 +224,84 @@ export async function runBuildOnce(deps: BuildDeps): Promise<BuildOutcome> {
   await deps.store.putBundle('pub/v1/meta/spot-index.json', spotIndex);
   await deps.store.putManifest('pub/v1/manifest.json', JSON.stringify({ build_id }));
   return { published: true, build_id };
+}
+
+const reporterKeyFor = (deviceId: string): string => deviceId;
+
+const SCORECARD_WINDOW_DAYS = 30;
+const MAX_PREDICTION_LEAD_DAYS = 7;
+
+/** P5 is a current 30-day statement, never a lifetime counter. */
+function reportsWithinScorecardWindow(reports: readonly SurfReport[], now: Date): readonly SurfReport[] {
+  const asOfDay = now.toISOString().slice(0, 10);
+  const earliestDay = precedingCivilDate(asOfDay, SCORECARD_WINDOW_DAYS);
+  return reports.filter((report) => {
+    const observedAt = new Date(report.observed_at);
+    if (!Number.isFinite(observedAt.valueOf())) {
+      throw new Error(`scorecard build refused: observation has invalid observed_at ${JSON.stringify(report.observed_at)}`);
+    }
+    const observedDay = observedAt.toISOString().slice(0, 10);
+    return observedDay >= earliestDay && observedDay <= asOfDay;
+  });
+}
+
+/**
+ * The observation log names a valid hour, while predictions are partitioned
+ * by the preceding model-run day. Rebuild from only those immutable
+ * partitions that could contain the current scorecard window's observations.
+ */
+async function scorecardPredictionRows(deps: BuildDeps, reports: readonly SurfReport[]): Promise<PredictionRow[]> {
+  const partitions = new Set<string>();
+  for (const report of reports) {
+    const observedDay = new Date(report.observed_at).toISOString().slice(0, 10);
+    for (let daysBack = 0; daysBack <= MAX_PREDICTION_LEAD_DAYS; daysBack += 1) {
+      partitions.add(precedingCivilDate(observedDay, daysBack));
+    }
+  }
+  return predictionRows(deps, [...partitions].sort());
+}
+
+function scorecardsForBuild(
+  rows: readonly PredictionRow[],
+  reports: readonly SurfReport[],
+  now: Date,
+): Readonly<Record<string, ScorecardBlock>> {
+  const predictions: readonly PredictionSnapshot[] = rows.map((row) => ({
+    spot_id: row.spot_id,
+    source: row.source,
+    run_ts: row.run_ts,
+    valid_ts: row.valid_ts,
+    lead_h: row.lead_h,
+    swell_h_m: row.swell_h_m,
+    land_masked: row.land_masked,
+  }));
+  return projectScorecard({
+    predictions,
+    reports,
+    trustConfig,
+    resolveReporter: reporterKeyFor,
+    asOf: now.toISOString(),
+  }).blocks;
+}
+
+function emptyScorecardBlock(): ScorecardBlock {
+  return {
+    n_obs: 0,
+    n_reporters: 0,
+    threshold: 30,
+    counter: '0 / 30',
+    claim_ok: false,
+    headline: null,
+  };
+}
+
+function refuseUnsettledClaims(scorecards: Readonly<Record<string, ScorecardBlock>>): void {
+  const earnedAt = Object.entries(scorecards).find(([, block]) => block.claim_ok)?.[0];
+  if (earnedAt !== undefined) {
+    throw new Error(
+      `scorecard build refused: ${earnedAt} earned a mathematical claim but no settled headline exists; refusing to invent public accuracy copy.`,
+    );
+  }
 }
 
 function coordinatesFor(deps: BuildDeps) {

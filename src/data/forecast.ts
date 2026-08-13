@@ -13,6 +13,7 @@
 import surface from '../../data/published-surface.json';
 
 import type { Locale } from '../i18n/strings';
+import type { ScorecardBlock } from '../scorecard/scorecard-block';
 import type { SizeBandToken } from './size-bands';
 import {
   assertStrictTwoDayUpdate,
@@ -67,6 +68,7 @@ export interface ForecastPlaceholder {
    * no rank field exists (adr-two-day-ranking.md).
    */
   readonly days: readonly [readonly DaySummary[], readonly DaySummary[]];
+  readonly spot_detail?: Readonly<Record<string, { readonly name: string; readonly scorecard?: ScorecardBlock }>>;
 }
 
 const current = assertStrictTwoDayUpdate(surface.current);
@@ -90,4 +92,5 @@ export const forecast: ForecastPlaceholder = {
   // Today's legacy alias remains only for yesterday-receipt compatibility.
   // Tomorrow always comes from its separately ranked day array.
   days: [summaries(current.calls), summaries(current.days[1].spots)],
+  ...(current.spot_detail === undefined ? {} : { spot_detail: current.spot_detail }),
 };

@@ -15,6 +15,8 @@ import { S3Client } from '@aws-sdk/client-s3';
 
 import { runBuildOnce } from '../build';
 import { S3Store } from '../adapters/s3-store';
+import { createS3ObservationLogReader } from '../../scorecard/s3-observation-reader';
+import { emptyObservationLogReader, type ObservationLogReader } from '../../scorecard/observation-source';
 import type { BuildOutcome, BuildStore, Clock } from '../ports';
 import type { SpotSeed } from '../../scoring/engine';
 import { deriveBuildLogLines, PUBLISH_HANDOFF_FAILED_EVENT } from './log-events';
@@ -27,6 +29,7 @@ const REGION_ID = 'pa-pacific';
 
 export type BuildOverrides = {
   readonly store?: BuildStore;
+  readonly observationLog?: ObservationLogReader;
   readonly clock?: Clock;
   /** Tests only: bypass the bundled launch-policy files entirely. */
   readonly spots?: readonly SpotSeed[];
@@ -49,11 +52,14 @@ export type BuildOverrides = {
 export async function runBuild(overrides: BuildOverrides = {}): Promise<BuildOutcome> {
   const clock = overrides.clock ?? { now: () => new Date() };
   const store = overrides.store ?? defaultStore();
+  const observationLog = overrides.observationLog
+    ?? (overrides.store === undefined ? defaultObservationLog() : emptyObservationLogReader);
 
   const outcome = await runBuildOnce({
     store,
     clock,
     region_id: REGION_ID,
+    observationLog,
     ...(overrides.spots !== undefined
       ? { spots: [...overrides.spots] }
       : { launchData: bundledLaunchSeedPaths }),
@@ -110,6 +116,11 @@ function publisherReportedFreshPages(answer: unknown): boolean {
 // build.success starts appearing in CloudWatch after Andres deploys.
 function defaultStore(): BuildStore {
   return new S3Store(new S3Client({}), requiredEnv('BUCKET_NAME'));
+}
+
+/** The live build reads immutable observations through this adapter only. */
+function defaultObservationLog(): ObservationLogReader {
+  return createS3ObservationLogReader(new S3Client({}), requiredEnv('BUCKET_NAME'));
 }
 
 /** The Publisher's SDK client, retries capped at ONE attempt -- load-bearing,

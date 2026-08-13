@@ -31,6 +31,8 @@ export type ScorecardBlock = {
   readonly threshold: number;
   readonly counter: string;
   readonly claim_ok: boolean;
+  /** Claim copy is producer-owned. No settled claim copy exists today. */
+  readonly headline: string | null;
 };
 
 /**
@@ -57,6 +59,7 @@ export const decideScorecardBlock = (inputs: BlockInputs): ScorecardBlock => {
     threshold: REPORTS_REQUIRED,
     counter: `${displayObservations} / ${REPORTS_REQUIRED}`,
     claim_ok: decision.claimOk,
+    headline: null,
   };
 };
 

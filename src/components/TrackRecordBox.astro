@@ -43,25 +43,23 @@
 // prose: `composeEmptyStateSentence` (01-03) hands back an ordered sequence
 // of text and count parts for exactly this reason, so the paragraph's own
 // text nodes carry no digit and the counter alone carries tabular-nums (U6).
-import { scorecardBlockFromObservationCount } from '../scorecard/scorecard-block';
-import { dayOneObservationSource, probeObservationSource } from '../scorecard/observation-source';
+import { scorecardBlockFromObservationCount, type ScorecardBlock } from '../scorecard/scorecard-block';
 import { composeEmptyStateSentence } from '../scorecard/copy';
 
 interface Props {
-  spotId: string;
+  block?: ScorecardBlock;
 }
 
-const { spotId } = Astro.props;
-
-probeObservationSource('dayOneObservationSource', dayOneObservationSource);
-const observationCount = dayOneObservationSource(spotId);
-const block = scorecardBlockFromObservationCount(observationCount);
+const { block: suppliedBlock } = Astro.props;
+// Retained pre-P5 surfaces lack spot_detail.scorecard. This fixed fallback is
+// compatibility rendering only; new bundles always carry the producer block.
+const block = suppliedBlock ?? scorecardBlockFromObservationCount({ kind: 'store-absent', reason: 'retained pre-P5 surface' });
 
 if (block.claim_ok) {
   // No gated claim copy is implemented yet (deferred to a later slice): this
   // build has no honest sentence to print for a spot that passed the gate.
   throw new Error(
-    `TrackRecordBox: spot "${spotId}" passed the publish gate but no claim copy is implemented yet.`,
+    'TrackRecordBox: a scorecard claim arrived without a settled headline.',
   );
 }
 
