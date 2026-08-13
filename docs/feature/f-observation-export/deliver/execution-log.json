@@ -1,5 +1,41 @@
 {
   "schema_version": "3.0",
   "feature_id": "f-observation-export",
-  "events": []
+  "events": [
+    {
+      "sid": "01-02",
+      "p": "PREPARE",
+      "s": "EXECUTED",
+      "d": "resumed post allocation pause; checkpoint 9487288 rebased clean onto origin/main 50a42ee; roadmap criteria and requirement checklist reread",
+      "t": "2026-08-13T12:34:03Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "4 @step-01-02 scenarios authored pre-pause rode the checkpoint; on resume the focused run is green (at-0102-resume.log EXIT=0); red evidence for the resumed work supplied at unit level",
+      "t": "2026-08-13T12:34:03Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "composition test proven falsifiable: spots load deliberately broken, vitest exit 1 for the right reason (red-0102-composition-falsifiability.log); revert verified by empty git diff",
+      "t": "2026-08-13T12:34:03Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "units 18/18 EXIT=0 (unit-export-resume.log); focused ATs 4/4 EXIT=0; whole-feature 9 scenarios 245 steps EXIT=0 (at-feature-resume.log); dynamodb-local reader integration 2/2 EXIT=0 (dynamodb-export-resume.log); Vera N/A: non-visual step per roadmap non_visual_rationale",
+      "t": "2026-08-13T12:34:03Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "sealed on build/observation-export as the step 01-02 seal commit (subject: feat(export): seal step 01-02 with the composition proven and the bucket key made unsplittable); evidence log paths in the commit body",
+      "t": "2026-08-13T12:35:29Z"
+    }
+  ]
 }

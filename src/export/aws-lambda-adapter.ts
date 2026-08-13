@@ -62,7 +62,17 @@ async function composed(): Promise<ExportDeps> {
   }
 }
 
-async function createComposition(): Promise<ExportDeps> {
+/**
+ * Everything one night is handed, assembled from the environment.
+ *
+ * Exported so the assembly itself can be exercised without AWS: the SDK
+ * clients resolve region and credentials when a command is SENT, not when they
+ * are built, so composing is a pure enough act to test. The one part that
+ * genuinely reads the world is the launch seed, and a composition that came
+ * back without the beaches would kill the night at the first report it could
+ * not tile -- on a schedule whose write-once keys make night one unrepairable.
+ */
+export async function createComposition(): Promise<ExportDeps> {
   const tableName = requiredEnvironment('WRITE_STORE_TABLE');
   const bucket = requiredEnvironment('SITE_BUCKET');
   const [dynamo, document, s3] = await Promise.all([

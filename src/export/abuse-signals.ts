@@ -188,24 +188,39 @@ export function clipToFile(bucket: UtcWindow, file: UtcWindow): { readonly windo
 
 // ------------------------------------------------------------- the buckets --
 
+/** One beach on one of its own civil days, with the rows that landed in it. */
+type LocalDayBucket = {
+  readonly spot_id: string;
+  readonly local_day: string;
+  readonly rows: ObservationRow[];
+};
+
 function spotLocalDayBuckets(
   rows: readonly ObservationRow[],
   file: UtcWindow,
   timezone: string,
 ): readonly SpotLocalDaySignals[] {
-  const grouped = new Map<string, ObservationRow[]>();
+  // The grouping key is never taken apart again: the two parts it was built
+  // from ride beside it. Every spot_id is a slug today, but an id carrying
+  // the separator would otherwise be truncated in silence and its reports
+  // filed under another beach's day, in a file an operator reads during an
+  // incident.
+  const grouped = new Map<string, LocalDayBucket>();
   for (const row of rows) {
-    const key = `${row.spot_id} ${localDayOf(row.received_at, timezone)}`;
-    grouped.set(key, [...(grouped.get(key) ?? []), row]);
+    const local_day = localDayOf(row.received_at, timezone);
+    const key = `${row.spot_id} on ${local_day}`;
+    const bucket = grouped.get(key) ?? { spot_id: row.spot_id, local_day, rows: [] };
+    bucket.rows.push(row);
+    grouped.set(key, bucket);
   }
   return [...grouped]
     .sort(([left], [right]) => (left < right ? -1 : 1))
-    .map(([key, bucketRows]) => {
-      const [spot_id = '', local_day = ''] = key.split(' ');
-      const clipped = clipToFile(localDayUtcWindow(local_day, timezone), file);
+    .map(([, bucket]) => {
+      const bucketRows = bucket.rows;
+      const clipped = clipToFile(localDayUtcWindow(bucket.local_day, timezone), file);
       return {
-        spot_id,
-        local_day,
+        spot_id: bucket.spot_id,
+        local_day: bucket.local_day,
         utc_window: clipped.window,
         complete: clipped.complete,
         reports: bucketRows.length,

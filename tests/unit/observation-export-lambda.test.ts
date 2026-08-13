@@ -17,7 +17,7 @@ import assert from 'node:assert/strict';
 
 import { afterEach, beforeEach, describe, it } from 'vitest';
 
-import { handler } from '../../src/export/aws-lambda-adapter';
+import { createComposition, handler } from '../../src/export/aws-lambda-adapter';
 
 const OWNED_VARIABLES = ['WRITE_STORE_TABLE', 'SITE_BUCKET'] as const;
 
@@ -64,5 +64,33 @@ describe('the scheduled export refuses a night it cannot run', () => {
       'the second tick composed again instead of replaying the first tick\'s failure, so it got as far as the NEXT missing variable. A memoized rejection would have made the job dead for the life of the container.',
     );
     assert.match(second.message, /SITE_BUCKET/, 'and it names the one that is still missing -- SITE_BUCKET is the house name the write stack sets');
+  });
+
+  // covers: R3 R6
+  it('hands a night every dependency it needs, with the beaches actually loaded', async () => {
+    process.env['WRITE_STORE_TABLE'] = 'surfs-up-panama-write-store';
+    process.env['SITE_BUCKET'] = 'surfs-up-panama-site';
+
+    const deps = await createComposition();
+
+    assert.deepEqual(
+      Object.keys(deps).sort(),
+      ['clock', 'log', 'signals', 'spots', 'store', 'timezone'],
+      'a night is handed all six of its dependencies. A composition missing one would fail at the far end of a scheduled run nobody is watching.',
+    );
+    assert.equal(
+      deps.timezone,
+      'America/Panama',
+      'the signals bucket by the zone every launch-seed row declares, and the composition root is where that fact enters the run',
+    );
+    assert.ok(
+      deps.spots.length > 0 && deps.spots.every((spot) => Number.isFinite(spot.lat) && Number.isFinite(spot.lon)),
+      `the launch seed really loaded, with a real coordinate on every beach; got ${deps.spots.length}. This is the dependency that reads the world, and a run composed without it refuses at the first report it cannot tile -- on a schedule whose write-once keys make that night unrepairable.`,
+    );
+    assert.deepEqual(
+      ['playa-venao', 'santa-catalina-la-punta'].filter((spotId) => !deps.spots.some((spot) => spot.spot_id === spotId)),
+      [],
+      'and it carries the beaches that already have accepted reports',
+    );
   });
 });
