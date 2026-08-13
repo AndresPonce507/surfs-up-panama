@@ -205,6 +205,21 @@ function rejectDailyQuotaExceeded(): SubscribeDecision {
   };
 }
 
+/** A personal bar is a whole score on the published 0–100 scale. Reject it
+ * before touching the existing subscription universe: rounding, clamping, or
+ * substituting a default would silently change the surfer's intent. */
+function rejectInvalidThreshold(existing: StoredSub[]): SubscribeDecision {
+  return {
+    outcome: 'rejected',
+    stored: existing,
+    rejection: {
+      what: 'la barra elegida para los avisos',
+      why: 'la barra tiene que ser un número entero entre 0 y 100 para que el aviso respete exactamente la mañana que querés.',
+      how: 'elegí un número entero entre 0 y 100 y volvé a pedir avisos.',
+    },
+  };
+}
+
 /**
  * The R14 decision (07-write-path.md §8.1): a plain delete-by-identity,
  * always reported as the success outcome `unsubscribed` -- whether the
@@ -230,6 +245,12 @@ function decideUnsubscribe(request: UnsubscribeRequest): SubscribeDecision {
 export function decideSubscribe(request: SubscribeRequest | UnsubscribeRequest): SubscribeDecision {
   if (request.action === 'unsubscribe') {
     return decideUnsubscribe(request);
+  }
+  if (
+    request.threshold_score !== undefined &&
+    (!Number.isInteger(request.threshold_score) || request.threshold_score < 0 || request.threshold_score > 100)
+  ) {
+    return rejectInvalidThreshold(request.existing);
   }
   if (request.writes_today >= DAILY_SUBSCRIPTION_WRITE_QUOTA) {
     return rejectDailyQuotaExceeded();
