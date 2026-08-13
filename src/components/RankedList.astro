@@ -136,22 +136,27 @@ const glanceSub = tailCount === 0
     <svg class="dg-edge" viewBox="0 0 1440 110" preserveAspectRatio="none"><path d="M0,55 C180,20 360,90 540,60 C720,30 900,85 1080,58 C1260,32 1360,70 1440,50 L1440,110 L0,110 Z"/></svg>
   </div>
 
-  <h1>{t.home.header}</h1>
-  <p class="dg-sub">{glanceSub}</p>
-  <p class="dg-stamp"><time datetime={forecast.published_at}>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</time></p>
-  <p data-stale-notice hidden style="color:var(--warn);font-size:var(--text-meta);font-weight:600"></p>
-  <script is:inline>const t=document.querySelector('time[datetime]'),n=document.querySelector('[data-stale-notice]');if(t&&n&&Date.now()-Date.parse(t.dateTime)>108e5){const d=new Date(t.dateTime),h=(d.getUTCHours()+19)%24;n.hidden=!1;n.textContent=`Viejo. Lo último que vimos fue a las ${h%12||12}:${String(d.getUTCMinutes()).padStart(2,'0')} ${h<12?'a.m.':'p.m.'} No pudimos sacar datos nuevos esta mañana.`}</script>
-  <nav>
-    <a href={paths.home(locale)} aria-current={day === 0 ? 'page' : undefined}>
-      {t.home.tabToday}
-    </a>
-    <a
-      href={paths.tomorrow(locale)}
-      aria-current={day === 1 ? 'page' : undefined}
-    >
-      {t.home.tabTomorrow}
-    </a>
-  </nav>
+  {/* The title block is one unit so wide screens can set it beside the call
+      card instead of above it. It is a plain wrapper: no styles hang off it
+      below 1080px, where the page stays a single column. */}
+  <div class="dg-intro">
+    <h1>{t.home.header}</h1>
+    <p class="dg-sub">{glanceSub}</p>
+    <p class="dg-stamp"><time datetime={forecast.published_at}>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</time></p>
+    <p data-stale-notice hidden style="color:var(--warn);font-size:var(--text-meta);font-weight:600"></p>
+    <script is:inline>const t=document.querySelector('time[datetime]'),n=document.querySelector('[data-stale-notice]');if(t&&n&&Date.now()-Date.parse(t.dateTime)>108e5){const d=new Date(t.dateTime),h=(d.getUTCHours()+19)%24;n.hidden=!1;n.textContent=`Viejo. Lo último que vimos fue a las ${h%12||12}:${String(d.getUTCMinutes()).padStart(2,'0')} ${h<12?'a.m.':'p.m.'} No pudimos sacar datos nuevos esta mañana.`}</script>
+    <nav>
+      <a href={paths.home(locale)} aria-current={day === 0 ? 'page' : undefined}>
+        {t.home.tabToday}
+      </a>
+      <a
+        href={paths.tomorrow(locale)}
+        aria-current={day === 1 ? 'page' : undefined}
+      >
+        {t.home.tabTomorrow}
+      </a>
+    </nav>
+  </div>
   <ol class="ranked" data-dg="coast">
     {
       daySpots.map((summary, index) => {
@@ -287,7 +292,7 @@ const glanceSub = tailCount === 0
     pointer-events: none;
   }
   /* content over the band */
-  h1, .dg-stamp, p[data-stale-notice], nav, ol.ranked, footer, .home-primary {
+  .dg-intro, h1, .dg-stamp, p[data-stale-notice], nav, ol.ranked, footer, .home-primary {
     position: relative;
   }
   h1 {
@@ -505,7 +510,9 @@ const glanceSub = tailCount === 0
   /* ============ desktop composition ============ */
   @media (min-width: 1080px) {
     :global(body) { max-width: 72rem; padding-left: var(--sp-6); padding-right: var(--sp-6); }
-    .dg-sea { height: clamp(560px, 82vh, 760px); }
+    /* the band hugs the two-column hero now that the card rides beside the
+       title instead of under it; the list clears the wave edge as before */
+    .dg-sea { height: clamp(470px, 62vh, 580px); }
     h1 {
       font-size: clamp(40px, 4vw, 58px);
       font-weight: 800;
@@ -515,7 +522,7 @@ const glanceSub = tailCount === 0
       text-align: left;
       padding-top: var(--sp-7);
     }
-    ol.ranked li:first-child > a { font-size: clamp(26px, 2.3vw, 34px); }
+    ol.ranked li:first-child > a { font-size: clamp(22px, 1.9vw, 28px); }
     /* actions share one row on wide screens: both are items of the card's
        own two-column grid, so placement beats display (grid items blockify) */
     ol.ranked li:first-child :global(.copy-control),
@@ -528,18 +535,39 @@ const glanceSub = tailCount === 0
     ol.ranked li:first-child :global(.copy-call),
     ol.ranked li:first-child :global(.share-whatsapp) {
       width: auto;
-      padding-left: var(--sp-5);
-      padding-right: var(--sp-5);
+      /* both labels stay on one line inside the narrower card: the two
+         buttons must read as one row, not one tall and one short */
+      white-space: nowrap;
+      padding-left: var(--sp-3);
+      padding-right: var(--sp-3);
     }
+    /* Two-column hero. The title block floats left, so the call card, a grid
+       container and therefore its own formatting context, is set beside it on
+       the same water band instead of below it. No magic offset: the card's
+       top is the title block's top, whatever the title block's height. */
+    .dg-intro {
+      float: left;
+      width: 46%;
+      margin-right: var(--sp-6);
+      padding-top: var(--sp-7);
+    }
+    .dg-intro h1 { padding-top: 0; }
+    /* every row below the card clears the float, so a short title block can
+       never let a row ride up beside it */
+    ol.ranked li + li { clear: left; }
     ol.ranked li:first-child {
-      max-width: 640px;
-      padding: var(--sp-6);
-      margin-bottom: clamp(90px, 12vh, 150px);
+      /* fills the band's right column exactly: the float's own margin is the
+         gutter, so the card's right edge lines up with the list below it */
+      width: calc(54% - var(--sp-6));
+      max-width: 560px;
+      padding: var(--sp-5);
+      margin-top: var(--sp-7);
+      margin-bottom: clamp(80px, 10vh, 130px);
       border-radius: 24px;
     }
     ol.ranked li:first-child > strong {
-      min-width: 8.5rem;
-      min-height: 8.5rem;
+      min-width: 7rem;
+      min-height: 7rem;
       float: right;
     }
 
