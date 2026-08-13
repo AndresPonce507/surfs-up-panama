@@ -27,6 +27,7 @@
 // One build is made for the whole feature file and shared. No scenario mutates
 // the surface, so a second build would only spend wall time.
 
+import { AfterAll } from '@cucumber/cucumber';
 import { chromium, type Browser, type Page, type Response } from '@playwright/test';
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
@@ -252,3 +253,10 @@ export async function releaseBuiltSurface(): Promise<void> {
     surface = null;
   }
 }
+
+// The singleton browser above is a live Chromium child process; the preview
+// is a detached astro daemon. Neither is registered on any scenario's world,
+// so no After hook ever releases them. Without this AfterAll the browser
+// handle keeps cucumber's event loop referenced after the summary and the
+// whole `npm run test:at` run hangs at exit (observed 2026-08-12).
+AfterAll({ timeout: 30_000 }, releaseBuiltSurface);

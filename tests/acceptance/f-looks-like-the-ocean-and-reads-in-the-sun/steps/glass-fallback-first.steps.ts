@@ -132,13 +132,23 @@ async function openSpot(world: GlassWorld, width: number, theme: string): Promis
   const port = await unusedPort();
   const preview = spawn(join(projectRoot, 'node_modules/.bin/vite'), ['preview', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: fixture.root, env: credentialFreeEnvironment(), stdio: 'ignore' });
   const base = `http://127.0.0.1:${port}`;
-  await waitFor(base, preview);
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width, height: 844 } });
-  await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
-  if (theme === 'oscuro') await page.addInitScript(() => localStorage.setItem('surfs-up-theme', 'dark'));
-  await page.goto(`${base}${spotRoute(fixture.root)}`, { waitUntil: 'domcontentloaded' });
-  opened.set(world, { root: fixture.root, preview, browser, page });
+  // A failure between the spawn above and opened.set below must not strand
+  // the preview or the browser: a stranded child process keeps cucumber's
+  // event loop referenced after the summary and hangs the whole suite.
+  let browser: Browser | null = null;
+  try {
+    await waitFor(base, preview);
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({ viewport: { width, height: 844 } });
+    await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
+    if (theme === 'oscuro') await page.addInitScript(() => localStorage.setItem('surfs-up-theme', 'dark'));
+    await page.goto(`${base}${spotRoute(fixture.root)}`, { waitUntil: 'domcontentloaded' });
+    opened.set(world, { root: fixture.root, preview, browser, page });
+  } catch (error) {
+    await browser?.close().catch(() => undefined);
+    if (preview.exitCode === null) preview.kill('SIGTERM');
+    throw error;
+  }
 }
 
 async function openHome(world: GlassWorld, width: number, theme: string): Promise<void> {
@@ -148,12 +158,21 @@ async function openHome(world: GlassWorld, width: number, theme: string): Promis
   const port = await unusedPort();
   const preview = spawn(join(projectRoot, 'node_modules/.bin/vite'), ['preview', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: fixture.root, env: credentialFreeEnvironment(), stdio: 'ignore' });
   const base = `http://127.0.0.1:${port}`;
-  await waitFor(base, preview);
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width, height: 844 } });
-  await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
-  await page.goto(`${base}/index.html`, { waitUntil: 'domcontentloaded' });
-  opened.set(world, { root: fixture.root, preview, browser, page });
+  // Same discipline as openSpot: kill what this helper spawned if anything
+  // throws before the After hook can know about it.
+  let browser: Browser | null = null;
+  try {
+    await waitFor(base, preview);
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({ viewport: { width, height: 844 } });
+    await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
+    await page.goto(`${base}/index.html`, { waitUntil: 'domcontentloaded' });
+    opened.set(world, { root: fixture.root, preview, browser, page });
+  } catch (error) {
+    await browser?.close().catch(() => undefined);
+    if (preview.exitCode === null) preview.kill('SIGTERM');
+    throw error;
+  }
 }
 
 function pageFor(world: GlassWorld): Page {

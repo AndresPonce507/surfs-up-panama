@@ -43,6 +43,7 @@ import {
   shareFieldFindings,
   whatsappActionsInTopCard,
 } from './support/built-share-surface';
+import { stopPreviewDaemon } from './support/preview-surface';
 
 const MISSING_ACTION =
   'WHAT: la tarjeta grande no ofrece la acción de WhatsApp con el mensaje ya escrito. ' +
@@ -524,6 +525,14 @@ Then(
 After({ timeout: 20_000 }, async function (this: PasteWorld) {
   const state = peekStash(this);
   if (state === undefined) return;
+  // The slice-05 astro preview daemonises: its spawned child (state.home
+  // .preview) exits immediately and the server lives on under
+  // state.previewDaemonPid. Cucumber runs After hooks in reverse definition
+  // order, so this hook (registered last) runs FIRST and used to dropStash
+  // before share-from-every-spot-page's own After could peek the pid - which
+  // leaked one live astro preview server per slice-05 scenario, seven per
+  // full run (observed 2026-08-12). The stash owner kills the daemon itself.
+  stopPreviewDaemon(state.previewDaemonPid);
   await disposeHome(state.home);
   disposeRoot(state.root);
   dropStash(this);

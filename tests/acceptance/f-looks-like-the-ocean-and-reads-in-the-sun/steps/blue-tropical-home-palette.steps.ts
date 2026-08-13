@@ -179,16 +179,27 @@ async function openSurface(
     env: credentialFreeEnvironment(),
     stdio: 'ignore',
   });
-  await waitForPreview(url, preview);
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width, height: 844 } });
-  await page.emulateMedia({
-    colorScheme: theme === 'oscuro' ? 'dark' : 'light',
-    reducedMotion: movement === 'reducido' ? 'reduce' : 'no-preference',
-  });
-  if (theme === 'oscuro') await page.addInitScript(() => localStorage.setItem('surfs-up-theme', 'dark'));
-  await page.goto(url, { waitUntil: 'domcontentloaded' });
-  openedSurfaces.set(world, { root, cleanupRoot, preview, browser, page });
+  // A failure between the spawn above and openedSurfaces.set below must not
+  // strand the preview or the browser: the After hook can only kill what was
+  // registered, and a stranded child process keeps cucumber's event loop
+  // referenced after the summary, which reads as the whole suite hanging.
+  let browser: Browser | null = null;
+  try {
+    await waitForPreview(url, preview);
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({ viewport: { width, height: 844 } });
+    await page.emulateMedia({
+      colorScheme: theme === 'oscuro' ? 'dark' : 'light',
+      reducedMotion: movement === 'reducido' ? 'reduce' : 'no-preference',
+    });
+    if (theme === 'oscuro') await page.addInitScript(() => localStorage.setItem('surfs-up-theme', 'dark'));
+    await page.goto(url, { waitUntil: 'domcontentloaded' });
+    openedSurfaces.set(world, { root, cleanupRoot, preview, browser, page });
+  } catch (error) {
+    await browser?.close().catch(() => undefined);
+    if (preview.exitCode === null) preview.kill('SIGTERM');
+    throw error;
+  }
   return { buildStatus: build.status, buildOutput: build.output };
 }
 
