@@ -5,6 +5,7 @@
 // combine(); the score signature accepts no spread, track or freshness input.
 
 import type { MemberRow } from './engine';
+import type { SpreadClimatologyDecision } from './spread-climatology';
 
 export type SpreadInput =
   | { kind: 'absolute' }
@@ -239,6 +240,9 @@ function agreementSentenceEs(level: ConfidenceLevel, agreement: ModelAgreement):
   if (agreement.kind === 'spread_disabled') {
     return 'Esta lectura no compara los modelos entre sí, así que la confianza viene de otra parte';
   }
+  if (agreement.kind === 'worse_than_spot_normal') {
+    return `Los modelos se parten más de lo normal para este spot${agreement.disagree.length === 0 ? '' : ` en ${listEs(agreement.disagree)}`}`;
+  }
   if (agreement.kind === 'not_comparable') {
     // Day-neutral on purpose: this sentence renders unchanged on both the
     // Hoy and Mañana pages (RankedList.astro knows `day`, but neither
@@ -327,7 +331,26 @@ export type ModelAgreement =
   | { readonly kind: 'not_comparable' }
   | { readonly kind: 'no_usable_signal' }
   | { readonly kind: 'spread_disabled' }
+  | { readonly kind: 'worse_than_spot_normal'; readonly disagree: readonly SpreadVariable[] }
   | { readonly kind: 'compared'; readonly agree: readonly SpreadVariable[]; readonly disagree: readonly SpreadVariable[] };
+
+/**
+ * A future history reader may pass an activated climatology decision here.
+ * The current production build deliberately does not call this seam: live
+ * history is still below its accepted 30-completed-day minimum.
+ */
+export function agreementForSpreadClimatology(
+  terms: SpreadTerms,
+  level: ConfidenceLevel,
+  factors: ConfidenceFactors,
+  decision: SpreadClimatologyDecision,
+): ModelAgreement {
+  const agreement = modelAgreement(terms, level, factors);
+  if (agreement.kind !== 'compared'
+    || decision.kind !== 'climatology'
+    || decision.compares_worse_than_spot_normal !== true) return agreement;
+  return { kind: 'worse_than_spot_normal', disagree: agreement.disagree };
+}
 
 /** Every variable lands in exactly one side, by construction. */
 export function modelAgreement(terms: SpreadTerms, level: ConfidenceLevel, factors: ConfidenceFactors): ModelAgreement {
