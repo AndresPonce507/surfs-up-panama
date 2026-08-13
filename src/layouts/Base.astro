@@ -112,6 +112,7 @@ const inlineCss = minify(
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/sw.js');
+        window.addEventListener('online', () => navigator.serviceWorker.controller?.postMessage({ type: 'flush-report-queue' }));
       }
     </script>
   </body>
