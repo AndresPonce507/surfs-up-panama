@@ -106,6 +106,29 @@ The repo CLAUDE.md cucumber-tag rule is about `.feature` files and does not bind
 slice-to-scenario mapping lives in the roadmap, the file headers, and the per-step contract
 JSONs, as it has for slices 01–04.
 
+## D-2026-08-12-5 — Slice-05 sealed; DES tooling behaviour observed and recorded
+
+All five steps sealed on build/f2-learning-slice05 with full TDD evidence: 05-01 (3a328e0 +
+advisor round 3eb4ee1), 05-02 (a6563cf), 05-03 (69a6dad), 05-04 (5ff909c), 05-05 (4c309ff), each
+with five EXECUTED phases in execution-log.json (legacy phase names — the shim rejects the
+3-phase canon names), a 20-field contract JSON, red-first proof, and reverted falsifiability
+mutations. Fast gate at seal: 11 passed / 0 failed / 0 skipped, exit 0, read from gate.log.
+
+Tooling facts observed this lane, for the next orchestrator:
+1. The DES stop hook validates execution-log.json in the SESSION's cwd, not the dispatched
+   worktree. Here that was /Users/andres/psb-deliver-integration-20260812 (branch
+   release/deliver-20260812, unrelated ancestry), so every crafter's stop reported missing
+   entries that in fact exist in this worktree's committed log. Crafters were briefed to state
+   the mismatch and never write into the foreign worktree; all five did exactly that. The fix is
+   orchestrator-level: anchor the hook to the dispatched worktree.
+2. Dispatch-time DES prompt validation works and was kept ON for every step (a proposal to run
+   crafters DES-exempt was declined: the monitored path demonstrably seals work, and nw-deliver
+   treats exempt roadmap steps as a delivery violation). The evidence contract JSONs are the
+   accepted house fallback per HANDOFF section 10 waiver 2, and they exist for every step
+   REGARDLESS of the hook's misanchoring — nothing here depends on the hook being fixed.
+3. Vera/U1-U7 were N/A on every step: the slice is operator-JSON only; each roadmap step and
+   contract carries its concrete non-visual rationale.
+
 ## D-2026-08-12-3 — Lane addendum: the trailing 90-day fit window becomes real
 
 Flagged by today's ADR review: `readObservationLog` (src/learning/inputs.ts, consumed by
