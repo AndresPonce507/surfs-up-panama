@@ -365,6 +365,20 @@
       "s": "EXECUTED",
       "d": "PASS",
       "t": "2026-08-13T12:11:58Z"
+    },
+    {
+      "sid": "01-22",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS. Recovery branch from current origin/main: the on-load unit added before implementation failed at its own behavior oracle, 'the mount must call PushManager.getSubscription(), not assume a value from a prior visit', 0 !== 1. Exit 1 was captured in /private/tmp/psb-push-slice01-recovery/red-01-22-unit.log; it was neither an import nor a collection failure.",
+      "t": "2026-08-13T14:45:00Z"
+    },
+    {
+      "sid": "01-22",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS. mountPushSettings now reads the service-worker PushManager subscription, writes only an inert avisosState data value, and never reads a remembered flag. Focused unit passed 9/9, exit 0, captured in /private/tmp/psb-push-slice01-recovery/green-01-22-unit-rerun.log. The return-visit acceptance scenario remained green before and after the change because it does not expose an active state before a server acknowledgement.",
+      "t": "2026-08-13T14:46:00Z"
     }
   ]
 }

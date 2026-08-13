@@ -71,10 +71,10 @@ describe('canRequestPush', () => {
 
 describe('mountPushSettings', () => {
   function fakeDocumentWithControl(hidden: boolean): {
-    control: { hidden: boolean };
+    control: { hidden: boolean; dataset: Record<string, string> };
     documentPort: Pick<Document, 'querySelector'>;
   } {
-    const control = { hidden };
+    const control = { hidden, dataset: {} as Record<string, string> };
     return {
       control,
       documentPort: {
@@ -130,7 +130,7 @@ describe('mountPushSettings tap handling', () => {
   } {
     const withMessage = options.withMessage ?? true;
     let clickHandler: (() => unknown) | undefined;
-    const control = { hidden: true };
+    const control = { hidden: true, dataset: {} as Record<string, string> };
     const message: { hidden: boolean; textContent: string | null } = { hidden: true, textContent: null };
     const activate = {
       disabled: false,
@@ -225,5 +225,74 @@ describe('mountPushSettings tap handling', () => {
       true,
       'once refused, the control must visibly stop being an invitation instead of silently doing nothing',
     );
+  });
+});
+
+// Step 01-22: on a return visit the state must be derived from the browser's
+// own PushManager.getSubscription() result, never a remembered local flag.
+// This DOM-wiring seam is an explicit example-based exception: null and an
+// actual subscription object are the complete meaningful boundary values.
+describe('mountPushSettings on-load subscription read', () => {
+  function controlDocument(control: { hidden: boolean; dataset: Record<string, string> }): Pick<Document, 'querySelector'> {
+    return {
+      querySelector: ((selector: string) =>
+        selector === '[data-field="avisos"]' ? control : null) as Document['querySelector'],
+    };
+  }
+
+  function browserWithSubscription(subscription: unknown, rememberedFlag: string | null): {
+    windowPort: PushCapableWindow;
+    reads: { subscription: number; rememberedFlag: number };
+  } {
+    const reads = { subscription: 0, rememberedFlag: 0 };
+    const windowPort = {
+      ...capableWindow(),
+      navigator: {
+        serviceWorker: {
+          getRegistration: async () => ({
+            pushManager: {
+              getSubscription: async () => {
+                reads.subscription += 1;
+                return subscription;
+              },
+            },
+          }),
+        },
+      },
+      localStorage: {
+        getItem: () => {
+          reads.rememberedFlag += 1;
+          return rememberedFlag;
+        },
+      },
+    } as PushCapableWindow;
+    return { windowPort, reads };
+  }
+
+  it('reads PushManager.getSubscription on mount and ignores a remembered avisos flag', async () => {
+    const offControl = { hidden: true, dataset: {} as Record<string, string> };
+    const offBrowser = browserWithSubscription(null, 'activos');
+    await mountPushSettings(controlDocument(offControl), offBrowser.windowPort);
+    assert.equal(
+      offBrowser.reads.subscription,
+      1,
+      'the mount must call PushManager.getSubscription(), not assume a value from a prior visit',
+    );
+    assert.equal(
+      offBrowser.reads.rememberedFlag,
+      0,
+      'a remembered avisos flag must never be read to decide the mounted state',
+    );
+    assert.equal(
+      offControl.dataset.avisosState,
+      'inactivo',
+      'no real subscription must render as an honest inactive state despite the planted flag',
+    );
+
+    const onControl = { hidden: true, dataset: {} as Record<string, string> };
+    const onBrowser = browserWithSubscription({ endpoint: 'https://push.example/abc' }, null);
+    await mountPushSettings(controlDocument(onControl), onBrowser.windowPort);
+    assert.equal(onBrowser.reads.subscription, 1, 'each capable return visit needs its own real subscription read');
+    assert.equal(onControl.dataset.avisosState, 'activo', 'a real subscription object must be the only active-state source');
   });
 });

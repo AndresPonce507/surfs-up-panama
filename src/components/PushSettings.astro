@@ -32,7 +32,7 @@ const { locale, spotId } = Astro.props;
 <script>
   import { mountPushSettings } from '../push/island';
 
-  mountPushSettings(document, window);
+  void mountPushSettings(document, window);
 </script>
 
 <style>

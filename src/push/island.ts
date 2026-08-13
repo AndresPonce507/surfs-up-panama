@@ -16,14 +16,22 @@
 
 import { pushCopy } from './copy';
 
+type PushRegistrationPort = {
+  pushManager?: { getSubscription?: () => Promise<unknown> };
+};
+
 export type PushCapableWindow = {
   PushManager?: unknown;
   ServiceWorkerRegistration?: { prototype: { pushManager?: unknown } };
-  navigator: { serviceWorker?: unknown };
+  navigator: {
+    serviceWorker?: { getRegistration?: () => Promise<PushRegistrationPort | undefined> };
+  };
   Notification?: { requestPermission: () => Promise<NotificationPermission> };
+  localStorage?: { getItem: (key: string) => string | null };
 };
 
 export type PermissionOutcome = 'granted' | 'refused';
+export type AvisosSubscriptionState = 'activo' | 'inactivo';
 
 export function canRequestPush(windowPort: PushCapableWindow): boolean {
   return (
@@ -44,6 +52,26 @@ export function canRequestPush(windowPort: PushCapableWindow): boolean {
  */
 export function describePermissionOutcome(permission: NotificationPermission): PermissionOutcome {
   return permission === 'granted' ? 'granted' : 'refused';
+}
+
+/**
+ * A browser is active only when its own PushManager.getSubscription() read
+ * returns a subscription. Remembered client state is never evidence here.
+ */
+export function deriveAvisosState(subscription: unknown): AvisosSubscriptionState {
+  return subscription === null || subscription === undefined ? 'inactivo' : 'activo';
+}
+
+async function readRealSubscription(windowPort: PushCapableWindow): Promise<unknown> {
+  const getRegistration = windowPort.navigator.serviceWorker?.getRegistration;
+  if (getRegistration === undefined) return null;
+  try {
+    const registration = await getRegistration();
+    const subscription = await registration?.pushManager?.getSubscription?.();
+    return subscription ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -87,15 +115,19 @@ async function handleAvisosActivateTap(
 export function mountPushSettings(
   documentPort: Pick<Document, 'querySelector'>,
   windowPort: PushCapableWindow,
-): void {
-  if (!canRequestPush(windowPort)) return;
+): void | Promise<void> {
+  if (!canRequestPush(windowPort)) return undefined;
   const control = documentPort.querySelector<HTMLElement>('[data-field="avisos"]');
-  if (control === null) return;
+  if (control === null) return undefined;
   control.hidden = false;
+
+  const subscriptionRead = readRealSubscription(windowPort).then((subscription) => {
+    control.dataset.avisosState = deriveAvisosState(subscription);
+  });
 
   const activate = documentPort.querySelector<HTMLButtonElement>('[data-field="avisos-activate"]');
   const notificationApi = windowPort.Notification;
-  if (activate === null || notificationApi === undefined) return;
+  if (activate === null || notificationApi === undefined) return subscriptionRead;
 
   let permissionAlreadyAsked = false;
   activate.addEventListener('click', () => {
@@ -107,4 +139,6 @@ export function mountPushSettings(
       },
     );
   });
+
+  return subscriptionRead;
 }
