@@ -324,7 +324,60 @@ would contaminate another worktree. Therefore, for the remaining steps of this l
   worktree root), and only the Stop hook's foreign-worktree complaint is disregarded, per this
   waiver.
 
-Unblocking note, same date: the repo-wide `publish:surface --verify` civil-day guard was refusing
+### Addendum 2026-08-13, slice-01 close lane resumed after a watchdog kill
+
+The prior lane held step 01-20 at GREEN, pre-COMMIT, and died. Its work was intact on disk but
+unproven against today's tree, so none of its runs were inherited. What this lane did instead:
+
+- **Rebased onto `origin/main`** (142 commits). The three docs commits replayed clean. The data
+  commit `f63a8ab` was **dropped**, not merged: main independently carries the same 2026-08-12
+  capture files and a newer surface (`surf_date` 2026-08-13, published 05:48Z). This also cleared
+  the civil-day guard by itself, so the workaround below is now moot; `publish:surface --verify`
+  exits 0 reporting "current 2026-08-13; tomorrow 2026-08-14".
+- **Re-applied the 01-20 mount by hand** rather than resolving a merge. Main had moved
+  `SpotDetail.astro` (two `Breakdown` mounts and `StaticMap` added). Both edits are additive and in
+  different regions; `<PushSettings/>` sits immediately above the report CTA per §14.
+- **Re-proved 01-20 red-then-green on the new base**, both breaks failing at their own behaviour
+  oracles and both restores verified byte-exact by sha256. Numbers are in the execution log.
+- **Verified the 01-16 finding travelled:** main's `notification-seat.ts` reads `tag`, not `spot_id`.
+
+**Two defects in the installed DES shims, recorded rather than worked around silently.** Both are
+tooling bugs, not evidence gaps, and neither was faked:
+
+1. **`charter_path` is repo-root-relative, but every CLI joins it to `--project-dir`** (the
+   `deliver/` directory), producing a nested path that cannot exist. This makes
+   `des-record-examine` refuse outright, and it also breaks the visible-step COMMIT gate inside
+   `des-log-phase`, which computes the charter seal from the same broken join. The refusal was
+   captured (`01-20-record-examine-attempt.log`) before any alternative was used. The examination
+   was then recorded through the DES library's own `append_isolated_event` with byte-identical
+   entry shape to what `des-record-examine` builds, including a `charter_seal` taken from the real
+   charter file. Verified afterwards with the library's own
+   `visible_evidence_errors(contract, events, seal)`, which returns no errors for 01-20. The same
+   event shape is what the already-shipped `f-works-with-no-signal` 02-02 record carries, so this
+   is the house format, not an invention.
+2. **`completed_green_event` matches `d == "PASS"` exactly**, so a GREEN entry whose data field
+   carries its evidence prose is invisible to the gate. Both forms are logged for 01-20: the
+   detailed entry for humans, and a bare `PASS` entry for the gate.
+
+**One charter correction, owed by this lane.** The roadmap's U8 observation must appear verbatim in
+the charter (`des-record-examine` substring-checks it, and the shipped `f-works-with-no-signal`
+charter satisfies it). Ours had the observation wrapped across three lines, so it did not match. The
+first oracle bullet is now a single unwrapped line, byte-identical to the roadmap's
+`u8_observation`. Text unchanged; only the line breaks.
+
+**Still open, and not this lane's to close.** The push seat in `public/sw.js` is **empty**: SIGNAL's
+service worker is live on main with `install`, `activate`, `fetch` and `message` listeners and no
+`push` / `notificationclick`. `src/push/notification-seat.ts` exists on main and is **not wired**.
+Definition of Done row 1 cannot be true until that append happens, and no step in 01-21..01-27 does
+it: the append is gated on Pre-requisite 4(a), the SIGNAL lane's written acknowledgement of the
+payload contract. Flagged, not fixed.
+
+**Roadmap citation that dangles.** Step 01-20's notes say R37 "is recorded in
+`requirement-checklist.md` rather than faked", but this feature has no `distill/` directory and no
+such file. The measurement (317 B raw / 215 B gz against the 2.0 KB gz booking) is recorded in the
+execution log instead. JIT DISTILL for slices 02-04 owes that file.
+
+Unblocking note, 2026-08-12 (superseded by the rebase above): the repo-wide `publish:surface --verify` civil-day guard was refusing
 every build-dependent job on this lane (surface dated 2026-08-11, Panama civil day 2026-08-12).
 Resolved by carrying the sibling lane's already-gate-verified data commit `1488dac` file-for-file
 (this lane's commit `f63a8ab`), not by weakening the guard. The guard now reports "current

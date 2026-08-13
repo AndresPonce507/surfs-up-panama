@@ -1,0 +1,67 @@
+---
+// The avisos control for a spot page (application-architecture.md section
+// 14 wireframe: "Avisos de este spot (activar)", just above the report CTA).
+// Server-rendered hidden by default; revealed only when the browser
+// genuinely supports push (src/push/island.ts, mountPushSettings). This
+// step (01-20) wires capability detection and mount only -- the tap itself
+// does not do anything yet, that is step 01-21's own AT gate.
+//
+// No on-state renders here: an avisos-active state requires a real browser
+// PushSubscription plus a server acknowledgement, neither of which exists
+// until the write-path steps land.
+import type { Locale } from '../i18n/strings';
+import { pushCopy } from '../push/copy';
+
+interface Props {
+  locale: Locale;
+  spotId: string;
+}
+
+const { locale, spotId } = Astro.props;
+---
+
+<section class="avisos-control" data-field="avisos" data-spot-id={spotId} lang={locale} hidden>
+  <button class="avisos-action" type="button" data-field="avisos-activate">
+    {pushCopy.activate}
+  </button>
+</section>
+
+<script>
+  import { mountPushSettings } from '../push/island';
+
+  mountPushSettings(document, window);
+</script>
+
+<style>
+  .avisos-control {
+    margin-bottom: var(--sp-3);
+    padding: var(--sp-3);
+    border: 1px solid var(--hairline);
+    border-radius: var(--r-m);
+    background: var(--surface);
+  }
+
+  .avisos-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+    min-height: var(--tap);
+    padding: var(--sp-2) var(--sp-3);
+    border: 1px solid var(--go);
+    border-radius: var(--r-s);
+    background: var(--go);
+    color: var(--on-go);
+    font: inherit;
+    font-size: var(--text-body);
+    font-weight: 700;
+    line-height: var(--leading-snug);
+    letter-spacing: var(--track-meta);
+    text-align: start;
+  }
+
+  .avisos-action:focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+</style>

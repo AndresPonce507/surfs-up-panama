@@ -27,6 +27,7 @@ import Breakdown from './Breakdown.astro';
 import WeakestLink from './WeakestLink.astro';
 import StaticMap from './StaticMap.astro';
 import TrackRecordBox from './TrackRecordBox.astro';
+import PushSettings from './PushSettings.astro';
 
 interface Props {
   locale: Locale;
@@ -125,6 +126,7 @@ const tomorrow = summaryFor(1);
       </section>
     ) : null
   }
+  <PushSettings locale={locale} spotId={spotId} />
   <p>
     <a class="cta" href={paths.report(locale, spotId)}>{t.spot.reportCta}</a>
   </p>
