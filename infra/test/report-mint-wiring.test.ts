@@ -10,6 +10,8 @@ import { describe, expect, it } from 'vitest';
 
 import { writeStack } from '../bin/app.js';
 import { functionNames, projectAccountId, projectRegion, siteBucketName } from '../lib/physical-names.js';
+import { createCredentialProvider, type Fetcher } from '../../src/report/mint.js';
+import { sendSavedReport } from '../../src/report/submit.js';
 
 type Properties = Readonly<Record<string, unknown>>;
 type Resource = Readonly<{ readonly Type?: string; readonly Properties?: Properties }>;
@@ -71,8 +73,36 @@ describe('report/mint Lambda composition', () => {
     expect(urls).toHaveLength(4);
     for (const [, resource] of urls) {
       const cors = resource.Properties?.Cors as Properties;
-      expect(cors.AllowHeaders).toEqual(['content-type', 'x-surf-credential']);
+      expect(cors.AllowHeaders).toEqual(['cache-control', 'content-type', 'x-surf-credential']);
       expect(cors.MaxAge).toBe(86_400);
+    }
+  });
+
+  it('never lets the browser client send a request header the write URLs do not allow', async () => {
+    // A header outside AllowHeaders makes AWS answer the preflight with no CORS
+    // headers at all, so every real browser submit dies before the server sees
+    // it while curl smokes stay green. Found live 2026-08-13.
+    const sent: Record<string, string>[] = [];
+    const stub: Fetcher = async (_path, request) => {
+      sent.push({ ...(request.headers as Record<string, string>) });
+      return new Response(
+        JSON.stringify({ credential: 'c_stub', report_id: 'r_stub', outcome: 'no_snapshot', predicted: null }),
+        { status: 200 },
+      );
+    };
+    await createCredentialProvider(stub, 'd_drift', undefined, 'https://mint.invalid/').get();
+    await sendSavedReport('{}', 'c_stub', stub, 'https://report.invalid/');
+    expect(sent).toHaveLength(2);
+
+    const urls = resources.filter(([, resource]) => resource.Type === 'AWS::Lambda::Url');
+    for (const [, resource] of urls) {
+      const cors = resource.Properties?.Cors as Properties;
+      const allowed = (cors.AllowHeaders as readonly string[]).map((name) => name.toLowerCase());
+      for (const headers of sent) {
+        for (const name of Object.keys(headers).map((header) => header.toLowerCase())) {
+          expect(allowed).toContain(name);
+        }
+      }
     }
   });
 

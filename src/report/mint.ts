@@ -50,7 +50,7 @@ async function mintCredential(fetcher: Fetcher, deviceId: string, endpoint: stri
   const response = await fetcher(endpoint, {
     method: 'POST',
     cache: 'no-store',
-    headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
+    headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ device_id: deviceId }),
   });
   const body = await response.json().catch(() => undefined) as { credential?: unknown } | undefined;
