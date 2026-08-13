@@ -36,6 +36,16 @@ charters in `docs/product/expectations/f-bill-stays-zero-and-stays-up/` are the 
 outcomes land in each charter's session log, and this file records only whatever local
 command-surface tests those slices do ship.
 
+Amended 2026-08-13 for slice-04: it DOES ship a local command surface, so it does produce
+scaffold-RED entries after all. The live half stayed live, but a real production outage of
+2026-08-11 to 13 (not the planned drill; no schedule was ever disabled) drove a complete ALARM
+then OK cycle on both deployed switches, and the read-only capture of it is committed at
+`infra/evidence/alarm-probe-capture-2026-08-13.json`. A recorded capture is a file, and a file
+can be read by a command with an exit code, so slice-04's evidence is now checkable on a laptop
+the same way slice-05's month close is. The human charter still owns the inbox-level oracle and
+is not closed by these tests. Full substitution deviation, and the three brief-versus-file
+corrections it turned up, in `requirement-checklist.md`'s "Current DISTILL coverage".
+
 ## Commands that will be observed
 
 ```sh
@@ -56,6 +66,11 @@ npm run test:at -- --tags @slice-NN
 | slice-03 | The default infrastructure job names the five money lines, the created-not-imported $20 line, and the exact deny scope | `runLocalCi --job=infra` output, real repo | MISSING_FUNCTIONALITY | Real infra job ran, exited 0, output omitted "$18 action-enabled budget" (not yet declared/checked). |
 | slice-03 | Every money-line or deny-scope regression is rejected naming exactly what broke | `runLocalCi` contained-root output, per-row mutation | MISSING_FUNCTIONALITY | Threshold-drift row: evaluator had no $18 check, so mutation reached the (bare-fixture) vitest-existence guard instead of a money-line rejection -- assertion on the missing "$18 action-enabled budget" wording failed correctly, proving the check did not exist. |
 | slice-03 | (vitest) rejects a constructed resource missing the project cost-allocation tag | `assertCostAllocationTagPresent` direct call | MISSING_FUNCTIONALITY | Helper did not exist until written; then a real `.toThrow()` mismatch until wording matched. |
+| slice-04 | Both dead-man's switches are proven alive by a complete ALARM then OK cycle on the live account | `runAlarmProbe --input`, committed evidence capture | MISSING_FUNCTIONALITY | Command ran, exited 0, printed its whole report (`alarm probe: not yet evaluated`); `assertIncludes` failed on the real absence of `surfs-up-panama-dead-mans-switch`. A string absence in captured stdout, not a collection or import error. |
+| slice-04 | The report proves the 2 to 3 hour detection floor from the deployed switch, never from a stopwatch | `runAlarmProbe --input`, committed evidence capture | MISSING_FUNCTIONALITY | Same real report; failed on the absence of `2 consecutive 1 h period`. The floor must be read off the deployed `EvaluationPeriods: 2` x `Period: 3600` with breaching handling, because this incident measured no detection time at all. |
+| slice-04 | The report proves the mail reached the subscription and never claims anyone read it | `runAlarmProbe --input`, committed evidence capture | MISSING_FUNCTIONALITY | Same real report; failed on the absence of `delivery recorded`. |
+| slice-04 | The report says a real outage produced this cycle and that no schedule was ever disabled to stage it | `runAlarmProbe --input`, committed evidence capture | MISSING_FUNCTIONALITY | Same real report; failed on the absence of `real production incident`. This is the substitution-honesty scenario: the planned drill never ran and the report may not let a reader assume it did. |
+| slice-04 | Every half-proven capture is rejected naming what it leaves unproven | `runAlarmProbe --input`, five broken copies of the capture | MISSING_FUNCTIONALITY | Each of the 5 rows (ALARM never closed by an OK, OK action removed, subscription unconfirmed, a failed delivery, a watched switch absent) mutated in a fresh scratch copy; the core had no check yet, so exit code stayed 0 for every row where the scenario demands non-zero. Same shape as the slice-02 and slice-03 coupled negatives. |
 
 ### Drift demonstrated red, exact text observed (system-architecture.md §11 doctrine)
 
@@ -90,3 +105,43 @@ separate `evaluateBillGuardrails` phase that only runs inside the full `infra` j
 (`scripts/ci-local-core.mjs`), never under `declarationInput`-mode. Full untagged
 `npm run test:at` (61 scenarios) reverified green after the fix. See
 `requirement-checklist.md`'s "Current DISTILL coverage" section for the architectural note.
+
+### Slice-04 RED run, 2026-08-13
+
+```sh
+NODE_OPTIONS="--import tsx" node scripts/run-cucumber.mjs \
+  --tags "@feature-f-bill-stays-zero-and-stays-up and @slice-04"
+```
+
+Exit code 1, captured to a file and read back, never piped. Tally:
+`5 scenarios (5 failed)`, `116 steps (105 passed, 6 skipped, 5 failed)`, `4 hooks (4 passed)`.
+
+The 105 passing steps are the proof this is a behavioral red and not a wiring failure. `strict:
+true` in `cucumber.mjs` fails a run on a single undefined or pending step; there were none, no
+ambiguous steps, and no import error. Every scenario reached its own oracle and died there. Four
+died on a real string absence in the command's captured stdout, one on the exit-code oracle.
+
+Note on the literal command: `npx cucumber-js --config cucumber.mjs` does NOT work in this repo.
+`cucumber.mjs`'s own header records why — tsx must be registered through `NODE_OPTIONS="--import
+tsx"` and refuses the deprecated loader key — and `scripts/run-cucumber.mjs` additionally carries
+the zero-scenario guard, which is exactly the guard that matters when the mechanic under test is a
+per-scenario tag.
+
+### Slice-04 rejection text: not observable at DISTILL, on purpose
+
+Slices 01 to 03 could record the exact rejection wording above because their evaluator existed by
+the time the section was written. Slice-04's does not: `infra/alarm-probe-core.mjs` is a DISTILL
+stub that returns `{ exitCode: 0, lines: ['alarm probe: not yet evaluated'] }` and accepts every
+capture, including all five broken ones. There is therefore NO rejection text to quote yet, and an
+empty "exact text observed" list for slice-04 is the correct state rather than an unfinished one.
+
+The stub returns exit 0 deliberately. It is the choice that puts the coupled negative's failure on
+the exit-code oracle ("an incomplete capture was accepted as proof the switches are alive"), which
+is the load-bearing assertion of the whole slice. A stub returning a non-zero code would have made
+that same assertion pass by accident while the feature was still unimplemented, which is precisely
+the "test passes for accidental reasons" trap this repo has already been bitten by twice.
+
+DELIVER owes this section the five rejection strings once `evaluateAlarmProbe` is real, one per
+row of the coupled negative, each shown red against its own broken capture before the row counts
+as a guard (`system-architecture.md` §11 doctrine). DELIVER may not edit the scenarios to reach
+them.

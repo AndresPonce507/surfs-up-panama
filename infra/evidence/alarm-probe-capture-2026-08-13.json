@@ -1,0 +1,273 @@
+{
+  "capturedAt": "2026-08-13T10:24:00Z",
+  "capturedBy": "arn:aws:iam::602167897909:user/andres-cli (read-only calls only)",
+  "region": "us-east-1",
+  "provenance": "Real production incident of 2026-08-11..13, not a synthetic probe. No AWS write call was made to produce this capture; no schedule was disabled or enabled.",
+  "alarms": {
+    "MetricAlarms": [
+      {
+        "AlarmName": "surfs-up-panama-build-dead-mans-switch",
+        "AlarmArn": "arn:aws:cloudwatch:us-east-1:602167897909:alarm:surfs-up-panama-build-dead-mans-switch",
+        "AlarmDescription": "BuildSuccess absent for 2 consecutive hours: public forecast publication may be stale",
+        "AlarmConfigurationUpdatedTimestamp": "2026-08-11T13:16:57.945000-05:00",
+        "ActionsEnabled": true,
+        "OKActions": [
+          "arn:aws:sns:us-east-1:602167897909:surfs-up-panama-alarms"
+        ],
+        "AlarmActions": [
+          "arn:aws:sns:us-east-1:602167897909:surfs-up-panama-alarms"
+        ],
+        "InsufficientDataActions": [],
+        "StateValue": "OK",
+        "StateReason": "Threshold Crossed: 1 datapoint [1.0 (13/08/26 05:23:00)] was not less than the threshold (1.0) and 1 missing datapoint was treated as [Breaching].",
+        "StateReasonData": "{\"version\":\"1.0\",\"queryDate\":\"2026-08-13T06:23:58.463+0000\",\"startDate\":\"2026-08-13T05:23:00.000+0000\",\"statistic\":\"Sum\",\"period\":3600,\"recentDatapoints\":[1.0],\"threshold\":1.0,\"evaluatedDatapoints\":[{\"timestamp\":\"2026-08-13T05:23:00.000+0000\",\"sampleCount\":1.0,\"value\":1.0}]}",
+        "StateUpdatedTimestamp": "2026-08-13T01:23:58.465000-05:00",
+        "MetricName": "BuildSuccess",
+        "Namespace": "SurfsUpPanama",
+        "Statistic": "Sum",
+        "Dimensions": [],
+        "Period": 3600,
+        "EvaluationPeriods": 2,
+        "Threshold": 1.0,
+        "ComparisonOperator": "LessThanThreshold",
+        "TreatMissingData": "breaching",
+        "StateTransitionedTimestamp": "2026-08-13T01:23:58.465000-05:00"
+      },
+      {
+        "AlarmName": "surfs-up-panama-dead-mans-switch",
+        "AlarmArn": "arn:aws:cloudwatch:us-east-1:602167897909:alarm:surfs-up-panama-dead-mans-switch",
+        "AlarmDescription": "IngestSuccess absent for 2 consecutive hours: the forecast is freezing in silence",
+        "AlarmConfigurationUpdatedTimestamp": "2026-08-09T21:55:31.795000-05:00",
+        "ActionsEnabled": true,
+        "OKActions": [
+          "arn:aws:sns:us-east-1:602167897909:surfs-up-panama-alarms"
+        ],
+        "AlarmActions": [
+          "arn:aws:sns:us-east-1:602167897909:surfs-up-panama-alarms"
+        ],
+        "InsufficientDataActions": [],
+        "StateValue": "OK",
+        "StateReason": "Threshold Crossed: 1 datapoint [1.0 (12/08/26 23:18:00)] was not less than the threshold (1.0) and 1 missing datapoint was treated as [Breaching].",
+        "StateReasonData": "{\"version\":\"1.0\",\"queryDate\":\"2026-08-13T00:18:56.985+0000\",\"startDate\":\"2026-08-12T23:18:00.000+0000\",\"statistic\":\"Sum\",\"period\":3600,\"recentDatapoints\":[1.0],\"threshold\":1.0,\"evaluatedDatapoints\":[{\"timestamp\":\"2026-08-12T23:18:00.000+0000\",\"sampleCount\":1.0,\"value\":1.0}]}",
+        "StateUpdatedTimestamp": "2026-08-12T19:18:56.986000-05:00",
+        "MetricName": "IngestSuccess",
+        "Namespace": "SurfsUpPanama",
+        "Statistic": "Sum",
+        "Dimensions": [],
+        "Period": 3600,
+        "EvaluationPeriods": 2,
+        "Threshold": 1.0,
+        "ComparisonOperator": "LessThanThreshold",
+        "TreatMissingData": "breaching",
+        "StateTransitionedTimestamp": "2026-08-12T19:18:56.986000-05:00"
+      }
+    ],
+    "CompositeAlarms": [],
+    "LogAlarms": []
+  },
+  "history": {
+    "surfs-up-panama-dead-mans-switch": {
+      "AlarmHistoryItems": [
+        {
+          "AlarmName": "surfs-up-panama-dead-mans-switch",
+          "AlarmType": "MetricAlarm",
+          "Timestamp": "2026-08-12T19:18:56.986000-05:00",
+          "HistoryItemType": "StateUpdate",
+          "HistorySummary": "Alarm updated from ALARM to OK",
+          "HistoryData": "{\"version\":\"1.0\",\"oldState\":{\"stateValue\":\"ALARM\",\"stateReason\":\"Threshold Crossed: no datapoints were received for 2 periods and 2 missing datapoints were treated as [Breaching].\",\"stateReasonData\":{\"version\":\"1.0\",\"queryDate\":\"2026-08-10T02:56:25.445+0000\",\"statistic\":\"Sum\",\"period\":3600,\"recentDatapoints\":[],\"threshold\":1.0,\"evaluatedDatapoints\":[{\"timestamp\":\"2026-08-10T01:56:00.000+0000\"},{\"timestamp\":\"2026-08-10T00:56:00.000+0000\"}]}},\"newState\":{\"stateValue\":\"OK\",\"stateReason\":\"Threshold Crossed: 1 datapoint [1.0 (12/08/26 23:18:00)] was not less than the threshold (1.0) and 1 missing datapoint was treated as [Breaching].\",\"stateReasonData\":{\"version\":\"1.0\",\"queryDate\":\"2026-08-13T00:18:56.985+0000\",\"startDate\":\"2026-08-12T23:18:00.000+0000\",\"statistic\":\"Sum\",\"period\":3600,\"recentDatapoints\":[1.0],\"threshold\":1.0,\"evaluatedDatapoints\":[{\"timestamp\":\"2026-08-12T23:18:00.000+0000\",\"sampleCount\":1.0,\"value\":1.0}]}}}"
+        },
+        {
+          "AlarmName": "surfs-up-panama-dead-mans-switch",
+          "AlarmType": "MetricAlarm",
+          "Timestamp": "2026-08-09T21:56:25.446000-05:00",
+          "HistoryItemType": "StateUpdate",
+          "HistorySummary": "Alarm updated from INSUFFICIENT_DATA to ALARM",
+          "HistoryData": "{\"version\":\"1.0\",\"oldState\":{\"stateValue\":\"INSUFFICIENT_DATA\",\"stateReason\":\"Unchecked: Initial alarm creation\"},\"newState\":{\"stateValue\":\"ALARM\",\"stateReason\":\"Threshold Crossed: no datapoints were received for 2 periods and 2 missing datapoints were treated as [Breaching].\",\"stateReasonData\":{\"version\":\"1.0\",\"queryDate\":\"2026-08-10T02:56:25.445+0000\",\"statistic\":\"Sum\",\"period\":3600,\"recentDatapoints\":[],\"threshold\":1.0,\"evaluatedDatapoints\":[{\"timestamp\":\"2026-08-10T01:56:00.000+0000\"},{\"timestamp\":\"2026-08-10T00:56:00.000+0000\"}]}}}"
+        }
+      ]
+    },
+    "surfs-up-panama-build-dead-mans-switch": {
+      "AlarmHistoryItems": [
+        {
+          "AlarmName": "surfs-up-panama-build-dead-mans-switch",
+          "AlarmType": "MetricAlarm",
+          "Timestamp": "2026-08-13T01:23:58.465000-05:00",
+          "HistoryItemType": "StateUpdate",
+          "HistorySummary": "Alarm updated from ALARM to OK",
+          "HistoryData": "{\"version\":\"1.0\",\"oldState\":{\"stateValue\":\"ALARM\",\"stateReason\":\"Threshold Crossed: no datapoints were received for 2 periods and 2 missing datapoints were treated as [Breaching].\",\"stateReasonData\":{\"version\":\"1.0\",\"queryDate\":\"2026-08-11T18:17:58.552+0000\",\"statistic\":\"Sum\",\"period\":3600,\"recentDatapoints\":[],\"threshold\":1.0,\"evaluatedDatapoints\":[{\"timestamp\":\"2026-08-11T17:17:00.000+0000\"},{\"timestamp\":\"2026-08-11T16:17:00.000+0000\"}]}},\"newState\":{\"stateValue\":\"OK\",\"stateReason\":\"Threshold Crossed: 1 datapoint [1.0 (13/08/26 05:23:00)] was not less than the threshold (1.0) and 1 missing datapoint was treated as [Breaching].\",\"stateReasonData\":{\"version\":\"1.0\",\"queryDate\":\"2026-08-13T06:23:58.463+0000\",\"startDate\":\"2026-08-13T05:23:00.000+0000\",\"statistic\":\"Sum\",\"period\":3600,\"recentDatapoints\":[1.0],\"threshold\":1.0,\"evaluatedDatapoints\":[{\"timestamp\":\"2026-08-13T05:23:00.000+0000\",\"sampleCount\":1.0,\"value\":1.0}]}}}"
+        },
+        {
+          "AlarmName": "surfs-up-panama-build-dead-mans-switch",
+          "AlarmType": "MetricAlarm",
+          "Timestamp": "2026-08-11T13:17:58.553000-05:00",
+          "HistoryItemType": "StateUpdate",
+          "HistorySummary": "Alarm updated from INSUFFICIENT_DATA to ALARM",
+          "HistoryData": "{\"version\":\"1.0\",\"oldState\":{\"stateValue\":\"INSUFFICIENT_DATA\",\"stateReason\":\"Unchecked: Initial alarm creation\"},\"newState\":{\"stateValue\":\"ALARM\",\"stateReason\":\"Threshold Crossed: no datapoints were received for 2 periods and 2 missing datapoints were treated as [Breaching].\",\"stateReasonData\":{\"version\":\"1.0\",\"queryDate\":\"2026-08-11T18:17:58.552+0000\",\"statistic\":\"Sum\",\"period\":3600,\"recentDatapoints\":[],\"threshold\":1.0,\"evaluatedDatapoints\":[{\"timestamp\":\"2026-08-11T17:17:00.000+0000\"},{\"timestamp\":\"2026-08-11T16:17:00.000+0000\"}]}}}"
+        }
+      ]
+    }
+  },
+  "topicSubscriptions": {
+    "Subscriptions": [
+      {
+        "SubscriptionArn": "arn:aws:sns:us-east-1:602167897909:surfs-up-panama-alarms:0a61e309-fdd9-43cc-ac6f-c8f58cbd0c07",
+        "Protocol": "email",
+        "TopicArn": "arn:aws:sns:us-east-1:602167897909:surfs-up-panama-alarms"
+      }
+    ]
+  },
+  "notificationsDelivered": {
+    "Label": "NumberOfNotificationsDelivered",
+    "Datapoints": [
+      {
+        "Timestamp": "2026-08-09T22:00:00-05:00",
+        "Sum": 2.0,
+        "Unit": "Count"
+      },
+      {
+        "Timestamp": "2026-08-13T01:00:00-05:00",
+        "Sum": 1.0,
+        "Unit": "Count"
+      },
+      {
+        "Timestamp": "2026-08-09T21:00:00-05:00",
+        "Sum": 1.0,
+        "Unit": "Count"
+      },
+      {
+        "Timestamp": "2026-08-11T13:00:00-05:00",
+        "Sum": 1.0,
+        "Unit": "Count"
+      },
+      {
+        "Timestamp": "2026-08-12T19:00:00-05:00",
+        "Sum": 1.0,
+        "Unit": "Count"
+      }
+    ]
+  },
+  "notificationsFailed": {
+    "Label": "NumberOfNotificationsFailed",
+    "Datapoints": [
+      {
+        "Timestamp": "2026-08-09T22:00:00-05:00",
+        "Sum": 0.0,
+        "Unit": "Count"
+      },
+      {
+        "Timestamp": "2026-08-13T01:00:00-05:00",
+        "Sum": 0.0,
+        "Unit": "Count"
+      },
+      {
+        "Timestamp": "2026-08-09T21:00:00-05:00",
+        "Sum": 0.0,
+        "Unit": "Count"
+      },
+      {
+        "Timestamp": "2026-08-11T13:00:00-05:00",
+        "Sum": 0.0,
+        "Unit": "Count"
+      },
+      {
+        "Timestamp": "2026-08-12T19:00:00-05:00",
+        "Sum": 0.0,
+        "Unit": "Count"
+      }
+    ]
+  },
+  "stacks": {
+    "Stacks": [
+      {
+        "StackId": "arn:aws:cloudformation:us-east-1:602167897909:stack/SurfsUpPanamaWrite/9221a150-95db-11f1-bb38-126bd145191f",
+        "StackName": "SurfsUpPanamaWrite",
+        "CreationTime": "2026-08-11T23:22:50.990000+00:00",
+        "LastUpdatedTime": "2026-08-13T01:44:08.580000+00:00",
+        "StackStatus": "UPDATE_COMPLETE",
+        "DisableRollback": false,
+        "DeploymentConfig": {
+          "Mode": "STANDARD",
+          "DisableRollback": false
+        },
+        "LastOperations": [
+          {
+            "OperationType": "UPDATE_STACK",
+            "OperationId": "0e021501-2d01-4894-b0ea-a50be732f4eb"
+          }
+        ]
+      },
+      {
+        "StackId": "arn:aws:cloudformation:us-east-1:602167897909:stack/SurfsUpPanamaIngest/aa56b2b0-94eb-11f1-84f7-0afffbdcec63",
+        "StackName": "SurfsUpPanamaIngest",
+        "CreationTime": "2026-08-10T18:45:32.476000+00:00",
+        "LastUpdatedTime": "2026-08-13T06:26:55.970000+00:00",
+        "StackStatus": "UPDATE_COMPLETE",
+        "DisableRollback": false,
+        "DeploymentConfig": {
+          "Mode": "STANDARD",
+          "DisableRollback": false
+        },
+        "LastOperations": [
+          {
+            "OperationType": "UPDATE_STACK",
+            "OperationId": "3d64b279-d371-4ba7-801e-fb9e8afb7c0b"
+          }
+        ]
+      },
+      {
+        "StackId": "arn:aws:cloudformation:us-east-1:602167897909:stack/SurfsUpPanamaObservability/ea323510-9466-11f1-ba2b-0affeb562a31",
+        "StackName": "SurfsUpPanamaObservability",
+        "CreationTime": "2026-08-10T02:55:16.447000+00:00",
+        "LastUpdatedTime": "2026-08-11T18:16:52.619000+00:00",
+        "StackStatus": "UPDATE_COMPLETE",
+        "DisableRollback": false,
+        "DeploymentConfig": {
+          "Mode": "STANDARD",
+          "DisableRollback": false
+        },
+        "LastOperations": [
+          {
+            "OperationType": "UPDATE_STACK",
+            "OperationId": "df548547-30f7-4948-b4b1-760fcc39a274"
+          }
+        ]
+      },
+      {
+        "StackId": "arn:aws:cloudformation:us-east-1:602167897909:stack/SurfsUpPanamaSite/789c1a20-9465-11f1-bbbd-0affeea01ff5",
+        "StackName": "SurfsUpPanamaSite",
+        "CreationTime": "2026-08-10T02:44:56.343000+00:00",
+        "LastUpdatedTime": "2026-08-11T18:14:37.953000+00:00",
+        "StackStatus": "UPDATE_COMPLETE",
+        "DisableRollback": false,
+        "DeploymentConfig": {
+          "Mode": "STANDARD",
+          "DisableRollback": false
+        },
+        "LastOperations": [
+          {
+            "OperationType": "UPDATE_STACK",
+            "OperationId": "31086d5d-ad3c-4e94-aa3f-3b06af1daa5e"
+          }
+        ]
+      },
+      {
+        "StackId": "arn:aws:cloudformation:us-east-1:602167897909:stack/CDKToolkit/264061b0-9464-11f1-be00-0ee6188a468b",
+        "StackName": "CDKToolkit",
+        "CreationTime": "2026-08-10T02:35:28.596000+00:00",
+        "LastUpdatedTime": "2026-08-10T02:35:34.954000+00:00",
+        "StackStatus": "CREATE_COMPLETE",
+        "DisableRollback": false,
+        "DeploymentConfig": {
+          "Mode": "STANDARD",
+          "DisableRollback": false
+        },
+        "LastOperations": [
+          {
+            "OperationType": "CREATE_STACK",
+            "OperationId": "2a2f88b5-d7e9-4b0a-9d39-c1ebc602367a"
+          }
+        ]
+      }
+    ]
+  }
+}
