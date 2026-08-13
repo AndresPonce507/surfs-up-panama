@@ -7,7 +7,7 @@
 import Base from '../layouts/Base.astro';
 import Confidence from './Confidence.astro';
 import { forecast, type DaySummary } from '../data/forecast';
-import { modelAgreement, type ModelAgreement } from '../scoring/confidence';
+import { CONFIDENCE_FACTORS, modelAgreement, type ModelAgreement } from '../scoring/confidence';
 import { spotById } from '../data/region';
 import { strings, type Locale } from '../i18n/strings';
 import { paths } from '../i18n/routes';
@@ -37,7 +37,7 @@ function agreementFor(summary: DaySummary): ModelAgreement {
   if (summary.confidence_reason === undefined || summary.conf_level === undefined) {
     return { kind: 'unknown' };
   }
-  return modelAgreement(summary.confidence_reason.spread_terms, summary.conf_level);
+  return modelAgreement(summary.confidence_reason.spread_terms, summary.conf_level, CONFIDENCE_FACTORS);
 }
 
 function nameOf(spotId: string): string {

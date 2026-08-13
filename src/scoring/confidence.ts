@@ -35,6 +35,21 @@ export type ConfidenceResult = {
 };
 
 /**
+ * Per-factor removability (05-scoring-engine.md section 6.1): "Participation
+ * is a per-factor enable flag in the constants file; disabling it is a data
+ * change." `spread: false` takes `c_spread` out of the `c_total` product and
+ * out of `dominant`, and `level` re-projects from whichever factors still
+ * participate (slice-03, F-KNOW-HOW-MUCH-TO-TRUST-IT). This is removability
+ * only: the calibration check that could prove the term lies stays in the
+ * learning lane, out of scope here.
+ */
+export type ConfidenceFactors = { readonly spread: boolean };
+
+/** Today's shipped value: every factor on. Flip `spread` to `false` to
+ * switch the disagreement term off; nothing else needs to change. */
+export const CONFIDENCE_FACTORS: ConfidenceFactors = { spread: true };
+
+/**
  * A member the models can actually see. Same predicate `blend()` applies, on
  * purpose, because the two functions read the SAME member list and must not
  * disagree about which members exist.
@@ -67,6 +82,13 @@ export function confidence(
   track: { mae: number; mae_ref: number } | null,
   last_report_age_h: number | null,
   missing: ('wind' | 'tide')[],
+  // Defaults to today's live constant, not a hardcoded copy of it: the sole
+  // production caller of this function is the ingest build (out of scope for
+  // slice-03, `src/pipeline/**`), and a default that reads CONFIDENCE_FACTORS
+  // means that caller keeps following the switch automatically rather than
+  // needing its own edit. Render call sites that compose the reason a surfer
+  // reads (`modelAgreement`, below) pass it explicitly and require it.
+  factors: ConfidenceFactors = CONFIDENCE_FACTORS,
 ): ConfidenceResult {
   const members = usableMembers(declaredMembers);
   const c_spread = spread.kind === 'climatology'
@@ -74,19 +96,28 @@ export function confidence(
     : absoluteSpread(members);
   const c_track = track === null ? 1 : clamp(1 - track.mae / track.mae_ref);
   const c_fresh = last_report_age_h === null ? null : Math.max(Math.exp(-last_report_age_h / 36), 0.3);
-  const product = c_spread * c_track * (c_fresh ?? 1);
+  const product = (factors.spread ? c_spread : 1) * c_track * (c_fresh ?? 1);
   const cap = Math.min(
     missing.includes('wind') ? 0.4 : 1,
     missing.includes('tide') ? 0.7 : 1,
   );
-  const c_total = Math.min(product, cap);
+  // Law L17 (05 section 6.4, zero-informative-factor guard): spread
+  // disabled, track never verified, and no report ever leaves NOTHING
+  // participating in the product. The naive product would read 1.0, alta,
+  // which is fabricated certainty. Forcing c_total itself to 0 (rather than
+  // overriding `level` separately) keeps level a pure threshold projection
+  // of c_total in every case, factor disabled or not.
+  const noUsableSignal = !factors.spread && track === null && c_fresh === null;
+  const c_total = noUsableSignal ? 0 : Math.min(product, cap);
   const level = c_total <= 0.4 ? 'low' : c_total <= 0.7 ? 'medium' : 'high';
   const spread_terms = spread.kind === 'climatology'
     ? { height: 0, period: 0, direction: 0 }
     : absoluteSpreadTerms(members);
   const dominant = missing.length > 0
     ? 'missing_data'
-    : dominantSpreadTerm(spread_terms, c_track, c_fresh);
+    : noUsableSignal
+      ? null
+      : dominantSpreadTerm(spread_terms, c_track, c_fresh, factors);
 
   return {
     c_spread,
@@ -172,6 +203,17 @@ function negativeListEs(variables: readonly SpreadVariable[]): string {
 
 function agreementSentenceEs(level: ConfidenceLevel, agreement: ModelAgreement): string {
   if (agreement.kind === 'unknown') return MODEL_AGREEMENT_ES[level];
+  // Law L17 (05 section 6.4): with the term off and nothing else informative
+  // surviving, the reason admits the gap outright instead of naming a cause.
+  if (agreement.kind === 'no_usable_signal') {
+    return 'Todavía no hay ninguna señal usable para medir la confianza en este spot';
+  }
+  // Flag off, but some other factor (historial, frescura) is genuinely
+  // driving `level`: honest about not comparing models, without claiming
+  // either agreement or an absence of signal that is not true here.
+  if (agreement.kind === 'spread_disabled') {
+    return 'Esta lectura no compara los modelos entre sí, así que la confianza viene de otra parte';
+  }
   if (agreement.kind === 'not_comparable') {
     return 'Hoy solo un modelo alcanza a ver este spot, así que no hay con qué comparar';
   }
@@ -236,14 +278,34 @@ export const DISAGREEMENT_THRESHOLD = 0.5;
  * `unknown` is for a surface committed before `confidence_reason` existed. It
  * is never produced by `modelAgreement`, only constructed at a call site that
  * genuinely has no terms to read.
+ *
+ * `no_usable_signal` and `spread_disabled` are the two readings `factors`
+ * forces with the disagreement term off (slice-03). Neither may reuse
+ * `not_comparable` (its sentence says only one model can see the spot) or
+ * `unknown` (its sentence claims the models coincide in part): both would
+ * name an agreement that no longer participates. `no_usable_signal` is law
+ * L17's zero-informative-factor guard (05 section 6.4): `level` is already
+ * `low` because nothing else carried signal either, and the reason admits it
+ * outright. `spread_disabled` is every other flag-off reading: some other
+ * factor (track record, freshness) is genuinely driving `level`, so the
+ * sentence must not claim "no signal" any more than it may name a variable
+ * that is not participating.
  */
 export type ModelAgreement =
   | { readonly kind: 'unknown' }
   | { readonly kind: 'not_comparable' }
+  | { readonly kind: 'no_usable_signal' }
+  | { readonly kind: 'spread_disabled' }
   | { readonly kind: 'compared'; readonly agree: readonly SpreadVariable[]; readonly disagree: readonly SpreadVariable[] };
 
 /** Every variable lands in exactly one side, by construction. */
-export function modelAgreement(terms: SpreadTerms, level: ConfidenceLevel): ModelAgreement {
+export function modelAgreement(terms: SpreadTerms, level: ConfidenceLevel, factors: ConfidenceFactors): ModelAgreement {
+  // The flag check comes BEFORE the silent-terms check below: with the term
+  // off, `terms` can still carry real (unused) numbers, and reading them
+  // here would name a factor that no longer participates in `level`.
+  if (!factors.spread) {
+    return level === 'low' ? { kind: 'no_usable_signal' } : { kind: 'spread_disabled' };
+  }
   if (isSilent(terms) && level === 'low') return { kind: 'not_comparable' };
   return {
     kind: 'compared',
@@ -296,11 +358,19 @@ function dominantSpreadTerm(
   terms: { height: number; period: number; direction: number },
   c_track: number,
   c_fresh: number | null,
+  factors: ConfidenceFactors,
 ): ConfidenceResult['dominant'] {
+  // A disabled term does not participate in `c_total`, so it may not be
+  // named as the dominant cause either (05 section 6.4).
+  const spreadCandidates: [ConfidenceResult['dominant'], number][] = factors.spread
+    ? [
+        ['spread_height', terms.height],
+        ['spread_period', terms.period],
+        ['spread_direction', terms.direction],
+      ]
+    : [];
   const candidates: [ConfidenceResult['dominant'], number][] = [
-    ['spread_height', terms.height],
-    ['spread_period', terms.period],
-    ['spread_direction', terms.direction],
+    ...spreadCandidates,
     ['track', -Math.log(c_track)],
   ];
   if (c_fresh !== null) candidates.push(['freshness', -Math.log(c_fresh)]);
