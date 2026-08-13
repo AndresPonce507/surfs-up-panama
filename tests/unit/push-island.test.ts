@@ -19,7 +19,13 @@ import assert from 'node:assert/strict';
 
 import { describe, it } from 'vitest';
 
-import { canRequestPush, mountPushSettings, type PushCapableWindow } from '../../src/push/island';
+import {
+  canRequestPush,
+  describePermissionOutcome,
+  mountPushSettings,
+  type PushCapableWindow,
+} from '../../src/push/island';
+import { pushCopy } from '../../src/push/copy';
 
 function capableWindow(): PushCapableWindow {
   return {
@@ -98,5 +104,126 @@ describe('mountPushSettings', () => {
     };
     assert.doesNotThrow(() => mountPushSettings(nowhere, capableWindow()));
     assert.doesNotThrow(() => mountPushSettings(nowhere, incapableWindow()));
+  });
+});
+
+// Step 01-21: the tap requests the real permission, and a refusal is said in
+// words instead of ever showing an avisos-active state.
+
+// `NotificationPermission` is a closed three-value DOM union ('granted' |
+// 'denied' | 'default'). Enumerating all three is the entire domain, so a
+// property here would just re-encode the same ternary as a generator --
+// the same tautology this file's header already flags for canRequestPush.
+describe('describePermissionOutcome', () => {
+  it('reads granted only for the literal granted permission, and refused for every other value the DOM can report', () => {
+    assert.equal(describePermissionOutcome('granted'), 'granted', 'the literal granted permission must read as granted');
+    assert.equal(describePermissionOutcome('denied'), 'refused', 'a hard denial must read as refused');
+    assert.equal(describePermissionOutcome('default'), 'refused', 'a dismissed prompt must read as refused, the same as a hard denial');
+  });
+});
+
+describe('mountPushSettings tap handling', () => {
+  function fakeAvisosDom(options: { withMessage?: boolean } = {}): {
+    documentPort: Pick<Document, 'querySelector'>;
+    activate: { click: () => unknown; disabled: boolean };
+    message: { hidden: boolean; textContent: string | null };
+  } {
+    const withMessage = options.withMessage ?? true;
+    let clickHandler: (() => unknown) | undefined;
+    const control = { hidden: true };
+    const message: { hidden: boolean; textContent: string | null } = { hidden: true, textContent: null };
+    const activate = {
+      disabled: false,
+      addEventListener: ((type: string, handler: () => unknown) => {
+        if (type === 'click') clickHandler = handler;
+      }) as unknown,
+      click: () => clickHandler?.(),
+    };
+    const documentPort: Pick<Document, 'querySelector'> = {
+      querySelector: ((selector: string) => {
+        if (selector === '[data-field="avisos"]') return control;
+        if (selector === '[data-field="avisos-activate"]') return activate;
+        if (selector === '[data-field="avisos-message"]') return withMessage ? message : null;
+        return null;
+      }) as Document['querySelector'],
+    };
+    return { documentPort, activate, message };
+  }
+
+  function windowWithPermission(requestPermission: () => Promise<NotificationPermission>): PushCapableWindow {
+    return { ...capableWindow(), Notification: { requestPermission } };
+  }
+
+  it('asks for the real permission on tap and says the refusal in words when it is not granted', async () => {
+    const { documentPort, activate, message } = fakeAvisosDom();
+    let asks = 0;
+    mountPushSettings(
+      documentPort,
+      windowWithPermission(async () => {
+        asks += 1;
+        return 'denied';
+      }),
+    );
+    await activate.click();
+    assert.equal(asks, 1, 'the tap must actually reach the permission request for a refusal to mean anything');
+    assert.equal(message.hidden, false, 'a refused permission must reveal the message in place');
+    assert.equal(message.textContent, pushCopy.refused, 'the shown text must be the settled refusal copy, never an invented string');
+  });
+
+  it('leaves the message hidden and empty when the permission is granted', async () => {
+    const { documentPort, activate, message } = fakeAvisosDom();
+    mountPushSettings(documentPort, windowWithPermission(async () => 'granted'));
+    await activate.click();
+    assert.equal(message.hidden, true, 'a granted permission must never reveal the refusal message');
+    assert.equal(message.textContent, null, 'a granted permission must never write refusal text into the page');
+  });
+
+  it('never throws on a refused tap when the page has an action but no message element to fill', async () => {
+    const { documentPort, activate, message } = fakeAvisosDom({ withMessage: false });
+    mountPushSettings(documentPort, windowWithPermission(async () => 'denied'));
+    await assert.doesNotReject(() => Promise.resolve(activate.click()));
+    assert.equal(message.hidden, true, 'the message element that was never wired must stay exactly as it started');
+  });
+
+  /**
+   * Regression for the surfer-facing defect Vera found by spying on the real
+   * Notification.requestPermission API from the page: the control asked on
+   * every tap, and only looked correct in Chromium because that browser
+   * happens to auto-suppress a repeat prompt once permission is explicitly
+   * 'denied'. This project's own harness note (avisos-island.steps.ts) records
+   * that a refusal here usually surfaces as a dismissal ('default'), not a
+   * hard 'denied' -- and browsers do not reliably suppress a second prompt for
+   * a dismissal. So the resolved value under test is 'default', the exact
+   * state that would mask the bug if the code relied on the browser instead
+   * of tracking its own "already asked" state.
+   */
+  it('asks for the real permission at most once per page visit, and visibly quiets the control once refused', async () => {
+    const { documentPort, activate, message } = fakeAvisosDom();
+    let asks = 0;
+    mountPushSettings(
+      documentPort,
+      windowWithPermission(async () => {
+        asks += 1;
+        return 'default';
+      }),
+    );
+
+    await activate.click();
+    await activate.click();
+    await activate.click();
+    await activate.click();
+
+    assert.equal(
+      asks,
+      1,
+      'a control that keeps calling requestPermission after a dismissal is exactly the nagging decision 23 forbids',
+    );
+    assert.equal(message.hidden, false, 'the refusal said on the first tap must still stand');
+    assert.equal(message.textContent, pushCopy.refused, 'the refusal copy must still be the settled string, unchanged by later taps');
+    assert.equal(
+      activate.disabled,
+      true,
+      'once refused, the control must visibly stop being an invitation instead of silently doing nothing',
+    );
   });
 });
