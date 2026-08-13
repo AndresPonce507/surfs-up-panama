@@ -27,7 +27,9 @@ import { readFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { gzipSync } from 'node:zlib';
 
+import { REPORT_DOCUMENT_GZIP_BUDGETS } from './page-weight-core.mjs';
 import { PUBLICATION_TARGETS } from './release/publication-target.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -38,23 +40,30 @@ const imageTag = 'surfs-up-panama-publisher-arm64-smoke:local';
 // target -- nothing about this image's actual size approaches either.
 const awsContainerImageHardLimitBytes = 10 * 1024 * 1024 * 1024;
 const projectImageBudgetBytes = 3 * 1024 * 1024 * 1024;
+const reportPageKinds = ['reportar', 'reportado'];
 
-if (process.argv.includes('--inside-lambda-runtime')) {
-  await runInsideLambdaRuntime();
-} else {
-  const buildMs = buildImage();
-  const imageSizeBytes = imageSizeOf(imageTag);
-  assertImageSize(imageSizeBytes);
-  await assertBootstrapLoads();
-  const evidence = await smokeInLambdaRuntime();
-  console.log(JSON.stringify({
-    result: 'PASS',
-    architecture: 'linux/arm64',
-    image: imageTag,
-    image_build_ms: buildMs,
-    image_size_bytes: imageSizeBytes,
-    ...evidence,
-  }));
+if (isEntrypoint()) {
+  if (process.argv.includes('--inside-lambda-runtime')) {
+    await runInsideLambdaRuntime();
+  } else {
+    const buildMs = buildImage();
+    const imageSizeBytes = imageSizeOf(imageTag);
+    assertImageSize(imageSizeBytes);
+    await assertBootstrapLoads();
+    const evidence = await smokeInLambdaRuntime();
+    console.log(JSON.stringify({
+      result: 'PASS',
+      architecture: 'linux/arm64',
+      image: imageTag,
+      image_build_ms: buildMs,
+      image_size_bytes: imageSizeBytes,
+      ...evidence,
+    }));
+  }
+}
+
+function isEntrypoint() {
+  return process.argv[1] !== undefined && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 }
 
 function buildImage() {
@@ -116,6 +125,7 @@ async function smokeInLambdaRuntime() {
   if (evidenceLine === undefined) throw new Error('ARM64 publish smoke refused: the in-container run printed no evidence line.');
   const evidence = JSON.parse(evidenceLine);
   if (evidence.result !== 'ARM64_PUBLISH_PASS') throw new Error(`ARM64 publish smoke refused: unexpected in-container result ${JSON.stringify(evidence)}.`);
+  assertReportPageGzipEvidence(evidence);
   return evidence;
 }
 
@@ -155,7 +165,8 @@ async function runInsideLambdaRuntime() {
   // the bucket; the fixture must be seeded under the key it will actually
   // receive the GET for.
   const bundleObjectKey = 'v1/regions/pa-pacific/bundle.json';
-  objects.set(bundleObjectKey, Buffer.from(JSON.stringify(regionBundleFor(buildId, today, tomorrow))));
+  const bundle = regionBundleFor(buildId, today, tomorrow);
+  objects.set(bundleObjectKey, Buffer.from(JSON.stringify(bundle)));
 
   Object.assign(process.env, {
     AWS_ACCESS_KEY_ID: 'fixture',
@@ -179,15 +190,152 @@ async function runInsideLambdaRuntime() {
     const uploadedPageKeys = [...objects.keys()].filter((key) => key !== bundleObjectKey && key !== archiveKey);
     if (uploadedPageKeys.length === 0) throw new Error('Publish handler uploaded no rendered pages.');
     if (!uploadedPageKeys.includes('.public-site-origin.json')) throw new Error('Publish handler did not upload the real astro build\'s origin receipt.');
+    // `objects` receives each body through defaultCommandRunner's real
+    // PutObject call. These are therefore the files the writable /tmp render
+    // just emitted and Publisher just uploaded, not a host build or a copied
+    // fixture. gzipSync runs in this linux/arm64 Lambda runtime process.
+    const reportPageGzip = measurePublishedReportPages(objects, reportSpotSlugs(bundle));
     console.log(JSON.stringify({
       result: 'ARM64_PUBLISH_PASS',
       status_code: answer.statusCode,
       uploaded_object_count: uploadedPageKeys.length,
       panama_today: today,
       panama_tomorrow: tomorrow,
+      report_route_count: reportPageGzip.length,
+      report_page_gzip: reportPageGzip,
     }));
   } finally {
     await new Promise((resolvePromise, reject) => server.close((error) => (error ? reject(error) : resolvePromise())));
+  }
+}
+
+/** The renderer must emit the two report documents for every current call. */
+function reportSpotSlugs(bundle) {
+  const calls = bundle?.publish_surface?.calls;
+  if (!Array.isArray(calls) || calls.length === 0) {
+    throw new Error('ARM64 publish smoke refused: the real renderer input names no report-route spots, so report-route evidence is incomplete.');
+  }
+  const slugs = new Set();
+  for (const call of calls) {
+    const slug = call?.spot_id;
+    if (typeof slug !== 'string' || slug.length === 0 || slugs.has(slug)) {
+      throw new Error('ARM64 publish smoke refused: the real renderer input has an invalid or duplicate report-route spot, so report-route evidence is incomplete.');
+    }
+    slugs.add(slug);
+  }
+  return [...slugs].sort();
+}
+
+/**
+ * Measures canonical report documents that the actual Publisher upload path
+ * received. The real renderer input names every required spot; each one must
+ * emit its spot document and both report routes. A missing document, route
+ * body, declared ceiling, or byte field is a refusal: absence can never be
+ * reported as a lightweight page.
+ *
+ * @param {Map<string, Buffer>} objects upload bodies observed by the in-runtime S3 fixture
+ * @param {readonly string[]} expectedSpotSlugs spot ids the real render input requires
+ */
+export function measurePublishedReportPages(objects, expectedSpotSlugs) {
+  if (expectedSpotSlugs.length === 0) {
+    throw new Error('ARM64 publish smoke refused: the real renderer input names no report-route spots, so report-route evidence is incomplete.');
+  }
+  const emittedReportKeys = new Set(
+    [...objects.keys()].filter((key) => /^spots\/[^/]+\/(?:reportar|reportado)\.html$/.test(key)),
+  );
+
+  const measurements = [];
+  for (const slug of expectedSpotSlugs) {
+    const spotKey = `spots/${slug}.html`;
+    if (!Buffer.isBuffer(objects.get(spotKey))) {
+      throw new Error(`ARM64 publish smoke refused: ${spotKey} is absent from the real Publisher upload bodies, so report-route evidence is incomplete.`);
+    }
+    for (const kind of reportPageKinds) {
+      const budget = REPORT_DOCUMENT_GZIP_BUDGETS[kind];
+      if (budget === undefined) {
+        throw new Error(`ARM64 publish smoke refused: the page-weight gate declares no ${kind} report document ceiling.`);
+      }
+      const key = `spots/${slug}/${kind}.html`;
+      const body = objects.get(key);
+      if (!Buffer.isBuffer(body)) {
+        throw new Error(`ARM64 publish smoke refused: ${key} is absent from the real Publisher upload bodies, so report-route evidence is incomplete.`);
+      }
+      const gzipBytes = gzipSync(body).length;
+      if (!Number.isSafeInteger(gzipBytes)) {
+        throw new Error(`ARM64 publish smoke refused: ${key} produced an invalid gzip measurement.`);
+      }
+      if (gzipBytes > budget.bytes) {
+        throw new Error(`ARM64 publish smoke refused: ${key} is ${gzipBytes} B gz, over its ${budget.label} (${budget.bytes} B) document ceiling.`);
+      }
+      measurements.push({
+        route: `/spots/${slug}/${kind}`,
+        object_key: key,
+        gzip_bytes: gzipBytes,
+        ceiling_bytes: budget.bytes,
+        ceiling_label: budget.label,
+        margin_bytes: budget.bytes - gzipBytes,
+      });
+    }
+  }
+  const measuredKeys = new Set(measurements.map(({ object_key: objectKey }) => objectKey));
+  for (const key of emittedReportKeys) {
+    if (!measuredKeys.has(key)) {
+      throw new Error(`ARM64 publish smoke refused: emitted report route ${key} has no matching canonical spot document, so report-route evidence is incomplete.`);
+    }
+  }
+  return measurements;
+}
+
+/** The outer smoke trusts only complete, internally consistent ARM64 evidence. */
+export function assertReportPageGzipEvidence(evidence) {
+  if (typeof evidence !== 'object' || evidence === null) {
+    throw new Error('ARM64 publish smoke refused: in-container report-page gzip evidence is not an object.');
+  }
+  const report = evidence.report_page_gzip;
+  if (!Array.isArray(report) || report.length === 0) {
+    throw new Error('ARM64 publish smoke refused: in-container report-page gzip evidence is absent or incomplete.');
+  }
+  if (evidence.report_route_count !== report.length) {
+    throw new Error('ARM64 publish smoke refused: in-container report-page gzip evidence has an incomplete route count.');
+  }
+
+  const kindsBySlug = new Map();
+  for (const measurement of report) {
+    if (typeof measurement !== 'object' || measurement === null) {
+      throw new Error('ARM64 publish smoke refused: in-container report-page gzip evidence contains an invalid route measurement.');
+    }
+    const { route, object_key: objectKey, gzip_bytes: gzipBytes, ceiling_bytes: ceilingBytes, ceiling_label: ceilingLabel, margin_bytes: marginBytes } = measurement;
+    const match = typeof route === 'string' ? /^\/spots\/([^/]+)\/(reportar|reportado)$/.exec(route) : null;
+    if (match === null) {
+      throw new Error(`ARM64 publish smoke refused: in-container report-page gzip evidence has an invalid route ${JSON.stringify(route)}.`);
+    }
+    const [, slug, kind] = match;
+    const budget = REPORT_DOCUMENT_GZIP_BUDGETS[kind];
+    if (
+      budget === undefined
+      || objectKey !== `spots/${slug}/${kind}.html`
+      || !Number.isSafeInteger(gzipBytes)
+      || ceilingBytes !== budget.bytes
+      || ceilingLabel !== budget.label
+      || marginBytes !== budget.bytes - gzipBytes
+      || gzipBytes > budget.bytes
+    ) {
+      throw new Error(`ARM64 publish smoke refused: in-container ${route} gzip evidence is incomplete or outside its declared ceiling.`);
+    }
+    const kinds = kindsBySlug.get(slug) ?? new Set();
+    if (kinds.has(kind)) {
+      throw new Error(`ARM64 publish smoke refused: in-container ${route} gzip evidence is duplicated.`);
+    }
+    kinds.add(kind);
+    kindsBySlug.set(slug, kinds);
+  }
+
+  for (const [slug, kinds] of kindsBySlug) {
+    for (const kind of reportPageKinds) {
+      if (!kinds.has(kind)) {
+        throw new Error(`ARM64 publish smoke refused: in-container evidence omits /spots/${slug}/${kind}.`);
+      }
+    }
   }
 }
 
