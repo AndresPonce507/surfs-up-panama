@@ -163,7 +163,7 @@ describe('runFetch (Lambda Fetch composition root)', () => {
       clock: { now: () => new Date('2026-08-10T06:17:00Z') },
     });
 
-    expect(store.predictionKeys).toEqual(['predictions/v1/dt=2026-08-10/src=ncep_gfswave016/cyc=06Z/all.jsonl.gz']);
+    expect(store.predictionKeys).toEqual(['predictions/v1/dt=2026-08-10/src=ncep_gfswave016/cyc=06Z/all-window-e532841fa552e55d.jsonl.gz']);
     expect(store.predictions.size).toBe(2);
   });
 
@@ -181,7 +181,7 @@ describe('runFetch (Lambda Fetch composition root)', () => {
 
     expect(outcome.completed).toBe(true);
     expect(store.rawKeys).toContain('raw/open-meteo-marine/dt=2026-08-10/06/spot=playa-venao/run=2026-08-10T06-17-00.000Z/execution=evt-1.json.gz');
-    expect(store.predictionKeys).toEqual(['predictions/v1/dt=2026-08-10/src=ncep_gfswave016/cyc=06Z/all.jsonl.gz']);
+    expect(store.predictionKeys).toEqual(['predictions/v1/dt=2026-08-10/src=ncep_gfswave016/cyc=06Z/all-window-e532841fa552e55d.jsonl.gz']);
 
     const loggedEvents = logSpy.mock.calls.map(([line]) => (JSON.parse(String(line)) as { event: string }).event);
     expect(loggedEvents).toContain(INGEST_SUCCESS_EVENT);

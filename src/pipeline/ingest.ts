@@ -6,15 +6,21 @@
 //      as actual gzip bytes                                                   (durable #1)
 //   2. PUT one gzip JSONL file per (run_date, source, cycle, partition) to
 //      predictions/v1/... with If-None-Match:*                      (durable #2)
+//      The partition names the forecast WINDOW the cycle had published when
+//      this fetch saw it, so a window that rolls forward under an unchanged
+//      cycle files its new hours instead of colliding with them. See
+//      `predictionKey` below and adr-prediction-log-format.md decision 6.
 // The snapshot happens before any scoring exists anywhere in the run, so no
 // downstream failure, build bug or publish refusal can ever cost a snapshot.
 // One row per member per valid hour, natural key
 // (spot_id, source, run_ts, valid_ts), fields per domain-model section 5.1.
 
 import { loadLaunchSpotSeeds } from '../data/launch-spots';
-import { randomUUID } from 'node:crypto';
-import type { IngestDeps, IngestOutcome, MemberSeries, TideHour, WindHour } from './ports';
+import { createHash, randomUUID } from 'node:crypto';
+import type { IngestDeps, IngestOutcome, IngestStore, MemberHour, MemberSeries, TideHour, WindHour } from './ports';
 import { rawArchiveRecord } from './raw-archive';
+
+const PREDICTION_PREFIX = 'predictions/v1/';
 
 type PredictionRow = {
   spot_id: string;
@@ -49,6 +55,10 @@ export async function runIngestOnce(deps: IngestDeps): Promise<IngestOutcome> {
   const recordsByKey = new Map<string, PredictionRow[]>();
   const executionId = deps.execution_id ?? randomUUID();
   const spots = deps.spots ?? loadLaunchSpotSeeds(deps.launchData);
+  // One snapshot of the archive, read before the loop. Every prediction write
+  // this run makes happens after the loop, so a single up-front read sees
+  // exactly what a per-member read would have seen, at a fraction of the IO.
+  const archive = await loadArchive(deps.store);
   for (const spot of spots) {
     const wavePayload = await deps.source.fetchWavePayload(spot.spot_id);
     const waveArchive = wavePayload.ok
@@ -103,7 +113,7 @@ export async function runIngestOnce(deps: IngestDeps): Promise<IngestOutcome> {
     }
 
     for (const member of waves.data) {
-      const attribution = await retainPriorAttribution(deps, spot.spot_id, member);
+      const attribution = retainPriorAttribution(archive, spot.spot_id, member);
       // An exact series has already been durably captured under its original
       // provider attribution. Do not merely rely on conditional PUT here:
       // avoiding the attempted write is what makes an unchanged provider
@@ -115,26 +125,99 @@ export async function runIngestOnce(deps: IngestDeps): Promise<IngestOutcome> {
       }
     }
   }
+  const archivedForecasts = forecastsByNaturalKey(archive);
   for (const [key, rows] of recordsByKey) {
+    // The archive is insert-only at the RECORD grain, not merely at the object
+    // grain. Conditional PUT alone used to carry that guarantee, because one
+    // cycle could only ever address one object; now that a widened window
+    // addresses its own object, a restated hour could otherwise be filed
+    // beside the hour it contradicts. It is refused here instead.
+    const contradicted = rows.find((row) => {
+      const archived = archivedForecasts.get(naturalKey(row));
+      return archived !== undefined && archived !== forecastStated(row);
+    });
+    if (contradicted !== undefined) {
+      events.push({ type: 'prediction_rewrite_refused', detail: `${key} ${naturalKey(contradicted)}` });
+      events.push({ type: ARCHIVE_REWRITE_REFUSED_EVENT, detail: naturalKey(contradicted) });
+      continue;
+    }
     const outcome = await deps.store.putPredictionIfAbsent(key, rows.map((row) => JSON.stringify(row)).join('\n'));
     events.push({ type: outcome === 'created' ? 'prediction_created' : 'prediction_duplicate', detail: key });
   }
   return { completed: true, events };
 }
 
-async function retainPriorAttribution(
-  deps: IngestDeps,
+/** Health event for a refused rewrite. Informational: no metric filter watches it. */
+const ARCHIVE_REWRITE_REFUSED_EVENT = 'health.archive.rewrite_refused';
+
+type ArchivedObject = { readonly key: string; readonly rows: readonly PredictionRow[] };
+
+/**
+ * Every prediction receipt already on the substrate, read once. `null` when
+ * the store offers no read seam: both the attribution retention and the
+ * rewrite refusal below are then inert, and immutability rests on conditional
+ * PUT alone, which is exactly the guarantee this path always had.
+ */
+async function loadArchive(store: IngestStore): Promise<readonly ArchivedObject[] | null> {
+  if (store.listPredictions === undefined || store.getPrediction === undefined) return null;
+  const keys = await store.listPredictions(PREDICTION_PREFIX);
+  const objects: ArchivedObject[] = [];
+  for (const key of keys) {
+    const body = await store.getPrediction(key);
+    if (body === null) continue;
+    objects.push({ key, rows: body.split('\n').filter(Boolean).map((line) => JSON.parse(line) as PredictionRow) });
+  }
+  return objects;
+}
+
+/** The record natural key of the log (adr-prediction-log-format.md decision 4). */
+function naturalKey(row: PredictionRow): string {
+  return `${row.spot_id}|${row.source}|${row.run_ts}|${row.valid_ts}`;
+}
+
+/**
+ * What the natural key actually identifies: one wave model's cycle predicting
+ * one hour. That, and only that, may never change once archived.
+ *
+ * Deliberately excluded, because they are not the keyed prediction and DO
+ * legitimately move between two looks at the same cycle -- treating them as
+ * history would refuse every genuine rollforward and restore the very defect
+ * this guard was added alongside:
+ *   - `fetched_ts`, audit/debug metadata only (domain-model.md section 5.1);
+ *   - `wind_*`, `tide_*`, contemporaneous joins from providers running their
+ *     own cycles, carried on the row for replay convenience and keyed by
+ *     nothing in this row's natural key.
+ */
+function forecastStated(row: PredictionRow): string {
+  return JSON.stringify([
+    row.lead_h,
+    row.swell_h_m, row.swell_t_s, row.swell_dir_deg,
+    row.swell2_h_m, row.swell2_t_s, row.swell2_dir_deg,
+    row.land_masked,
+  ]);
+}
+
+function forecastsByNaturalKey(archive: readonly ArchivedObject[] | null): ReadonlyMap<string, string> {
+  const stated = new Map<string, string>();
+  if (archive === null) return stated;
+  for (const object of archive) {
+    for (const row of object.rows) {
+      if (!stated.has(naturalKey(row))) stated.set(naturalKey(row), forecastStated(row));
+    }
+  }
+  return stated;
+}
+
+function retainPriorAttribution(
+  archive: readonly ArchivedObject[] | null,
   spotId: string,
   member: MemberSeries,
-): Promise<{ member: MemberSeries; unchanged: boolean }> {
-  if (deps.store.listPredictions === undefined || deps.store.getPrediction === undefined) return { member, unchanged: false };
-  const keys = await deps.store.listPredictions('predictions/v1/');
+): { member: MemberSeries; unchanged: boolean } {
+  if (archive === null) return { member, unchanged: false };
   const canonical = JSON.stringify(member.hours.map((hour) => [hour.valid_ts, hour.swell.h_m, hour.swell.t_s, hour.swell.dir_deg, hour.swell2, hour.land_masked]));
-  for (const key of keys) {
-    if (!key.includes(`/src=${member.source}/`)) continue;
-    const body = await deps.store.getPrediction(key);
-    if (body === null) continue;
-    const rows = body.split('\n').filter(Boolean).map((line) => JSON.parse(line) as PredictionRow)
+  for (const object of archive) {
+    if (!object.key.includes(`/src=${member.source}/`)) continue;
+    const rows = object.rows
       .filter((row) => row.spot_id === spotId && row.source === member.source)
       .sort((left, right) => left.valid_ts.localeCompare(right.valid_ts));
     const prior = JSON.stringify(rows.map((row) => [row.valid_ts, row.swell_h_m, row.swell_t_s, row.swell_dir_deg, row.swell2_h_m === null ? null : { h_m: row.swell2_h_m, t_s: row.swell2_t_s, dir_deg: row.swell2_dir_deg }, row.land_masked]));
@@ -166,14 +249,12 @@ function addMemberRows(
   wind: readonly WindHour[],
   tide: readonly TideHour[],
 ): void {
-  const runDate = member.run_ts.slice(0, 10);
-  const runHour = member.run_ts.slice(11, 13);
-  const key = `predictions/v1/dt=${runDate}/src=${member.source}/cyc=${runHour}Z/all.jsonl.gz`;
+  const key = predictionKey(member);
   const rows = recordsByKey.get(key) ?? [];
   const tideValues = tide.flatMap((hour) => hour.tide_m === null ? [] : [hour.tide_m]);
   const tideDayLow = tideValues.length === 0 ? null : Math.min(...tideValues);
   const tideDayHigh = tideValues.length === 0 ? null : Math.max(...tideValues);
-  for (const hour of member.hours) {
+  for (const hour of canonicalHours(member.hours)) {
     const windAtHour = wind.find((candidate) => candidate.valid_ts === hour.valid_ts)?.wind ?? null;
     const tideAtHour = tide.find((candidate) => candidate.valid_ts === hour.valid_ts)?.tide_m ?? null;
     rows.push({
@@ -198,6 +279,67 @@ function addMemberRows(
     });
   }
   recordsByKey.set(key, rows);
+}
+
+/**
+ * The object a member series belongs in: its run partition, then the forecast
+ * window that run had published by the time this fetch saw it.
+ *
+ * The run alone was not enough. The provider asks for whole forecast DAYS in
+ * UTC (`forecast_days`, open-meteo-source.ts), so the window advances at UTC
+ * midnight while the attributed cycle holds until the next 6-hourly cycle
+ * clears its latency. Between those instants the same cycle emits hours it had
+ * never emitted before. Addressed by run alone they hashed onto the first
+ * fetch's key, the conditional PUT answered already-exists, and a whole
+ * forecast day was silently discarded -- the outage of 2026-08-13.
+ *
+ * The window id hashes the exact set of hours covered and NOTHING ELSE. Two
+ * consequences, both deliberate:
+ *   - the name is a pure function of (cycle, window), so repeating a fetch
+ *     verbatim can only land on the same object, and the conditional PUT keeps
+ *     its meaning: first write wins, bytes never move;
+ *   - a cycle that restates the SAME hours with DIFFERENT numbers collides
+ *     rather than diverging, so it can never sneak past write-once under a
+ *     fresh name. Hashing the values instead would invert exactly that.
+ *
+ * Layout depth is unchanged. The window rides in the `<partition>` slot the
+ * key template already ends with (domain-model.md section 5.2), because the
+ * archive already holds `all.jsonl.gz` objects that are immutable forever: a
+ * new path SEGMENT would have split the log across two depths permanently and
+ * broken every fixed-depth glob and hive-partitioned read over it.
+ */
+function predictionKey(member: MemberSeries): string {
+  const runDate = member.run_ts.slice(0, 10);
+  const runHour = member.run_ts.slice(11, 13);
+  return `${PREDICTION_PREFIX}dt=${runDate}/src=${member.source}/cyc=${runHour}Z/all-window-${windowId(member.hours)}.jsonl.gz`;
+}
+
+function windowId(hours: readonly MemberHour[]): string {
+  const covered = canonicalHours(hours).map((hour) => hour.valid_ts).join(',');
+  return createHash('sha256').update(covered).digest('hex').slice(0, 16);
+}
+
+/**
+ * The hour list an object is written from: ascending, one entry per valid_ts.
+ *
+ * Both the object's NAME and its BYTES are taken from this, so the name is a
+ * pure function of the covered hours and the bytes are a pure function of the
+ * fetch -- which is what lets conditional PUT stay meaningful. Hashing a
+ * canonical list while writing the raw one would let two payloads differing
+ * only in hour order share a key and disagree on content, and the loser's
+ * bytes would be dropped: the same class of silent loss this whole change
+ * exists to end. Open-Meteo already emits ascending unique hours, so in
+ * practice this reorders nothing; it is here so the guarantee does not depend
+ * on that.
+ *
+ * A repeated valid_ts keeps its first entry, deterministically.
+ */
+function canonicalHours(hours: readonly MemberHour[]): readonly MemberHour[] {
+  const byValidTs = new Map<string, MemberHour>();
+  for (const hour of hours) {
+    if (!byValidTs.has(hour.valid_ts)) byValidTs.set(hour.valid_ts, hour);
+  }
+  return [...byValidTs.values()].sort((left, right) => left.valid_ts.localeCompare(right.valid_ts));
 }
 
 function differenceInHours(validTimestamp: string, runTimestamp: string): number {

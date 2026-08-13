@@ -22,6 +22,11 @@ export const BUILD_SUCCESS_EVENT = 'build.success';
  * an hourly build cycle produced no new page without paging anyone. */
 export const BUILD_REFUSED_EVENT = 'build.refused';
 export const STARTUP_REFUSED_EVENT = 'health.startup.refused';
+/** Informational only: no metric filter watches this. A provider restated an
+ * already-archived hour with a different forecast under the same run stamp and
+ * the write was refused to keep the log insert-only. Rare and never expected;
+ * a human reading it means the upstream contradicted itself. */
+export const ARCHIVE_REWRITE_REFUSED_EVENT = 'health.archive.rewrite_refused';
 export const CYCLE_FROZEN_EVENT = 'health.provider.cycle_frozen';
 export const UNCHANGED_CYCLE_EVENT = 'ingest.cycle_unchanged';
 
@@ -43,6 +48,9 @@ export function deriveIngestLogLines(outcome: IngestOutcome): readonly LogLine[]
   const unchangedCycleLines = outcome.events
     .filter((event) => event.type === 'cycle_unchanged')
     .map((event): LogLine => ({ event: UNCHANGED_CYCLE_EVENT, cycle: event.detail }));
+  const rewriteRefusedLines = outcome.events
+    .filter((event) => event.type === ARCHIVE_REWRITE_REFUSED_EVENT)
+    .map((event): LogLine => ({ event: ARCHIVE_REWRITE_REFUSED_EVENT, record: event.detail }));
 
   const hasSuccessfulCycle = outcome.events.some((event) => SUCCESSFUL_CYCLE_EVENT_TYPES.has(event.type));
   const successLines: readonly LogLine[] = outcome.completed && hasSuccessfulCycle
@@ -54,7 +62,7 @@ export function deriveIngestLogLines(outcome: IngestOutcome): readonly LogLine[]
     }]
     : [];
 
-  return [...startupLines, ...frozenCycleLines, ...unchangedCycleLines, ...providerErrorLines, ...successLines];
+  return [...startupLines, ...frozenCycleLines, ...unchangedCycleLines, ...rewriteRefusedLines, ...providerErrorLines, ...successLines];
 }
 
 export function deriveBuildLogLines(outcome: BuildOutcome): readonly LogLine[] {

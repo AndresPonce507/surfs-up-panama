@@ -33,7 +33,11 @@ export interface LearningInputStore {
 
 /** log/observations/v1/dt=<date>/reports.jsonl, one row per line. */
 export const OBSERVATION_LOG_PREFIX = 'log/observations/v1/';
-/** predictions/v1/dt=<run-date>/src=<source>/cyc=<cycle>Z/all.jsonl.gz, one row per line. */
+/** predictions/v1/dt=<run-date>/src=<source>/cyc=<cycle>Z/<partition>.jsonl.gz, one row per line.
+ *  The partition names the forecast window the cycle had published when the
+ *  fetch saw it (adr-prediction-log-format.md decision 6); older objects are
+ *  named `all`. Nothing here parses it: the job reads every key under the
+ *  prefix and works from the rows. */
 export const PREDICTION_LOG_PREFIX = 'predictions/v1/';
 /** log/calls/v1/dt=<date>/build=<HH>Z/<region_id>.jsonl.gz: what the site published, one row per spot-hour. */
 export const CALL_LOG_PREFIX = 'log/calls/v1/';

@@ -169,7 +169,10 @@ Deviation from research 09 §13.1's sketch, deliberate: `score_q`/`score_confide
 
 ```
 s3://<data-bucket>/predictions/v1/dt=<run_date>/src=<source>/cyc=<HH>Z/<partition>.jsonl.gz
-      <partition> = "all" at ≤40 spots per region; geohash4 tile past that
+      <partition> = "all-window-<16 hex>" at ≤40 spots per region; geohash4 tile past that
+                    the hex is sha256 over that member's sorted valid_ts set: the
+                    forecast window the cycle had published when the fetch saw it
+                    (amended 2026-08-13, adr-prediction-log-format.md decision 6)
 s3://<data-bucket>/raw/<provider>/dt=YYYY-MM-DD/<HH>/spot=<spot_id>/run=YYYY-MM-DDTHH-mm-ss.sssZ/execution=<execution_id>.json.gz
                                                               # verbatim gzip bytes, 30-day lifecycle
 ```
@@ -179,6 +182,7 @@ s3://<data-bucket>/raw/<provider>/dt=YYYY-MM-DD/<HH>/spot=<spot_id>/run=YYYY-MM-
 - **Partitioned by run date first** — retention, backfill and learning-job scans are all date-scoped (research 09 §13.1).
 - **Format: gzipped JSONL now, Parquet compaction when a region exceeds ~500 spots** — see `adr-prediction-log-format.md`. DuckDB/pandas read both.
 - **Idempotency:** the natural key of a record is `(spot_id, source, run_ts, valid_ts)`; the natural key of a *file* is `(run_date, source, cycle, partition)`. Ingest creates a file with conditional PUT (`If-None-Match: *`). A duplicate returns a verified already-exists acknowledgement and leaves the first bytes untouched. Gap repair may create an absent key from `raw/`, but may never replace an existing prediction receipt.
+- **Amended 2026-08-13 (production defect): the partition carries the forecast window, and insert-only is enforced at the record grain too.** The upstream window advances at UTC midnight while the attributed cycle holds until the next cycle clears its latency, so one cycle can emit hours it had not emitted an hour earlier. Addressed by run alone those new hours hashed onto the first fetch's key, the conditional PUT answered already-exists, and a whole forecast day was discarded — the site could not publish for a day. The partition token now names the window (above), so a widened window files its own object and nothing is overwritten. Because a new address could otherwise carry a contradiction, ingest additionally refuses any write whose rows would restate an already-archived `(spot_id, source, run_ts, valid_ts)` with a different **wave forecast** (`lead_h`, `swell_*`, `swell2_*`, `land_masked`). `fetched_ts` and the joined `wind_*`/`tide_*` columns are excluded from that comparison on purpose: they are audit metadata and contemporaneous joins from providers on their own cycles, and counting them as history would refuse every legitimate rollforward. Reasoning and rejected alternatives: `adr-prediction-log-format.md`.
 - **Raw provenance:** a raw key identifies `(provider, spot_id, capture_run_ts, execution_id)`. `capture_run_ts` is the UTC instant the HTTP response was received by ingest, rendered with colon-safe time separators as the `run=` directory; `execution_id` is the Scheduler/Lambda delivery identity. This keeps all spot-specific response bodies distinct even when a provider call is retried within the same capture instant, while preserving the existing provider/date/hour partition. The raw body is gzip-compressed verbatim bytes; no parser or validator may run before that archive write.
 - **Timestamps: UTC everywhere in logs.** Local time is a display concern derived from the spot's `timezone` field.
 

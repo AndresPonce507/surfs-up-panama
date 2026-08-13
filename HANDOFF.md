@@ -16,6 +16,31 @@ This section supersedes the legacy notes below. They are retained only as histor
   `surfs-up-panama-build-dead-mans-switch`. Expected given the above; they must clear after the
   fix deploys and a real Fetch/Build cycle runs.
 
+## Archive key format changed 2026-08-13 (production defect, fix on `fix/ingest-window-rollforward`)
+
+- **The prediction archive's `<partition>` token now names the forecast WINDOW**, not just the
+  run: `predictions/v1/dt=<run_date>/src=<source>/cyc=<HH>Z/all-window-<16 hex>.jsonl.gz`, the hex
+  being sha256 over that member's sorted `valid_ts` set. Reasoning, rejected alternatives and the
+  full amendment: `adr-prediction-log-format.md` decision 6.
+- **Why.** Open-Meteo is asked for whole forecast DAYS in UTC, so its window advances at UTC
+  midnight while the attributed cycle holds until the next 6-hourly cycle clears its latency.
+  Addressed by run alone, the newly arrived later-day rows hashed onto the earlier fetch's key,
+  the conditional PUT answered already-exists, and a whole forecast day was silently discarded.
+  The build then refused with `missing complete today or tomorrow ranking` every hour. Second
+  production defect of the day; the first was the build reading forecast-dated partitions.
+- **Write-once is unchanged and now also enforced at the RECORD grain.** Nothing is overwritten;
+  objects are still written once with `If-None-Match:*`. A run whose rows would restate an
+  already-archived `(spot_id, source, run_ts, valid_ts)` with a different **wave forecast** is
+  refused and logged as `health.archive.rewrite_refused` (informational, no metric filter).
+  `fetched_ts` and the joined `wind_*`/`tide_*` columns are deliberately outside that comparison.
+- **Objects already written as `all.jsonl.gz` stay valid forever and need no migration.** Readers
+  list the whole `dt=` prefix and never parse the filename. On the first run after deploy an
+  unchanged window still matches the legacy object exactly, so it emits `cycle_unchanged` and
+  writes nothing.
+- **Deploy: `SurfsUpPanamaIngest` must be redeployed even though `infra/` did not change** —
+  `ingest.ts` is handler source bundled into that stack. No IAM change: `grantPut`/`grantRead` on
+  `predictions/*` already cover the deeper filename.
+
 ## Andres's four rulings today (2026-08-12)
 
 1. **Push threshold — STAGED.** Hidden server default of 70 now; no surfer-facing number
