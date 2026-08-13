@@ -283,6 +283,69 @@ describe('planNotifications', () => {
   });
 });
 
+describe('planNotifications -- afternoon follow-up (R41)', () => {
+  it('plans exactly one settled Spanish follow-up after today’s morning aviso, regardless of the later score, during each spot’s local afternoon', () => {
+    fc.assert(
+      fc.property(
+        fc.integer({ min: 13, max: 17 }),
+        fc.constantFrom(
+          { timezone: 'America/Panama', offset: '-05:00' },
+          { timezone: 'Etc/GMT-1', offset: '+01:00' },
+        ),
+        fc.constantFrom<StoredSub['last_notified_date']>(null, '2026-08-09', '2026-08-10', '2026-08-11'),
+        fc.constantFrom<StoredSub['followup_date']>(null, '2026-08-09', '2026-08-10', '2026-08-11'),
+        fc.integer({ min: 0, max: 100 }),
+        (hour, zone, notifiedDate, followupDate, laterScore) => {
+          const subscription = subscriptionWithBar(70, {
+            last_notified_date: notifiedDate,
+            followup_date: followupDate,
+          });
+          const before = JSON.stringify(subscription);
+          const plan = planNotifications({
+            now: `2026-08-10T${String(hour).padStart(2, '0')}:25:00${zone.offset}`,
+            spots: [{ ...playaVenao, timezone: zone.timezone }],
+            scores: { [playaVenao.spot_id]: laterScore },
+            subscriptions: [subscription],
+            default_threshold_score: fixtureServerThresholdScore,
+            run_cap: 10_000,
+          });
+
+          const followups = plan.sends.filter((send) => (send as { kind?: string }).kind === 'followup');
+          const eligible = hour >= 14 && hour < 17
+            && notifiedDate === '2026-08-10'
+            && (followupDate === null || followupDate < '2026-08-10');
+
+          assert.equal(
+            followups.length,
+            eligible ? 1 : 0,
+            'only today’s morning aviso and no prior follow-up earn one afternoon question',
+          );
+          if (eligible) {
+            const [followup] = followups;
+            assert.deepEqual(
+              followup,
+              {
+                spot_id: playaVenao.spot_id,
+                endpoint_hash: subscription.endpoint_hash,
+                lang: 'es',
+                title: '¿Cómo estuvo?',
+                body: '¿Cómo estuvo?',
+                url: '/spots/playa-venao/reportar?t=ps',
+                tag: playaVenao.spot_id,
+                ttl_seconds: 4 * 60 * 60,
+                kind: 'followup',
+              },
+              'the follow-up carries the settled question and the solicited-report deep link',
+            );
+          }
+          assert.equal(JSON.stringify(subscription), before, 'planning does not mutate the supplied subscription state');
+        },
+      ),
+      { numRuns: 100 },
+    );
+  });
+});
+
 // The gone set is written here from the specification (07-write-path.md §8.4
 // and adr-push-vapid-direct.md decision 4), never imported from the module
 // under test. An oracle that read the production constant would agree with any
