@@ -80,7 +80,7 @@ export interface ReportQueue {
    * readable -- the surfer was told plainly and the label is theirs -- but it
    * stops being something to send.
    */
-  readonly settleSavedRecord?: (reportId: string) => Promise<void>;
+  readonly settleSavedRecord?: (reportId: string, reason?: string) => Promise<void>;
   /** Immutable records already waiting before this page opened, never a new form value. */
   readonly pendingRecords?: () => Promise<readonly { readonly report_id: string; readonly bytes: string }[]>;
   readonly identity?: {
@@ -136,7 +136,10 @@ export async function openReportQueue(deps: QueueDependencies): Promise<QueueOut
       commit: (record) => append(store, record),
       savedRecord: (reportId) => store.get(reportId),
       discardSavedRecord: (reportId) => store.remove(reportId),
-      settleSavedRecord: (reportId) => store.put(`${SETTLED_KEY_PREFIX}${reportId}`, reportId),
+      settleSavedRecord: (reportId, reason) => store.put(
+        `${SETTLED_KEY_PREFIX}${reportId}`,
+        JSON.stringify({ settled_id: reportId, refusal_what: reason ?? null }),
+      ),
       pendingRecords: async () => pendingFrom(await store.entries()),
       identity: {
         read: async () => parseIdentity(await store.get(IDENTITY_KEY)),

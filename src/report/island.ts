@@ -25,18 +25,15 @@
 // files, per this step's implementation notes.
 
 import { composeReportRecord, type ReportAnswers } from './report-record';
-import { createCredentialProvider, type CredentialProvider } from './mint';
 import { finalizeSavedReport, sendWithCredentialRecovery, type ReportReceipt, type SubmissionOutcome } from './submit';
 import { decideArrivalUi, type ComparisonLines } from './reveal';
 import {
-  SENTINEL_KEY_PREFIX,
-  SETTLED_KEY_PREFIX,
-  openReportQueue,
   type CommitOutcome,
   type QueueOutcome,
-  type QueueStore,
   type ReportQueue,
 } from './queue';
+import { openBrowserReportQueue, REPORT_QUEUE_DATABASE, REPORT_QUEUE_STORE } from './browser-queue';
+import { configuredWriteEndpoint, loadWriteBrowserEndpoints } from './write-browser-config';
 import { QUALITY_TOKENS, WIND_STATE_TOKENS } from '../data/report-vocab';
 import { sizeBands } from '../data/size-bands';
 import { paths } from '../i18n/routes';
@@ -252,76 +249,66 @@ export function parseAnswers(raw: RawAnswers): ReportAnswers | undefined {
 // here is a plain ASCII string, a small integer or an array of strings.
 // ---------------------------------------------------------------------------
 
-const DATABASE_NAME = 'psb-report-queue';
-const STORE_NAME = 'entries';
+const DATABASE_NAME = REPORT_QUEUE_DATABASE;
+const STORE_NAME = REPORT_QUEUE_STORE;
 const LOCAL_CREDENTIAL_KEY = 'psb-report-credential';
 
-function openIndexedDbStore(): Promise<QueueStore> {
-  return new Promise((resolve, reject) => {
-    const request = indexedDB.open(DATABASE_NAME, 1);
-    request.onupgradeneeded = () => {
-      if (!request.result.objectStoreNames.contains(STORE_NAME)) {
-        request.result.createObjectStore(STORE_NAME);
-      }
-    };
-    request.onsuccess = () => resolve(storeFrom(request.result));
-    request.onerror = () => reject(request.error ?? new Error('report queue: indexedDB open failed'));
-  });
-}
+type CredentialProvider = {
+  get(): Promise<string>;
+  invalidate(): Promise<void>;
+};
 
-function storeFrom(db: IDBDatabase): QueueStore {
+type CredentialStore = {
+  read(): Promise<{ readonly deviceId: string; readonly credential: string } | undefined>;
+  write(identity: { readonly deviceId: string; readonly credential: string }): Promise<void>;
+  clear(): Promise<void>;
+};
+
+/**
+ * Deliberately local to the report island. Sharing mint.ts with the Push
+ * settings island makes Vite emit a third request on every normal spot
+ * reading, over the ten-request session ceiling. The two browser entrypoints
+ * therefore each carry this tiny, identical credential boundary; neither
+ * requests it until its own explicit action needs a credential.
+ */
+function createReportCredentialProvider(
+  fetcher: (path: string, request: RequestInit) => Promise<Response>,
+  identity: CredentialStore,
+  mintEndpoint: string,
+): CredentialProvider {
+  let credential: Promise<string> | undefined;
   return {
-    put: (key, value) =>
-      runRequest(db, 'readwrite', (store) => store.put(toStorable(key, value), key)).then(() => undefined),
-    get: (key) => runRequest(db, 'readonly', (store) => store.get(key)).then(fromStorable),
-    remove: (key) => runRequest(db, 'readwrite', (store) => store.delete(key)).then(() => undefined),
-    entries: () => listStoredEntries(db),
+    get: () => {
+      credential ??= loadReportCredential(fetcher, identity, mintEndpoint);
+      return credential;
+    },
+    invalidate: async () => {
+      credential = undefined;
+      await identity.clear();
+    },
   };
 }
 
-function listStoredEntries(db: IDBDatabase): Promise<readonly { readonly key: string; readonly value: string }[]> {
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const keys = store.getAllKeys();
-    const values = store.getAll();
-    transaction.oncomplete = () => resolve(
-      keys.result.flatMap((key, index) => {
-        const value = fromStorable(values.result[index]);
-        return typeof key === 'string' && value !== undefined ? [{ key, value }] : [];
-      }),
-    );
-    transaction.onerror = () => reject(transaction.error ?? new Error('report queue: indexedDB list failed'));
+async function loadReportCredential(
+  fetcher: (path: string, request: RequestInit) => Promise<Response>,
+  identity: CredentialStore,
+  mintEndpoint: string,
+): Promise<string> {
+  const known = await identity.read();
+  if (known !== undefined) return known.credential;
+  const deviceId = `d_${Array.from(crypto.getRandomValues(new Uint8Array(16)), (byte) => byte.toString(16).padStart(2, '0')).join('')}`;
+  const response = await fetcher(mintEndpoint, {
+    method: 'POST',
+    cache: 'no-store',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ device_id: deviceId }),
   });
-}
-
-function runRequest(
-  db: IDBDatabase,
-  mode: IDBTransactionMode,
-  action: (store: IDBObjectStore) => IDBRequest,
-): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, mode);
-    const request = action(transaction.objectStore(STORE_NAME));
-    request.onsuccess = () => resolve(request.result as unknown);
-    request.onerror = () => reject(request.error ?? new Error('report queue: indexedDB request failed'));
-  });
-}
-
-/** Report rows are stored parsed; the probe sentinel and the settled marker are bare strings. */
-function toStorable(key: string, value: string): unknown {
-  return key.startsWith(SENTINEL_KEY_PREFIX) || key.startsWith(SETTLED_KEY_PREFIX)
-    ? value
-    : (JSON.parse(value) as unknown);
-}
-
-function fromStorable(stored: unknown): string | undefined {
-  if (stored === undefined) return undefined;
-  return typeof stored === 'string' ? stored : JSON.stringify(stored);
-}
-
-function randomSentinelToken(): string {
-  return `probe-${crypto.randomUUID()}`;
+  const body = await response.json().catch(() => undefined) as { credential?: unknown } | undefined;
+  if (!response.ok || typeof body?.credential !== 'string') {
+    throw new Error('No pudimos preparar el envío del reporte ahora.');
+  }
+  await identity.write({ deviceId, credential: body.credential });
+  return body.credential;
 }
 
 // ---------------------------------------------------------------------------
@@ -612,13 +599,13 @@ async function sendQueuedReport(
     await sendWithCredentialRecovery(savedBytes, credential, fetch, reportEndpoint),
     {
       discard: (candidateId) => queue.discardSavedRecord?.(candidateId) ?? Promise.reject(new Error('report queue cannot discard receipt')),
-      settle: (candidateId) => queue.settleSavedRecord?.(candidateId) ?? Promise.reject(new Error('report queue cannot settle a refused report')),
+      settle: (candidateId, reason) => queue.settleSavedRecord?.(candidateId, reason) ?? Promise.reject(new Error('report queue cannot settle a refused report')),
     },
   );
 }
 
 async function activate(elements: IslandElements, spotId: string, locale: Locale, spotName: string): Promise<void> {
-  const opened = await openReportQueue({ openStore: openIndexedDbStore, newSentinel: randomSentinelToken });
+  const opened = await openBrowserReportQueue();
   applyProbeUi(decideProbeUi(opened), elements);
   if (opened.kind !== 'ready') return;
 
@@ -627,10 +614,10 @@ async function activate(elements: IslandElements, spotId: string, locale: Locale
     backHref: paths.spot(locale, spotId),
     backLabel: spotName,
   };
-  const endpoints = configuredWriteEndpoints(elements.form);
+  const endpoints = await configuredWriteEndpoints(elements.form);
   const credential = endpoints === undefined
     ? undefined
-    : createCredentialProvider(fetch, undefined, browserCredentialStore(opened.queue), endpoints.mint);
+    : createReportCredentialProvider(fetch, browserCredentialStore(opened.queue), endpoints.mint);
 
   // A passing storage probe makes reporting available, but Mandar is not an
   // honest action until all three answers exist. Keep the static disabled
@@ -704,20 +691,10 @@ function savedAnswers(bytes: string): ReportAnswers | undefined {
   }
 }
 
-function configuredWriteEndpoints(form: HTMLFormElement): { readonly mint: string; readonly report: string } | undefined {
+async function configuredWriteEndpoints(form: HTMLFormElement): Promise<{ readonly mint: string; readonly report: string } | undefined> {
   const mint = configuredWriteEndpoint(form.dataset.reportMintUrl);
   const report = configuredWriteEndpoint(form.dataset.reportSubmitUrl);
-  return mint === undefined || report === undefined ? undefined : { mint, report };
-}
-
-function configuredWriteEndpoint(value: string | undefined): string | undefined {
-  if (value === undefined) return undefined;
-  try {
-    const endpoint = new URL(value);
-    return endpoint.protocol === 'https:' || endpoint.protocol === 'http:' ? endpoint.href : undefined;
-  } catch {
-    return undefined;
-  }
+  return mint === undefined || report === undefined ? loadWriteBrowserEndpoints() : { mint, report };
 }
 
 function browserCredentialStore(queue: ReportQueue): {

@@ -257,6 +257,7 @@ export class WriteStack extends Stack {
           Body: Fn.join('', [
             '{"push_url":"', pushUrl.url,
             '","mint_url":"', mintUrl.url,
+            '","report_url":"', reportUrl.url,
             '","vapid_public_key":"', vapidPublicKey.valueAsString,
             '"}',
           ]),
@@ -274,6 +275,7 @@ export class WriteStack extends Stack {
           Body: Fn.join('', [
             '{"push_url":"', pushUrl.url,
             '","mint_url":"', mintUrl.url,
+            '","report_url":"', reportUrl.url,
             '","vapid_public_key":"', vapidPublicKey.valueAsString,
             '"}',
           ]),

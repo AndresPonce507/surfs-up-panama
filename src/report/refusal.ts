@@ -62,7 +62,7 @@ export const SEND_REFUSED_MESSAGE = 'No pudimos enviar el reporte ahora.';
  * strands a label the server would have accepted, while wrongly keeping one
  * costs a send that refuses again.
  */
-const SETTLED_REFUSAL_CODES: ReadonlySet<string> = new Set(['observed_at_out_of_range']);
+const SETTLED_REFUSAL_CODES: ReadonlySet<string> = new Set(['observed_at_out_of_range', 'schema_invalid']);
 
 /**
  * Read a refused response body as the sentence to show and the answer to

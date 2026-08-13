@@ -63,7 +63,7 @@ export type SubmissionOutcome =
 export interface SavedReportStore {
   discard(reportId: string): Promise<void>;
   /** Keep the label, stop sending it: the write path will never accept these bytes. */
-  settle(reportId: string): Promise<void>;
+  settle(reportId: string, reason: string): Promise<void>;
 }
 
 /** Sends only the immutable bytes read from the durable queue. */
@@ -124,7 +124,7 @@ export async function finalizeSavedReport(
     return outcome;
   }
   if (outcome.kind === 'refused' && outcome.persistence === 'settled') {
-    await store.settle(reportId);
+    await store.settle(reportId, outcome.message);
   }
   return outcome;
 }

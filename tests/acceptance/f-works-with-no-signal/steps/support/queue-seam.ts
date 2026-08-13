@@ -131,7 +131,9 @@ export async function queuedReports(page: Page): Promise<QueuedReport[]> {
           };
           request.onsuccess = () => {
             db.close();
-            done(request.result as QueuedReport[]);
+            done((request.result as unknown[]).filter((row): row is QueuedReport => (
+              typeof row === 'object' && row !== null && typeof (row as { report_id?: unknown }).report_id === 'string'
+            )));
           };
         };
       });

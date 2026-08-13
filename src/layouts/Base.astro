@@ -108,6 +108,51 @@ const inlineCss = minify(
     <script>
       import { connectThemeToggle } from '../styles/theme-controller';
       connectThemeToggle();
+      let replayStarting = false;
+      const startQueuedReportReplay = () => {
+        if (replayStarting) return;
+        replayStarting = true;
+        void import('../report/replay').then(({ startReportReplay }) => startReportReplay());
+      };
+      const reportsAreWaiting = () => new Promise((resolve) => {
+        if (!('indexedDB' in window)) {
+          resolve(false);
+          return;
+        }
+        const opening = indexedDB.open('psb-report-queue');
+        opening.onupgradeneeded = () => {
+          opening.transaction?.abort();
+          resolve(false);
+        };
+        opening.onerror = () => resolve(false);
+        opening.onsuccess = () => {
+          const database = opening.result;
+          if (!database.objectStoreNames.contains('entries')) {
+            database.close();
+            resolve(false);
+            return;
+          }
+          const keys = database.transaction('entries', 'readonly').objectStore('entries').getAllKeys();
+          keys.onerror = () => {
+            database.close();
+            resolve(false);
+          };
+          keys.onsuccess = () => {
+            database.close();
+            resolve(keys.result.some((key) => typeof key === 'string' && !key.startsWith('identity/') && !key.startsWith('sentinel/') && !key.startsWith('settled/')));
+          };
+        };
+      });
+      const replayIfReportsAreWaiting = () => {
+        void reportsAreWaiting().then((waiting) => {
+          if (waiting) startQueuedReportReplay();
+        });
+      };
+      window.addEventListener('online', replayIfReportsAreWaiting);
+      navigator.serviceWorker?.addEventListener('message', (event) => {
+        if (event.data?.type === 'flush-report-queue') replayIfReportsAreWaiting();
+      });
+      replayIfReportsAreWaiting();
     </script>
     <script>
       if ('serviceWorker' in navigator) {
