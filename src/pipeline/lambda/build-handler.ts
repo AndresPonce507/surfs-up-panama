@@ -16,7 +16,7 @@ import { runBuildOnce } from '../build';
 import { S3Store } from '../adapters/s3-store';
 import type { BuildOutcome, BuildStore, Clock } from '../ports';
 import type { SpotSeed } from '../../scoring/engine';
-import { deriveBuildLogLines } from './log-events';
+import { deriveBuildLogLines, PUBLISH_HANDOFF_FAILED_EVENT } from './log-events';
 import { bundledLaunchSeedPaths } from './bundled-launch-seed-paths';
 
 /** The Pacific launch policy is the only published region today
@@ -30,6 +30,15 @@ export type BuildOverrides = {
   /** Tests only: bypass the bundled launch-policy files entirely. */
   readonly spots?: readonly SpotSeed[];
   readonly probePublicManifest?: (build_id: string) => Promise<void>;
+  /** The only way into the Publisher: a port passed in, never a module this
+   * handler reaches for. Called after the public-manifest probe and after
+   * deriveBuildLogLines' lines are printed, exactly once, only when the
+   * build published. A rejection is caught and written down as an
+   * informational health.* line; it is never rethrown, never retried
+   * in-cycle, and never changes what runBuild answers -- build.success
+   * describes Build's own work, which really happened, so a publisher that
+   * hangs must not be able to erase it. */
+  readonly invokePublisher?: (invocation: { build_id: string; bundle_key: string }) => Promise<unknown>;
 };
 
 /** The driving port this Lambda exposes to tests, mirroring
@@ -53,7 +62,30 @@ export async function runBuild(overrides: BuildOverrides = {}): Promise<BuildOut
   for (const line of deriveBuildLogLines(outcome)) {
     console.log(JSON.stringify(line));
   }
+
+  if (outcome.published) await handOverToPublisher(outcome.build_id, overrides.invokePublisher);
+
   return outcome;
+}
+
+/** The bundle key this build cycle really wrote, composed from the same
+ * REGION_ID this file already passes to runBuildOnce -- never a second
+ * hand-typed literal. Matches src/pipeline/build.ts:212 exactly. */
+function publishedBundleKey(): string {
+  return `pub/v1/regions/${REGION_ID}/bundle.json`;
+}
+
+async function handOverToPublisher(build_id: string, invokePublisher: BuildOverrides['invokePublisher']): Promise<void> {
+  if (invokePublisher === undefined) return;
+  try {
+    await invokePublisher({ build_id, bundle_key: publishedBundleKey() });
+  } catch (error) {
+    console.log(JSON.stringify({
+      event: PUBLISH_HANDOFF_FAILED_EVENT,
+      build_id,
+      reason: error instanceof Error ? error.message : String(error),
+    }));
+  }
 }
 
 // Composition-root-only wiring. Not covered directly by a unit test, same as

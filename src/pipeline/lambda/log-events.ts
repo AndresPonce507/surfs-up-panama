@@ -33,6 +33,12 @@ export const STARTUP_REFUSED_EVENT = 'health.startup.refused';
  * a human reading it means the upstream contradicted itself. */
 export const ARCHIVE_REWRITE_REFUSED_EVENT = 'health.archive.rewrite_refused';
 export const CYCLE_FROZEN_EVENT = 'health.provider.cycle_frozen';
+/** Informational only, same reason as BUILD_REFUSED_EVENT: lets a human read
+ * why an hour's handover to the publisher could not be delivered, without
+ * paging anyone. The build itself already succeeded (this line is only ever
+ * printed after build.success), and the next hourly cycle republishes
+ * everything anyway because publication is additive-only. */
+export const PUBLISH_HANDOFF_FAILED_EVENT = 'health.publish.handoff_failed';
 export const UNCHANGED_CYCLE_EVENT = 'ingest.cycle_unchanged';
 
 export type LogLine = Readonly<Record<string, unknown>>;

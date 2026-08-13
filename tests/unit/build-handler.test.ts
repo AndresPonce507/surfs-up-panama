@@ -10,7 +10,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { runBuild } from '../../src/pipeline/lambda/build-handler';
-import { BUILD_REFUSED_EVENT, BUILD_SUCCESS_EVENT } from '../../src/pipeline/lambda/log-events';
+import { BUILD_REFUSED_EVENT, BUILD_SUCCESS_EVENT, PUBLISH_HANDOFF_FAILED_EVENT } from '../../src/pipeline/lambda/log-events';
 import type { BuildStore } from '../../src/pipeline/ports';
 import type { SpotSeed } from '../../src/scoring/engine';
 
@@ -141,5 +141,84 @@ describe('runBuild (Lambda Build composition root)', () => {
     expect(loggedLines.some((line) => line.event === BUILD_REFUSED_EVENT)).toBe(true);
 
     logSpy.mockRestore();
+  });
+
+  it('hands the publisher the build it just finished, with the composed bundle key, only after build.success is printed', async () => {
+    const store = new InMemoryBuildStore();
+    store.seed('playa-venao');
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const invokedAfter: string[] = [];
+    const invokePublisher = vi.fn(async () => {
+      invokedAfter.push(...logSpy.mock.calls.map(([line]) => (JSON.parse(String(line)) as { event: string }).event));
+      return { statusCode: 200 };
+    });
+
+    const outcome = await runBuild({
+      store,
+      spots: [seed('playa-venao', 'Playa Venao')],
+      clock: { now: () => new Date(AT) },
+      probePublicManifest: async () => {},
+      invokePublisher,
+    });
+
+    expect(outcome.published).toBe(true);
+    expect(invokePublisher).toHaveBeenCalledTimes(1);
+    expect(invokePublisher).toHaveBeenCalledWith({
+      build_id: outcome.published ? outcome.build_id : undefined,
+      bundle_key: 'pub/v1/regions/pa-pacific/bundle.json',
+    });
+    expect(invokedAfter).toEqual([BUILD_SUCCESS_EVENT]);
+
+    logSpy.mockRestore();
+  });
+
+  it('catches a rejecting publisher, writes down the failed handover with the rejection\'s own reason, and still answers that it published', async () => {
+    const store = new InMemoryBuildStore();
+    store.seed('playa-venao');
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const invokePublisher = vi.fn(async () => {
+      throw new Error('acceptance harness: the publisher could not be reached this hour');
+    });
+
+    const outcome = await runBuild({
+      store,
+      spots: [seed('playa-venao', 'Playa Venao')],
+      clock: { now: () => new Date(AT) },
+      probePublicManifest: async () => {},
+      invokePublisher,
+    });
+
+    expect(outcome.published).toBe(true);
+    expect(invokePublisher).toHaveBeenCalledTimes(1);
+
+    const loggedLines = logSpy.mock.calls.map(([line]) => JSON.parse(String(line)) as { event: string; build_id?: string; reason?: string });
+    expect(loggedLines).toEqual([
+      { event: BUILD_SUCCESS_EVENT, build_id: outcome.published ? outcome.build_id : undefined },
+      {
+        event: PUBLISH_HANDOFF_FAILED_EVENT,
+        build_id: outcome.published ? outcome.build_id : undefined,
+        reason: 'acceptance harness: the publisher could not be reached this hour',
+      },
+    ]);
+
+    logSpy.mockRestore();
+  });
+
+  it('never calls the publisher when the build refused', async () => {
+    const store = new InMemoryBuildStore(); // seeded with nothing
+    vi.spyOn(console, 'log').mockImplementation(() => {});
+    const invokePublisher = vi.fn(async () => ({ statusCode: 200 }));
+
+    const outcome = await runBuild({
+      store,
+      spots: [seed('playa-venao', 'Playa Venao')],
+      clock: { now: () => new Date(AT) },
+      invokePublisher,
+    });
+
+    expect(outcome.published).toBe(false);
+    expect(invokePublisher).not.toHaveBeenCalled();
+
+    vi.restoreAllMocks();
   });
 });
