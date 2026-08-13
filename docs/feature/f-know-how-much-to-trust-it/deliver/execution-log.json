@@ -22,6 +22,55 @@
       "s": "EXECUTED",
       "d": "PASS",
       "t": "2026-08-12T17:14:49Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: falsifiability probe 2026-08-13, confidence_reason carriage removed from summaries(); 2 scenarios failed, exit 1; all 20 reasons collapsed to the generic 'Los modelos coinciden solo en parte'; reverted, git diff clean",
+      "t": "2026-08-13T10:31:08Z"
+    },
+    {
+      "sid": "01-01",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: post-rebase re-run 2026-08-13, 2 scenarios / 44 steps passed, exit 0",
+      "t": "2026-08-13T10:31:08Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "RED_UNIT",
+      "s": "EXECUTED",
+      "d": "PASS: falsifiability probe 2026-08-13, usableMembers filter removed; 3 tests failed, exit 1; spread terms exploded to {5.503, 8.892, 27.040} vs {0.127, 0.419, 0.071} exactly as feature-delta D5 documents; reverted, git diff clean",
+      "t": "2026-08-13T10:31:08Z"
+    },
+    {
+      "sid": "01-02",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: post-rebase re-run 2026-08-13, tests/unit/model-agreement.test.ts 14 passed, exit 0",
+      "t": "2026-08-13T10:31:08Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: falsifiability probe 2026-08-13, summary min-height dropped from var(--tap) to 20px; 2 scenarios failed, exit 1; measured touch targets fell to 29px height on all 20 rows; reverted, git diff clean",
+      "t": "2026-08-13T10:31:08Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "GREEN",
+      "s": "EXECUTED",
+      "d": "PASS: post-rebase re-run 2026-08-13, 2 scenarios / 44 steps passed, exit 0",
+      "t": "2026-08-13T10:31:08Z"
+    },
+    {
+      "sid": "01-03",
+      "p": "COMMIT",
+      "s": "EXECUTED",
+      "d": "PASS: source-blind Vera verdict PASS 2026-08-13, recorded in the charter Session log (docs/product/expectations/f-know-how-much-to-trust-it/la-razon-nombra-en-cual-cosa-los-modelos-no-se-ponen-de-acuerdo.md). 80 disclosures opened, 40/40 reasons name concrete variables, contrast 6.92:1 light / 8.69:1 dark, 44x44px targets, zero overflow, zero digits. Two oracle cases UNOBSERVED for lack of an example in today's data (full-agreement phrasing; single-opinion 'no hay con que comparar'), both covered falsifiably by fixture-driven scenarios. TOOLING REFUSAL recorded verbatim, des-record-examine could not be used: \"Error: charter must be the contract path /Users/andres/psb-multimodel-trust/docs/feature/f-know-how-much-to-trust-it/deliver/docs/product/expectations/f-know-how-much-to-trust-it/la-razon-nombra-en-cual-cosa-los-modelos-no-se-ponen-de-acuerdo.md, not /Users/andres/psb-multimodel-trust/docs/product/expectations/f-know-how-much-to-trust-it/la-razon-nombra-en-cual-cosa-los-modelos-no-se-ponen-de-acuerdo.md\" - the shim resolves --charter under --project-dir, but this repo keeps charters in docs/product/expectations/, so no valid argument exists.",
+      "t": "2026-08-13T10:43:36Z"
     }
   ]
 }
