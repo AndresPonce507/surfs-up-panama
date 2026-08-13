@@ -331,20 +331,31 @@ async function openPublishedSweep(world: SurfaceWorld, theme: string): Promise<v
   const port = await unusedPort();
   const preview = spawn(join(projectRoot, 'node_modules/.bin/vite'), ['preview', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: fixture.root, env: credentialFreeEnvironment(), stdio: 'ignore' });
   const base = `http://127.0.0.1:${port}`;
-  await waitFor(base, preview);
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
-  await page.goto(`${base}/index.html`, { waitUntil: 'load' });
-  const homePalette = await paletteOf(page);
-  const audits: PublishedAudit[] = [];
-  for (const route of routes) {
-    await page.goto(`${base}${route.url}`, { waitUntil: 'load' });
-    audits.push(await auditPublishedPage(page, route, homePalette));
+  // A failure between the spawn above and the world registration below must
+  // not strand the preview or the browser: the After hook can only kill what
+  // reached publishedSweeps. A stranded child process keeps cucumber's event
+  // loop referenced after the summary, which reads as the whole suite hanging.
+  let browser: Browser | null = null;
+  try {
+    await waitFor(base, preview);
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
+    await page.goto(`${base}/index.html`, { waitUntil: 'load' });
+    const homePalette = await paletteOf(page);
+    const audits: PublishedAudit[] = [];
+    for (const route of routes) {
+      await page.goto(`${base}${route.url}`, { waitUntil: 'load' });
+      audits.push(await auditPublishedPage(page, route, homePalette));
+    }
+    const counts: Record<PublishedRouteKind, number> = { spot: 0, ayer: 0, manana: 0, reportar: 0, reportado: 0, unknown: 0, offline: 0 };
+    for (const route of routes) counts[route.kind] += 1;
+    publishedSweeps.set(world, { root: fixture.root, preview, browser, page, audits, counts });
+  } catch (error) {
+    await browser?.close().catch(() => undefined);
+    if (preview.exitCode === null) preview.kill('SIGTERM');
+    throw error;
   }
-  const counts: Record<PublishedRouteKind, number> = { spot: 0, ayer: 0, manana: 0, reportar: 0, reportado: 0, unknown: 0, offline: 0 };
-  for (const route of routes) counts[route.kind] += 1;
-  publishedSweeps.set(world, { root: fixture.root, preview, browser, page, audits, counts });
 }
 
 function assertedPublishedSweep(world: SurfaceWorld): PublishedSweep {
@@ -591,21 +602,31 @@ When('el surfista abre la página de Playa Venao y su recibo de ayer a {int} px,
   const port = await unusedPort();
   const preview = spawn(join(projectRoot, 'node_modules/.bin/vite'), ['preview', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: fixture.root, env: credentialFreeEnvironment(), stdio: 'ignore' });
   const base = `http://127.0.0.1:${port}`;
-  await waitFor(base, preview);
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width, height: 844 } });
-  await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
-  if (theme === 'oscuro') await page.addInitScript(() => localStorage.setItem('surfs-up-theme', 'dark'));
-  await page.goto(base, { waitUntil: 'load' });
-  const homePalette = await paletteOf(page);
-  const baseline = visibleBaseline(fixture.root);
-  const spotUrl = `${base}${playaVenaoRoute(fixture.root)}`;
-  const yesterdayUrl = `${base}${playaVenaoRoute(fixture.root, true)}`;
-  await page.goto(spotUrl, { waitUntil: 'load' });
-  const spotAudit = await audit(page, 'spot', homePalette, baseline);
-  await page.goto(yesterdayUrl, { waitUntil: 'load' });
-  const yesterdayAudit = await audit(page, 'ayer', homePalette, baseline);
-  opened.set(this, { root: fixture.root, spotUrl, yesterdayUrl, preview, browser, page, homePalette, baseline, spotAudit, yesterdayAudit });
+  // Same discipline as openPublishedSweep: a throw before opened.set (for
+  // example visibleBaseline refusing a missing receipt) must kill what this
+  // step already spawned, or the leaked child hangs the suite at exit.
+  let browser: Browser | null = null;
+  try {
+    await waitFor(base, preview);
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({ viewport: { width, height: 844 } });
+    await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
+    if (theme === 'oscuro') await page.addInitScript(() => localStorage.setItem('surfs-up-theme', 'dark'));
+    await page.goto(base, { waitUntil: 'load' });
+    const homePalette = await paletteOf(page);
+    const baseline = visibleBaseline(fixture.root);
+    const spotUrl = `${base}${playaVenaoRoute(fixture.root)}`;
+    const yesterdayUrl = `${base}${playaVenaoRoute(fixture.root, true)}`;
+    await page.goto(spotUrl, { waitUntil: 'load' });
+    const spotAudit = await audit(page, 'spot', homePalette, baseline);
+    await page.goto(yesterdayUrl, { waitUntil: 'load' });
+    const yesterdayAudit = await audit(page, 'ayer', homePalette, baseline);
+    opened.set(this, { root: fixture.root, spotUrl, yesterdayUrl, preview, browser, page, homePalette, baseline, spotAudit, yesterdayAudit });
+  } catch (error) {
+    await browser?.close().catch(() => undefined);
+    if (preview.exitCode === null) preview.kill('SIGTERM');
+    throw error;
+  }
 });
 
 Then('las dos páginas conservan el agua tropical y el margen de lectura bajo el sol', function (this: SurfaceWorld) {
@@ -643,32 +664,41 @@ When('el surfista abre la página que no existe y las dos pantallas de reportar 
   const port = await unusedPort();
   const preview = spawn(join(projectRoot, 'node_modules/.bin/vite'), ['preview', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], { cwd: fixture.root, env: credentialFreeEnvironment(), stdio: 'ignore' });
   const base = `http://127.0.0.1:${port}`;
-  await waitFor(base, preview);
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
-  await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
-  if (theme === 'oscuro') await page.addInitScript(() => localStorage.setItem('surfs-up-theme', 'dark'));
-  await page.goto(base, { waitUntil: 'load' });
-  const homePalette = await paletteOf(page);
-  const baseline = visibleBaseline(fixture.root);
-  const forecastValues = [...new Set([...Object.values(baseline.today), ...Object.values(baseline.tomorrow)].filter((value) => value.length > 1))];
-  const unknownUrl = `${base}/404.html`;
-  const captureUrl = `${base}/spots/playa-venao/reportar.html`;
-  const revealUrl = `${base}/spots/playa-venao/reportado.html`;
-  await page.goto(unknownUrl, { waitUntil: 'load' });
-  await placeForecastOracle(page, forecastValues);
-  const unknownAudit = await auditReportSurface(page, 'unknown', homePalette);
-  await page.goto(captureUrl, { waitUntil: 'load' });
-  await placeForecastOracle(page, forecastValues);
-  const captureAudit = await auditReportSurface(page, 'capture', homePalette);
-  const reportStateResult = await reportState(page);
-  await page.goto(revealUrl, { waitUntil: 'load' });
-  await placeForecastOracle(page, forecastValues);
-  const revealAudit = await auditReportSurface(page, 'reveal', homePalette);
-  openedReports.set(this, {
-    unknownUrl, captureUrl, revealUrl, preview, browser, page,
-    unknownAudit, captureAudit, revealAudit, reportState: reportStateResult,
-  });
+  // Same discipline as openPublishedSweep: a throw before openedReports.set
+  // (visibleBaseline again) must kill what this step already spawned.
+  let browser: Browser | null = null;
+  try {
+    await waitFor(base, preview);
+    browser = await chromium.launch({ headless: true });
+    const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await page.emulateMedia({ colorScheme: theme === 'oscuro' ? 'dark' : 'light', reducedMotion: 'reduce' });
+    if (theme === 'oscuro') await page.addInitScript(() => localStorage.setItem('surfs-up-theme', 'dark'));
+    await page.goto(base, { waitUntil: 'load' });
+    const homePalette = await paletteOf(page);
+    const baseline = visibleBaseline(fixture.root);
+    const forecastValues = [...new Set([...Object.values(baseline.today), ...Object.values(baseline.tomorrow)].filter((value) => value.length > 1))];
+    const unknownUrl = `${base}/404.html`;
+    const captureUrl = `${base}/spots/playa-venao/reportar.html`;
+    const revealUrl = `${base}/spots/playa-venao/reportado.html`;
+    await page.goto(unknownUrl, { waitUntil: 'load' });
+    await placeForecastOracle(page, forecastValues);
+    const unknownAudit = await auditReportSurface(page, 'unknown', homePalette);
+    await page.goto(captureUrl, { waitUntil: 'load' });
+    await placeForecastOracle(page, forecastValues);
+    const captureAudit = await auditReportSurface(page, 'capture', homePalette);
+    const reportStateResult = await reportState(page);
+    await page.goto(revealUrl, { waitUntil: 'load' });
+    await placeForecastOracle(page, forecastValues);
+    const revealAudit = await auditReportSurface(page, 'reveal', homePalette);
+    openedReports.set(this, {
+      unknownUrl, captureUrl, revealUrl, preview, browser, page,
+      unknownAudit, captureAudit, revealAudit, reportState: reportStateResult,
+    });
+  } catch (error) {
+    await browser?.close().catch(() => undefined);
+    if (preview.exitCode === null) preview.kill('SIGTERM');
+    throw error;
+  }
 });
 
 Then('las tres pantallas conservan el agua tropical, la lectura bajo el sol y una llegada honesta', function (this: SurfaceWorld) {

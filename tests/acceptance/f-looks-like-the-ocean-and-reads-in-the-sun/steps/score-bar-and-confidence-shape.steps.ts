@@ -109,9 +109,25 @@ async function openAndAudit(world: RankingWorld): Promise<void> {
     stdio: 'ignore',
   });
   const baseUrl = `http://127.0.0.1:${port}`;
-  await waitFor(baseUrl, preview);
-  const browser = await chromium.launch({ headless: true });
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  // A failure between the spawn above and opened.set below must not strand
+  // the preview or the browser: a stranded child process keeps cucumber's
+  // event loop referenced after the summary and hangs the whole suite.
+  let browser: Browser;
+  try {
+    await waitFor(baseUrl, preview);
+    browser = await chromium.launch({ headless: true });
+  } catch (error) {
+    if (preview.exitCode === null) preview.kill('SIGTERM');
+    throw error;
+  }
+  let page: Page;
+  try {
+    page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  } catch (error) {
+    await browser.close().catch(() => undefined);
+    if (preview.exitCode === null) preview.kill('SIGTERM');
+    throw error;
+  }
   opened.set(world, { browser, preview, page, baseUrl });
 
   const allAudits: RouteAudit[] = [];
