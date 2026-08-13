@@ -264,6 +264,62 @@ Carried here as the motivating evidence for later slices, not treated as slice-0
   names only Hoy and Mañana, so this is out of its scope, but it is a genuine hole in the feature's
   promise on the one page a surfer lands on from a shared link.
 
+## Wave: DELIVER / [REF] W4 scope amendment for slice-04, recorded 2026-08-13
+
+This section executes wave decision W4 (below): the recorded, dated scope amendment slice-04 owes
+before any of its code is written. It states exactly which paths enter the approved
+`implementation_scope`, why slice-04 genuinely needs each one, and what stays excluded. The
+matching mechanical edit to `deliver/roadmap.json`'s `excluded_patterns` rides this same commit,
+so the scope change is never a silent config edit.
+
+**Why an amendment at all.** The approved scope (`src/scoring/`, `src/data/`, `src/components/`)
+was drawn for slice-01, whose rationale was "the producer already publishes everything required".
+Slice-04's entire value is producer-side: a second, independent wave source
+(raw NOAA `gfswave` GRIB2, US public domain) behind the registry seam. There is no honest way to
+ship it inside the reading-surface directories. W4 predicted exactly this and required the
+amendment to be recorded at this slice's JIT DISTILL rather than laundered through a config edit.
+
+**Paths added, each with its need:**
+
+1. `src/pipeline/adapters/` — the second-vendor adapter and the source registry declaration.
+   `adr-openmeteo-vs-raw-grib2.md` decision 2 makes adding a provider "a registry edit plus one
+   adapter", and both artifacts live here. Prior art is mined from `build/f2-trust`
+   (`noaa-gfswave-grib2.ts`, 304 lines; `tests/unit/noaa-gfswave-source.test.ts`; a 2,652-byte
+   captured grib_filter response with a reproduction receipt, sha256 `6997a999…`), but it was
+   written against an older port shape and must be re-fitted to the current
+   `fetchWavePayload`/`parseWaveMembers` split, not re-imported wholesale — W4's own warning is
+   that mined prior art can silently re-import a rejected architecture. The store adapters in
+   this directory (`filesystem-store.ts`, `s3-store.ts`) may be touched only insofar as the raw
+   forensic archive must learn to carry a binary verbatim payload.
+2. `src/pipeline/ports.ts` — types-only seam edit, only if needed: `ReceivedSourcePayload.verbatim`
+   is a `string`, and grib_filter returns binary GRIB2 that cannot ride a JS string honestly.
+   Condition: only the payload type may widen; no port method changes meaning.
+3. `src/pipeline/ingest.ts` — the source loop only: `IngestDeps` composes exactly one
+   `deps.source`, and per-source prediction-log rows from a second vendor plus the honest
+   dark-source shrink require the core to iterate declared sources. Condition: the archive key
+   grammar, write-once rules and cycle attribution stay untouched.
+4. `src/pipeline/raw-archive.ts` — only if the forensic archive must carry a binary verbatim (its
+   key grammar hardcodes `.json.gz`). The alternative is a JSON capture envelope (base64 body +
+   sha256), the shape the existing fixture receipt already uses; if that path is taken this file
+   is not touched.
+5. `src/pipeline/capture-cli.ts` and `src/pipeline/lambda/fetch-handler.ts` — the composition
+   roots where real runs compose their sources. The registry must be declared where production
+   composes, so the adapter is a real `ForecastSource` and never a parser reachable only from
+   tests (the prior-art adapter's own header states this bar).
+
+**Stays excluded, restated so the carve-out is visible:** `src/pipeline/build.ts` (the producer
+already lists every `src=` partition and consumers read nothing provider-shaped, ADR decision 2;
+law L9 continues to hold because nothing here becomes readable by `combine()`),
+`src/pipeline/static-publication.ts`, `src/pipeline/run-build-cli.ts`,
+`src/pipeline/lambda/build-handler.ts` (the Bridge lane's contended file — its HIGH-1 fix owns it),
+`src/pipeline/lambda/bundled-launch-seed-paths.ts`, `src/pipeline/lambda/log-events.ts`,
+`src/publish/**`, `src/i18n/**`, `src/share/**`, `src/report/**`, `src/pages/**`,
+`src/layouts/**`, `infra/**`, `public/**`, `scripts/**`.
+
+**Deploy note.** Nothing in this amendment authorizes a deploy. The fetch handler's composition
+change lands as code; `SurfsUpPanamaIngest` redeployment remains a human-run step outside this
+lane, exactly as the archive-key change of 2026-08-13 was handled.
+
 ## Wave: DELIVER / [REF] Wave decisions
 
 | # | Decision | Made by | Rationale |

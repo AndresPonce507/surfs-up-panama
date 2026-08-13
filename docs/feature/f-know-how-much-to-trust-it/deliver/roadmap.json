@@ -162,14 +162,26 @@
     "source_directories": [
       "src/scoring/",
       "src/data/",
-      "src/components/"
+      "src/components/",
+      "src/pipeline/adapters/",
+      "src/pipeline/ports.ts",
+      "src/pipeline/ingest.ts",
+      "src/pipeline/raw-archive.ts",
+      "src/pipeline/capture-cli.ts",
+      "src/pipeline/lambda/fetch-handler.ts"
     ],
     "test_directories": [
       "tests/unit/",
       "tests/acceptance/f-know-how-much-to-trust-it/"
     ],
+    "scope_amendment": "W4 executed 2026-08-13: the six src/pipeline paths above enter scope for slice-04 only, under the conditions recorded in feature-delta.md ('W4 scope amendment for slice-04'). src/pipeline/** was previously excluded wholesale; the exclusion list below now names the pipeline files that remain out of scope.",
     "excluded_patterns": [
-      "src/pipeline/**",
+      "src/pipeline/build.ts",
+      "src/pipeline/static-publication.ts",
+      "src/pipeline/run-build-cli.ts",
+      "src/pipeline/lambda/build-handler.ts",
+      "src/pipeline/lambda/bundled-launch-seed-paths.ts",
+      "src/pipeline/lambda/log-events.ts",
       "src/publish/**",
       "src/i18n/**",
       "src/share/**",
