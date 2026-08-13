@@ -99,6 +99,13 @@
       "s": "EXECUTED",
       "d": "PASS: slice-03 implemented at 56ad4d3. 5 scenarios / 123 steps green; vitest 623/623; tsc exit 0; build exit 0 with dist inspected; ci:local --fast 11 passed / 0 failed / 0 skipped exit 0. Two falsifiability probes reverted clean: removing the zero-signal guard read 'high' where it must read low; disabling the flag-off early return made 4 of 5 fail with the three variables named again across all 40 published rows.",
       "t": "2026-08-13T11:29:59Z"
+    },
+    {
+      "sid": "04-01",
+      "p": "RED_ACCEPTANCE",
+      "s": "EXECUTED",
+      "d": "PASS: slice-04 JIT DISTILL contract red for the right reason 2026-08-13. 5 scenarios / 5 failed, exit 1 (log .ci-local-logs/slice04-red-acceptance.log): every failure reads 'el registro de fuentes todavia no existe en src/pipeline/adapters/: Cannot find module .../source-registry', never an import crash; tsc --noEmit exit 0 through the computed dynamic import. Fixtures are real same-cycle captures of both vendors (NOAA grib_filter f000..f048 + Open-Meteo marine, 2026-08-13 00Z, receipts with sha256 beside the bytes).",
+      "t": "2026-08-13T12:57:13Z"
     }
   ]
 }
