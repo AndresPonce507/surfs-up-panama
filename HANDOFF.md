@@ -129,6 +129,19 @@ This section supersedes the legacy notes below. They are retained only as histor
 - This supersedes the earlier `notify.mjs` packaging claim. Redeploy `SurfsUpPanamaWrite`; then
   the next hourly run must log a `push_notify_run` result before Notify is called healthy.
 
+## Full local gate triage (2026-08-14)
+
+- The default local gate no longer hangs. It completed in 12m30s on the current integration tree:
+  **328 passed, 48 skipped, 57 failed** acceptance scenarios, plus one browser contrast audit.
+  Fast CI is separately green at **11 passed / 0 failed / 0 skipped**.
+- The 57 failures are concentrated in the design/browser acceptance corpus: 29 visual/palette/
+  contrast cases, 10 confidence-disclosure cases, 11 Push-screen/return-state/follow-up cases,
+  and 7 isolated keystone/bridge/share cases. The bridge case asserts an obsolete upload-key
+  set, while a Push page-evaluation case throws `ReferenceError: __name is not defined`.
+- This is a red shared release gate, not evidence against the narrowly tested Notify repair.
+  Repairing those product and test-harness failures is a separate integration lane; do not label
+  the full suite green or bypass it for ordinary feature work.
+
 ## Offline report replay correction (2026-08-13)
 
 - `997f2c9` removed the returned-signal queue replay without a recorded decision. The regression is
