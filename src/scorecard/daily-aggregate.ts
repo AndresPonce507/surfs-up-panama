@@ -34,6 +34,17 @@ const aggregateKey = (residual: Residual, day: string): string =>
 const aggregateSortKey = (aggregate: DailyAggregate): string =>
   [aggregate.spot_id, aggregate.source, aggregate.lead_bucket, aggregate.variable, aggregate.day].join('|');
 
+const residualSortKey = (residual: Residual): string =>
+  [
+    residual.spot_id,
+    residual.source,
+    residual.lead_bucket,
+    residual.variable,
+    residual.paired_valid_ts,
+    residual.device_id,
+    residual.err.toString(),
+  ].join('|');
+
 const initialAggregate = (residual: Residual, day: string): AccumulatedDailyAggregate => ({
   spot_id: residual.spot_id,
   source: residual.source,
@@ -73,7 +84,7 @@ const publicAggregate = (aggregate: AccumulatedDailyAggregate): DailyAggregate =
 
 /** Adds each residual once to its immutable (spot, source, lead, variable, day) aggregate. */
 export const aggregateDaily = (residuals: readonly Residual[]): readonly DailyAggregate[] => {
-  const aggregates = residuals.reduce((current, residual) => {
+  const aggregates = [...residuals].sort((left, right) => residualSortKey(left).localeCompare(residualSortKey(right))).reduce((current, residual) => {
     const day = dayOf(residual.paired_valid_ts);
     const key = aggregateKey(residual, day);
     const next = new Map(current);
