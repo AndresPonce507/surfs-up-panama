@@ -1427,11 +1427,17 @@ Then('la publicación señala una sola ausencia heredada por día sin confundirl
     `${legacy.spotId}:today`,
     `${legacy.spotId}:tomorrow`,
   ]);
-  const actual = events.map((entry) => `${String(entry.spot_id)}:${String(entry.day)}`);
+  // Identity, not line count: the same spot-day is rendered once per locale
+  // (the /en/ tree mounts SpotDetail too), so the fact recorded is one gap
+  // per spot-day, not one line per document. Same convention as the
+  // breakdown-event counter below, which was written after the en tree
+  // landed; this counter predates it and counted raw lines, which failed
+  // every build since the en tree with "4 ausencias, no 2".
+  const actual = [...new Set(events.map((entry) => `${String(entry.spot_id)}:${String(entry.day)}`))];
   const findings: string[] = [];
-  if (events.length !== expected.size) findings.push(`la publicación señaló ${events.length} ausencia(s) heredada(s), no ${expected.size}`);
+  if (actual.length !== expected.size) findings.push(`la publicación señaló ${actual.length} ausencia(s) heredada(s), no ${expected.size}`);
   for (const key of expected) {
-    if (actual.filter((candidate) => candidate === key).length !== 1) findings.push(`falta o se repite la ausencia heredada ${key}`);
+    if (!actual.includes(key)) findings.push(`falta la ausencia heredada ${key}`);
   }
   for (const entry of events) {
     if (typeof entry.published_at !== 'string' || entry.published_at.length === 0) {
