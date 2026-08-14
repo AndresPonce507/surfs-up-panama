@@ -290,26 +290,13 @@ const hasMap = (mapManifest.spots as Record<string, unknown>)[spotId] !== undefi
   </p>
 </Base>
 
-<script is:inline>
-(() => {
-  // Same gating as home's reveal script: reduced motion sees the finished
-  // page immediately, and a browser without IntersectionObserver never gets
-  // the hidden-until-revealed state, because that state only exists under
-  // the sd-js class this script adds. Without JS everything is fully
-  // visible by default.
-  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  if (!('IntersectionObserver' in window)) return;
-  const root = document.documentElement;
-  root.classList.add('sd-js');
-  const cards = [...document.querySelectorAll('[data-sd="reveal"]')];
-  cards.forEach((card, i) => card.style.setProperty('--sd-d', `${(i % 2) * 90 + Math.floor(i / 2) * 60}ms`));
-  const io = new IntersectionObserver((entries) => entries.forEach((entry) => {
-    if (entry.isIntersecting) { entry.target.classList.add('sd-in'); io.unobserve(entry.target); }
-  }), { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
-  cards.forEach((card) => io.observe(card));
-  requestAnimationFrame(() => root.classList.add('sd-load'));
-})();
-</script>
+{/* NO reveal script on this route, on purpose. The f-see-what-killed-it
+    oracle refuses ANY script on a spot document matching lazy-load or map
+    signatures (weakest-link-callout.steps.ts "el mapa no le suma peso"),
+    because this page must read on terrible signal with zero script weight.
+    All motion below is pure CSS: entry keyframes for the above-the-fold
+    cards and scroll-driven view() timelines for the rest, so a browser
+    without scroll timelines simply shows the finished page. */}
 
 <style>
   /* ============ the water, spot edition ============
@@ -430,7 +417,11 @@ const hasMap = (mapManifest.spots as Record<string, unknown>)[spotId] !== undefi
     padding: var(--sp-5) var(--sp-4);
     border: 1px solid var(--hairline);
     border-radius: var(--r-l);
-    background: var(--surface);
+    /* NO background here, on purpose: components.css's `section` rule
+       already paints it --surface, and the palette acceptance fixture
+       sabotages `section[data-day]` at (0,1,1) specificity to prove the
+       audit rejects a repainted card. A scoped background at (0,2,0) made
+       the sabotage inert and the scenario failed at its Given. */
     box-shadow: 0 24px 60px -18px var(--sd-card-shadow);
   }
 
@@ -712,8 +703,8 @@ const hasMap = (mapManifest.spots as Record<string, unknown>)[spotId] !== undefi
     font-weight: 700;
     line-height: var(--leading-snug);
   }
-  .spot-share :global(.share-controls) { margin-top: var(--sp-3); }
-  .spot-share :global(.copy-control) { margin-top: var(--sp-2); }
+  /* the two share-spacing rules live in the is:global block at the end of
+     this file, not here: the palette fixture requires that block to exist */
   .spot-share :global(.share-whatsapp) {
     border-radius: var(--r-m);
     font-weight: 700;
@@ -753,12 +744,16 @@ const hasMap = (mapManifest.spots as Record<string, unknown>)[spotId] !== undefi
     .spot-share :global(.share-controls) { grid-column: auto; }
   }
 
-  /* ============ motion, all of it opt-in ============
-     Every animation and transition lives inside this media block, and the
-     reveal JS is gated by the same matchMedia, so reduced motion computes
-     zero transition durations everywhere (base.css's kill switch is the
-     second lock on the same door). Default state without JS: everything
-     fully visible, every fill at full width. */
+  /* ============ motion, all of it opt-in, all of it script-free ============
+     Every animation lives inside this media block, so reduced motion never
+     sees any of it (base.css's kill switch is the second lock on the same
+     door). There is deliberately NO script on this route (see the note above
+     the style block), so entry motion is plain keyframes for the cards that
+     load in view, and the below-band cards reveal on a CSS scroll timeline
+     under @supports; a browser without scroll timelines simply shows the
+     finished page. Every keyframe animates FROM a hidden state TO the
+     element's own resting values, so the static truth never depends on
+     motion support. */
   @media (prefers-reduced-motion: no-preference) {
     .sd-swell { animation: sd-roll var(--sd-v, 22s) linear infinite; }
     .sd-s1 { --sd-v: 26s; }
@@ -766,59 +761,56 @@ const hasMap = (mapManifest.spots as Record<string, unknown>)[spotId] !== undefi
     .sd-s3 { --sd-v: 12s; }
     @keyframes sd-roll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 
-    /* hero: fade-rise on load, then the gentle buoy float (hero only) */
-    :global(.sd-js:not(.sd-load)) .sd-ident,
-    :global(.sd-js:not(.sd-load)) .sd-hero {
-      opacity: 0;
-      transform: translateY(18px);
-    }
-    .sd-ident {
-      transition: opacity .8s ease, transform .8s cubic-bezier(.22, .9, .24, 1);
-    }
+    @keyframes sd-enter { from { opacity: 0; transform: translateY(18px); } }
+    @keyframes sd-pop { from { opacity: 0; transform: scale(.92); } }
+    @keyframes sd-grow { from { transform: scaleX(0); } }
+
+    /* above the fold: fade-rise on load, then the gentle buoy (hero only).
+       The buoy sits LAST in the list so its transform wins once it starts. */
+    .sd-ident { animation: sd-enter .8s cubic-bezier(.22, .9, .24, 1) both; }
     .sd-hero {
-      transition: opacity .8s ease .1s, transform .8s cubic-bezier(.22, .9, .24, 1) .1s;
-      animation: sd-buoy 9s ease-in-out 2.2s infinite;
+      animation:
+        sd-enter .8s cubic-bezier(.22, .9, .24, 1) .1s both,
+        sd-buoy 9s ease-in-out 2.2s infinite;
     }
     @keyframes sd-buoy { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
-    :global(.sd-js:not(.sd-load)) .sd-hero .sd-ring {
-      opacity: 0;
-      transform: scale(.92);
-    }
-    .sd-hero .sd-ring {
-      transition: opacity .7s ease .15s, transform .7s cubic-bezier(.22, .9, .24, 1) .15s;
-    }
-    :global(.sd-js:not(.sd-load)) .sd-hero :global(.fill),
-    :global(.sd-js:not(.sd-load)) .sd-hero .sd-dl-track i { transform: scaleX(0); }
+    .sd-hero .sd-ring { animation: sd-pop .7s cubic-bezier(.22, .9, .24, 1) .15s both; }
     .sd-hero :global(.fill),
     .sd-hero .sd-dl-track i {
       transform-origin: left;
-      transition: transform .9s cubic-bezier(.22, .9, .24, 1) .25s;
+      animation: sd-grow .9s cubic-bezier(.22, .9, .24, 1) .25s both;
     }
 
-    /* below-band cards: staggered fade-rise on scroll (delays set by the
-       inline script through --sd-d); their fills draw in with them */
-    :global(.sd-js) [data-sd='reveal']:not(.sd-in) {
-      opacity: 0;
-      transform: translateY(24px);
-    }
-    [data-sd='reveal'] {
-      transition: opacity .65s ease var(--sd-d, 0ms), transform .65s cubic-bezier(.22, .9, .24, 1) var(--sd-d, 0ms);
-    }
-    :global(.sd-js) [data-sd='reveal']:not(.sd-in) :global(.fill),
-    :global(.sd-js) [data-sd='reveal']:not(.sd-in) .sd-dl-track i { transform: scaleX(0); }
-    [data-sd='reveal'] :global(.fill),
-    [data-sd='reveal'] .sd-dl-track i {
-      transform-origin: left;
-      transition: transform .9s cubic-bezier(.22, .9, .24, 1) calc(var(--sd-d, 0ms) + 120ms);
+    /* below the band: reveal as each card scrolls into view, no script.
+       A card already in view at load has passed its entry range and simply
+       sits at its finished state. */
+    @supports (animation-timeline: view()) {
+      [data-sd='reveal'] {
+        animation: sd-enter both cubic-bezier(.22, .9, .24, 1);
+        animation-timeline: view();
+        animation-range: entry 5% entry 55%;
+      }
+      [data-sd='reveal'] :global(.fill),
+      [data-sd='reveal'] .sd-dl-track i {
+        transform-origin: left;
+        animation: sd-grow both cubic-bezier(.22, .9, .24, 1);
+        animation-timeline: view();
+        animation-range: entry 10% entry 80%;
+      }
     }
 
     /* hover lift on the quieter cards, pointer devices only; the hero keeps
-       its buoy instead of a competing lift */
+       its buoy instead of a competing lift. The lift rides the separate
+       `translate` property because a finished view() animation keeps owning
+       `transform` (fill-mode both), and an animation always beats a
+       transition on the same property. */
     @media (hover: hover) and (pointer: fine) {
+      .sd-card {
+        transition: translate .3s cubic-bezier(.2, .9, .25, 1.2), box-shadow .3s;
+      }
       .sd-card:hover {
-        transform: translateY(-2px);
+        translate: 0 -2px;
         box-shadow: var(--shadow-2);
-        transition: transform .3s cubic-bezier(.2, .9, .25, 1.2), box-shadow .3s;
       }
     }
   }
@@ -883,5 +875,22 @@ const hasMap = (mapManifest.spots as Record<string, unknown>)[spotId] !== undefi
     .sd-below :global(section.avisos-control) { grid-area: avisos; }
     .sd-card { padding: var(--sp-5); }
     .sd-map { padding: var(--sp-4); }
+  }
+</style>
+
+<style is:global>
+  /* This block is load-bearing beyond its two rules: the palette acceptance
+     fixture (palette-across-every-surface.steps.ts, wrong-card-palette mode)
+     injects its sabotage rule at the top of SpotDetail's is:global block to
+     prove a repainted card is rejected before publish. Removing the block
+     breaks that scenario at its Given. The rules themselves are the share
+     card's child-component spacing, global because the components they reach
+     carry their own scope hashes. */
+  .spot-share .share-controls {
+    margin-top: var(--sp-3);
+  }
+
+  .spot-share .copy-control {
+    margin-top: var(--sp-2);
   }
 </style>

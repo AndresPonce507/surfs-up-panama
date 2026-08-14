@@ -117,10 +117,14 @@ function cellsFor(summary: DaySummary): RowCells | undefined {
 
 const worthCount = daySpots.filter((s) => s.score_q >= GLANCE_TAIL_UNDER).length;
 const tailCount = daySpots.length - worthCount;
-// Computed, never hand-written: the counts move with every publication.
+// Computed, never hand-written: the counts move with every publication. The
+// day word follows the rendered day: the tomorrow route said "Hoy valen la
+// pena" about tomorrow's numbers, the same identical-page family of bug as
+// the shared header was.
+const dayWordEs = day === 0 ? 'hoy' : 'mañana';
 const glanceSub = tailCount === 0
-  ? `Los ${daySpots.length} spots del Pacífico, ordenados por el puntaje de hoy.`
-  : `${daySpots.length} spots del Pacífico, ordenados. Hoy valen la pena ${worthCount}; los otros ${tailCount} están casi planos y lo decimos.`;
+  ? `Los ${daySpots.length} spots del Pacífico, ordenados por el puntaje de ${dayWordEs}.`
+  : `${daySpots.length} spots del Pacífico, ordenados. ${day === 0 ? 'Hoy' : 'Mañana'} valen la pena ${worthCount}; los otros ${tailCount} están casi planos y lo decimos.`;
 ---
 
 <Base
@@ -309,6 +313,25 @@ const glanceSub = tailCount === 0
   /* content over the band */
   .dg-intro, h1, .dg-stamp, p[data-stale-notice], nav, ol.ranked, footer, .home-primary {
     position: relative;
+  }
+  /* The reading block wears the same dark well as the day-tab pill. Not
+     decoration: the sea band behind it is a SIBLING, invisible to every
+     ancestor-walking contrast audit, so the white title measured 1.07:1
+     against the page --bg and failed the palette sweep on manana and
+     en/tomorrow (the sweep skips only index). An opaque well on the block's
+     own box is what the walkers, and a phone in the sun, actually see.
+     Same token pair as the segmented control; one system. */
+  .dg-intro {
+    margin-top: calc(var(--tap) + var(--sp-2));
+    padding: var(--sp-4);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--r-l);
+    background: var(--dg-seg-bg);
+  }
+  .dg-intro h1 {
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
   }
   h1 {
     color: var(--hero-ink);
@@ -599,7 +622,9 @@ const glanceSub = tailCount === 0
       float: left;
       width: 46%;
       margin-right: var(--sp-6);
-      padding-top: var(--sp-7);
+      margin-top: var(--sp-7);
+      padding: var(--sp-5);
+      border-radius: 24px;
     }
     .dg-intro h1 { padding-top: 0; }
     /* every row below the card clears the float, so a short title block can
