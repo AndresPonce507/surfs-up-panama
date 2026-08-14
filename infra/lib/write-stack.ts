@@ -416,15 +416,16 @@ export class WriteStack extends Stack {
       resources: [writeStore.tableArn],
     }));
     // The sender reads one current published bundle, never a report or call
-    // log, and cannot mutate the site bucket.
+    // log, and cannot mutate the site bucket. Build calls this its local
+    // `pub/` output, but S3Store strips that root before upload.
     notifyFn.addToRolePolicy(new iam.PolicyStatement({
       actions: ['s3:GetObject'],
-      resources: [siteBucket.arnForObjects('pub/v1/regions/pa-pacific/bundle.json')],
+      resources: [siteBucket.arnForObjects('v1/regions/pa-pacific/bundle.json')],
     }));
     notifyFn.addToRolePolicy(new iam.PolicyStatement({
       actions: ['s3:ListBucket'],
       resources: [siteBucket.bucketArn],
-      conditions: { StringLike: { 's3:prefix': ['pub/v1/regions/pa-pacific/*'] } },
+      conditions: { StringLike: { 's3:prefix': ['v1/regions/pa-pacific/*'] } },
     }));
     notifyFn.addToRolePolicy(new iam.PolicyStatement({
       actions: ['ssm:GetParameter'],

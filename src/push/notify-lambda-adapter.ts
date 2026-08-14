@@ -44,7 +44,9 @@ async function createComposition() {
 
   const [keyParameter, bundleObject] = await Promise.all([
     send(new GetParameterCommand({ Name: requiredEnvironment('VAPID_PRIVATE_KEY_PARAMETER'), WithDecryption: true }), ssmClient),
-    send(new GetObjectCommand({ Bucket: requiredEnvironment('SITE_BUCKET'), Key: 'pub/v1/regions/pa-pacific/bundle.json' }), s3Client),
+    // Build's `pub/` root is local only. S3Store maps the published bundle
+    // to this physical bucket key before Notify reads it with the raw SDK.
+    send(new GetObjectCommand({ Bucket: requiredEnvironment('SITE_BUCKET'), Key: 'v1/regions/pa-pacific/bundle.json' }), s3Client),
   ]);
   const spots = parseSpots(requiredEnvironment('PUSH_SPOTS_JSON'));
   const scores = parseScores(await objectBody((bundleObject as Record<string, unknown>).Body));

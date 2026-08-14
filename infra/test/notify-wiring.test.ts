@@ -16,7 +16,7 @@
 // request rate."
 
 import { Template } from 'aws-cdk-lib/assertions';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -35,6 +35,7 @@ const resources = Object.entries(template.Resources ?? {});
 // This guards the same fromAsset staging-cache collision that previously put
 // report-mint.mjs in Notify's package while the runtime sought notify.handler.
 const cloudAssembly = app.synth();
+const notifyAdapterSource = readFileSync(resolve(__dirname, '../../src/push/notify-lambda-adapter.ts'), 'utf8');
 
 function resourcesOfType(type: string): readonly (readonly [string, Resource])[] {
   return resources.filter(([, resource]) => resource.Type === type);
@@ -154,8 +155,17 @@ describe('the scheduled notify job', () => {
     const actions = actionSet(statements);
     expect(actions).toEqual(expect.arrayContaining(['s3:GetObject', 's3:ListBucket']));
     const rendered = JSON.stringify(statements);
-    expect(rendered).toContain(`${siteBucketName}/pub/v1/regions/pa-pacific/bundle.json`);
+    expect(rendered).toContain(`${siteBucketName}/v1/regions/pa-pacific/bundle.json`);
+    expect(rendered).not.toContain('pub/v1/regions/pa-pacific');
     expect(rendered).not.toContain('log/calls');
+  });
+
+  it('uses the physical bundle key when the Notify runtime reads S3 directly', () => {
+    // Build names this its local `pub/` output, but S3Store strips that root
+    // before upload. Notify uses the SDK directly, so it must use the bucket
+    // key rather than the local pipeline key.
+    expect(notifyAdapterSource).toContain("Key: 'v1/regions/pa-pacific/bundle.json'");
+    expect(notifyAdapterSource).not.toContain("Key: 'pub/v1/regions/pa-pacific/bundle.json'");
   });
 
   it('stays out of the breaker at RUNTIME too, not only in the IAM policy', () => {

@@ -105,6 +105,17 @@ This section supersedes the legacy notes below. They are retained only as histor
   is intentionally denied `ssm:GetParameter`, so it cannot attest to that secret's presence or
   value.
 
+## Notify published-bundle key correction (2026-08-14)
+
+- The repaired Notify package still read Build's pipeline-local
+  `pub/v1/regions/pa-pacific/bundle.json` directly from S3. That object does not exist in the
+  live bucket: `S3Store` maps it to physical
+  `v1/regions/pa-pacific/bundle.json` before upload. The former key was verified absent and the
+  physical key present with read-only production checks.
+- Notify and its least-privilege IAM policy now use the physical `v1/` key. The regression test
+  proves both the raw-SDK runtime key and synthesized IAM policy cannot drift back to `pub/`.
+  Redeploy `SurfsUpPanamaWrite` before treating the next `:25 UTC` Notify execution as valid.
+
 ## Offline report replay correction (2026-08-13)
 
 - `997f2c9` removed the returned-signal queue replay without a recorded decision. The regression is
