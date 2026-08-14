@@ -295,7 +295,7 @@ When(
 When('el surfista toca la razón de confianza de cada fila', async function (this: PipelineWorld) {
   const world = slice07World(this);
   const page = requiredPage(world);
-  const rows = page.locator('ol.ranked > li');
+  const rows = page.locator('ol.ranked > li:not([role="presentation"])');
   const count = await rows.count();
   const observed: ObservedRow[] = [];
   for (let index = 0; index < count; index += 1) {
@@ -338,7 +338,7 @@ Then(
   async function (this: PipelineWorld) {
     const world = slice07World(this);
     const page = requiredPage(world);
-    const rows = page.locator('ol.ranked > li');
+    const rows = page.locator('ol.ranked > li:not([role="presentation"])');
     const count = await rows.count();
     const findings: string[] = [];
     if (count === 0) findings.push('la página no tiene ni una fila');

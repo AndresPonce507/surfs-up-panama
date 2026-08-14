@@ -68,7 +68,7 @@ function headlinePattern(spotName: string): RegExp {
 }
 
 function scorePattern(score: number): RegExp {
-  return new RegExp(`<strong>${score}</strong>`);
+  return new RegExp(`<strong(?:\\s[^>]*)?>${score}</strong>`);
 }
 
 function copyProject(): string {

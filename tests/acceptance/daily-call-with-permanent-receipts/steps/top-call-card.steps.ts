@@ -278,7 +278,7 @@ function requiredExpected(world: Slice04World): NonNullable<Slice04World['slice0
 }
 
 async function renderedRows(page: Page): Promise<RenderedRow[]> {
-  return page.locator('ol.ranked > li').evaluateAll((rows) => rows.map((row) => {
+  return page.locator('ol.ranked > li:not([role="presentation"])').evaluateAll((rows) => rows.map((row) => {
     const anchor = row.querySelector<HTMLElement>('a');
     const score = row.querySelector<HTMLElement>('strong');
     const reason = [...row.querySelectorAll<HTMLElement>('p')]
