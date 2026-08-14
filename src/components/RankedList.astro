@@ -210,7 +210,7 @@ const glanceSub = tailCount === 0
               <span class="dg-window-hours"><span>06:00</span><span>12:00</span><span>18:00</span></span>
             </div>
           )}
-          {tier === undefined && summary.conf_level !== undefined && (
+          {summary.conf_level !== undefined && (
             <Confidence level={summary.conf_level} agreement={agreementFor(summary)} />
           )}
           {/* The one action the big card offers, handed in by the route so this
@@ -540,6 +540,7 @@ const glanceSub = tailCount === 0
   }
   ol.ranked li[data-tier='tail'] > strong { font-size: var(--text-body); color: var(--ink-2); }
   ol.ranked li[data-tier='tail'] > a { font-weight: 600; min-height: var(--tap); }
+  ol.ranked li[data-tier='tail'] > :global(details.confidence) { grid-column: 1 / -1; }
 
   /* ============ motion, all of it opt-in ============ */
   @media (prefers-reduced-motion: no-preference) {

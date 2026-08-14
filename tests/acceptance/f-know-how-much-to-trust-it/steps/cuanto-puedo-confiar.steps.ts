@@ -255,7 +255,7 @@ async function openAndTapEveryReason(
   world.trustBrowser = browser;
   world.trustPage = page;
 
-  const rows = page.locator('ol.ranked > li');
+  const rows = page.locator('ol.ranked > li:not([role="presentation"])');
   const count = await rows.count();
   const observed: ObservedRow[] = [];
   for (let index = 0; index < count; index += 1) {
@@ -440,7 +440,7 @@ Then('ninguna fila se desborda el ancho de 390 px ni recorta su texto al alargar
   if (geometry.scrollWidth > geometry.clientWidth) {
     findings.push(`U2: la página se desborda: scrollWidth ${geometry.scrollWidth} > clientWidth ${geometry.clientWidth}`);
   }
-  const rows = page.locator('ol.ranked > li');
+  const rows = page.locator('ol.ranked > li:not([role="presentation"])');
   const count = await rows.count();
   for (let index = 0; index < count; index += 1) {
     const overflow = await rows.nth(index).evaluate((row) => {
@@ -460,7 +460,7 @@ Then('ninguna fila se desborda el ancho de 390 px ni recorta su texto al alargar
 
 Then('el toque que abre la razón mide al menos 44 por 44 px y no tiene movimiento', async function (this: PipelineWorld) {
   const page = requiredPage(trustWorld(this));
-  const rows = page.locator('ol.ranked > li');
+  const rows = page.locator('ol.ranked > li:not([role="presentation"])');
   const count = await rows.count();
   const findings: string[] = [];
   for (let index = 0; index < count; index += 1) {
@@ -534,7 +534,7 @@ const CONTRAST_AGAINST_REAL_BACKGROUND_SCRIPT = `(el) => {
 
 Then('el texto de la razón abierta tiene suficiente contraste contra el fondo real de la tarjeta', async function (this: PipelineWorld) {
   const page = requiredPage(trustWorld(this));
-  const rows = page.locator('ol.ranked > li');
+  const rows = page.locator('ol.ranked > li:not([role="presentation"])');
   const count = await rows.count();
   const findings: string[] = [];
   if (count === 0) findings.push('U1: no hay ni una fila que medir');
