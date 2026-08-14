@@ -166,15 +166,18 @@ export class WriteStack extends Stack {
         // AssetStaging identifies local bundles by their serializable options;
         // its fingerprint cannot see this closure's entry point. Without this
         // discriminator, Notify can reuse report-mint's staged ZIP and Lambda
-        // then cannot resolve notify.handler at runtime.
+        // then cannot resolve notify.handler at runtime. `web-push` is
+        // CommonJS and dynamically requires Node crypto, so its Lambda entry
+        // must remain CommonJS too. An ESM esbuild bundle turns that require
+        // into a runtime exception before Notify can run.
         environment: { SURFS_UP_PANAMA_BUNDLE: 'notify' },
         local: {
           tryBundle(outputDirectory: string): boolean {
             buildSync({
               entryPoints: [resolve(projectRoot, 'src/push/notify-lambda-adapter.ts')],
-              outfile: resolve(outputDirectory, 'notify.mjs'),
+              outfile: resolve(outputDirectory, 'notify.cjs'),
               bundle: true,
-              format: 'esm',
+              format: 'cjs',
               platform: 'node',
               target: 'node22',
               sourcemap: false,

@@ -16,6 +16,7 @@
 // request rate."
 
 import { Template } from 'aws-cdk-lib/assertions';
+import { execFileSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -110,12 +111,16 @@ describe('the scheduled notify job', () => {
     expect(JSON.stringify(notify.Properties?.Code)).toContain('S3Bucket');
   });
 
-  it('stages the notify handler under the exact module name Lambda loads', () => {
+  it('stages a CommonJS notify handler that can load web-push under the Node Lambda runtime', () => {
     const [, notify] = notifyFunction();
     const code = notify.Properties?.Code as Properties;
     const s3Key = String(code.S3Key);
     const assetDirectory = resolve(cloudAssembly.directory, `asset.${s3Key.slice(0, -'.zip'.length)}`);
-    expect(existsSync(resolve(assetDirectory, 'notify.mjs'))).toBe(true);
+    const handler = resolve(assetDirectory, 'notify.cjs');
+    expect(existsSync(handler)).toBe(true);
+    expect(() => execFileSync(process.execPath, ['-e', `require(${JSON.stringify(handler)})`], {
+      cwd: process.cwd(), stdio: 'pipe', timeout: 10_000,
+    })).not.toThrow();
   });
 
   it('reads the VAPID private key from the one declared SecureString parameter and can never write a parameter', () => {

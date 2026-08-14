@@ -116,6 +116,19 @@ This section supersedes the legacy notes below. They are retained only as histor
   proves both the raw-SDK runtime key and synthesized IAM policy cannot drift back to `pub/`.
   Redeploy `SurfsUpPanamaWrite` before treating the next `:25 UTC` Notify execution as valid.
 
+## Notify CommonJS runtime correction (2026-08-14)
+
+- The next live `:25 UTC` check proved the staged `notify.mjs` loaded but then crashed before
+  handler execution: `web-push` dynamically requires Node `crypto`, which an ESM esbuild bundle
+  rejects. The error was `Dynamic require of "crypto" is not supported`.
+- Notify now stages `notify.cjs` as CommonJS. The focused test first failed because the CJS entry
+  was absent, then passed after proving the staged artifact can be required. A separate exact
+  Linux/ARM64 Node 22 Lambda-container invocation initialized and invoked the artifact with no
+  `Runtime.ImportModuleError` or crypto dynamic-require failure; its controlled fixture endpoint
+  refusal was expected. AWS documents `.cjs` as its supported CommonJS file extension.
+- This supersedes the earlier `notify.mjs` packaging claim. Redeploy `SurfsUpPanamaWrite`; then
+  the next hourly run must log a `push_notify_run` result before Notify is called healthy.
+
 ## Offline report replay correction (2026-08-13)
 
 - `997f2c9` removed the returned-signal queue replay without a recorded decision. The regression is
