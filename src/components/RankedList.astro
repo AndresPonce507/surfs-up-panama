@@ -32,6 +32,9 @@ const { locale, day, announcement } = Astro.props;
 const t = strings[locale];
 const daySpots = forecast.days[day];
 const currentPath = day === 0 ? paths.home(locale) : paths.tomorrow(locale);
+// Two routes, one screen: the heading is what proves which day you are on.
+// An identical h1 on both made the Mañana tab read as a dead link.
+const heading = day === 0 ? t.home.header : t.home.headerTomorrow;
 
 /**
  * How the models compared for this row. A row published before
@@ -114,15 +117,19 @@ function cellsFor(summary: DaySummary): RowCells | undefined {
 
 const worthCount = daySpots.filter((s) => s.score_q >= GLANCE_TAIL_UNDER).length;
 const tailCount = daySpots.length - worthCount;
-// Computed, never hand-written: the counts move with every publication.
+// Computed, never hand-written: the counts move with every publication. The
+// day word follows the rendered day: the tomorrow route said "Hoy valen la
+// pena" about tomorrow's numbers, the same identical-page family of bug as
+// the shared header was.
+const dayWordEs = day === 0 ? 'hoy' : 'mañana';
 const glanceSub = tailCount === 0
-  ? `Los ${daySpots.length} spots del Pacífico, ordenados por el puntaje de hoy.`
-  : `${daySpots.length} spots del Pacífico, ordenados. Hoy valen la pena ${worthCount}; los otros ${tailCount} están casi planos y lo decimos.`;
+  ? `Los ${daySpots.length} spots del Pacífico, ordenados por el puntaje de ${dayWordEs}.`
+  : `${daySpots.length} spots del Pacífico, ordenados. ${day === 0 ? 'Hoy' : 'Mañana'} valen la pena ${worthCount}; los otros ${tailCount} están casi planos y lo decimos.`;
 ---
 
 <Base
   locale={locale}
-  title={t.home.header}
+  title={heading}
   currentPath={currentPath}
   announcement={announcement}
 >
@@ -140,7 +147,7 @@ const glanceSub = tailCount === 0
       card instead of above it. It is a plain wrapper: no styles hang off it
       below 1080px, where the page stays a single column. */}
   <div class="dg-intro">
-    <h1>{t.home.header}</h1>
+    <h1>{heading}</h1>
     <p class="dg-sub">{glanceSub}</p>
     <p class="dg-stamp"><time datetime={forecast.published_at}>{t.home.updatedPrefix} {formatUpdatedAtEs(forecast.published_at)}</time></p>
     <p data-stale-notice hidden style="color:var(--warn);font-size:var(--text-meta);font-weight:600"></p>
@@ -277,11 +284,23 @@ const glanceSub = tailCount === 0
     --dg-glint-hi: #ffffff8c;
     --dg-glint-mid: #ffffff66;
     --dg-glint-soft: #ffffff52;
+    /* day-tab pill ground: 8% BLACK precomposited over the load-bearing hero
+       stop (#0d5866 day, #0c5866 night). Declared opaque for the same
+       alpha-blind-reader reason as --go-tint in tokens.css: the contrast
+       audit drops alpha and would misread an rgba wash here. Black, not
+       white, on purpose: a white wash put --hero-ink-2 at 6.04:1, under the
+       7:1 sunlight margin the band itself holds; this well keeps the
+       inactive tab at 8.12:1 (self-computed) and the solid --surface active
+       thumb pops harder against it. The hover wash keeps alpha: it paints
+       only under a fine pointer and never sits under audited resting text. */
+    --dg-seg-bg: #0c515e;
+    --dg-seg-wash: #ffffff1f;
   }
   :global([data-theme='dark']) {
     --dg-wave-1: #052730;
     --dg-wave-2: #07333f;
     --dg-wave-3: #093f4c;
+    --dg-seg-bg: #0b515e; /* the same 8% black over night's #0c5866 stop */
   }
   .dg-sea {
     position: absolute;
@@ -295,6 +314,25 @@ const glanceSub = tailCount === 0
   .dg-intro, h1, .dg-stamp, p[data-stale-notice], nav, ol.ranked, footer, .home-primary {
     position: relative;
   }
+  /* The reading block wears the same dark well as the day-tab pill. Not
+     decoration: the sea band behind it is a SIBLING, invisible to every
+     ancestor-walking contrast audit, so the white title measured 1.07:1
+     against the page --bg and failed the palette sweep on manana and
+     en/tomorrow (the sweep skips only index). An opaque well on the block's
+     own box is what the walkers, and a phone in the sun, actually see.
+     Same token pair as the segmented control; one system. */
+  .dg-intro {
+    margin-top: calc(var(--tap) + var(--sp-2));
+    padding: var(--sp-4);
+    border: 1px solid var(--glass-line);
+    border-radius: var(--r-l);
+    background: var(--dg-seg-bg);
+  }
+  .dg-intro h1 {
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
+  }
   h1 {
     color: var(--hero-ink);
     padding-top: var(--sp-5);
@@ -306,11 +344,45 @@ const glanceSub = tailCount === 0
     padding: var(--sp-1) var(--sp-3);
     border-radius: var(--r-s);
   }
-  nav { border-bottom: 0; }
-  nav a { color: var(--hero-ink-2); }
+  /* day tabs as one segmented control on the water: two states of one
+     switch, never two bare words. Same <a> elements, hrefs and aria-current
+     as always; only this scope replaces the shared underline treatment
+     (components.css nav), so every other route keeps it. The seg tokens sit
+     on the dark water band in BOTH themes, like the ring/track values. */
+  nav {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--glass-line);
+    border-radius: var(--r-full);
+    background: var(--dg-seg-bg);
+    /* Hit-target, not decoration: everything on the band shares one
+       `position: relative` rule, so `ol.ranked`, later in the DOM, painted
+       its transparent box OVER these tabs on desktop (where .dg-intro
+       floats beside the list) and swallowed every click -- the live
+       "Mañana does nothing" bug. Lifting only the nav keeps the list's own
+       stacking untouched. Pinned by
+       tests/e2e/f-looks-like-the-ocean-and-reads-in-the-sun/desktop-tabs-clickable.spec.ts. */
+    z-index: 2;
+  }
+  nav a {
+    min-height: var(--tap);
+    margin-bottom: 0;
+    padding: 0 var(--sp-4);
+    border-bottom: 0;
+    border-radius: var(--r-full);
+    color: var(--hero-ink-2);
+    font-weight: 700;
+    text-decoration: none;
+  }
   nav a[aria-current='page'] {
-    color: var(--hero-ink);
-    border-bottom-color: var(--hero-ink);
+    background: var(--surface);
+    color: var(--ink);
+    border-bottom-color: transparent;
+    box-shadow: 0 1px 8px -2px var(--dg-card-shadow);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    nav a:not([aria-current='page']):hover { background: var(--dg-seg-wash); }
   }
 
   /* caustic light + rays: desktop pointers only, soft-light so they never
@@ -471,6 +543,7 @@ const glanceSub = tailCount === 0
 
   /* ============ motion, all of it opt-in ============ */
   @media (prefers-reduced-motion: no-preference) {
+    nav a { transition: background-color var(--dur-2) var(--ease), color var(--dur-2) var(--ease); }
     .dg-swell { animation: dg-roll var(--dg-v, 22s) linear infinite; }
     .dg-s1 { --dg-v: 26s; }
     .dg-s2 { --dg-v: 17s; animation-direction: reverse; }
@@ -549,7 +622,9 @@ const glanceSub = tailCount === 0
       float: left;
       width: 46%;
       margin-right: var(--sp-6);
-      padding-top: var(--sp-7);
+      margin-top: var(--sp-7);
+      padding: var(--sp-5);
+      border-radius: 24px;
     }
     .dg-intro h1 { padding-top: 0; }
     /* every row below the card clears the float, so a short title block can
